@@ -1,0 +1,183 @@
+import { describe, it, expect } from 'vitest';
+import { createRound, markAt } from '../core/round';
+import { buildTimeline, SchedulerConfig } from '../core/scheduler';
+import { newProfile } from '../core/economy';
+import { toViewModel } from './viewModel';
+
+const cfg: SchedulerConfig = {
+  attemptInterval: 2000,
+  activeSpan: 800,
+  windowWidth: 600,
+  peakRadius: 100,
+  distractorRate: 0,
+};
+
+const rng = () => 0.5;
+
+describe('toViewModel', () => {
+  it('learnedPercent is 0 for a new round', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.learnedPercent).toBe(0);
+  });
+
+  it('learnedPercent reflects session.learned after a PERFECT mark', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    // peak = 400ms (window center), peakRadius=100 → tap at 400 is PERFECT (+8)
+    const afterMark = markAt(state, 400);
+    const vm = toViewModel(afterMark, 400);
+    expect(vm.learnedPercent).toBe(8);
+  });
+
+  it('mastered is false for a new round', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.mastered).toBe(false);
+  });
+
+  it('mastered is true when session.learned reaches 100', () => {
+    // 13 PERFECT marks × 8 = 104, capped at 100 → mastered
+    const timeline = buildTimeline(cfg, rng, 13);
+    let state = createRound(timeline);
+    for (let i = 0; i < 13; i++) {
+      // Each event starts at i * 2000ms; peak is at activeStart + 400
+      state = markAt(state, i * 2000 + 400);
+    }
+    const vm = toViewModel(state, 13 * 2000);
+    expect(vm.mastered).toBe(true);
+    expect(vm.learnedPercent).toBe(100);
+  });
+
+  it('lastResult is null for a new round', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.lastResult).toBeNull();
+  });
+
+  it('lastResult is PERFECT after a perfect mark', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const afterMark = markAt(state, 400); // peak hit
+    const vm = toViewModel(afterMark, 400);
+    expect(vm.lastResult).toBe('PERFECT');
+  });
+
+  it('confused is false for a new round', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.confused).toBe(false);
+  });
+
+  it('confused is true during confusedUntil window after FALSE_MARK', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    // Tap at t=50000 — outside any active window → FALSE_MARK → confusedUntil=53000
+    const afterFalseMark = markAt(state, 50000);
+    // At t=51000 (inside the 3s confuse window) → confused=true
+    const vm = toViewModel(afterFalseMark, 51000);
+    expect(vm.confused).toBe(true);
+  });
+});
+
+// ─── Cycle 3: viewModel exposes coins from a passed-in profile ────────────────
+
+describe('toViewModel — profile fields', () => {
+  it('coins reflects the profile passed in', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const profile = { coins: 75, xp: 0, level: 1 };
+    const vm = toViewModel(state, 0, profile);
+    expect(vm.coins).toBe(75);
+  });
+
+  // ─── Cycle 4: viewModel exposes level from a passed-in profile ────────────
+
+  it('level reflects the profile passed in', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const profile = { coins: 0, xp: 300, level: 3 };
+    const vm = toViewModel(state, 0, profile);
+    expect(vm.level).toBe(3);
+  });
+
+  it('existing fields are unaffected when profile is provided', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0, newProfile());
+    expect(vm.learnedPercent).toBe(0);
+    expect(vm.mastered).toBe(false);
+    expect(vm.lastResult).toBeNull();
+    expect(vm.confused).toBe(false);
+  });
+
+  it('coins defaults to 0 when no profile is provided', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.coins).toBe(0);
+  });
+
+  it('level defaults to 1 when no profile is provided', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.level).toBe(1);
+  });
+});
+
+// ─── Cycle 5: tell cue — attemptActive + tellStrength ────────────────────────
+// Config: activeSpan=800, attemptInterval=2000, windowWidth=600
+// Event 0: activeStart=0, activeEnd=800; window [100, 700]; peak=400
+// Gap between events: now=1000 is outside any active window
+
+describe('toViewModel — tell cue', () => {
+  it('no active attempt → attemptActive=false, tellStrength=0', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 1000); // in the gap between events
+    expect(vm.attemptActive).toBe(false);
+    expect(vm.tellStrength).toBe(0);
+  });
+
+  it('active attempt, now===peak → tellStrength equals tellIntensity (max)', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    // Event 0: activeStart=0; window=[100,700]; peak=400
+    const vm = toViewModel(state, 400, newProfile(), 1);
+    expect(vm.attemptActive).toBe(true);
+    expect(vm.tellStrength).toBeCloseTo(1, 5);
+  });
+
+  it('active attempt, now at scoring window edge → tellStrength ≈ 0', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    // Event 0: window=[100,700]; peak=400; halfSpan=300
+    // now=100 → |100-400|/300 = 1.0 → tellStrength = 0
+    const vm = toViewModel(state, 100, newProfile(), 1);
+    expect(vm.attemptActive).toBe(true);
+    expect(vm.tellStrength).toBeCloseTo(0, 5);
+  });
+
+  it('lower tellIntensity → strictly smaller tellStrength at peak (harder = fainter)', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const fullTell = toViewModel(state, 400, newProfile(), 1.0);
+    const halfTell = toViewModel(state, 400, newProfile(), 0.5);
+    expect(halfTell.tellStrength).toBeLessThan(fullTell.tellStrength);
+    expect(halfTell.tellStrength).toBeCloseTo(0.5, 5);
+  });
+
+  it('omitting tellIntensity defaults to 1 — tellStrength at peak is 1', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    // No 4th arg — should default to tellIntensity=1
+    const vm = toViewModel(state, 400);
+    expect(vm.attemptActive).toBe(true);
+    expect(vm.tellStrength).toBeCloseTo(1, 5);
+  });
+});

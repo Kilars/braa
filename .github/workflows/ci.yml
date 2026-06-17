@@ -1,0 +1,50 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+# Note: e2e (bun run e2e) is omitted from CI.
+#
+# The smoke test in e2e/smoke.mjs has two requirements that make it
+# unreliable to automate here without significant extra scaffolding:
+#
+#   1. PW_CHROME must be set to a versioned, platform-specific Chromium path
+#      (e.g. ~/.cache/ms-playwright/chromium-1169/chrome-linux/chrome).
+#      playwright-core does not bundle a browser; the path is installation-
+#      dependent and changes with each Playwright release.
+#
+#   2. A live dev server must be running on http://localhost:5173 before the
+#      test starts (bun run dev &), and the server needs time to be ready.
+#
+# To add e2e to CI later:
+#   - Run `bunx playwright install --with-deps chromium` to install Chromium.
+#   - Discover the installed path with:
+#       PW_CHROME=$(find ~/.cache/ms-playwright -name chrome -type f | head -1)
+#   - Start the dev server in the background and wait for it:
+#       bun run dev &
+#       until curl -sf http://localhost:5173 >/dev/null; do sleep 1; done
+#   - Export PW_CHROME and run `bun run e2e`.
+#
+# Run e2e locally: PW_CHROME="$HOME/.cache/ms-playwright/chromium-*/chrome-linux/chrome" bun run e2e
