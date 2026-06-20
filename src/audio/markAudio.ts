@@ -58,8 +58,40 @@ export function tapSound(): SoundSpec {
 }
 
 // ambientSpec: pure data — no WebAudio/DOM. A low, quiet pad for looping.
+// Returns the primary partial of the ambient bed (back-compat: same as ambientLayers()[0]).
 export function ambientSpec(): SoundSpec {
-  return { freq: 160, durationMs: 0, type: 'sine', gain: 0.04 };
+  return ambientLayers()[0];
+}
+
+export type DogFoleyEvent = 'idle-pant' | 'mastery-bark' | 'false-huff';
+
+// Synthesised dog foley — subtle, gains well under the mark SFX (PERFECT praise = 0.9)
+// so it never masks the praise tone. Layers are played sequentially (like masterySound).
+export function foleyLayers(event: DogFoleyEvent): SoundSpec[] {
+  switch (event) {
+    case 'idle-pant': // two soft breath puffs (in/out) — barely there
+      return [
+        { freq: 300, durationMs: 70, type: 'sine', gain: 0.04 },
+        { freq: 340, durationMs: 60, type: 'sine', gain: 0.03 },
+      ];
+    case 'mastery-bark': // bright, longer two-syllable happy bark
+      return [
+        { freq: 520, durationMs: 90, type: 'triangle', gain: 0.22 },
+        { freq: 430, durationMs: 110, type: 'triangle', gain: 0.18 },
+      ];
+    case 'false-huff': // single low, short disappointed huff
+      return [{ freq: 170, durationMs: 70, type: 'sine', gain: 0.12 }];
+  }
+}
+
+// Ambient bed = a few low detuned partials (a ~3 Hz beat shimmer + a soft fifth for body),
+// not a lone drone. Still quiet (sum of gains well under 0.12) and lazy/mute-aware at play time.
+export function ambientLayers(): SoundSpec[] {
+  return [
+    { freq: 160, durationMs: 0, type: 'sine', gain: 0.04 },
+    { freq: 163, durationMs: 0, type: 'sine', gain: 0.03 },
+    { freq: 240, durationMs: 0, type: 'triangle', gain: 0.025 },
+  ];
 }
 
 // MarkAudio is a thin side-effect wrapper. AudioContext is only touched inside
@@ -69,7 +101,7 @@ export class MarkAudio {
   private _muted = false;
   private _ambientOn = false;
   private _ambientStarted = false;
-  private _ambientOsc: OscillatorNode | null = null;
+  private _ambientOscs: OscillatorNode[] = [];
   private clips = new Map<string, AudioBuffer>();
 
   registerClip(cue: string, buffer: AudioBuffer): void {
@@ -161,6 +193,21 @@ export class MarkAudio {
     }
   }
 
+  playFoley(event: DogFoleyEvent): void {
+    if (this._muted) return;
+    try {
+      const ctx = this.ensureCtx();
+      if (!ctx) return;
+      let cursor = ctx.currentTime;
+      for (const spec of foleyLayers(event)) {
+        this.playSpec(ctx, spec, cursor);
+        cursor += spec.durationMs / 1000;
+      }
+    } catch {
+      // Guard: AudioContext unavailable or suspended — silent fail
+    }
+  }
+
   startAmbient(): void {
     this._ambientStarted = true;
     if (this._muted) return;
@@ -168,16 +215,17 @@ export class MarkAudio {
     try {
       const ctx = this.ensureCtx();
       if (!ctx) return;
-      const spec = ambientSpec();
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      osc.type = spec.type;
-      osc.frequency.setValueAtTime(spec.freq, ctx.currentTime);
-      gainNode.gain.setValueAtTime(spec.gain, ctx.currentTime);
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      osc.start();
-      this._ambientOsc = osc;
+      for (const spec of ambientLayers()) {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = spec.type;
+        osc.frequency.setValueAtTime(spec.freq, ctx.currentTime);
+        gainNode.gain.setValueAtTime(spec.gain, ctx.currentTime);
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start();
+        this._ambientOscs.push(osc);
+      }
       this._ambientOn = true;
     } catch {
       // Guard: AudioContext unavailable or suspended — silent fail
@@ -186,12 +234,14 @@ export class MarkAudio {
 
   stopAmbient(): void {
     if (!this._ambientOn) return;
-    try {
-      this._ambientOsc?.stop();
-    } catch {
-      // oscillator may already be stopped — ignore
+    for (const osc of this._ambientOscs) {
+      try {
+        osc.stop();
+      } catch {
+        // oscillator may already be stopped — ignore
+      }
     }
-    this._ambientOsc = null;
+    this._ambientOscs = [];
     this._ambientOn = false;
   }
 

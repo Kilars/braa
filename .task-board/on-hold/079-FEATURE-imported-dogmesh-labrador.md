@@ -1,6 +1,6 @@
 # FEATURE: Imported-mesh DogMesh behind the existing interface (Labrador slice)
 
-**Status**: Backlog — **blocked on 077 + 078**
+**Status**: Depends on 078 (loader) + the converted `.glb`. Model purchased + dropped (`Labrador_FBX.rar`); not owner-blocked — needs the FBX → glb conversion first (tech-decisions §3c).
 **Created**: 2026-06-17
 **Priority**: High
 **Labels**: render, assets, dog, visual-review, epic:pokemon-go-visuals
@@ -90,5 +90,5 @@ off, nothing changes.
 
 ---
 
-**Next Steps**: Unblocked after 077 (model) + 078 (loader). Largest slice in
-Phase 1 — expect iteration in Visual Review.
+**Next Steps**: ready after the FBX → glb conversion (§3c) + 078 (loader) land. Largest
+slice in Phase 1 — expect iteration in Visual Review.

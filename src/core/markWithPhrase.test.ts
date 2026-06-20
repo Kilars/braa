@@ -10,6 +10,7 @@ const COOL_PHRASE: Phrase = {
   windowBonusMs: 200,
   rewardBonus: 0.1,
   cooldownMs: 5000,
+  peakRadiusPenaltyMs: 0,
 };
 
 const BASE_ATTEMPT: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 15 };

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { soundForResult, masterySound, tapSound, ambientSpec, MarkAudio, markLayers, shouldUseClip } from './markAudio';
+import { soundForResult, masterySound, tapSound, ambientSpec, MarkAudio, markLayers, shouldUseClip, foleyLayers, ambientLayers } from './markAudio';
 import type { MarkResult } from '../core/mark';
+import type { DogFoleyEvent } from './markAudio';
 
 describe('soundForResult', () => {
   it('returns a SoundSpec for PERFECT', () => {
@@ -249,5 +250,128 @@ describe('shouldUseClip', () => {
     registry.set('PERFECT', {} as unknown as AudioBuffer);
 
     expect(shouldUseClip('OK', registry)).toBe(false);
+  });
+});
+
+// ─── foleyLayers ─────────────────────────────────────────────────────────────
+
+describe('foleyLayers', () => {
+  it('foleyLayers(\'mastery-bark\') returns a non-empty array; every layer has freq in canine range (>= 150 and <= 1200), durationMs <= 400, and gain > 0 and <= 0.5', () => {
+    const layers = foleyLayers('mastery-bark');
+    expect(layers.length).toBeGreaterThan(0);
+    for (const layer of layers) {
+      expect(layer.freq).toBeGreaterThanOrEqual(150);
+      expect(layer.freq).toBeLessThanOrEqual(1200);
+      expect(layer.durationMs).toBeLessThanOrEqual(400);
+      expect(layer.gain).toBeGreaterThan(0);
+      expect(layer.gain).toBeLessThanOrEqual(0.5);
+    }
+  });
+
+  it('the three events produce distinct signatures — idle-pant, mastery-bark, and false-huff are pairwise NOT deep-equal', () => {
+    const pant = foleyLayers('idle-pant');
+    const bark = foleyLayers('mastery-bark');
+    const huff = foleyLayers('false-huff');
+
+    expect(pant).not.toEqual(bark);
+    expect(bark).not.toEqual(huff);
+    expect(pant).not.toEqual(huff);
+  });
+
+  it('false-huff is low + short while mastery-bark is brighter + longer: huff first-layer freq < bark first-layer freq AND huff total duration < bark total duration; also huff first-layer freq <= 220 and huff total duration <= 100', () => {
+    const huff = foleyLayers('false-huff');
+    const bark = foleyLayers('mastery-bark');
+
+    const huffFirstFreq = huff[0].freq;
+    const barkFirstFreq = bark[0].freq;
+    const huffTotalDuration = huff.reduce((sum, layer) => sum + layer.durationMs, 0);
+    const barkTotalDuration = bark.reduce((sum, layer) => sum + layer.durationMs, 0);
+
+    expect(huffFirstFreq).toBeLessThan(barkFirstFreq);
+    expect(huffTotalDuration).toBeLessThan(barkTotalDuration);
+    expect(huffFirstFreq).toBeLessThanOrEqual(220);
+    expect(huffTotalDuration).toBeLessThanOrEqual(100);
+  });
+
+  it('annoyance budget: across all three events, every layer gain is < 0.5 (foley never as loud as the PERFECT praise tone, gain 0.9)', () => {
+    const pant = foleyLayers('idle-pant');
+    const bark = foleyLayers('mastery-bark');
+    const huff = foleyLayers('false-huff');
+    const allLayers = [...pant, ...bark, ...huff];
+
+    for (const layer of allLayers) {
+      expect(layer.gain).toBeLessThan(0.5);
+    }
+  });
+
+  it('deterministic — foleyLayers(e) deep-equals itself on repeated calls for each event', () => {
+    const events: Array<'idle-pant' | 'mastery-bark' | 'false-huff'> = ['idle-pant', 'mastery-bark', 'false-huff'];
+    for (const event of events) {
+      const first = foleyLayers(event);
+      const second = foleyLayers(event);
+      expect(first).toEqual(second);
+    }
+  });
+});
+
+// ─── ambientLayers ───────────────────────────────────────────────────────────
+
+describe('ambientLayers', () => {
+  it('returns an array of length >= 2', () => {
+    const layers = ambientLayers();
+    expect(layers.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('not every layer shares the same freq (at least two distinct freqs — a detuned/fuller bed, not a lone drone)', () => {
+    const layers = ambientLayers();
+    const distinctFreqs = new Set(layers.map(l => l.freq));
+    expect(distinctFreqs.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('every layer freq is within 120..260, every layer gain <= 0.06, and the SUM of all gains is <= 0.12 (stays quiet)', () => {
+    const layers = ambientLayers();
+    let gainSum = 0;
+    for (const layer of layers) {
+      expect(layer.freq).toBeGreaterThanOrEqual(120);
+      expect(layer.freq).toBeLessThanOrEqual(260);
+      expect(layer.gain).toBeLessThanOrEqual(0.06);
+      gainSum += layer.gain;
+    }
+    expect(gainSum).toBeLessThanOrEqual(0.12);
+  });
+
+  it('every layer type is \'sine\' or \'triangle\'', () => {
+    const layers = ambientLayers();
+    for (const layer of layers) {
+      expect(['sine', 'triangle']).toContain(layer.type);
+    }
+  });
+
+  it('deterministic — deep-equals itself on repeat', () => {
+    const first = ambientLayers();
+    const second = ambientLayers();
+    expect(first).toEqual(second);
+  });
+
+  it('back-compat: ambientSpec() deep-equals ambientLayers()[0]', () => {
+    const spec = ambientSpec();
+    const firstLayer = ambientLayers()[0];
+    expect(spec).toEqual(firstLayer);
+  });
+});
+
+// ─── MarkAudio — foley ───────────────────────────────────────────────────────
+
+describe('MarkAudio — foley', () => {
+  it('playFoley(\'mastery-bark\') on a MUTED instance does not throw', () => {
+    const audio = new MarkAudio();
+    audio.setMuted(true);
+    expect(() => audio.playFoley('mastery-bark')).not.toThrow();
+  });
+
+  it('playFoley(\'idle-pant\') on a default (unmuted) instance does not throw in Node (AudioContext undefined → guarded)', () => {
+    const audio = new MarkAudio();
+    expect(audio.isMuted()).toBe(false);
+    expect(() => audio.playFoley('idle-pant')).not.toThrow();
   });
 });

@@ -40,9 +40,9 @@ and de-risks the asset pipeline before per-breed cost is incurred.
 
 | # | Phase | Task | State |
 |---|-------|------|-------|
-| 0 | Sourcing & decision | `077-RESEARCH-dog-model-sourcing` | **Ready now** (purchase = human gate) |
-| 1 | Pipeline slice | `078-FEATURE-gltf-load-path-and-fallback` | Specced, blocked on 077 |
-| 1 | Pipeline slice | `079-FEATURE-imported-dogmesh-labrador` | Specced, blocked on 077+078 |
+| 0 | Sourcing & decision | `077-RESEARCH-dog-model-sourcing` | **DONE** — purchased + dropped (`Labrador_FBX.rar`); needs FBX→glb conversion |
+| 1 | Pipeline slice | `078-FEATURE-gltf-load-path-and-fallback` | Core landed; loader/scene wiring needs the converted `.glb` |
+| 1 | Pipeline slice | `079-FEATURE-imported-dogmesh-labrador` | Specced; depends on 078 + the converted `.glb` |
 | 2 | Animation | `080` — skeletal animation mapping (pose channels → bones/anim groups) | Outlined below |
 | 3 | The look | `081` — PBR coat + soft bright lighting + real contact shadow + tone mapping | Outlined below |
 | 4 | Breed scale-out | `082` — retarget shared rig to all 5 breeds (coat textures + proportion morphs) | Outlined below |

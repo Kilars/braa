@@ -181,3 +181,29 @@ describe('toViewModel — tell cue', () => {
     expect(vm.tellStrength).toBeCloseTo(1, 5);
   });
 });
+
+// ─── Cycle 6: engagement meter passthrough + derived beat ────────────────────
+
+describe('toViewModel — engagement', () => {
+  it('exposes the engagement meter passed in', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0, newProfile(), 1, 0, 0.3);
+    expect(vm.engagement).toBe(0.3);
+  });
+
+  it('derives the disengage beat from the meter (low meter → escalated beat)', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    expect(toViewModel(state, 0, newProfile(), 1, 0, 0.9).engagementBeat).toBe('engaged');
+    expect(toViewModel(state, 0, newProfile(), 1, 0, 0).engagementBeat).toBe('walk-off');
+  });
+
+  it('defaults to a full, engaged meter when omitted', () => {
+    const timeline = buildTimeline(cfg, rng, 5);
+    const state = createRound(timeline);
+    const vm = toViewModel(state, 0);
+    expect(vm.engagement).toBe(1);
+    expect(vm.engagementBeat).toBe('engaged');
+  });
+});

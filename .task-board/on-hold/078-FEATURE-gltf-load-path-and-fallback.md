@@ -1,7 +1,25 @@
 # FEATURE: glTF load path + procedural fallback (keep the app shippable)
 
-**Status**: Backlog — **blocked on 077** (needs a concrete `.glb`)
+**Status**: **pure decision core landed (TDD)**; loader glue + scene wiring + Visual Review still to build. The model is purchased + dropped (`Labrador_FBX.rar`); the remaining prerequisite is the **FBX → glb conversion** (tech-decisions §3c), not an owner gate.
 **Created**: 2026-06-17
+
+> **Iteration note (2026-06-17):** The asset-free, test-first core shipped now —
+> it needs no model and keeps the app byte-for-byte identical to today (flag off):
+> - `src/render/dogModelLoader.ts` (+ `.test.ts`, 9 tests):
+>   - `selectDogRenderMode({ flagEnabled, loadState })` — pure; only a flag-on +
+>     `ready` load yields `'imported'`, everything else (off / idle / loading /
+>     failed / timeout) falls back to `'procedural'` (behaviours 1–3).
+>   - `resolveLoadState({ state, elapsedMs, budgetMs })` — pure; promotes a
+>     still-`loading` state past its budget to `'timeout'` (behaviour 4).
+>   - `renderConfig.importedDog` — the feature flag, **default OFF**.
+>
+> **Remaining (needs the converted `.glb` — see tech-decisions §3c):** the actual lazy
+> `loadDogModel()` glTF glue (`@babylonjs/loaders` dep + `SceneLoader`), the
+> `scene.ts` wiring (await loader → spinner → `selectDogRenderMode` → fall back to
+> `createDogMesh`), and the Visual Review of both paths. `scene.ts` builds the dog
+> **synchronously** today; the async load + spinner wiring lands with the asset so
+> the imported path can actually be seen and reviewed (no point wiring an
+> unverifiable load against a non-existent model).
 **Priority**: High
 **Labels**: render, assets, loading, tdd, epic:pokemon-go-visuals
 **Estimated Effort**: Medium
@@ -76,13 +94,17 @@ imported path is proven and flag-enabled.
   right dog; guard with the existing switch path.
 
 ## Acceptance Criteria
-- [ ] `selectDogRenderMode` is pure + TDD-covered (flag off, ready, failed, loading).
-- [ ] `loadDogModel()` lazily loads the `.glb`; failure is caught, not thrown to UI.
-- [ ] Flag **off** by default → identical to today (procedural dog, all states work).
-- [ ] Flag **on** + valid model → model loads with the `#hud-loading` spinner; load
-      failure cleanly falls back to procedural (Visual Review confirms both paths).
-- [ ] Entry bundle unaffected (loader is split); `bun run verify` green.
+- [x] `selectDogRenderMode` is pure + TDD-covered (flag off, ready, failed, loading,
+      timeout) — 9 tests in `dogModelLoader.test.ts`.
+- [ ] **TODO (needs converted `.glb`):** `loadDogModel()` lazily loads the `.glb`; failure caught,
+      not thrown to UI.
+- [x] Flag **off** by default → identical to today (`renderConfig.importedDog=false`;
+      no scene change → procedural dog, all states work; full verify gate green).
+- [ ] **TODO (needs converted `.glb`):** Flag **on** + valid model → loads with the `#hud-loading`
+      spinner; load failure cleanly falls back to procedural (Visual Review of both).
+- [x] Entry bundle unaffected (no loader dep added yet — pure logic only);
+      `bun run verify` green.
 
 ---
 
-**Next Steps**: Unblocked once `077` stages a `.glb`. Move to `in-progress` then.
+**Next Steps**: convert the FBX → glb (tech-decisions §3c) and stage `public/models/dog.glb`, then build the loader glue + scene wiring. Move to `in-progress` then.

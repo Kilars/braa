@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { STARTER_TRICKS, UNTRAIN_TRICKS, SIGNATURE_TRICKS, lookupTrick, tricksForBreed } from './tricks';
+import { STARTER_TRICKS, UNTRAIN_TRICKS, SIGNATURE_TRICKS, lookupTrick, tricksForBreed, graduationTrickIds, trickRewardMultiplier } from './tricks';
 import type { Trick } from './tricks';
 import { STARTER_BREED, BREED_CATALOG } from './breeds';
+import { canGraduate } from './prestige';
+import type { Dog } from './roster';
 
 // ─── Cycle 1: STARTER_TRICKS has the three Norwegian starter commands ─────────
 
@@ -256,5 +258,104 @@ describe('SIGNATURE_TRICKS — snurr (spin)', () => {
 
   it('lookupTrick finds snurr by id', () => {
     expect(lookupTrick('snurr')?.id).toBe('snurr');
+  });
+});
+
+// ─── graduationTrickIds — the trick set a dog must master to graduate ─────────
+// Graduation = "fully trained": every trick the dog's breed offers, which is the
+// starter set PLUS the breed's signature trick. A breed with a signature trick
+// must master it too, not just the three starters (the select screen lists it).
+
+describe('graduationTrickIds', () => {
+  it('Labrador (no signature trick) requires exactly the starter ids', () => {
+    expect(graduationTrickIds(STARTER_BREED)).toEqual(STARTER_TRICKS.map(t => t.id));
+  });
+
+  it('Border Collie requires the starter ids plus its signature rull', () => {
+    const borderCollie = BREED_CATALOG.find(b => b.id === 'border-collie')!;
+    const ids = graduationTrickIds(borderCollie);
+    for (const t of STARTER_TRICKS) expect(ids).toContain(t.id);
+    expect(ids).toContain('rull');
+    expect(ids).toHaveLength(STARTER_TRICKS.length + 1);
+  });
+
+  it('matches tricksForBreed (single source of truth for the breed trick set)', () => {
+    const husky = BREED_CATALOG.find(b => b.id === 'husky')!;
+    expect(graduationTrickIds(husky)).toEqual(tricksForBreed(husky).map(t => t.id));
+  });
+});
+
+describe('canGraduate against graduationTrickIds', () => {
+  const borderCollie = BREED_CATALOG.find(b => b.id === 'border-collie')!;
+  const starterIds = STARTER_TRICKS.map(t => t.id);
+
+  it('a signature breed that mastered only the starters is NOT graduation-ready', () => {
+    const dog: Dog = { id: 'd1', name: 'Lassie', breedId: 'border-collie', masteredTrickIds: [...starterIds] };
+    expect(canGraduate(dog, graduationTrickIds(borderCollie))).toBe(false);
+  });
+
+  it('becomes graduation-ready once the signature trick is also mastered', () => {
+    const dog: Dog = { id: 'd1', name: 'Lassie', breedId: 'border-collie', masteredTrickIds: [...starterIds, 'rull'] };
+    expect(canGraduate(dog, graduationTrickIds(borderCollie))).toBe(true);
+  });
+});
+
+// ─── TDD Cycle: trickRewardMultiplier ────────────────────────────────────────
+// Per-trick reward uplift: harder tricks earn more to avoid dominated choices.
+// Derived from learnMult/windowMult penalties; no per-trick magic numbers.
+
+describe('trickRewardMultiplier — easy trick (sitt) unchanged', () => {
+  it('trickRewardMultiplier(sitt) === 1 (baseline, learnMult=1, windowMult=1)', () => {
+    const sitt = lookupTrick('sitt')!;
+    // This import will fail until the function is exported; that's expected (RED).
+    expect(trickRewardMultiplier(sitt)).toBe(1);
+  });
+});
+
+describe('trickRewardMultiplier — monotonic in difficulty', () => {
+  it('trickRewardMultiplier(legg-deg) > trickRewardMultiplier(ligg)', () => {
+    const leggDeg = lookupTrick('legg-deg')!;
+    const ligg = lookupTrick('ligg')!;
+    expect(trickRewardMultiplier(leggDeg)).toBeGreaterThan(trickRewardMultiplier(ligg));
+  });
+
+  it('trickRewardMultiplier(ligg) > trickRewardMultiplier(sitt)', () => {
+    const ligg = lookupTrick('ligg')!;
+    const sitt = lookupTrick('sitt')!;
+    expect(trickRewardMultiplier(ligg)).toBeGreaterThan(trickRewardMultiplier(sitt));
+  });
+
+  it('trickRewardMultiplier monotonic chain: legg-deg > ligg > sitt', () => {
+    const leggDeg = lookupTrick('legg-deg')!;
+    const ligg = lookupTrick('ligg')!;
+    const sitt = lookupTrick('sitt')!;
+    const leggDegMult = trickRewardMultiplier(leggDeg);
+    const liggMult = trickRewardMultiplier(ligg);
+    const sittMult = trickRewardMultiplier(sitt);
+    expect(leggDegMult).toBeGreaterThan(liggMult);
+    expect(liggMult).toBeGreaterThan(sittMult);
+    expect(sittMult).toBe(1);
+  });
+});
+
+describe('trickRewardMultiplier — bounded cap', () => {
+  it('multiplier for hardest real trick (legg-deg) is bounded at or below 2.2', () => {
+    const leggDeg = lookupTrick('legg-deg')!;
+    const mult = trickRewardMultiplier(leggDeg);
+    expect(mult).toBeLessThanOrEqual(2.2);
+    expect(mult).toBeGreaterThan(1);
+  });
+
+  it('multiplier for synthetic extreme trick is clamped to cap <= 2.2', () => {
+    const extremeTrick: Trick = { id: 'x', name: 'x', learnMult: 0, windowMult: 0, distractorBonus: 0 };
+    const mult = trickRewardMultiplier(extremeTrick);
+    expect(mult).toBeLessThanOrEqual(2.2);
+    expect(mult).toBeGreaterThan(1);
+  });
+
+  it('hardest signature trick (sov, learnMult=0.55) respects cap', () => {
+    const sov = lookupTrick('sov')!;
+    const mult = trickRewardMultiplier(sov);
+    expect(mult).toBeLessThanOrEqual(2.2);
   });
 });

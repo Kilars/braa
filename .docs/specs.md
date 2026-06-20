@@ -154,6 +154,22 @@ forgiving by default:
   background are ignored, so a notification, lock, or fat-finger never triggers a
   false mark / confuse.
 
+### Wrong-behavior beats & disengagement
+
+The dog sometimes offers the *wrong* thing — a temptation you must **not** mark
+(marking it is a false mark). With real clips this reads as personality, scaled by
+an **engagement meter**: good timing keeps the dog eager; sloppy/false marks or slow
+rewards drain it and the dog gets visibly more "done with you."
+
+- **Off-task** (mild): `scratch ear`, `dig`, sniff/`eat`, bored `flop`, the zoomies.
+- **Sass**: `bark` at you, `turn` its back.
+- **Disengage** (meter empty): trots to the frame edge and sits back-turned — you
+  can't earn until you **call it back** (tap), costing tempo/combo. The dog returns
+  and re-engages once you're rewarding well.
+
+Escalation is graded (itch → flop → bark → walk-off), so it stays funny, never
+punishing. (`pissing`/`defecation` clips exist — ultra-rare gag at most.)
+
 ## Economy & Progression
 
 Two axes work together:

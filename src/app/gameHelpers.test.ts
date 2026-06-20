@@ -5,6 +5,7 @@ import {
   buildSchedulerCfg,
   boostedDeltas,
   buildGameSave,
+  restoreLearnedBar,
 } from './gameHelpers';
 import type { EffectiveDifficulty } from '../core/difficulty';
 import type { Dog } from '../core/roster';
@@ -272,5 +273,116 @@ describe('buildGameSave — removal of dead top-level masteredTrickIds', () => {
     expect(Object.prototype.hasOwnProperty.call(save, 'masteredTrickIds')).toBe(false);
     expect(save.roster).toHaveLength(1);
     expect(save.roster[0].masteredTrickIds).toEqual(['sitt']);
+  });
+});
+
+// ── restoreLearnedBar ──────────────────────────────────────────────────────────
+
+describe('restoreLearnedBar', () => {
+  it('returns the saved bar when savedDogId and savedTrickId match startDogId and startTrickId', () => {
+    const result = restoreLearnedBar({
+      savedDogId: 'rex',
+      savedTrickId: 'sitt',
+      savedBar: 70,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(result).toBe(70);
+  });
+
+  it('returns 0 when the dog differs from saved', () => {
+    const result = restoreLearnedBar({
+      savedDogId: 'rex',
+      savedTrickId: 'sitt',
+      savedBar: 70,
+      startDogId: 'buddy',
+      startTrickId: 'sitt',
+    });
+    expect(result).toBe(0);
+  });
+
+  it('returns 0 when the trick differs from saved', () => {
+    const result = restoreLearnedBar({
+      savedDogId: 'rex',
+      savedTrickId: 'sitt',
+      savedBar: 70,
+      startDogId: 'rex',
+      startTrickId: 'ligg',
+    });
+    expect(result).toBe(0);
+  });
+
+  it('returns 0 when there is no saved round (savedTrickId is null)', () => {
+    const result = restoreLearnedBar({
+      savedDogId: null,
+      savedTrickId: null,
+      savedBar: 70,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(result).toBe(0);
+  });
+
+  it('clamps a malformed saved bar above 100 to 100 on a match', () => {
+    const result = restoreLearnedBar({
+      savedDogId: 'rex',
+      savedTrickId: 'sitt',
+      savedBar: 150,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(result).toBe(100);
+  });
+
+  it('clamps a malformed saved bar below 0 to 0 on a match', () => {
+    const result = restoreLearnedBar({
+      savedDogId: 'rex',
+      savedTrickId: 'sitt',
+      savedBar: -10,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(result).toBe(0);
+  });
+});
+
+// ── buildGameSave with active round fields ─────────────────────────────────────
+
+describe('buildGameSave — active round persistence', () => {
+  const baseParams = {
+    profile: newProfile(),
+    roster: [makeDog('rex', ['sitt'])],
+    kennelUpgradeIds: ['kennel-1'],
+    difficultyMode: 'NORMAL' as const,
+    unlockedPhraseIds: ['phrase-a'],
+    prestigePoints: 5,
+    idleTimestamp: 1000000,
+  };
+
+  it('includes activeRoundDogId, activeTrickId, learnedBar when provided', () => {
+    const save = buildGameSave({
+      ...baseParams,
+      activeRoundDogId: 'rex',
+      activeTrickId: 'sitt',
+      learnedBar: 55,
+    });
+    expect(save.activeRoundDogId).toBe('rex');
+    expect(save.activeTrickId).toBe('sitt');
+    expect(save.learnedBar).toBe(55);
+  });
+
+  it('defaults activeRoundDogId to null when not provided', () => {
+    const save = buildGameSave(baseParams);
+    expect(save.activeRoundDogId).toBe(null);
+  });
+
+  it('defaults activeTrickId to null when not provided', () => {
+    const save = buildGameSave(baseParams);
+    expect(save.activeTrickId).toBe(null);
+  });
+
+  it('defaults learnedBar to 0 when not provided', () => {
+    const save = buildGameSave(baseParams);
+    expect(save.learnedBar).toBe(0);
   });
 });

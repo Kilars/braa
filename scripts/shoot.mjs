@@ -11,6 +11,7 @@
  *   --click "<text>"            Click first button containing this text; repeatable
  *   --wait  <ms>                Sleep ms; repeatable
  *   --force "<sel>{<cssDecls>}" Inject !important style; repeatable
+ *   --eval  "<jsExpr>"          Run arbitrary JS in the page (dev hooks/gestures); repeatable
  *   --poll  "<jsExpr>"          waitForFunction(() => <jsExpr>) before shooting
  *   --report "<selector>"       Log textContent + computed opacity; repeatable (output after screenshot)
  *
@@ -73,6 +74,11 @@ for (let i = 0; i < argv.length; i++) {
       actions.push({ type: 'force', value: val });
       i++;
       break;
+    case '--eval':
+      // Run arbitrary JS in the page (e.g. call a dev hook or dispatch a gesture).
+      actions.push({ type: 'eval', value: val });
+      i++;
+      break;
     case '--poll':
       // Store for pre-screenshot waitForFunction; last one wins.
       pollExpr = val;
@@ -108,6 +114,11 @@ for (const action of actions) {
 
     case 'wait':
       await page.waitForTimeout(action.value);
+      break;
+
+    case 'eval':
+      // eslint-disable-next-line no-new-func
+      await page.evaluate(action.value);
       break;
 
     case 'force': {

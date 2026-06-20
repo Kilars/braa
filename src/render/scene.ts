@@ -14,7 +14,8 @@ import { dogPose } from './dogPose';
 import { rewardPulse } from './rewardPulse';
 import { masteryFlourish } from './masteryFlourish';
 import { breedAppearance, type DogAppearance } from './dogAppearance';
-import { setupBackdrop } from './backdrop';
+import { setupBackdrop, applyBackdropTier } from './backdrop';
+import { kennelTier } from './backdropTier';
 import { handAnim, type RewardKind } from './handReward';
 
 // BASE_EMISSIVE is constant; BASE_COLOR is now derived from the breed coat at runtime.
@@ -51,13 +52,19 @@ const MISBEHAVING_EMISSIVE = new Color3(0.2, 0.0, 0.0);  // red glow
  *   - `setBreed(breedId)` — switch the active breed coat + proportions live
  *   - `dispose()` — cleanup
  */
-export function createScene(canvas: HTMLCanvasElement, initialAppearance: DogAppearance = breedAppearance('labrador')): {
+export function createScene(
+  canvas: HTMLCanvasElement,
+  initialAppearance: DogAppearance = breedAppearance('labrador'),
+  initialUpgradeIds: string[] = [],
+): {
   updateDog: (state: RoundState, now: number, opts?: DogVisualOpts) => void;
   setBreed: (breedId: string) => void;
   /** Register a successful mark so the dog plays a brief reward pulse. Replaces (refresh-not-stack). */
   notifyMark: (tier: MarkResult, markAt: number) => void;
   /** Register a mastery event — triggers the bigger/longer hand gesture. */
   notifyMastery: (masteryAt: number) => void;
+  /** Update the backdrop tier live when kennel upgrades are purchased. */
+  setKennelUpgrades: (ids: string[]) => void;
   dispose: () => void;
 } {
   const engine = new Engine(canvas, true, {
@@ -107,7 +114,8 @@ export function createScene(canvas: HTMLCanvasElement, initialAppearance: DogApp
   ground.material = groundMat;
 
   // Training-ground backdrop: sky gradient + ground gradient + vignette + key light
-  setupBackdrop(scene, ground as unknown as { material: StandardMaterial | null }, light);
+  // Pass the initial tier so the scene boots with the correct kennel dressing.
+  setupBackdrop(scene, ground as unknown as { material: StandardMaterial | null }, light, kennelTier(initialUpgradeIds));
 
   // ── Trainer's hand mesh ────────────────────────────────────────────────────
   // Placeholder mitt: palm box + two finger boxes + a small treat sphere, held
@@ -348,6 +356,10 @@ export function createScene(canvas: HTMLCanvasElement, initialAppearance: DogApp
       // Also kick off the dog's mastery flourish (bigger leap + happy spin + fast wag).
       // Replaces any prior masteredAt (refresh-not-stack).
       lastMasteryAt = masteryAt;
+    },
+    /** Update the backdrop live when kennel upgrades change. No scene rebuild. */
+    setKennelUpgrades(ids: string[]): void {
+      applyBackdropTier(scene, kennelTier(ids));
     },
     dispose() {
       window.removeEventListener("resize", onResize);

@@ -25,6 +25,12 @@ export interface GameSave {
   streak: number;
   /** Last day played as YYYY-MM-DD; defaults '' for old saves. */
   lastPlayedYmd: string;
+  /** Dog id of the round in progress, or null if none. Defaults null for old saves. */
+  activeRoundDogId: string | null;
+  /** Trick id of the round in progress, or null if none. Defaults null for old saves. */
+  activeTrickId: string | null;
+  /** Partial learned-bar (0–100) of the in-progress round. Defaults 0 for old saves. */
+  learnedBar: number;
 }
 
 export function serialize(save: GameSave): string {
@@ -46,6 +52,9 @@ export function deserialize(raw: string): GameSave | null {
       bestCombo: parsed.bestCombo ?? 0,
       streak: parsed.streak ?? 0,
       lastPlayedYmd: parsed.lastPlayedYmd ?? '',
+      activeRoundDogId: parsed.activeRoundDogId ?? null,
+      activeTrickId: parsed.activeTrickId ?? null,
+      learnedBar: parsed.learnedBar ?? 0,
     };
   } catch {
     return null;

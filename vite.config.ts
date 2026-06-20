@@ -2,8 +2,15 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // GitHub Pages serves project sites under /<repo>/. The Pages workflow builds
+  // with BASE_PATH="/bra/"; local dev, tests, and the Capacitor wrap stay at "/".
+  base: process.env.BASE_PATH ?? "/",
   test: {
+    // Pure game-logic tests run under fast node; only the DOM-bearing UI layer
+    // (panel factories, hud) opts into jsdom — keeps the core suite quick while
+    // letting src/ui tests exercise real document/element APIs.
     environment: "node",
+    environmentMatchGlobs: [["src/ui/**", "jsdom"]],
     include: ["src/**/*.test.ts"],
     // Compact "dot" output (one char per test) keeps test runs from flooding
     // terminal/agent context; failures are still printed in full. Override with
@@ -23,20 +30,22 @@ export default defineConfig({
         background_color: "#7ec8f0",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        // Relative paths resolve against the manifest URL, so the same manifest
+        // works at root ("/") and under a Pages subpath ("/bra/") without edits.
+        start_url: ".",
         icons: [
           {
-            src: "/icon-192.png",
+            src: "icon-192.png",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/icon-512.png",
+            src: "icon-512.png",
             sizes: "512x512",
             type: "image/png",
           },
           {
-            src: "/icon-512-maskable.png",
+            src: "icon-512-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

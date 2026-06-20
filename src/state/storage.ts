@@ -26,20 +26,32 @@ export class IndexedDbStorage implements Storage {
   private readonly dbName: string;
   private readonly storeName = 'saves';
   private readonly key = 'current';
+  /** Memoised open — the connection lives for the page lifetime and is reused. */
+  private dbPromise: Promise<IDBDatabase> | null = null;
 
   constructor(dbName = 'bra-save') {
     this.dbName = dbName;
   }
 
   private openDb(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onupgradeneeded = () => {
-        request.result.createObjectStore(this.storeName);
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    // Open once and reuse: the game persists on most state changes, so opening a
+    // fresh connection per op churns dozens of IDBDatabase handles per session.
+    // Concurrent first-callers share one in-flight open (no double-open race).
+    // A rejected open is NOT cached — null the memo so a later call can retry.
+    if (!this.dbPromise) {
+      this.dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, 1);
+        request.onupgradeneeded = () => {
+          request.result.createObjectStore(this.storeName);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }).catch((err) => {
+        this.dbPromise = null;
+        throw err;
+      });
+    }
+    return this.dbPromise;
   }
 
   async load(): Promise<GameSave | null> {

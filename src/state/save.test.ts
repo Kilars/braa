@@ -20,6 +20,9 @@ describe('serialize/deserialize round-trip', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const raw = serialize(save);
     const result = deserialize(raw);
@@ -86,6 +89,9 @@ describe('deserialize — backward-compat for difficultyMode', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -124,6 +130,9 @@ describe('deserialize — backward-compat for unlockedPhraseIds', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -167,6 +176,9 @@ describe('deserialize — backward-compat for roster', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -190,6 +202,9 @@ describe('deserialize — backward-compat for muted', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -230,6 +245,9 @@ describe('deserialize — bestCombo round-trip', () => {
       bestCombo: 12,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -289,6 +307,9 @@ describe('deserialize — backward-compat for prestigePoints', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -332,6 +353,9 @@ describe('deserialize — backward-compat for streak + lastPlayedYmd', () => {
       bestCombo: 0,
       streak: 5,
       lastPlayedYmd: '2026-06-14',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     const result = deserialize(serialize(save));
     expect(result).not.toBeNull();
@@ -392,5 +416,56 @@ describe('deserialize — post-cleanup: buildGameSave round-trip without top-lev
     // After cleanup, buildGameSave will not write masteredTrickIds,
     // so the deserialized result should not have it as an own property.
     expect(Object.prototype.hasOwnProperty.call(deserialized, 'masteredTrickIds')).toBe(false);
+  });
+});
+
+// ─── Cycle 86: backward-compat — old saves without active round fields ────────
+
+describe('deserialize — backward-compat for activeRoundDogId, activeTrickId, learnedBar', () => {
+  it('defaults activeRoundDogId to null, activeTrickId to null, learnedBar to 0 for old saves without these fields', () => {
+    const oldSave = JSON.stringify({
+      profile: { coins: 50, xp: 30, level: 1 },
+      masteredTrickIds: [],
+      idleTimestamp: 1718000000000,
+      kennelUpgradeIds: [],
+      difficultyMode: 'NORMAL',
+      roster: [{ id: 'rex', name: 'Rex', breedId: 'labrador', masteredTrickIds: [] }],
+      unlockedPhraseIds: [],
+      prestigePoints: 0,
+      muted: false,
+      bestCombo: 0,
+      streak: 0,
+      lastPlayedYmd: '',
+      // no activeRoundDogId, activeTrickId, or learnedBar
+    });
+    const result = deserialize(oldSave);
+    expect(result).not.toBeNull();
+    expect(result!.activeRoundDogId).toBe(null);
+    expect(result!.activeTrickId).toBe(null);
+    expect(result!.learnedBar).toBe(0);
+  });
+
+  it('round-trips activeRoundDogId, activeTrickId, learnedBar when present', () => {
+    const save: GameSave = {
+      profile: { coins: 0, xp: 0, level: 1 },
+      idleTimestamp: 1718000000000,
+      kennelUpgradeIds: [],
+      difficultyMode: 'NORMAL',
+      roster: [{ id: 'rex', name: 'Rex', breedId: 'labrador', masteredTrickIds: [] }],
+      unlockedPhraseIds: [],
+      prestigePoints: 0,
+      muted: false,
+      bestCombo: 0,
+      streak: 0,
+      lastPlayedYmd: '',
+      activeRoundDogId: 'rex',
+      activeTrickId: 'sitt',
+      learnedBar: 55,
+    };
+    const result = deserialize(serialize(save));
+    expect(result).not.toBeNull();
+    expect(result!.activeRoundDogId).toBe('rex');
+    expect(result!.activeTrickId).toBe('sitt');
+    expect(result!.learnedBar).toBe(55);
   });
 });

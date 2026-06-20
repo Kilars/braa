@@ -10,13 +10,14 @@
     "test:verbose": "vitest run --reporter=verbose",
     "typecheck": "tsc --noEmit",
     "verify": "node scripts/verify.mjs",
-    "e2e": "node e2e/smoke.mjs",
+    "e2e": "node e2e/smoke.mjs && node e2e/full-loop.mjs",
     "cap:sync": "cap sync"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
     "playwright-core": "^1.60.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.12",

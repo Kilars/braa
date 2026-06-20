@@ -14,16 +14,19 @@ import { STARTER_ROSTER } from './state/save';
 import { classifyMark } from './core/mark';
 import { applyMark, isConfused } from './core/session';
 import { comboAfter, comboMultiplier } from './core/combo';
+import { engagement, ENGAGEMENT_FULL, rewardLatencyMs } from './core/engagement';
+import { cycleIndex } from './core/swipeGesture';
 import { BASE_PHRASE, PHRASE_CATALOG, availablePhrases, nextPurchasableEntry, type Phrase } from './core/phrases';
 import { resolvePhraseMark } from './core/markWithPhrase';
 import { RESUME_GRACE_MS, isWithinResumeGrace } from './core/resumeGrace';
 import { MarkAudio } from './audio/markAudio';
+import { dogVisualState } from './render/dogState';
 import { STARTER_BREED, BREED_CATALOG, adoptableBreeds, canAdopt, isBreedLevelLocked, composeDifficulty, type Breed } from './core/breeds';
 import type { Dog } from './core/roster';
 import { recordMastery, addDog } from './core/roster';
-import { STARTER_TRICKS, UNTRAIN_TRICKS, SIGNATURE_TRICKS, tricksForBreed, type Trick } from './core/tricks';
+import { STARTER_TRICKS, UNTRAIN_TRICKS, SIGNATURE_TRICKS, tricksForBreed, graduationTrickIds, type Trick } from './core/tricks';
 import { onboardingStage, untrainTricksUnlocked } from './core/onboarding';
-import { totalMasteredCount, buildSchedulerCfg, boostedDeltas, buildGameSave } from './app/gameHelpers';
+import { totalMasteredCount, buildSchedulerCfg, boostedDeltas, buildGameSave, restoreLearnedBar, BASE_SCHEDULER_TIMING } from './app/gameHelpers';
 import { updateStreak } from './core/streak';
 import { ACHIEVEMENTS, unlockedAchievements } from './core/achievements';
 
@@ -47,8 +50,7 @@ let difficulty = effectiveDifficulty(MODE);
 let roundDifficulty: EffectiveDifficulty = difficulty; // starts as plain difficulty (no trick selected yet)
 
 let SCHEDULER_CFG: SchedulerConfig = {
-  attemptInterval: 2000,  // 2 s between correct attempts
-  activeSpan: 800,        // behavior visible for 800 ms
+  ...BASE_SCHEDULER_TIMING,
   ...difficulty.scheduler,
   distractorRate: 0,      // gated to 0 until onboarding reveals distractors (see buildSchedulerCfg)
 };
@@ -83,6 +85,38 @@ void (async () => {
   let streak = 0;
   let lastPlayedYmd = '';
 
+  // Active-round snapshot from the loaded save — used once on round-start to resume.
+  // These are read-only once captured; the live state is tracked in activeRoundDogId / activeRoundTrickId below.
+  let savedActiveRoundDogId: string | null = null;
+  let savedActiveTrickId: string | null = null;
+  let savedLearnedBar: number = 0;
+
+  // Live tracking of the in-progress round; null when on the select screen.
+  let activeRoundDogId: string | null = null;
+  let activeRoundTrickId: string | null = null;
+
+  // Bootstrap save: snapshots the shared state during load (idle-income reset and
+  // streak update). Distinct from persist() — it runs before markAudio/round state
+  // exist, so it uses savedMuted and never carries active-round fields. Reads the
+  // mutable bootstrap locals at call time, so it always saves the latest values.
+  function persistBootstrap(): void {
+    storage.save(buildGameSave({
+      profile,
+      roster,
+      kennelUpgradeIds,
+      difficultyMode: MODE,
+      unlockedPhraseIds,
+      prestigePoints,
+      idleTimestamp: Date.now(),
+      muted: savedMuted,
+      bestCombo,
+      streak,
+      lastPlayedYmd,
+    })).catch(() => {
+      // save failure is non-fatal
+    });
+  }
+
   try {
     const save = await storage.load();
     if (save?.profile) {
@@ -101,6 +135,10 @@ void (async () => {
       // Restore streak state from save
       streak = save.streak ?? 0;
       lastPlayedYmd = save.lastPlayedYmd ?? '';
+      // Capture the in-progress round snapshot (new fields; null/0 for old saves)
+      savedActiveRoundDogId = save.activeRoundDogId ?? null;
+      savedActiveTrickId = save.activeTrickId ?? null;
+      savedLearnedBar = save.learnedBar ?? 0;
       // Use composeDifficulty so the active dog's breed is factored in on load
       difficulty = composeDifficulty(MODE, getActiveBreed());
       // roundDifficulty stays as plain difficulty until a trick is selected
@@ -113,22 +151,7 @@ void (async () => {
       if (earned > 0) {
         profile = award(profile, { coins: earned, xp: 0 }, 1);
         // Persist the reset timestamp immediately so re-loading doesn't double-grant
-        const resetSave = buildGameSave({
-          profile,
-          roster,
-          kennelUpgradeIds,
-          difficultyMode: MODE,
-          unlockedPhraseIds,
-          prestigePoints,
-          idleTimestamp: Date.now(),
-          muted: savedMuted,
-          bestCombo,
-          streak,
-          lastPlayedYmd,
-        });
-        storage.save(resetSave).catch(() => {
-          // save failure is non-fatal
-        });
+        persistBootstrap();
       }
     }
   } catch {
@@ -143,21 +166,7 @@ void (async () => {
     streak = updated.streak;
     lastPlayedYmd = updated.lastPlayedYmd;
     // Persist the updated streak immediately
-    storage.save(buildGameSave({
-      profile,
-      roster,
-      kennelUpgradeIds,
-      difficultyMode: MODE,
-      unlockedPhraseIds,
-      prestigePoints,
-      idleTimestamp: Date.now(),
-      muted: savedMuted,
-      bestCombo,
-      streak,
-      lastPlayedYmd,
-    })).catch(() => {
-      // save failure is non-fatal
-    });
+    persistBootstrap();
   }
 
   // ── Timeline helpers ──────────────────────────────────────────────────────
@@ -189,6 +198,24 @@ void (async () => {
   // ── Combo state ───────────────────────────────────────────────────────────
   let combo = 0;
 
+  // ── Engagement meter (0..1) ───────────────────────────────────────────────
+  // The dog's eagerness this round: good marks refill it, sloppy/false marks
+  // drain it (src/core/engagement.ts). A transient session feel — like combo,
+  // it is not persisted; every fresh round starts with an eager dog.
+  let engagementMeter = ENGAGEMENT_FULL;
+
+  // ── BRA press disambiguation (tap vs phrase-swipe) ────────────────────────
+  // The press records its instant on pointerdown; the mark only commits on
+  // pointerup IF the gesture wasn't a horizontal swipe (which swaps the phrase
+  // instead). Scoring still uses this recorded pointerdown instant, so swipe
+  // support never adds latency to the timing tap. null = no press in flight.
+  let pendingDownAt: number | null = null;
+
+  // ── Idle-pant throttle ────────────────────────────────────────────────────
+  // Foley pant plays at most once per PANT_INTERVAL_MS while the dog is idle.
+  const PANT_INTERVAL_MS = 7000;
+  let lastPantAt = -Infinity;
+
   // ── Phrase state ──────────────────────────────────────────────────────────
   // Start on BASE_PHRASE; after loading save, loadedPhrase is the first available.
   let loadedPhrase: Phrase = BASE_PHRASE;
@@ -209,6 +236,7 @@ void (async () => {
   });
 
   function persist(): void {
+    const inRound = appState === 'training' && activeRoundDogId !== null && activeRoundTrickId !== null;
     storage.save(buildGameSave({
       profile,
       roster,
@@ -221,17 +249,20 @@ void (async () => {
       bestCombo,
       streak,
       lastPlayedYmd,
+      activeRoundDogId: inRound ? activeRoundDogId : null,
+      activeTrickId: inRound ? activeRoundTrickId : null,
+      learnedBar: inRound ? state.session.learned : 0,
     })).catch(() => {
       // save failure is non-fatal
     });
   }
 
-  /** Cycle loadedPhrase to the next available phrase (wraps around). */
-  function cyclePhrase(): void {
+  /** Cycle loadedPhrase to the next/previous available phrase (wraps around). */
+  function cyclePhrase(dir: 'next' | 'prev' = 'next'): void {
     const available = availablePhrases(profile, unlockedPhraseIds);
     if (available.length <= 1) return;
     const idx = available.findIndex(p => p.id === loadedPhrase.id);
-    loadedPhrase = available[(idx + 1) % available.length];
+    loadedPhrase = available[cycleIndex(Math.max(0, idx), available.length, dir)];
     lastUsedAt = null; // reset cooldown on switch
   }
 
@@ -272,6 +303,7 @@ void (async () => {
     prevMastered = false;
     prevConfused = false;
     combo = 0;
+    engagementMeter = ENGAGEMENT_FULL;
   }
 
   function regenerateTimeline(now: number): void {
@@ -319,10 +351,26 @@ void (async () => {
 
   // ── HUD ───────────────────────────────────────────────────────────────────
   const { renderTraining, showSelect, showTraining, applyRevealed, showLoading, hideLoading, celebrate } = createHud({
-    onBraTap() {
+    // The BRA marker is press-then-release so a horizontal swipe can swap the phrase
+    // (specs §Marker Phrases) without ever firing a stray mark. The press instant is
+    // recorded here; the mark commits on release only if it wasn't a swipe.
+    onBraTapDown() {
       ensureAmbient();
+      pendingDownAt = performance.now();
+    },
+    // A horizontal swipe consumed the press → swap the loaded phrase, never mark.
+    onSwapPhrase(dir: 'next' | 'prev') {
+      pendingDownAt = null;
+      cyclePhrase(dir);
+    },
+    onBraTapCommit() {
+      const downAt = pendingDownAt;
+      pendingDownAt = null;
+      if (downAt === null) return;
       if (appState !== 'training') return;
-      const now = performance.now();
+      // Score using the *pointerdown* instant, not release — swipe support adds no
+      // latency to the timing tap (the whole game is precise timing).
+      const now = downAt;
       // Mobile grace: swallow stray taps right after returning from background
       // (notification dismiss / lock wake / fat-finger) so they never false-mark + confuse.
       if (isWithinResumeGrace(now, resumedAt, RESUME_GRACE_MS)) return;
@@ -343,19 +391,29 @@ void (async () => {
       combo = comboAfter(combo, result);
       // Track all-time best combo
       bestCombo = Math.max(bestCombo, combo);
+      // Drain/refill the engagement meter: precise marks keep the dog eager,
+      // sloppy/false marks bore it (drives the HUD mood meter + disengage beat).
+      engagementMeter = engagement(engagementMeter, { kind: 'mark', result });
+      // "Slow rewards drain it" (spec §Mistakes): on a real reward (PERFECT/OK), how
+      // promptly the player marked the apex also nudges engagement. Pure timing —
+      // no dog clips, so this is unblocked (corrects 098's over-broad 079 deferral).
+      if ((result === 'PERFECT' || result === 'OK') && attempt) {
+        engagementMeter = engagement(engagementMeter, {
+          kind: 'reward',
+          latencyMs: rewardLatencyMs(now, attempt.peak),
+        });
+      }
       if (fired && loadedPhrase.cooldownMs > 0) {
         lastUsedAt = now;
       }
       markAudio.play(result);
+      if (result === 'FALSE_MARK') markAudio.playFoley('false-huff');
       // Notify the 3D scene on every successful mark so the dog gives a brief
       // reward pulse (bounce + tail flick). PERFECT pops more than OK (per D8).
       // Subsequent calls REPLACE the stored mark (refresh-not-stack).
       if (result === 'PERFECT' || result === 'OK') {
         sceneApi?.notifyMark(result, now);
       }
-    },
-    getPhrase() {
-      return { phrase: loadedPhrase, lastUsedAt };
     },
     onSelectMode(mode: DifficultyMode) {
       setMode(mode);
@@ -374,7 +432,24 @@ void (async () => {
       roundDifficulty = applyTrickProfile(difficulty, trick);
       SCHEDULER_CFG = buildSchedulerCfg(totalMasteredCount(roster), roundDifficulty);
       appState = 'training';
+      // Track the in-progress round so persist() can snapshot it
+      activeRoundDogId = activeDogId;
+      activeRoundTrickId = trick.id;
       startFreshRound(performance.now());
+      // Resume partial learned-bar from save — only for tricks not already mastered
+      // (re-practice always starts fresh). restoreLearnedBar returns 0 on any mismatch.
+      if (!wasAlreadyMastered) {
+        const resumedBar = restoreLearnedBar({
+          savedDogId: savedActiveRoundDogId,
+          savedTrickId: savedActiveTrickId,
+          savedBar: savedLearnedBar,
+          startDogId: activeDogId,
+          startTrickId: trick.id,
+        });
+        if (resumedBar > 0) {
+          state = { ...state, session: { ...state.session, learned: resumedBar } };
+        }
+      }
       showTraining(trick.name);
       // Show loading indicator only if the scene is not yet ready
       if (sceneApi === null) {
@@ -450,6 +525,8 @@ void (async () => {
       if (!updated) return; // guard: insufficient coins
       profile = updated;
       kennelUpgradeIds = [...kennelUpgradeIds, upgradeId];
+      // Update the backdrop tier live — no reload needed
+      sceneApi?.setKennelUpgrades(kennelUpgradeIds);
       persist();
     },
     // Phrase loadout switcher callbacks
@@ -479,12 +556,12 @@ void (async () => {
     canGraduateActiveDog() {
       const dog = roster.find(d => d.id === activeDogId);
       if (!dog) return false;
-      return canGraduate(dog, STARTER_TRICKS.map(t => t.id));
+      return canGraduate(dog, graduationTrickIds(getActiveBreed()));
     },
     onGraduate() {
       const dog = roster.find(d => d.id === activeDogId);
       if (!dog) return;
-      if (!canGraduate(dog, STARTER_TRICKS.map(t => t.id))) return;
+      if (!canGraduate(dog, graduationTrickIds(getActiveBreed()))) return;
       prestigePoints += PRESTIGE_PER_GRADUATION;
       roster = roster.map(d => d.id === activeDogId ? graduate(d) : d);
       persist();
@@ -505,15 +582,11 @@ void (async () => {
       location.reload();
     },
     getStats() {
-      const tricksMastered = roster.reduce(
-        (sum, dog) => sum + dog.masteredTrickIds.length,
-        0,
-      );
       return {
         prestigePoints,
         coins: profile.coins,
         level: profile.level,
-        tricksMastered,
+        tricksMastered: totalMasteredCount(roster),
         streak,
       };
     },
@@ -544,6 +617,7 @@ void (async () => {
 
       // Play mastery jingle (ascending arpeggio reward)
       markAudio.playMastery();
+      markAudio.playFoley('mastery-bark');
 
       // Fire celebratory visual burst (CSS-only, transient, pointer-events:none)
       celebrate();
@@ -554,8 +628,11 @@ void (async () => {
       // New mastery pays full; re-practicing an already-mastered trick pays the reduced
       // income floor (reduced coins, no XP) — keeps unlock-gating skill-driven.
       profile = wasAlreadyMastered
-        ? completePractice(profile, MODE, kennelMultiplier(kennelUpgradeIds), prestigePoints)
-        : completeMastery(profile, MODE, kennelMultiplier(kennelUpgradeIds), prestigePoints);
+        ? completePractice(profile, MODE, kennelMultiplier(kennelUpgradeIds), prestigePoints, activeTrick)
+        : completeMastery(profile, MODE, kennelMultiplier(kennelUpgradeIds), prestigePoints, activeTrick);
+      // Clear the in-progress round snapshot so the mastered trick doesn't resume
+      activeRoundDogId = null;
+      activeRoundTrickId = null;
       persist();
 
       // Re-evaluate onboarding stage after mastery — may reveal new systems
@@ -594,7 +671,16 @@ void (async () => {
       }
     }
 
-    const vm = toViewModel(state, now, profile, roundDifficulty.tellIntensity, combo);
+    // Soft idle pant — only while the dog is genuinely idle (waiting), infrequent.
+    if (now - lastPantAt > PANT_INTERVAL_MS) {
+      const visual = dogVisualState(state, now, { trickId: activeTrick.id, untrain: activeTrick.untrain });
+      if (visual === 'idle') {
+        markAudio.playFoley('idle-pant');
+        lastPantAt = now;
+      }
+    }
+
+    const vm = toViewModel(state, now, profile, roundDifficulty.tellIntensity, combo, engagementMeter);
     renderTraining(vm);
     if (sceneApi) sceneApi.updateDog(state, now, {
       trickId: activeTrick.id,
@@ -611,13 +697,29 @@ void (async () => {
   // Start in select state
   showSelect();
 
+  // ── Dev-only test hook ────────────────────────────────────────────────────
+  // Exposes a minimal read-only API on window.__bra for e2e tests.
+  // Gated to DEV builds only — absent from production bundles (tree-shaken by Vite).
+  // Cast import.meta to access Vite's env extension without requiring vite/client types.
+  const importMetaEnv = (import.meta as unknown as { env: { DEV?: boolean } }).env;
+  if (importMetaEnv.DEV) {
+    (window as unknown as Record<string, unknown>)['__bra'] = {
+      /** Current coin balance (read-only). */
+      coins: () => profile.coins,
+      /** Current app screen: 'select' | 'training'. */
+      screen: () => appState,
+      /** Current learned-bar value (0–100). */
+      learnedBar: () => state.session.learned,
+    };
+  }
+
   // Kick off Babylon scene import in the background — non-blocking.
   // The app always passes through select before training, so this resolves
   // well before the first trick is picked. Guard every updateDog call in
   // case training somehow starts before the import resolves.
   import('./render/scene').then(mod => {
     // Pass the active breed's appearance so the dog renders with the right coat on load
-    sceneApi = mod.createScene(canvas, breedAppearance(getActiveBreed().id));
+    sceneApi = mod.createScene(canvas, breedAppearance(getActiveBreed().id), kennelUpgradeIds);
     // Dev/screenshot hook — allows headless scripts to switch breed without UI interaction.
     // Safe to ship: no-ops in production if never called; no security surface.
     (window as unknown as Record<string, unknown>)['__setBreed'] = (id: string) => sceneApi?.setBreed(id);
@@ -640,6 +742,28 @@ void (async () => {
       const now = performance.now();
       if (kind === 'mastery') sceneApi?.notifyMastery(now);
       else sceneApi?.notifyMark('PERFECT', now);
+    };
+    // Dev/screenshot hook — drive the kennel-tier backdrop (task 095) without
+    // having to earn coins and buy upgrades, so visual-review scripts can capture
+    // the training ground at any tier. Pass the owned-upgrade ids; the backdrop
+    // updates live. No-op outside dev use; no security surface.
+    (window as unknown as Record<string, unknown>)['__setKennelUpgrades'] = (ids: string[]) => {
+      kennelUpgradeIds = [...ids];
+      sceneApi?.setKennelUpgrades(kennelUpgradeIds);
+    };
+    // Dev/screenshot hook — force the engagement meter to any 0..1 level so
+    // visual-review scripts can capture the mood meter at each disengage beat
+    // (engaged → itch → flop → bark → walk-off) without grinding bad marks.
+    // No-op outside dev use; no security surface.
+    (window as unknown as Record<string, unknown>)['__setEngagement'] = (level: number) => {
+      engagementMeter = Math.max(0, Math.min(1, level));
+    };
+    // Dev/screenshot hook — unlock every phrase and raise the level past all gates so
+    // more than one phrase is available, surfacing the BRA swipe affordance (task 099)
+    // for visual review without grinding coins/levels. No-op outside dev use.
+    (window as unknown as Record<string, unknown>)['__forcePhrases'] = () => {
+      profile = { ...profile, level: 9 };
+      unlockedPhraseIds = PHRASE_CATALOG.map(e => e.phrase.id).filter(id => id !== BASE_PHRASE.id);
     };
     // Hide the loading indicator now that the scene is ready
     hideLoading();

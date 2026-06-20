@@ -101,7 +101,10 @@ try {
     await page.evaluate(() => {
       const btn = document.querySelector('#hud-bra-btn');
       if (btn) {
+        // BRA is now press-then-release: the mark commits on pointerup (so a swipe
+        // can swap the phrase instead). A zero-movement down→up is a tap.
         btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+        btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
       }
     });
 

@@ -69,6 +69,48 @@ Implemented in `src/render/backdrop.ts` (called from `scene.ts`):
 - Per-frame cost: two extra quad draw calls (sky plane + ground) + the shell. All
   textures drawn once at init. No post-processing. Safe on mobile.
 
+## 2c. Rendering — Kennel-Tier Backdrop Upgrades (DECIDED, 2026-06-17, task 095)
+
+**Four visual tiers (0–3) keyed to the count of owned kennel upgrades; props are
+low-poly Babylon primitives placed at the scene edges.**
+
+Implementation in `src/render/backdropTier.ts` (pure, fully tested) +
+`src/render/backdrop.ts` (`applyBackdropTier`) + `src/render/scene.ts`
+(`setKennelUpgrades` handle method) + `src/main.ts` (initial pass + purchase hook).
+
+### Tier → visual mapping
+
+| Tier | Owned upgrades | What it adds vs. previous tier |
+|------|---------------|--------------------------------|
+| 0 | 0 | Bare ground + sky (existing backdrop) |
+| 1 | 1 (`treats-pouch`) | 2 small bush spheres at far back corners; slightly brighter/greener fill |
+| 2 | 2 (`clicker-pro`) | 2 more mid-edge bushes + agility props: cone pair + low jump-bar on the left edge |
+| 3 | 3 (`training-dummy`) | 3 far-back bushes + fence-line (3 segments across the background); warmest fill |
+
+### Design decisions
+
+- **Pure tier resolution**: `kennelTier(ids)` in `backdropTier.ts` (no Babylon
+  import) counts distinct valid upgrade ids, clamps to [0,3], ignores unknown ids.
+  Fully unit-tested (19 tests). `backdropTierConfig(tier)` returns a config with
+  monotonically non-decreasing `lushness` scalar plus per-tier prop counts and
+  light-intensity deltas.
+- **Props are static primitives**: bush spheres (5 segments), cones (tessellation 8),
+  cylinders, boxes. No textures, no animation, no motion cues — `prefers-reduced-motion`
+  is unaffected. All props use `disableLighting = true` so they read as flat-colour
+  silhouettes consistent with the backdrop aesthetic.
+- **Edge placement**: all props are at |x| ≥ 2.2 or |z| ≤ −1.5 (back half of the
+  10×10 ground), keeping the centred dog framing zone (D12) clear. The jump-bar
+  group is the closest — its nearest edge is at x = −2.2, well clear of the dog at x ≈ 0.
+- **Live update, no rebuild**: `ensureTierProps(scene)` creates all prop meshes once
+  (disabled) into a module-level `Map`. `applyBackdropTier(scene, tier)` only
+  calls `setEnabled(true/false)` and bumps the hemi-light intensity by `cfg.fillBoost`
+  — no mesh allocation per call, no per-frame cost.
+- **Bootstrap tier**: `createScene(canvas, appearance, initialUpgradeIds)` resolves the
+  initial tier and passes it to `setupBackdrop`, so a returning player sees the
+  correct park immediately without any post-init call.
+- **Save schema**: unchanged — tier is always derived from the existing
+  `kennelUpgradeIds` string array; no new fields.
+
 ## 3. 3D-on-Mobile Cost (flagged)
 
 Semi-realistic, breed-recognizable 3D models + per-breed signature animations is
@@ -97,6 +139,140 @@ so the app stays shippable throughout. Vertical slice (Labrador) first, then sca
 
 The chosen model's link / license / format / tri count will be recorded here by
 task `077` once selected and approved.
+
+### 3a. Candidate shortlist (task 077, 2026-06-17) — RESOLVED (purchased + dropped; see §3b/§3c)
+
+Research done against the §3/077 selection criteria (glTF/.glb, shared rigged
+canine skeleton supporting our pose channels, clean UVs for per-breed coat swaps,
+~10–30k-tri mobile budget, and a license that permits **commercial use +
+modification + redistribution inside a compiled app**). License terms below were
+verified via vendor docs where noted; **exact price / tri-count / per-model rig
+fitness must be re-confirmed on the listing at point of purchase** (not asserted
+here, to avoid stale specifics).
+
+**Assets-location convention (decided here):** imported models live in
+`public/models/` and load at runtime from `/models/<file>.glb` (Vite serves
+`public/` at web root; Babylon's `SceneLoader` reads that URL). **Do not commit a
+paid asset until its license is recorded in this section.** A CC0 asset may be
+committed freely.
+
+| # | Source | Role | License (verified) | Look | Notes |
+|---|--------|------|--------------------|------|-------|
+| 1 | **TurboSquid** rigged dog, *Royalty-Free* license | **Final look (Track B)** | RF **allows use inside a compiled mobile game**; **forbids redistributing the raw model file** ([TurboSquid RF FAQ](https://www.turbosquid.com/help/en/articles/9937423-royalty-free-license-faq)) | Semi-realistic — matches the Pokémon-GO ceiling | Often FBX/OBJ → convert to `.glb` via Blender; verify rig covers sit/lie/spin/roll + head channels before buying |
+| 2 | **CGTrader** rigged dog, *Royalty-Free* (exclude "Editorial only") | Paid fallback to #1 | Royalty-Free, redistribution-in-app — **verify exact per-listing terms** ([CGTrader dog-rig](https://www.cgtrader.com/3d-models/dog-rig)) | Semi-realistic options exist | Some listings ship glTF natively (no convert step) |
+| 3 | **Quaternius** CC0 dog (LowPoly Animated Animals / Universal Animation Library) | **De-risk placeholder (Track A)** | **CC0** — commercial, modify, redistribute, **no attribution** ([Quaternius](https://quaternius.com/)) | Stylized low-poly (below the ceiling) | Rigged + animated, glTF available — proves the pipeline at **zero cost/legal risk** |
+
+**Recommendation — two-track (HISTORICAL — both tracks now executed; see §3b/§3c):**
+
+- **Track A (de-risk now, free):** stage a **Quaternius CC0** dog as
+  `public/models/dog.glb` to prove the `078` loader + `079` imported-`DogMesh`
+  slice end-to-end **with real Visual Review at zero cost and zero legal risk**.
+  CC0 means no money/likeness/attribution gate — it validates the whole pipeline
+  behind the (default-off) flag before any purchase.
+- **Track B (final look — the chosen, now-purchased track):** a
+  **semi-realistic Royalty-Free** rigged dog for the shipped aesthetic, dropped in
+  behind the **same `DogMesh` seam**. Executed via the Dogs Big Pack Labrador (§3b/§3c).
+
+Rationale (as recorded at decision time): this unblocked engineering immediately
+without spending money, while the money/likeness decision stayed with the owner.
+Outcome: the owner went straight to Track B and purchased the Labrador (§3b).
+
+**Escalation to owner — RESOLVED (2026-06-19):** the owner approved committing the
+CC0 placeholder (done), chose and purchased the realistic Labrador (§3b), and dropped
+the asset (`Labrador_FBX.rar`, §3c). The distribution / raw-`.glb` licensing question
+is settled by the PWA-first + pack-on-web stance (§3d).
+
+**Status:** research, shortlist, purchase, and file-drop all complete. The **one
+remaining step before the licensed model renders is converting the FBX → `.glb`** (see
+§3c; `public/models/dog.glb` is still the CC0 placeholder). `078`'s pure load-decision
+core (`selectDogRenderMode` + `resolveLoadState` + default-off `renderConfig` flag) was
+landed test-first, so the loader/scene glue is a drop-in once the converted glb exists.
+
+### 3b. Owner decision (2026-06-19): buy "Dogs Big Pack" Labrador ($30), realistic track
+
+After an in-engine **bake-off** (free candidates rendered in the real scene/lighting:
+Quaternius/Poly-Pizza low-poly + Objaverse high-poly), the owner judged low-poly
+"too basic" and chose the **realistic** track. Concrete pick:
+
+- **Pack:** **Dogs Big Pack** (CGTrader / Sketchfab Store / Fab) — Royalty-Free (no-AI).
+  19 realistic PBR breeds × 3 colours, **100+ animations** (incl. literal `sit` /
+  `lie` / `sleep` / `bark` / `idle` that map onto Sitt/Ligg + dog states), **mobile
+  model 2,500–3,500 tris + 4 LODs**, 2048 PBR maps. Breeds cover **4/5** of ours
+  (Labrador, Border Collie, French Bulldog, Husky); **no Poodle** → Puddel needs a
+  substitute/restyle later.
+- **Scope approved now:** **one breed — Labrador, $30** (vertical slice first). Buy the
+  rest only after the slice passes Visual Review in motion.
+- **Format:** ships FBX/OBJ/BLEND (no native glb) → **convert FBX → glb in Blender**,
+  stage at `public/models/dog.glb`.
+- **Human gate — purchase + drop DONE (2026-06-19):** the owner bought the pack and
+  dropped the FBX (`Labrador_FBX.rar` at repo root, see §3c). **Remaining step: convert
+  FBX → glb** and stage at `public/models/dog.glb`; then wire/review (078/079).
+- **⚠️ License reality (cross-vendor, newly confirmed):** every paid RF/Asset-Store
+  license forbids end-users **extracting the raw file**. Native (Capacitor) bundle =
+  clean; raw **web-PWA** serving the `.glb` = the gray area. PWA scope for the licensed
+  model is an open owner call; the **CC0 placeholder** below is unaffected.
+- **Placeholder staged (done):** a **CC0** dog is at `public/models/dog.glb`
+  (see [`public/models/CREDITS.md`](../public/models/CREDITS.md)) to prove the pipeline.
+- **Loader/scene wiring (078 glue + 079 imported `DogMesh`): NOT YET BUILT** — deferred
+  at the owner's request (2026-06-19). The pure cores already exist; the glTF-loader
+  dependency, async `loadDogModel`, `createImportedDogMesh`, and `scene.ts` wiring + the
+  Visual Review are still to do. Flag stays default-OFF, so the app is unchanged today.
+
+### 3c. Asset received (2026-06-19): `Labrador_FBX.rar` (Dogs Big Pack — Labrador)
+
+The owner purchased + dropped the Labrador. Archive at repo root: **`Labrador_FBX.rar`**
+(22 MiB, RAR5, 111 MiB uncompressed). Confirmed Dogs Big Pack structure. Manifest:
+
+| File | Size | Role for us |
+|------|------|-------------|
+| `Labrador.fbx` | 707 KB | base desktop mesh (static) |
+| `Labrador_anim_IP.fbx` | 52 MB | **animated — In-Place.** ✅ the source we want — the dog trains stationary, so In-Place (not Root-Motion) clips are correct |
+| `Labrador_anim_RM.fbx` | 52 MB | animated — Root-Motion (locomotion travels; not needed here) |
+| `Labrador_LOD.fbx` | 1.7 MB | LOD chain (4 levels) |
+| `Labrador_LowPoly.fbx` | 249 KB | **mobile-budget mesh** (~2.5–3.5k tris) — ✅ primary candidate for the PWA/Capacitor build |
+| `Labrador_NoAlpha.fbx` | 681 KB | coat variant without alpha-mask texture |
+| `Import_settings/` | — | vendor screenshots: Blender / Maya / C4D FBX import settings (use for the convert step) |
+
+**Pending conversion (when the build resumes):** extract → in Blender, import
+`Labrador_anim_IP.fbx` (+ `Labrador_LowPoly` for the mobile mesh) using the supplied
+`Import_settings/Blender_*` references → export **glb** (mesh + skeleton + the In-Place
+animation groups) → stage at `public/models/dog.glb`, replacing the CC0 placeholder.
+Then flip `renderConfig.importedDog` on only after the Labrador slice passes Visual Review.
+
+**Licensing reminder (still applies — see §3b):** Royalty-Free / no-AI. Fine bundled in
+the compiled Capacitor app; the raw-`.glb`-in-a-web-PWA extraction question is unresolved
+and must be decided before the licensed model ships on web. `Labrador_FBX.rar` and any
+converted `.glb` of it are the **paid asset** — do NOT treat them like the CC0 placeholder
+(e.g. mind what gets served fetchable in the web build).
+
+### 3d. Distribution stance (2026-06-19): PWA-first; pack/encrypt the licensed model on web
+
+Owner preference: **ship browser-based (PWA) first** — instant updates, one codebase, no
+App-Store/Play-Store signing + review overhead. This matches the existing architecture
+(CLAUDE.md: client-only PWA; Capacitor is an *optional* later wrapper for store presence).
+
+Consequence for the paid Labrador's "no raw-file extraction" clause (§3b), which bites
+**only on web**: the agreed mitigation is to **pack/encrypt the licensed `.glb`** so it is
+not served as a plain open-format file — decrypt in memory at load time. This satisfies the
+"not redistributed in an open format" letter of the RF license while keeping the realistic
+dog on the preferred web build. (The clause's real intent is to stop asset *resale*, not
+browser caching; packing addresses the letter, and practical risk for an indie PWA is low.)
+
+**TODO when wiring the real model:** add the pack/decrypt step to the load path (`078`
+`loadDogModel`) for the licensed `.glb` only; the CC0 placeholder needs no packing. A later
+Capacitor native build can bundle the model compiled and skip packing entirely.
+
+## 3e. UI test harness — jsdom for `src/ui/**` only (DECIDED, 2026-06-19, task 101)
+
+The pure game-logic suite runs under Vitest's fast `node` environment. The DOM-bearing
+UI layer (the five panel factories + future `hud` tests) needs a real `document`, so
+`vite.config.ts` adds `test.environmentMatchGlobs: [["src/ui/**", "jsdom"]]` — node stays
+the default; only `src/ui/**` opts into jsdom (`jsdom` is a dev dependency). Per-file
+`// @vitest-environment jsdom` docblocks make the env explicit at the top of each UI test.
+Task 101 added behavior tests for `adoptPanel` / `kennelPanel` / `settingsPanel` /
+`helpPanel` / `achievementsPanel` (24 tests) through their public `PanelHandle` (gate
+legibility classes, buy/adopt/reset flows, open/close, list re-render) — characterization
+of current behavior, asserting observable DOM not internals so they survive refactors.
 
 ## 4. Marker Voice ("sound like Maren") (flagged)
 
@@ -139,15 +315,11 @@ behaviors.
 
 ## 7. Phrase Loadout UI + Trade-off Model (from spec review)
 
-Two phrase questions are deliberately deferred:
-
-- **Loadout/selection UI:** spec commits to "no extra buttons" — load a phrase
-  outside the round, or swipe the BRA marker to swap. Pick and prototype one;
-  confirm it never competes with the timing tap.
-- **Trade-off model:** with few phrases early, a strict "fire strongest on
-  cooldown" rotation is harmless. Once the catalog grows, stronger phrases need a
-  real upside+downside (e.g. +reward / −window) or situational specialism so
-  loading is a genuine choice. Decide the model before authoring many phrases.
+- **Loadout/selection UI:** DECIDED (2026-06-19, task 099) — **both** spec-named
+  selection paths now exist and neither competes with the timing tap: the bottom-left
+  **loadout chip** (tap to cycle, already shipped) **and** **swipe the BRA marker** to
+  swap (new). See §7q below.
+- **Trade-off model:** DECIDED (2026-06-17, task 087) — see §7p below.
 
 ## 8. Tuning Targets — Audited Constant Table (iteration 11, 2026-06-14)
 
@@ -289,6 +461,72 @@ been validated by playtest. The table is the single reference for future tuning.
 | SUPER_PHRASE `unlockCost` | 275 coins | phrases.ts | Shop price to unlock | **APPLIED §7n** |
 | SUPER_PHRASE `unlockLevel` | 3 | phrases.ts | Requires player level 3 | Locks until 300 XP |
 
+### 7p. Phrase Trade-off Model — DECIDED (2026-06-17, task 087)
+
+**Model:** each phrase's `peakRadiusPenaltyMs` shrinks the PERFECT band
+(`peakRadius`) when `applyPhraseToAttempt` is called, clamped to a positive
+floor (`PEAK_RADIUS_FLOOR_MS = 20 ms`) so PERFECT stays achievable.
+
+```
+peakRadius_effective = max(20, attempt.peakRadius − phrase.peakRadiusPenaltyMs)
+```
+
+The outer scoring window (`windowBonusMs`) is unchanged — stronger phrases still
+widen it. The downside is exclusively in the PERFECT sub-band: a bigger reward
+multiplier demands tighter peak timing (*precision-for-payout*). `BASE_PHRASE`
+(`bra`) keeps `peakRadiusPenaltyMs: 0` and is never penalised.
+
+**Per-phrase values (all tunable):**
+
+| Phrase | `peakRadiusPenaltyMs` | Rationale |
+|--------|-----------------------|-----------|
+| bra (base) | 0 | Neutral default; always available, no penalty |
+| flink | 0 | Onboarding-gentle; first purchase should feel like a win |
+| dyktig | 25 | Small penalty; noticeable but not punishing |
+| super | 40 | Medium penalty; genuine skill check for the +20% reward |
+| kjempebra | 65 | Largest penalty; +30% reward requires near-floor precision at NORMAL peakRadius |
+
+At NORMAL `peakRadius = 80 ms`: kjempebra leaves `max(20, 80-65) = 20 ms` — still
+hittable but very tight. At HARD `peakRadius = 50 ms`: kjempebra leaves
+`max(20, 50-65) = 20 ms`. At EXPERT `peakRadius = 25 ms`: kjempebra leaves
+`max(20, 25-65) = 20 ms` (floor). The floor ensures PERFECT is never locked out.
+
+Resolves the open "trade-off model" design item in §7. Values are conservative
+placeholders — adjust after playtesting.
+
+### 7q. Phrase Swipe-to-Swap on the BRA Marker — DECIDED (2026-06-19, task 099)
+
+Implements the spec's second named phrase-selection gesture (specs §Marker Phrases:
+"swapped by swiping the BRA marker itself; the round is still one tap"). Closes the
+open "loadout/selection UI" item in §7.
+
+**Pure core (`src/core/swipeGesture.ts`, TDD, 10 tests):**
+- `classifySwipe(dx, dy, threshold = 40px)` → `{type:'tap'}` unless the press travels
+  **≥ threshold horizontally AND horizontal travel dominates vertical**, then
+  `{type:'swipe', dir}` (swipe-left = `next`, swipe-right = `prev`). A wobble or a
+  vertical drag stays a tap, so the timing mark is never lost to an accidental swipe.
+- `cycleIndex(current, length, dir)` — wrap-around index step; no-op for length ≤ 1.
+
+**The timing tradeoff (the one real risk, and its resolution):** the BRA marker is now
+**press-then-release**. `pointerdown` records the press instant (`onBraTapDown` →
+`pendingDownAt`); the mark **commits on `pointerup`/`pointercancel`** — but only if the
+gesture was a tap. A swipe calls `onSwapPhrase(dir)` and **suppresses the mark** (so a
+deliberate phrase-swap never fires a stray FALSE_MARK + confuse). Crucially, scoring uses
+the recorded **pointerdown** instant, not release, so swipe support adds **zero latency**
+to the timing tap. The e2e BRA taps were updated to dispatch `pointerdown`+`pointerup`
+(a zero-movement down→up = tap); full-loop still plays to mastery via apex-timed taps —
+that green run is the scoring-precision regression guard. `setPointerCapture` is
+try/guarded (synthetic events have no active pointer).
+
+**Visual (Visual Review: PASS after one fix round):** a faint "‹ swipe ›" hint appears
+under the marker only when `available.length > 1` (more than base "bra"); a swap flashes
+the new phrase word in gold above the marker, sliding in the swipe direction, with a brief
+button nudge. `prefers-reduced-motion` → cross-fade, no slide/nudge (D13). Round-1 review
+flagged the hint cramped against the bottom gesture zone and the swap word too close /
+low-contrast; fixed by lifting `#hud-bottom` padding (40px + safe-area, loadout-chip calc
+kept in sync), raising the swap word with a dark halo + richer gold. New dev/screenshot
+hook `__forcePhrases()` + a `--eval` flag on `scripts/shoot.mjs`.
+
 ### 7k. Combo (`src/core/combo.ts`)
 
 | Name | Value | File | What it affects | Note |
@@ -426,7 +664,9 @@ to a diminishing-returns formula such as `1 + log(1 + points) × 0.5`.**
 | `IDLE_CAP_COINS` | 200 | 110 | Cap exceeds a medium active session; undermines "nudge not replacement" | **APPLIED** |
 | SUPER phrase `unlockCost` | 150 | 275 | Unlocked too quickly; level-3 gate loses meaning | **APPLIED** |
 | `prestigeMultiplier` | unbounded linear | cap at 2.5× | Unbounded growth trivializes late content | **APPLIED** |
-| Legg deg on EXPERT | (stacked penalty) | Exclude trick×mode combinations with effective learnMult × peakRadius &lt; 10 ms from the reward path | Near-impossible timing without trick-specific reward uplift | Deferred |
+| Legg deg on EXPERT | (stacked penalty) | `trickRewardMultiplier` uplift folds into difficulty-mult term; legg-deg earns ~1.7× sitt at same mode/kennel/prestige | Hard tricks now pay proportionally more — no longer strictly dominated | **RESOLVED** (2026-06-18) |
+
+**Per-trick reward uplift — APPLIED (2026-06-18):** `trickRewardMultiplier(trick)` in `src/core/tricks.ts` derives a reward multiplier from the trick's existing `learnMult`/`windowMult` penalties — no per-trick hand-tuned field, so retuning a trick's difficulty keeps its pay consistent automatically. Formula: `min(REWARD_UPLIFT_CAP, 1 + (1 − learnMult) + (1 − windowMult) × 0.5)`. `REWARD_UPLIFT_CAP = 2.2`. Sitt (learnMult=1, windowMult=1) → 1.0× (unchanged). Legg deg (learnMult=0.5, windowMult=0.6) → 1.0 + 0.5 + 0.2 = 1.7×. Synthetic worst-case (learnMult=0, windowMult=0) → clamped to 2.2×. This uplift folds into the difficulty-mult term; the documented payout order (`base × trickMult × modeMult × kennelMult × prestige`) is unchanged. Both `completeMastery` and `completePractice` accept an optional `trick?: Trick` param (backward-compatible: omitting it defaults to 1×). The `main.ts` call sites pass `activeTrick` so every mastery/re-practice event uses the correct uplift.
 
 ## 10. Level-Gated Unlock Ladder (Placeholder Tuning) — DECIDED
 
@@ -494,6 +734,42 @@ Praise tone gains (layered after the click):
 
 **Voice sourcing remains the open §4 decision.** The intended clip is a Maren-style Norwegian "bra!" marker voice. Its sourcing — recorded original / licensed / TTS — carries likeness/legal weight and is not decided here. The `registerClip` path is the future hook for that asset.
 
+## Dog Foley + Ambient Bed — DECIDED (2026-06-17, task 094)
+
+**Three synthesised dog foley events** layered into the existing lazy/mute-aware audio path, plus an enriched ambient bed. All gains sit well under the PERFECT praise tone (gain 0.9) and play sequentially (same cursor-advance pattern as `masterySound`).
+
+### Foley events
+
+| Event | Layers | freq (Hz) | durationMs | type | gain |
+|-------|--------|-----------|-----------|------|------|
+| `idle-pant` | puff-in | 300 | 70 | sine | 0.04 |
+| | puff-out | 340 | 60 | sine | 0.03 |
+| `mastery-bark` | syllable 1 | 520 | 90 | triangle | 0.22 |
+| | syllable 2 | 430 | 110 | triangle | 0.18 |
+| `false-huff` | huff | 170 | 70 | sine | 0.12 |
+
+All gains are well under the PERFECT praise tone (0.9) — foley never masks the mark SFX.
+
+### Trigger edges
+
+- **mastery-bark**: layered immediately after the mastery jingle (`markAudio.playMastery()`) on the mastery false→true edge in `tick()`.
+- **false-huff**: played in `onBraTap` right after `markAudio.play(result)` when `result === 'FALSE_MARK'`.
+- **idle-pant**: throttled to `PANT_INTERVAL_MS = 7000` ms and gated to `dogVisualState(state, now, ...) === 'idle'`. Evaluated in the normal training path of `tick()` (after the confuse-edge block, before `renderTraining`). Does not run in the early-return mastery branch.
+
+### Enriched ambient bed
+
+Three partials replace the single 160 Hz drone:
+
+| freq (Hz) | durationMs | type | gain |
+|-----------|-----------|------|------|
+| 160 | 0 (looping) | sine | 0.04 |
+| 163 | 0 (looping) | sine | 0.03 |
+| 240 | 0 (looping) | triangle | 0.025 |
+
+The 163 Hz partial gives a ~3 Hz beat shimmer against the 160 Hz root; the 240 Hz triangle adds a soft fifth for body. Sum of gains = 0.095, well under 0.12. Still lazy + mute-aware: `startAmbient` loops over `ambientLayers()` creating one oscillator per partial; `stopAmbient` stops every oscillator in `_ambientOscs` and resets the array. `ambientSpec()` delegates to `ambientLayers()[0]` for back-compat.
+
+**Not aurally verifiable headless — a human on-device listen is the remaining verification (precedent: task 074).**
+
 ## Mobile Resume Grace — DECIDED (2026-06-17, task 073)
 
 **`RESUME_GRACE_MS = 400`** (`src/core/resumeGrace.ts`).
@@ -514,3 +790,54 @@ taps of a fresh session are never eaten. Placeholder value; a one-line tuning kn
 We deliberately do **not** pause the round timeline on background: the loop time base
 is `performance.now()` and the scheduler loops, so swallowing the resume tap (what the
 spec mandates) is sufficient. Timeline pause is out of scope.
+
+## Engagement Meter + Disengage Beats — PARTIAL (2026-06-19, task 098)
+
+Spec (specs.md §Mistakes → *Wrong-behavior beats & disengagement*) calls for an
+engagement meter that drains on sloppy/false marks or slow rewards and refills on good
+timing, with the dog's offered wrong-behaviors escalating as it empties. Task 098
+**depends on 079** (real Labrador clips) for the on-dog expression, so this iteration
+shipped the **unblocked layer**: the pure model + a visible HUD meter. The dog-behavior
+beats + walk-away/call-back remain 079-gated.
+
+**Pure model (`src/core/engagement.ts`):**
+- `engagement(prev, event)` — clamped 0..1. Mark deltas mirror the learned-bar
+  sign/severity but at meter scale: **PERFECT +0.15, OK +0.08, MISS −0.06,
+  FALSE_MARK −0.2**. Reward-latency event ramps linearly: **≤800 ms → +0.05**
+  (snappy keeps the dog eager) down to **≥2400 ms → −0.15** (slow bores it).
+- `disengageBeat(level)` → `engaged / itch / flop / bark / walk-off` at thresholds
+  **0.75 / 0.5 / 0.25 / 0** (monotonic; spec escalation order itch→…→walk-off).
+- **Not persisted** — like `combo`, it's a transient session feel; every fresh round
+  starts at `ENGAGEMENT_FULL` (1) so a returning player meets an eager dog. Only
+  mark-quality is wired live so far; the reward-latency event is implemented + tested
+  but not yet fed from the loop (deferred with the rest of the 079 wiring).
+
+**HUD reflection (DOM layer, no Labrador needed):** a top-right "mood" pill stacked
+under coins/level. Chosen because the spec frames the meter's *visibility* through the
+dog, which needs 079's clips — a small DOM meter surfaces the live value now and is
+fully phone-portrait reviewable. Revealed at the economy stage (with stats).
+
+### Reward-latency feed wired live — DONE (2026-06-19, task 100)
+
+098 listed *"wire the reward-latency event live"* under its **079-gated** remainder. That
+bundling was **over-broad**: the `{ kind:'reward', latencyMs }` event needs only the
+active attempt's apex (`attempt.peak`) and the tap instant — pure timing, **no Labrador
+clips**. Task 100 carves it out and wires it. New pure `rewardLatencyMs(tapTime,
+apexTime)` (= `max(0, tapTime − apexTime)`; clamped so a pre-apex tap is "instant", not
+negative) in `engagement.ts`. In `main.ts` `onBraTap`, after the `mark` event, a
+**PERFECT/OK** mark (a real reward) also fires `engagement(…, { kind:'reward',
+latencyMs })`. MISS/FALSE_MARK do **not** fire it — they are not rewards and their drain
+is already applied by the `mark` event (no double-count). So the spec's "slow rewards
+drain it" half is now live on the HUD mood meter: a correct-but-slow mark nets less
+engagement than a snappy one. Still transient (resets to `ENGAGEMENT_FULL` per round).
+Only the **on-dog** disengage beats / walk-away remain 079-gated.
+
+**HUD chrome consistency change (deliberate):** stacking the meter under the stats pill
+exposed that `#hud-stats` was the *only* HUD element docked **flush to the screen edge
+with a square outer corner** (`border-radius: 0 0 0 12px`); every other chrome element
+(diff-selector / kennel / loadout / combo) **floats inset 12–16px with full rounding**.
+Visual Review flagged the docked look as "sheared/broken," so both stats + meter now sit
+in a `#hud-stats-cluster` that floats inset (`margin-right: 14px`) with `border-radius:
+12px` and shares one width (`align-items: stretch` + `min-width`), with coins/level
+spread via `justify-content: space-between`. Net: stats moved from edge-docked to
+floating-inset to match the rest of the HUD.

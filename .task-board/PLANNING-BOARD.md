@@ -1,40 +1,236 @@
 # Planning Board
 
-**Current Focus**: **Pokémon-GO Visuals epic** kicked off (2026-06-17). v1
-gameplay is complete + playable (564 tests, P0 PASS); the one unstarted pillar is
-**D14 — "looks the part."** Owner picked the sourcing route (**asset-store base
-model + shared-rig retargeting**, tech-decisions §3). Roadmap +
-task series live in [`EPIC-pokemon-go-visuals.md`](EPIC-pokemon-go-visuals.md).
+**Current Focus**: Iteration 13 (2026-06-19) found the backlog drained and ran
+`scan-project` to replenish **three unblocked, non-epic tasks** (ids **099–101**;
+080–085 stay reserved for the visuals epic). Picks deliberately avoid the saturated
+quality/refactor (×4) and logic (×4) domains from the last 15 done, and steer clear of
+the FBX→glb-gated visuals epic: **099** (HIGH) closes a named v1 spec gap — *swipe the
+BRA marker to swap phrase* (specs §Marker Phrases; tech-decisions §7 still lists the
+selection UI as open); **100** (MED) wires the already-built reward-latency event into
+the live engagement meter, completing the "slow rewards drain it" half of 098 — and
+carves it out of 098's over-broad 079 deferral (it needs only tap-vs-apex timing, no
+clips); **101** (MED) adds a jsdom test env + unit coverage for the five untested panel
+factories (`adoptPanel`/`kennelPanel`/… have none — env is node-only today). Then worked
+the backlog (see below).
 
-## Top Priorities — Pokémon-GO Visuals epic (077–085)
+---
 
-Backlog now holds the first batch (Phase 0–1). Work them in order; 078/079 are
-blocked until 077 stages a real `.glb`.
+**Prior focus**: Iteration 12 (2026-06-19) worked the single backlog task **098
+(engagement meter + disengagement)**, which **depends on 079** (real Labrador clips).
+Shipped the **unblocked slice**: the pure model (`src/core/engagement.ts` —
+`engagement(prev,event)` reducer + `disengageBeat(level)`, 13 TDD tests) and a visible
+**HUD mood meter** stacked under coins/level, colour-escalating green→red with the beat
+(reduced-motion + aria, **Visual Review PASS** after two review rounds). The on-dog
+beats + walk-away/call-back remain **079-gated**, so 098 moved to `on-hold` with the
+remainder documented. Repaired a **pre-existing gate-blocker** en route: untracked
+`dogModelLoader.test.ts` (on-hold 078 work) imported a never-implemented
+`importedPoseTransforms`, breaking `tsc`; removed the dead import + orphaned fixture.
+Also aligned the stats pill to the HUD's floating-inset chrome pattern (was the lone
+edge-docked element — tech-decisions). Suite **646 → 662 tests**; typecheck 0 · build
+clean · e2e PASS. Prior: iteration 11 shipped 095–097; iteration 10 shipped 093/094.
+The **Pokémon-GO Visuals epic** remains gated on the **FBX → `.glb` conversion**
+(`Labrador_FBX.rar`, tech-decisions §3c); once `public/models/dog.glb` is the real
+Labrador, 078/079 (+098's remainder) + phases 080–085 are the next major block.
 
-- **`077-RESEARCH-dog-model-sourcing`** — **ready now.** Shortlist 2–3 rigged dog
-  base models (format/license/tris/rig), recommend one, escalate the purchase to
-  the owner (money/likeness gate). Unblocks everything.
-- **`078-FEATURE-gltf-load-path-and-fallback`** — async glTF load + pure
-  `selectDogRenderMode` + procedural fallback, flag default off. *(blocked on 077)*
-- **`079-FEATURE-imported-dogmesh-labrador`** — imported Labrador behind the
-  `DogMesh` contract, flag-gated, Visual-Review proving slice. *(blocked on 077+078)*
+## Pokémon-GO Visuals epic (077–085) — needs FBX→glb conversion, then build
 
-Phases 2–6 (`080`–`085`: skeletal anim, PBR look, breed retarget, signature anims +
-backdrop, perf/ship gate) are outlined in the epic and promoted to full task files
-as each phase begins.
+No longer owner-blocked: the owner purchased + dropped the Labrador
+(`Labrador_FBX.rar` at repo root; manifest in tech-decisions §3c). The remaining
+gate is the **FBX → glb conversion** — the bought FBX must be converted and staged at
+`public/models/dog.glb`, replacing the CC0 placeholder. Roadmap in
+[`EPIC-pokemon-go-visuals.md`](EPIC-pokemon-go-visuals.md).
 
-Other deferred non-visual findings (own tasks, lower impact than the epic): **dog
-foley** (panting/barks/whines) absent + ambient is a synth drone not a real bed;
-**E2E coverage** stops at bar-progress (never exercises mastery → payout → return);
-more dead exports; `hud.ts` > 1100 lines (split candidate).
+- **`077-RESEARCH-dog-model-sourcing`** — DONE: research, shortlist, purchase, and
+  file-drop all complete (tech-decisions §3a–§3c). Remaining handoff: convert FBX → glb.
+- **`078-FEATURE-gltf-load-path-and-fallback`** — pure decision core landed (TDD, 9
+  tests, flag default off → app unchanged). Loader glue + scene wiring + Visual Review
+  still to build (needs the converted `.glb`).
+- **`079-FEATURE-imported-dogmesh-labrador`** — depends on 078. The `DogMesh` contract
+  is already a clean exported seam, so it's a drop-in once the loader + glb exist.
+- **`098-FEATURE-engagement-disengagement`** (on-hold) — pure model + HUD meter DELIVERED
+  (iteration 12); the on-dog disengage beats + walk-away/call-back are **079-gated** (need
+  the real `scratch ear`/`dig`/`bark`/`lie`/`trot`+`turn` clips). Drop-in once 079 lands.
 
-Other verified findings deferred to next scan (lower impact): **dog foley** (panting/
-barks/whines) entirely absent + ambient is a synthesized drone, not a real bed (audio,
-own task); **D14 fidelity** — primitive Babylon meshes, not Pokémon-GO stylized-realism
-(visual, large, saturated-domain — needs model sourcing); **E2E coverage** — smoke test
-stops at bar-progress, never exercises mastery → payout → return-to-select; more dead
-exports (`round.markAt`/`isMastered`, `roster.repertoire`, audio internals, payout
-constants, deprecated `getPhrase` callback); `hud.ts` > 1100 lines (split candidate).
+Phases 2–6 (`080`–`085`) stay outlined in the epic; **numbers 080–085 are reserved
+for those visual phases**, so new non-epic tasks start at **099**.
+
+## Top Priorities — next scan round (backlog drained again)
+
+**Backlog and in-progress are both empty** — iteration 13 shipped all three replenished
+tasks (099–101, below). The next iteration MUST run `scan-project` to replenish 3 fresh
+tasks (new ids start at **102**; 080–085 stay reserved for the epic).
+
+The Pokémon-GO Visuals epic still needs the FBX → glb conversion (tech-decisions §3c)
+before 078/079/098-remainder can build against the real model — none of 099–101 touched it.
+
+Carry-forward candidates for the next scan (re-rank against fresh findings): **unit tests
+for `hud.ts` orchestration** (the panel factories now have jsdom coverage from 101, but the
+686-line `createHud` orchestration does not); **centralize tunables into `src/core/tuning.ts`**
+(tech-decisions §8 "Future" note — but refactor domain is now warm); **`main.ts` is 760 LOC**
+and could shed more pure helpers. Still excluded: extend-levels-beyond-L5 (no content),
+Maren voice (owner-gated asset), and the on-dog engagement beats / walk-away (079-gated).
+
+**Saturation note (iteration 13):** last-15-done now skews **feature/UI** (099 UI-interaction,
+096 UI) and **test** (088, 101); quality/refactor (076/089/092/093) and logic (075/087/091/097)
+remain the heaviest historical buckets. Audio (074/094) and persistence (086/090) sit at 2.
+Next scan should avoid stacking more UI-interaction; a correctness/perf or content gap would
+balance the mix.
+
+## Recently Completed (iteration 13 — 2026-06-19)
+
+Scanned the drained backlog → replenished + shipped **099–101**. Gate after all three:
+typecheck 0 · **700 tests** (662 → 700) · build clean · e2e (smoke + full-loop) PASS.
+
+- `099-FEATURE-phrase-swipe-to-swap-bra-marker` (HIGH) — the spec's second named
+  phrase-selection gesture: **swipe the BRA marker** to swap the loaded phrase
+  (specs §Marker Phrases), closing tech-decisions §7's open "loadout/selection UI" item
+  (now §7q). Pure `src/core/swipeGesture.ts` — `classifySwipe(dx,dy,thr=40)` (horizontal-
+  dominant past-threshold = swipe; else tap) + `cycleIndex` (TDD, 10 tests). The marker is
+  now **press-then-release**: `pointerdown` records the instant, the mark **commits on
+  `pointerup`** only if it wasn't a swipe (a swipe calls `onSwapPhrase` and suppresses the
+  mark, so swiping never fires a stray FALSE_MARK). Scoring still uses the **pointerdown**
+  instant → **zero added tap latency**; e2e BRA taps now dispatch down+up and full-loop
+  still masters (the precision regression guard). Faint "‹ swipe ›" hint when >1 phrase
+  available + a gold swap-word flash above the marker; reduced-motion cross-fades.
+  **Visual Review was genuinely blocking** — round 1 (independent agent) flagged the hint
+  cramped against the bottom gesture zone + the swap word too tight/low-contrast; fixed by
+  lifting `#hud-bottom` (40px + safe-area, loadout-chip calc kept in sync) and raising the
+  swap word with a dark halo + richer gold; round-2 verifier = PASS. New `__forcePhrases()`
+  dev hook + a `--eval` flag on `scripts/shoot.mjs`.
+- `100-FEATURE-engagement-reward-latency-live-wiring` (MED) — wired the already-built
+  `{kind:'reward', latencyMs}` engagement event into the live loop, completing 098's
+  "slow rewards drain it" half. New pure `rewardLatencyMs(tap, apex)` (clamped ≥0, TDD);
+  fired on PERFECT/OK marks only (MISS/FALSE_MARK don't double-count). **Corrects 098's
+  over-broad 079 deferral** — needs only tap-vs-apex timing, no Labrador clips
+  (tech-decisions §"Engagement … Reward-latency feed wired live").
+- `101-TEST-ui-panel-jsdom-coverage` (MED) — added `jsdom` (dev dep) via
+  `environmentMatchGlobs: [["src/ui/**","jsdom"]]` so the DOM-bearing UI layer tests under
+  jsdom while the core suite stays on fast node. **24 behavior tests** through the public
+  `PanelHandle` for `adoptPanel`/`kennelPanel`/`settingsPanel`/`helpPanel`/`achievementsPanel`
+  (gate-legibility classes, buy/adopt/two-tap-reset flows, open/close, list re-render) —
+  characterization of current behavior, asserting observable DOM not internals
+  (tech-decisions §3e).
+
+## Recently Completed (iteration 12 — 2026-06-19)
+
+- `098-FEATURE-engagement-disengagement` (PARTIAL → on-hold) — shipped the unblocked
+  "Pure first" slice + a visible HUD reflection; the on-dog beats + walk-away are
+  079-gated. Pure `src/core/engagement.ts`: `engagement(prev,event)` clamped 0..1
+  reducer (mark-quality + reward-latency events) and `disengageBeat(level)` →
+  `engaged→itch→flop→bark→walk-off` (13 TDD tests). Live wiring in `main.ts`
+  (runtime meter, not persisted — transient like `combo`; `__setEngagement` dev hook).
+  New **HUD mood meter** under coins/level in a shared `#hud-stats-cluster`: fill =
+  meter, colour escalates green→red with the beat, red-tinted empty track + pulse at
+  walk-off, revealed at the economy stage, `role="meter"` + aria, reduced-motion handled.
+  `viewModel.ts` gains `engagement`/`engagementBeat` (3 tests). **Visual Review was
+  genuinely blocking** — round 1 caught a mid-screen float (→ cluster wrapper), an
+  invisible track (→ lightened groove) and a colourless empty walk-off (→ red track
+  tint); round 2 caught the stats pill being the lone edge-docked HUD element (→ floated
+  it inset + rounded to match diff-selector/kennel/loadout/combo; tech-decisions).
+  Also repaired a pre-existing gate-blocker: untracked `dogModelLoader.test.ts`
+  (on-hold 078) imported a never-implemented `importedPoseTransforms` (TS2305) — removed
+  the dead import + orphaned fixture. Suite **646 → 662**; typecheck 0 · build clean ·
+  e2e (smoke + full-loop) PASS.
+
+## Recently Completed (iteration 11 — 2026-06-18)
+
+- `095-FEATURE-kennel-tier-backdrop-upgrades` — kennel level now visibly upgrades
+  the training-ground backdrop in 4 tiers (specs §Kennel). Pure `backdropTier.ts`
+  (`kennelTier(ids)→0-3`, `backdropTierConfig`, 19 TDD tests); `backdrop.ts` pre-
+  builds bushes / agility cones / a cream jump set / a fence line once and
+  `applyBackdropTier` shows/hides + green-tints the ground per tier; `scene.ts`
+  exposes `setKennelUpgrades(ids)`, called by `main.ts` on bootstrap + every
+  purchase (live, no rebuild). New `__setKennelUpgrades` dev/screenshot hook.
+  **Visual Review was genuinely blocking** — first pass FAILED (props at negative-z
+  = behind the camera; rendered black under `disableLighting`); fixed to positive-z
+  lit/matte props, then an independent reviewer caught a tier-2 regression + cone
+  over-dominance, fixed by keeping front bushes ahead of the deeper cones and
+  shrinking/softening/cream-warming the props. Monotonic, dog framing intact.
+- `096-FEATURE-stage-economy-reveal-in-hud` — onboarding fix: `applyRevealed()` now
+  toggles `statsEl` on `revealed.economy`, so coins/level hide on a fresh session
+  and reveal at the first payout (reveal call already re-fires post-mastery,
+  `main.ts:595`). The staging contract was already tested in `onboarding.test.ts`;
+  the bug was pure UI glue. Verified by screenshot + computed-style probe.
+- `097-BALANCE-trick-reward-uplift-no-dominated-combos` — `trickRewardMultiplier`
+  (`min(2.2, 1 + (1-learnMult) + (1-windowMult)×0.5)`; sitt 1.0× → legg-deg 1.7×)
+  folded into `completeMastery`/`completePractice` via an optional `trick` param
+  (omitted = 1×, backward-compat). Harder tricks now pay proportionally more, so
+  none is strictly dominated (§Difficulty Modes intent; resolves the deferred
+  legg-deg×EXPERT item, tech-decisions §7n). Re-practice still 0 XP (task 070).
+  TDD red→green (12 tests). Suite 613 → **646**; verify + e2e green.
+
+## Recently Completed (readability refactor, iteration 10 — 2026-06-17)
+
+- `094-FEATURE-dog-foley-audio` — synthesised dog foley + a richer ambient bed,
+  TDD-first (13 new tests; suite 613 green). Pure `foleyLayers(event)` maps
+  `idle-pant | mastery-bark | false-huff` to bounded `SoundSpec[]` (gains well
+  under the 0.9 praise tone); `ambientLayers()` returns three detuned low
+  partials (160/163/240 Hz, ~3 Hz beat shimmer + soft fifth) and `ambientSpec()`
+  now delegates to `ambientLayers()[0]`. New `MarkAudio.playFoley` (mute-aware +
+  lazy) and a multi-oscillator `startAmbient`/`stopAmbient`. Triggers wired in
+  `main.ts`: bark on mastery, huff on FALSE_MARK, throttled idle pant
+  (`PANT_INTERVAL_MS = 7000`, gated to `dogVisualState === 'idle'`). Decision in
+  tech-decisions. **Not headless-verifiable — a human on-device listen is the
+  one remaining step (precedent 074).**
+- `093-REFACTOR-hud-panel-split` — the 1148-line `createHud()` god-closure is
+  decomposed: the five overlay panels (adopt / kennel / settings / help /
+  achievements) are now self-contained `src/ui/panels/*` factories returning a
+  `PanelHandle` (`{ el, open, close, update? }`). A new `createPanelManager`
+  (TDD, 4 tests, DOM-agnostic) enforces one-open-at-a-time exclusivity (task 071);
+  `createHud` is pure orchestration. Public return shape + `main.ts` untouched;
+  panels created in the original body-append order so `hud.css`/stacking is
+  unchanged. **`hud.ts` 1148 → 640 LOC.** Pixel-identity proven three ways:
+  byte-level `document.body` DOM diff (all panels identical; training differs only
+  in the live `data-tell` animation), MD5-identical phone-portrait screenshots
+  (6/7; training = animation frame), and a Visual Review agent (PASS, no
+  regression). Gate: typecheck 0 · 600 tests · build clean · e2e smoke + full-loop PASS.
+
+## Recently Completed (non-gated correctness + quality, iteration 9 — 2026-06-17)
+
+- `092-QUALITY-main-bootstrap-persist-helper` — the two pre-`persist()` bootstrap
+  saves (idle-income grant, streak update) are unified behind a `persistBootstrap()`
+  helper (uses `savedMuted` instead of `markAudio.isMuted()`), clearing the residual
+  `buildGameSave({...})` duplication 089 left behind. No behaviour change.
+
+- `091-BUGFIX-graduation-includes-breed-tricks` — closes a v1 progression
+  correctness gap: graduation eligibility checked only the 3 starter tricks, so a
+  Collie/Husky/Bulldog/Puddel "graduated" while its signature trick (shown as
+  masterable on the select screen) was unmastered. New pure
+  `graduationTrickIds(breed)` (starter set + breed signature, single-sourced off
+  `tricksForBreed`) drives both `main.ts` graduation call-sites. TDD, 5 new tests.
+- `090-PERF-indexeddb-connection-reuse` — `IndexedDbStorage` opened a fresh
+  connection on every `load`/`save`/`clear` (dozens per session). `openDb()` now
+  memoises the connection in `dbPromise`; a rejected open nulls the memo
+  (retryable). TDD: spy asserts `indexedDB.open` called once across 4 ops (was 4).
+- `089-QUALITY-main-ts-dead-code-consolidation` — removed dead `getPhrase`
+  callback (interface + impl; `grep` clean); `getStats` reuses
+  `totalMasteredCount(roster)`; new `BASE_SCHEDULER_TIMING` const single-sources
+  the `2000`/`800` scheduler base shared by `main.ts` + `buildSchedulerCfg`. No
+  behaviour change.
+
+Gate after iteration 9: typecheck 0 errors · 596 tests pass · build no warnings ·
+e2e (smoke + full-loop) PASS.
+
+## Recently Completed (non-gated v1 hardening, iteration 8 — 2026-06-17)
+
+- `086-FEATURE-round-resume-persistence` — closes the §Round States gap (partial
+  learned-bar progress now persists). `GameSave` gains `activeRoundDogId` /
+  `activeTrickId` / `learnedBar` (back-compat defaults); pure `restoreLearnedBar`
+  (TDD) seeds the bar only on a dog+trick match; `main.ts` snapshots the live round in
+  `persist()` and clears it on the mastery edge. Quit mid-round → reopen same
+  dog+trick → resumes; a different round starts at 0. 12 tests.
+- `087-FEATURE-phrase-tradeoff-model` — closes the §Marker Phrases trade-off gap
+  (phrases were pure upside). New `Phrase.peakRadiusPenaltyMs` shrinks the PERFECT
+  band, clamped to a 20 ms floor; stronger phrases trade precision for their reward
+  bonus (bra/flink 0, dyktig 25, super 40, kjempebra 65 ms). Model + values recorded
+  in tech-decisions §7p; the spec's "open design item" is resolved. TDD.
+- `088-TEST-e2e-full-loop-coverage` — `e2e/full-loop.mjs` plays Sitt to mastery by
+  apex-timed taps (polls `#hud[data-tell]`), then asserts **payout** (coins 0 → 50)
+  and **return-to-select**. The heart of the loop is now guarded end-to-end. A
+  DEV-only `window.__bra` read hook (tree-shaken from prod) backs the assertions.
+
+Gate after iteration 8: typecheck 0 errors · 589 tests pass · build no warnings ·
+e2e (smoke + full-loop) PASS.
 
 ## Recently Completed (audio + scope/quality, iteration 7 — 2026-06-17)
 

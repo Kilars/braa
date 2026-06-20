@@ -12,7 +12,7 @@ describe('BASE_PHRASE', () => {
 });
 
 describe('isReady - cooldown phrase', () => {
-  const coolPhrase = { id: 'flink', word: 'flink', windowBonusMs: 200, rewardBonus: 0.1, cooldownMs: 5000 };
+  const coolPhrase = { id: 'flink', word: 'flink', windowBonusMs: 200, rewardBonus: 0.1, cooldownMs: 5000, peakRadiusPenaltyMs: 0 };
 
   it('is NOT ready when within cooldownMs of lastUsedAt', () => {
     const lastUsedAt = 1000;
@@ -264,28 +264,30 @@ describe('isReady — kjempebra respects cooldown', () => {
 });
 
 describe('applyPhraseToAttempt — dyktig widens window by 200ms', () => {
-  const baseAttempt: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 15 };
+  // peakRadius 80 (a normal NORMAL value) so the penalty (25) does not hit the floor
+  const baseAttempt: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 80 };
   const dyktig = PHRASE_CATALOG.find(e => e.phrase.id === 'dyktig')!.phrase;
 
-  it('widens [start,end] by ±200ms', () => {
+  it('widens [start,end] by ±200ms and narrows peakRadius by penalty', () => {
     const result = applyPhraseToAttempt(baseAttempt, dyktig);
     expect(result.start).toBe(-100); // 100 - 200
     expect(result.end).toBe(400);    // 200 + 200
     expect(result.peak).toBe(150);
-    expect(result.peakRadius).toBe(15);
+    expect(result.peakRadius).toBe(55); // 80 - 25 (dyktig penalty)
   });
 });
 
 describe('applyPhraseToAttempt — kjempebra widens window by 350ms', () => {
-  const baseAttempt: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 15 };
+  // peakRadius 80 (a normal NORMAL value) so the penalty (65) does not hit the floor
+  const baseAttempt: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 80 };
   const kjempebra = PHRASE_CATALOG.find(e => e.phrase.id === 'kjempebra')!.phrase;
 
-  it('widens [start,end] by ±350ms', () => {
+  it('widens [start,end] by ±350ms and narrows peakRadius by penalty', () => {
     const result = applyPhraseToAttempt(baseAttempt, kjempebra);
     expect(result.start).toBe(-250); // 100 - 350
     expect(result.end).toBe(550);    // 200 + 350
     expect(result.peak).toBe(150);
-    expect(result.peakRadius).toBe(15);
+    expect(result.peakRadius).toBe(20); // max(20, 80 - 65) — floor clamps the result
   });
 });
 
@@ -293,7 +295,7 @@ describe('applyPhraseToAttempt', () => {
   const baseAttempt: Attempt = { start: 100, end: 200, peak: 150, peakRadius: 15 };
 
   it('widens [start,end] symmetrically by windowBonusMs for a phrase with bonus', () => {
-    const phrase = { id: 'flink', word: 'flink', windowBonusMs: 50, rewardBonus: 0, cooldownMs: 5000 };
+    const phrase = { id: 'flink', word: 'flink', windowBonusMs: 50, rewardBonus: 0, cooldownMs: 5000, peakRadiusPenaltyMs: 0 };
     const result = applyPhraseToAttempt(baseAttempt, phrase);
     expect(result.start).toBe(50);  // 100 - 50
     expect(result.end).toBe(250);   // 200 + 50
@@ -304,6 +306,74 @@ describe('applyPhraseToAttempt', () => {
   it('leaves attempt unchanged when using BASE_PHRASE (no bonus)', () => {
     const result = applyPhraseToAttempt(baseAttempt, BASE_PHRASE);
     expect(result).toBe(baseAttempt); // same reference — no new object
+  });
+});
+
+// ─── Phrase penalty: trade-off model (peakRadiusPenaltyMs) ──────────────────────
+
+describe('applyPhraseToAttempt — peakRadiusPenaltyMs narrows PERFECT band', () => {
+  const attempt: Attempt = { start: 100, end: 300, peak: 200, peakRadius: 120 };
+  const penaltyPhrase = {
+    id: 'test-penalty',
+    word: 'test',
+    windowBonusMs: 0,
+    rewardBonus: 0.2,
+    cooldownMs: 10000,
+    peakRadiusPenaltyMs: 60,
+  };
+
+  it('narrows peakRadius by exactly the penalty when no window bonus', () => {
+    const result = applyPhraseToAttempt(attempt, penaltyPhrase);
+    expect(result.peakRadius).toBe(60); // 120 - 60
+    expect(result.start).toBe(100); // window unchanged
+    expect(result.end).toBe(300);   // window unchanged
+  });
+});
+
+describe('applyPhraseToAttempt — peakRadiusPenaltyMs clamped to floor', () => {
+  const attempt: Attempt = { start: 100, end: 300, peak: 200, peakRadius: 30 };
+  const largePenaltyPhrase = {
+    id: 'test-large-penalty',
+    word: 'test',
+    windowBonusMs: 0,
+    rewardBonus: 0.3,
+    cooldownMs: 12000,
+    peakRadiusPenaltyMs: 100,
+  };
+
+  it('clamps to positive floor (20ms) when penalty exceeds peakRadius', () => {
+    const result = applyPhraseToAttempt(attempt, largePenaltyPhrase);
+    expect(result.peakRadius).toBeGreaterThan(0);
+    expect(result.peakRadius).toBe(20); // expected floor value
+  });
+});
+
+describe('applyPhraseToAttempt — BASE_PHRASE unchanged with penalty field', () => {
+  const attempt: Attempt = { start: 100, end: 300, peak: 200, peakRadius: 80 };
+
+  it('returns attempt unchanged when applied with BASE_PHRASE (penalty 0)', () => {
+    const result = applyPhraseToAttempt(attempt, BASE_PHRASE);
+    expect(result).toBe(attempt); // same reference — no modification
+    expect(result.peakRadius).toBe(80); // peakRadius untouched
+  });
+});
+
+describe('applyPhraseToAttempt — no regression: window bonus alone', () => {
+  const attempt: Attempt = { start: 100, end: 300, peak: 200, peakRadius: 60 };
+  const windowOnlyPhrase = {
+    id: 'window-only',
+    word: 'test',
+    windowBonusMs: 200,
+    rewardBonus: 0,
+    cooldownMs: 8000,
+    peakRadiusPenaltyMs: 0,
+  };
+
+  it('widens outer window by bonus while leaving peakRadius unchanged', () => {
+    const result = applyPhraseToAttempt(attempt, windowOnlyPhrase);
+    expect(result.start).toBe(-100); // 100 - 200
+    expect(result.end).toBe(500);    // 300 + 200
+    expect(result.peakRadius).toBe(60); // unchanged
   });
 });
 

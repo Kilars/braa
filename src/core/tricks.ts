@@ -35,6 +35,14 @@ export const SIGNATURE_TRICKS: Trick[] = [
   { id: 'snurr', name: 'Snurr', learnMult: 0.75, windowMult: 0.8, distractorBonus: 0.2 },
 ];
 
+export const REWARD_UPLIFT_CAP = 2.2;
+
+/** Reward uplift for a trick's intrinsic difficulty; 1 for the easiest, bounded by REWARD_UPLIFT_CAP. */
+export function trickRewardMultiplier(trick: Trick): number {
+  const raw = 1 + (1 - trick.learnMult) + (1 - trick.windowMult) * 0.5;
+  return Math.min(REWARD_UPLIFT_CAP, raw);
+}
+
 export function lookupTrick(id: string): Trick | undefined {
   return [...STARTER_TRICKS, ...UNTRAIN_TRICKS, ...SIGNATURE_TRICKS].find(t => t.id === id);
 }
@@ -47,4 +55,13 @@ export function tricksForBreed(breed: { signatureTrickId?: string }): Trick[] {
   const sig = lookupTrick(breed.signatureTrickId);
   if (!sig) return [...STARTER_TRICKS];
   return [...STARTER_TRICKS, sig];
+}
+
+// Trick ids a dog of this breed must master to graduate ("fully trained").
+// That is the breed's full trick set: the starter commands plus its signature
+// trick (if any). Single-sources off tricksForBreed so graduation and the
+// trick-select list can never disagree. (Untraining tricks are post-v1 and
+// excluded — tricksForBreed never includes them.)
+export function graduationTrickIds(breed: { signatureTrickId?: string }): string[] {
+  return tricksForBreed(breed).map(t => t.id);
 }

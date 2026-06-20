@@ -6,3 +6,11 @@ dist/
 # headless loop runtime logs (scripts/loop.sh)
 loop.log
 loop.err
+
+# Paid, no-redistribution 3D assets — must NOT enter git history.
+# Dogs Big Pack Labrador (Royalty-Free) + any FBX/glb converted from it.
+# See .docs/tech-decisions.md §3b/§3c and public/models/CREDITS.md.
+*.rar
+*.fbx
+Labrador_FBX.rar
+public/models/dog.glb

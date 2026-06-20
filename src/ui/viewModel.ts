@@ -2,6 +2,7 @@ import { RoundState } from '../core/round';
 import { isConfused } from '../core/session';
 import { Profile, newProfile } from '../core/economy';
 import { attemptAt } from '../core/scheduler';
+import { disengageBeat, type DisengageBeat } from '../core/engagement';
 
 export interface HudViewModel {
   learnedPercent: number;
@@ -15,6 +16,10 @@ export interface HudViewModel {
   /** 0..1: how close `now` is to the attempt peak (1 = at the peak). Same source as tellStrength. */
   peakProximity: number;
   combo: number;
+  /** 0..1 engagement meter (1 = eager). Drives the HUD mood meter + the disengage beat. */
+  engagement: number;
+  /** The escalating off-task beat the meter warrants (engaged → … → walk-off). */
+  engagementBeat: DisengageBeat;
 }
 
 function clamp01(x: number): number {
@@ -27,6 +32,7 @@ export function toViewModel(
   profile: Profile = newProfile(),
   tellIntensity = 1,
   combo = 0,
+  engagementLevel = 1,
 ): HudViewModel {
   const attempt = attemptAt(state.timeline, now);
   let attemptActive = false;
@@ -54,5 +60,7 @@ export function toViewModel(
     tellStrength,
     peakProximity,
     combo,
+    engagement: engagementLevel,
+    engagementBeat: disengageBeat(engagementLevel),
   };
 }

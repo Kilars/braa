@@ -8,6 +8,8 @@ export interface Phrase {
   windowBonusMs: number;
   rewardBonus: number;
   cooldownMs: number;
+  /** Downside: shrinks the PERFECT band so the reward bonus must be earned. 0 = none. */
+  peakRadiusPenaltyMs: number;
 }
 
 export interface PhraseEntry {
@@ -24,6 +26,7 @@ export const BASE_PHRASE: Phrase = {
   windowBonusMs: 0,
   rewardBonus: 0,
   cooldownMs: 0,
+  peakRadiusPenaltyMs: 0,
 };
 
 const FLINK_PHRASE: Phrase = {
@@ -32,6 +35,7 @@ const FLINK_PHRASE: Phrase = {
   windowBonusMs: 150,
   rewardBonus: 0.1,
   cooldownMs: 8000,
+  peakRadiusPenaltyMs: 0, // onboarding-gentle: no precision cost
 };
 
 const SUPER_PHRASE: Phrase = {
@@ -40,6 +44,7 @@ const SUPER_PHRASE: Phrase = {
   windowBonusMs: 250,
   rewardBonus: 0.2,
   cooldownMs: 12000,
+  peakRadiusPenaltyMs: 40, // medium penalty: precision-for-payout tradeoff
 };
 
 const DYKTIG_PHRASE: Phrase = {
@@ -48,6 +53,7 @@ const DYKTIG_PHRASE: Phrase = {
   windowBonusMs: 200,
   rewardBonus: 0.15,
   cooldownMs: 10000,
+  peakRadiusPenaltyMs: 25, // small penalty: mild tradeoff
 };
 
 const KJEMPEBRA_PHRASE: Phrase = {
@@ -56,6 +62,7 @@ const KJEMPEBRA_PHRASE: Phrase = {
   windowBonusMs: 350,
   rewardBonus: 0.3,
   cooldownMs: 18000,
+  peakRadiusPenaltyMs: 65, // largest penalty: biggest reward demands the tightest peak
 };
 
 /** Full ordered catalog — first entry is always BASE (free). */
@@ -120,11 +127,16 @@ export function isReady(p: Phrase, now: number, lastUsedAt: number | null): bool
   return now - lastUsedAt >= p.cooldownMs;
 }
 
+const PEAK_RADIUS_FLOOR_MS = 20;
+
 export function applyPhraseToAttempt(a: Attempt, p: Phrase): Attempt {
-  if (p.windowBonusMs === 0) return a;
+  if (p.windowBonusMs === 0 && p.peakRadiusPenaltyMs === 0) return a;
   return {
     ...a,
     start: a.start - p.windowBonusMs,
     end: a.end + p.windowBonusMs,
+    ...(p.peakRadiusPenaltyMs > 0 && {
+      peakRadius: Math.max(PEAK_RADIUS_FLOOR_MS, a.peakRadius - p.peakRadiusPenaltyMs),
+    }),
   };
 }

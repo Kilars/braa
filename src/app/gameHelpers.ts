@@ -43,18 +43,27 @@ export function effectiveDistractorRate(
 // ── buildSchedulerCfg ─────────────────────────────────────────────────────────
 
 /**
+ * Base scheduler timing applied before any difficulty/breed/trick overrides.
+ * Single source of truth so the bootstrap config in main.ts and buildSchedulerCfg
+ * can never drift apart. Both spread roundDifficulty.scheduler on top of this.
+ */
+export const BASE_SCHEDULER_TIMING = {
+  attemptInterval: 2000, // 2 s between correct attempts
+  activeSpan: 800,       // behavior visible for 800 ms
+} as const;
+
+/**
  * Assemble a SchedulerConfig from the current round difficulty and onboarding
- * state. Hard-codes the base timing constants (attemptInterval, activeSpan) that
- * are overridden by the spread of roundDifficulty.scheduler, then gates the
- * distractor rate via effectiveDistractorRate.
+ * state. Starts from BASE_SCHEDULER_TIMING, which is overridden by the spread of
+ * roundDifficulty.scheduler, then gates the distractor rate via
+ * effectiveDistractorRate.
  */
 export function buildSchedulerCfg(
   masteredCount: number,
   roundDifficulty: EffectiveDifficulty,
 ): SchedulerConfig {
   return {
-    attemptInterval: 2000,
-    activeSpan: 800,
+    ...BASE_SCHEDULER_TIMING,
     ...roundDifficulty.scheduler,
     distractorRate: effectiveDistractorRate(masteredCount, roundDifficulty),
   };
@@ -82,6 +91,28 @@ export function boostedDeltas(
   };
 }
 
+// ── restoreLearnedBar ─────────────────────────────────────────────────────────
+
+/**
+ * Pure resume rule: returns the saved partial learned-bar when the starting
+ * dog+trick match the saved active round, otherwise returns 0 (fresh start).
+ * Clamps malformed saved values into [0, 100].
+ */
+export function restoreLearnedBar(args: {
+  savedDogId: string | null;
+  savedTrickId: string | null;
+  savedBar: number;
+  startDogId: string;
+  startTrickId: string;
+}): number {
+  const match =
+    args.savedTrickId !== null &&
+    args.savedDogId === args.startDogId &&
+    args.savedTrickId === args.startTrickId;
+  if (!match) return 0;
+  return Math.min(100, Math.max(0, args.savedBar));
+}
+
 // ── buildGameSave ─────────────────────────────────────────────────────────────
 
 /**
@@ -104,6 +135,9 @@ export function buildGameSave(params: {
   bestCombo?: number;
   streak?: number;
   lastPlayedYmd?: string;
+  activeRoundDogId?: string | null;
+  activeTrickId?: string | null;
+  learnedBar?: number;
 }): GameSave {
   return {
     profile: params.profile,
@@ -117,5 +151,8 @@ export function buildGameSave(params: {
     bestCombo: params.bestCombo ?? 0,
     streak: params.streak ?? 0,
     lastPlayedYmd: params.lastPlayedYmd ?? '',
+    activeRoundDogId: params.activeRoundDogId ?? null,
+    activeTrickId: params.activeTrickId ?? null,
+    learnedBar: params.learnedBar ?? 0,
   };
 }

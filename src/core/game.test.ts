@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { MASTERY_BASE_PAYOUT, completeMastery, PRACTICE_BASE_PAYOUT, completePractice } from './game';
 import { newProfile } from './economy';
 import { kennelMultiplier, KENNEL_UPGRADES } from './kennel';
+import { lookupTrick } from './tricks';
 
 // ─── Cycle 1: completeMastery NORMAL awards base payout (mult = 1) ────────────
 
@@ -122,5 +123,103 @@ describe('completePractice / reduced re-practice payout', () => {
     // Expected: coins = round(50 * 1) = 50, xp = round(30 * 1) = 30
     expect(result.coins).toBe(p.coins + MASTERY_BASE_PAYOUT.coins);
     expect(result.xp).toBe(p.xp + MASTERY_BASE_PAYOUT.xp);
+  });
+});
+
+// ─── Cycle: completeMastery with trick parameter — harder tricks pay more ─────
+
+describe('completeMastery with trick parameter', () => {
+  it('harder trick (legg-deg) yields MORE coins than easier trick (sitt) at same mode/kennel/prestige', () => {
+    const p = newProfile();
+    const leggDeg = lookupTrick('legg-deg')!;
+    const sitt = lookupTrick('sitt')!;
+
+    const hardResult = completeMastery(p, 'NORMAL', 1, 0, leggDeg);
+    const easyResult = completeMastery(p, 'NORMAL', 1, 0, sitt);
+
+    expect(hardResult.coins).toBeGreaterThan(easyResult.coins);
+  });
+
+  it('harder trick (legg-deg) yields MORE xp than easier trick (sitt) at same mode/kennel/prestige', () => {
+    const p = newProfile();
+    const leggDeg = lookupTrick('legg-deg')!;
+    const sitt = lookupTrick('sitt')!;
+
+    const hardResult = completeMastery(p, 'NORMAL', 1, 0, leggDeg);
+    const easyResult = completeMastery(p, 'NORMAL', 1, 0, sitt);
+
+    expect(hardResult.xp).toBeGreaterThan(easyResult.xp);
+  });
+
+  it('backward-compatible: completeMastery without trick param equals trick=sitt (1× uplift)', () => {
+    const p = newProfile();
+    const sitt = lookupTrick('sitt')!;
+
+    const noTrickResult = completeMastery(p, 'NORMAL', 1, 0);
+    const sittResult = completeMastery(p, 'NORMAL', 1, 0, sitt);
+
+    expect(noTrickResult.coins).toBe(sittResult.coins);
+    expect(noTrickResult.xp).toBe(sittResult.xp);
+  });
+
+  it('trick param composes multiplicatively with mode/kennel/prestige in documented order', () => {
+    const p = newProfile();
+    const leggDeg = lookupTrick('legg-deg')!;
+    const sitt = lookupTrick('sitt')!;
+
+    // Verify no double-counting: HARD × legg-deg should be significantly more
+    // than HARD alone, not exponentially more
+    const hardAlone = completeMastery(p, 'HARD', 1, 0, sitt);
+    const hardLeggDeg = completeMastery(p, 'HARD', 1, 0, leggDeg);
+
+    const hardSittCoins = hardAlone.coins - p.coins;
+    const hardLeggDegCoins = hardLeggDeg.coins - p.coins;
+
+    // hardLeggDeg should be more, but not more than hardSitt × 2.2 (cap)
+    expect(hardLeggDegCoins).toBeGreaterThan(hardSittCoins);
+    expect(hardLeggDegCoins).toBeLessThanOrEqual(hardSittCoins * 2.2);
+  });
+});
+
+// ─── Cycle: completePractice with trick parameter — applies uplift to coins, keeps XP=0 ───
+
+describe('completePractice with trick parameter', () => {
+  it('harder trick (legg-deg) yields MORE coins than easier trick (sitt) at same mode/kennel/prestige', () => {
+    const p = newProfile();
+    const leggDeg = lookupTrick('legg-deg')!;
+    const sitt = lookupTrick('sitt')!;
+
+    const hardResult = completePractice(p, 'NORMAL', 1, 0, leggDeg);
+    const easyResult = completePractice(p, 'NORMAL', 1, 0, sitt);
+
+    expect(hardResult.coins).toBeGreaterThan(easyResult.coins);
+  });
+
+  it('re-practice keeps no-XP invariant WITH trick uplift: xp stays unchanged for both tricks', () => {
+    const p = newProfile();
+    const leggDeg = lookupTrick('legg-deg')!;
+    const sitt = lookupTrick('sitt')!;
+    const startXp = p.xp;
+
+    const hardResult = completePractice(p, 'NORMAL', 1, 0, leggDeg);
+    const easyResult = completePractice(p, 'NORMAL', 1, 0, sitt);
+
+    // Both must grant 0 XP (task 070 invariant)
+    expect(hardResult.xp).toBe(startXp);
+    expect(easyResult.xp).toBe(startXp);
+
+    // But harder trick grants more coins
+    expect(hardResult.coins).toBeGreaterThan(easyResult.coins);
+  });
+
+  it('backward-compatible: completePractice without trick param equals trick=sitt', () => {
+    const p = newProfile();
+    const sitt = lookupTrick('sitt')!;
+
+    const noTrickResult = completePractice(p, 'NORMAL', 1, 0);
+    const sittResult = completePractice(p, 'NORMAL', 1, 0, sitt);
+
+    expect(noTrickResult.coins).toBe(sittResult.coins);
+    expect(noTrickResult.xp).toBe(sittResult.xp);
   });
 });

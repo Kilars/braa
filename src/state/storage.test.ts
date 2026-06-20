@@ -1,7 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import 'fake-indexeddb/auto';
 import { InMemoryStorage, IndexedDbStorage } from './storage';
 import type { GameSave } from './save';
+
+/** A minimal valid GameSave for storage round-trip tests. */
+function sampleSave(): GameSave {
+  return {
+    profile: { coins: 42, xp: 10, level: 1 },
+    idleTimestamp: 1718000000000,
+    kennelUpgradeIds: [],
+    difficultyMode: 'NORMAL',
+    roster: [{ id: 'rex', name: 'Rex', breedId: 'labrador', masteredTrickIds: [] }],
+    unlockedPhraseIds: [],
+    prestigePoints: 0,
+    muted: false,
+    bestCombo: 0,
+    streak: 0,
+    lastPlayedYmd: '',
+    activeRoundDogId: null,
+    activeTrickId: null,
+    learnedBar: 0,
+  };
+}
 
 // ─── Cycle 3: InMemoryStorage.load returns null before any save ───────────────
 
@@ -30,6 +50,9 @@ describe('InMemoryStorage — save then load', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     await storage.save(save);
     const result = await storage.load();
@@ -55,6 +78,9 @@ describe('InMemoryStorage — idleTimestamp preserved', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     await storage.save(save);
     const loaded = await storage.load();
@@ -79,6 +105,9 @@ describe('InMemoryStorage — clear()', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     await storage.save(save);
     await storage.clear();
@@ -110,6 +139,9 @@ describe('IndexedDbStorage — save/load round-trip', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     await storage.save(save);
     const loaded = await storage.load();
@@ -131,9 +163,40 @@ describe('IndexedDbStorage — save/load round-trip', () => {
       bestCombo: 0,
       streak: 0,
       lastPlayedYmd: '',
+      activeRoundDogId: null,
+      activeTrickId: null,
+      learnedBar: 0,
     };
     await storage.save(save);
     const loaded = await storage.load();
     expect(loaded?.idleTimestamp).toBe(ts);
+  });
+});
+
+// ─── IndexedDbStorage connection reuse (task 090) ────────────────────────────
+
+describe('IndexedDbStorage — connection reuse', () => {
+  it('opens the database only once across many operations', async () => {
+    const storage = new IndexedDbStorage('bra-test-reuse');
+    const openSpy = vi.spyOn(indexedDB, 'open');
+    try {
+      await storage.save(sampleSave());
+      await storage.save(sampleSave());
+      await storage.load();
+      await storage.clear();
+      expect(openSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      openSpy.mockRestore();
+    }
+  });
+
+  it('still round-trips correctly after reuse and clear', async () => {
+    const storage = new IndexedDbStorage('bra-test-reuse-roundtrip');
+    const save = sampleSave();
+    await storage.save(save);
+    await storage.clear();
+    expect(await storage.load()).toBeNull();
+    await storage.save(save);
+    expect(await storage.load()).toEqual(save);
   });
 });

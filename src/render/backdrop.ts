@@ -27,6 +27,8 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { backdropTierConfig } from "./backdropTier";
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 // Sky: horizon pale → deep top (Pokémon-GO-ish soft daylight blue)
@@ -132,6 +134,149 @@ function createGroundTexture(scene: Scene): DynamicTexture {
   return tex;
 }
 
+// ── Tier prop constants ────────────────────────────────────────────────────────
+// All props are placed at the scene edges (x ≤ −3 or x ≥ 3, z ≤ −3 or z ≥ 3)
+// so they never overlap the centred dog framing zone (D12).
+
+/** Colour for bush spheres — medium-dark green, unlit. */
+const BUSH_COLOR  = new Color3(0.22, 0.55, 0.18);
+/** Colour for agility cones — softened orange so it accents, not competes with the dog. */
+const CONE_COLOR  = new Color3(0.84, 0.44, 0.18);
+/** Colour for jump pole + bar — warm cream to match the park's warm palette. */
+const POLE_COLOR  = new Color3(0.88, 0.80, 0.62);
+/** Colour for fence segments. */
+const FENCE_COLOR = new Color3(0.70, 0.58, 0.38);
+
+/**
+ * Module-level cache of tier-prop meshes, keyed by name.
+ * Re-used by applyBackdropTier to show/hide without re-allocating.
+ */
+const _tierProps: Map<string, AbstractMesh> = new Map();
+
+/** Cached reference to the fill (hemisphere) light set in setupBackdrop. */
+let _hemiLight: HemisphericLight | null = null;
+/** Base intensity of the hemi light before tier boosts. */
+const _HEMI_BASE_INTENSITY = 0.8;
+/** Cached reference to the ground material so tier updates can tint it lusher. */
+let _groundMat: StandardMaterial | null = null;
+
+/**
+ * Return (or create) a named mesh.  Factory is only called once.
+ */
+function getOrCreate(name: string, factory: () => AbstractMesh): AbstractMesh {
+  if (!_tierProps.has(name)) {
+    _tierProps.set(name, factory());
+  }
+  return _tierProps.get(name)!;
+}
+
+/** Create a single bush sphere with position (x, z). */
+function makeBush(scene: Scene, name: string, x: number, z: number): AbstractMesh {
+  const mat = new StandardMaterial(`${name}-mat`, scene);
+  mat.diffuseColor = BUSH_COLOR;
+  mat.specularColor = new Color3(0, 0, 0); // matte; lit by scene key/hemi lights
+  const mesh = MeshBuilder.CreateSphere(name, { diameter: 0.9, segments: 5 }, scene);
+  mesh.position.set(x, 0.3, z);
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  return mesh;
+}
+
+/** Create an agility cone at position (x, z). */
+function makeCone(scene: Scene, name: string, x: number, z: number): AbstractMesh {
+  const mat = new StandardMaterial(`${name}-mat`, scene);
+  mat.diffuseColor = CONE_COLOR;
+  mat.specularColor = new Color3(0, 0, 0); // matte; lit by scene key/hemi lights
+  const mesh = MeshBuilder.CreateCylinder(name, {
+    diameterTop: 0, diameterBottom: 0.22, height: 0.4, tessellation: 12,
+  }, scene);
+  mesh.position.set(x, 0.2, z);
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  return mesh;
+}
+
+/** Create a jump-bar pole (tall thin cylinder) at position (x, z). */
+function makeJumpPole(scene: Scene, name: string, x: number, z: number): AbstractMesh {
+  const mat = new StandardMaterial(`${name}-mat`, scene);
+  mat.diffuseColor = POLE_COLOR;
+  mat.specularColor = new Color3(0, 0, 0); // matte; lit by scene key/hemi lights
+  const mesh = MeshBuilder.CreateCylinder(name, {
+    diameter: 0.08, height: 1.0, tessellation: 6,
+  }, scene);
+  mesh.position.set(x, 0.5, z);
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  return mesh;
+}
+
+/** Create a horizontal jump bar (thin box) between two poles. */
+function makeJumpBar(scene: Scene, name: string, x: number, z: number): AbstractMesh {
+  const mat = new StandardMaterial(`${name}-mat`, scene);
+  mat.diffuseColor = POLE_COLOR; // cream rail, matches the pole
+  mat.specularColor = new Color3(0, 0, 0); // matte; lit by scene key/hemi lights
+  const mesh = MeshBuilder.CreateBox(name, { width: 1.1, height: 0.06, depth: 0.06 }, scene);
+  mesh.position.set(x, 0.55, z);
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  return mesh;
+}
+
+/** Create one fence segment (thin flat box) at position (x, z) with given rotation. */
+function makeFenceSegment(scene: Scene, name: string, x: number, z: number, rotY: number): AbstractMesh {
+  const mat = new StandardMaterial(`${name}-mat`, scene);
+  mat.diffuseColor = FENCE_COLOR;
+  mat.specularColor = new Color3(0, 0, 0); // matte; lit by scene key/hemi lights
+  const mesh = MeshBuilder.CreateBox(name, { width: 1.6, height: 0.6, depth: 0.06 }, scene);
+  mesh.position.set(x, 0.3, z);
+  mesh.rotation.y = rotY;
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  return mesh;
+}
+
+/**
+ * Ensure all tier props exist in the scene (idempotent).
+ * All props start disabled; applyBackdropTier enables/disables per tier.
+ */
+function ensureTierProps(scene: Scene): void {
+  // NOTE on placement: the camera sits at ≈(0, 1.28, -4.45) looking toward +Z
+  // (target (0,0.6,0)). So "behind the dog" — visible, never occluding the
+  // centered dog — is POSITIVE z, and the in-frame horizontal band narrows with
+  // distance. All props sit on the grass at small |x|, positive z, near the
+  // horizon behind the dog.
+
+  // Tier 1+: two bushes flanking the dog, kept CLOSE (small z) so they stay
+  // prominent and read as the first clear upgrade.
+  getOrCreate('bush-bl', () => makeBush(scene, 'bush-bl',  -1.7, 2.7));
+  getOrCreate('bush-br', () => makeBush(scene, 'bush-br',   1.7, 2.7));
+
+  // Tier 2+: STRICTLY ADDITIVE over tier 1 — the two front bushes (z 2.7) stay
+  // visible; the cones sit slightly BEHIND them (z 2.9) and are now small + softly
+  // coloured so they accent rather than compete with the dog. Two more bushes and
+  // a cream jump set fill in to the back-left.
+  getOrCreate('bush-ml', () => makeBush(scene, 'bush-ml',  -2.1, 3.6));
+  getOrCreate('bush-mr', () => makeBush(scene, 'bush-mr',   2.1, 3.6));
+  getOrCreate('cone-a',  () => makeCone(scene, 'cone-a',   -1.4, 2.9));
+  getOrCreate('cone-b',  () => makeCone(scene, 'cone-b',    1.4, 2.9));
+  getOrCreate('jump-pole-a', () => makeJumpPole(scene, 'jump-pole-a', -1.9, 3.2));
+  getOrCreate('jump-pole-b', () => makeJumpPole(scene, 'jump-pole-b', -0.9, 3.2));
+  getOrCreate('jump-bar',    () => makeJumpBar(scene,  'jump-bar',    -1.4, 3.2));
+
+  // Tier 3: more bushes + a fence line across the far background (at the horizon)
+  getOrCreate('bush-fl', () => makeBush(scene, 'bush-fl',  -1.0, 4.2));
+  getOrCreate('bush-fr', () => makeBush(scene, 'bush-fr',   1.0, 4.2));
+  getOrCreate('bush-fc', () => makeBush(scene, 'bush-fc',   0.0, 4.5));
+  getOrCreate('fence-l', () => makeFenceSegment(scene, 'fence-l', -2.0, 4.0, 0));
+  getOrCreate('fence-r', () => makeFenceSegment(scene, 'fence-r',  2.0, 4.0, 0));
+  getOrCreate('fence-c', () => makeFenceSegment(scene, 'fence-c',  0.0, 4.0, 0));
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
@@ -142,15 +287,18 @@ function createGroundTexture(scene: Scene): DynamicTexture {
  * 3. Subtle dark corner vignette via an inside-hemisphere shell.
  * 4. Adds a warm DirectionalLight key-light for cleaner dog separation;
  *    tunes the existing HemisphericLight to be softer fill.
+ * 5. Builds (but disables) all tier props; enables those appropriate for `tier`.
  *
  * @param scene       The Babylon scene.
  * @param groundMesh  The existing ground mesh (created by scene.ts).
  * @param hemiLight   The existing HemisphericLight (created by scene.ts).
+ * @param tier        Initial kennel tier (0–3; defaults to 0).
  */
 export function setupBackdrop(
   scene: Scene,
   groundMesh: { material: StandardMaterial | null },
   hemiLight: HemisphericLight,
+  tier: 0 | 1 | 2 | 3 = 0,
 ): void {
   // 1. Sky back-plane
   createSkyPlane(scene);
@@ -163,6 +311,7 @@ export function setupBackdrop(
     groundMat.emissiveColor = new Color3(0.06, 0.1, 0.06);
     // Retain some diffuse tinting for the light to act on
     groundMat.diffuseColor = new Color3(1, 1, 1); // use texture colour directly
+    _groundMat = groundMat; // cache for per-tier lushness tinting
   }
 
   // 3. Subtle corner vignette — inside-facing hemisphere, dark, low alpha
@@ -192,7 +341,68 @@ export function setupBackdrop(
   keyLight.intensity = 0.7;
 
   // Tune the hemisphere to be a softer ambient fill (key light takes the lead)
-  hemiLight.intensity = 0.8;
+  hemiLight.intensity = _HEMI_BASE_INTENSITY;
   hemiLight.diffuse = new Color3(0.95, 0.93, 0.85);  // cooler/softer fill
   hemiLight.groundColor = new Color3(0.42, 0.52, 0.38); // warm grass bounce
+
+  // Cache the hemi light for tier updates
+  _hemiLight = hemiLight;
+
+  // 5. Pre-build all tier props (disabled) and apply the initial tier
+  ensureTierProps(scene);
+  applyBackdropTier(scene, tier);
+}
+
+/**
+ * Update the backdrop to match a new kennel tier — live, no scene rebuild.
+ *
+ * Shows/hides the pre-built prop meshes and nudges the fill-light intensity
+ * based on the tier config. Safe to call on every kennel purchase.
+ *
+ * @param scene  The Babylon scene (used only to ensure props exist; meshes
+ *               created by setupBackdrop are reused via the module-level cache).
+ * @param tier   Target tier (0–3).
+ */
+export function applyBackdropTier(scene: Scene, tier: 0 | 1 | 2 | 3): void {
+  // Ensure the prop pool exists (no-op if setupBackdrop already called it)
+  ensureTierProps(scene);
+
+  const cfg = backdropTierConfig(tier);
+
+  // ── Bush visibility ──────────────────────────────────────────────────────
+  // Tier 1+: corner bushes
+  _tierProps.get('bush-bl')?.setEnabled(cfg.bushCount >= 2);
+  _tierProps.get('bush-br')?.setEnabled(cfg.bushCount >= 2);
+  // Tier 2+: mid-edge bushes
+  _tierProps.get('bush-ml')?.setEnabled(cfg.bushCount >= 4);
+  _tierProps.get('bush-mr')?.setEnabled(cfg.bushCount >= 4);
+  // Tier 3: far-back bushes
+  _tierProps.get('bush-fl')?.setEnabled(cfg.bushCount >= 6);
+  _tierProps.get('bush-fr')?.setEnabled(cfg.bushCount >= 6);
+  _tierProps.get('bush-fc')?.setEnabled(cfg.bushCount >= 6);
+
+  // ── Agility props (tier 2+) ──────────────────────────────────────────────
+  _tierProps.get('cone-a')?.setEnabled(cfg.agilityProps);
+  _tierProps.get('cone-b')?.setEnabled(cfg.agilityProps);
+  _tierProps.get('jump-pole-a')?.setEnabled(cfg.agilityProps);
+  _tierProps.get('jump-pole-b')?.setEnabled(cfg.agilityProps);
+  _tierProps.get('jump-bar')?.setEnabled(cfg.agilityProps);
+
+  // ── Fence line (tier 3) ──────────────────────────────────────────────────
+  _tierProps.get('fence-l')?.setEnabled(cfg.fenceLine);
+  _tierProps.get('fence-r')?.setEnabled(cfg.fenceLine);
+  _tierProps.get('fence-c')?.setEnabled(cfg.fenceLine);
+
+  // ── Fill-light intensity boost ───────────────────────────────────────────
+  if (_hemiLight) {
+    _hemiLight.intensity = _HEMI_BASE_INTENSITY + cfg.fillBoost;
+  }
+
+  // ── Ground lushness tint ───────────────────────────────────────────────────
+  // Push the ground texture greener with tier by damping its red/blue channels;
+  // green stays at 1 so higher tiers read as richer, greener grass.
+  if (_groundMat) {
+    const g = cfg.groundGreenBoost;
+    _groundMat.diffuseColor = new Color3(1 - g * 1.6, 1, 1 - g * 1.2);
+  }
 }

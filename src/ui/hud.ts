@@ -2,20 +2,30 @@ import './hud.css';
 import { HudViewModel } from './viewModel';
 import type { Phrase, PhraseEntry } from '../core/phrases';
 import { isReady } from '../core/phrases';
+import { classifySwipe } from '../core/swipeGesture';
 import type { DifficultyMode } from '../core/difficulty';
 import type { Trick } from '../core/tricks';
-import { KENNEL_UPGRADES, kennelMultiplier, canBuy } from '../core/kennel';
 import type { Revealed } from '../core/onboarding';
 import type { Dog } from '../core/roster';
 import type { Breed } from '../core/breeds';
 import type { Achievement } from '../core/achievements';
+import { createPanelManager } from './panels/panelManager';
+import type { PanelHandle } from './panels/panelManager';
+import { createAdoptPanel } from './panels/adoptPanel';
+import { createKennelPanel } from './panels/kennelPanel';
+import { createSettingsPanel } from './panels/settingsPanel';
+import { createHelpPanel } from './panels/helpPanel';
+import { createAchievementsPanel } from './panels/achievementsPanel';
 
 const RESULT_FLASH_MS = 700;
 
 export interface HudCallbacks {
-  onBraTap: () => void;
-  /** @deprecated use getLoadoutState instead — kept for backward compat */
-  getPhrase: () => { phrase: Phrase; lastUsedAt: number | null };
+  /** BRA pressed — record the press instant (scoring uses this, not release). */
+  onBraTapDown: () => void;
+  /** BRA released as a tap (not a swipe) — commit the timing mark. */
+  onBraTapCommit: () => void;
+  /** BRA released as a horizontal swipe — swap the loaded phrase instead of marking. */
+  onSwapPhrase: (dir: 'next' | 'prev') => void;
   onSelectMode: (mode: DifficultyMode) => void;
   initialMode: DifficultyMode;
   // Select-screen
@@ -62,6 +72,10 @@ export interface HudCallbacks {
  * Creates the DOM HUD overlay and returns an update function.
  * The overlay sits above the Babylon canvas (z-index: 10).
  * All logic lives in viewModel.ts — this file only touches the DOM.
+ *
+ * The five overlay panels (adopt / kennel / settings / help / achievements)
+ * live in ui/panels/* factories; createHud orchestrates them through a
+ * panel manager that enforces one-open-at-a-time exclusivity (task 071).
  */
 export function createHud(callbacks: HudCallbacks): {
   renderTraining: (vm: HudViewModel) => void;
@@ -152,595 +166,72 @@ export function createHud(callbacks: HudCallbacks): {
   selectEl.appendChild(helpBtnEl);
   document.body.appendChild(selectEl);
 
-  // ── Adopt panel (modal overlay) ────────────────────────────────────────
-  const adoptPanelEl = document.createElement('div');
-  adoptPanelEl.id = 'adopt-panel';
-  adoptPanelEl.setAttribute('aria-modal', 'true');
-  adoptPanelEl.setAttribute('role', 'dialog');
-  adoptPanelEl.setAttribute('aria-label', 'Adopt a Dog');
+  // ── Overlay panels ─────────────────────────────────────────────────────
+  // Each panel's DOM construction lives in its own ui/panels/* factory. They
+  // are created here in the same order they were formerly appended inline
+  // (adopt → kennel → settings → help → achievements) so document.body child
+  // order — and therefore hud.css / stacking — is unchanged. The panel manager
+  // enforces one-open-at-a-time exclusivity (task 071).
+  const panelManager = createPanelManager();
 
-  const adoptHeaderEl = document.createElement('div');
-  adoptHeaderEl.id = 'adopt-panel-header';
-
-  const adoptTitleEl = document.createElement('div');
-  adoptTitleEl.id = 'adopt-panel-title';
-  adoptTitleEl.textContent = 'Adopt a Dog';
-
-  const adoptCloseBtn = document.createElement('button');
-  adoptCloseBtn.id = 'adopt-panel-close';
-  adoptCloseBtn.type = 'button';
-  adoptCloseBtn.textContent = '✕';
-  adoptCloseBtn.setAttribute('aria-label', 'Close adopt panel');
-
-  adoptHeaderEl.appendChild(adoptTitleEl);
-  adoptHeaderEl.appendChild(adoptCloseBtn);
-
-  const adoptListEl = document.createElement('div');
-  adoptListEl.id = 'adopt-panel-list';
-
-  adoptPanelEl.appendChild(adoptHeaderEl);
-  adoptPanelEl.appendChild(adoptListEl);
-  document.body.appendChild(adoptPanelEl);
-
-  // ── Kennel panel (modal overlay) ───────────────────────────────────────
-  const kennelPanelEl = document.createElement('div');
-  kennelPanelEl.id = 'kennel-panel';
-  kennelPanelEl.setAttribute('aria-modal', 'true');
-  kennelPanelEl.setAttribute('role', 'dialog');
-  kennelPanelEl.setAttribute('aria-label', 'Kennel Shop');
-
-  const kennelHeaderEl = document.createElement('div');
-  kennelHeaderEl.id = 'kennel-panel-header';
-
-  const kennelTitleEl = document.createElement('div');
-  kennelTitleEl.id = 'kennel-panel-title';
-  kennelTitleEl.textContent = 'Kennel Upgrades';
-
-  const kennelMultiplierEl = document.createElement('div');
-  kennelMultiplierEl.id = 'kennel-panel-multiplier';
-
-  const kennelCloseBtn = document.createElement('button');
-  kennelCloseBtn.id = 'kennel-panel-close';
-  kennelCloseBtn.type = 'button';
-  kennelCloseBtn.textContent = '✕';
-  kennelCloseBtn.setAttribute('aria-label', 'Close kennel shop');
-
-  kennelHeaderEl.appendChild(kennelTitleEl);
-  kennelHeaderEl.appendChild(kennelMultiplierEl);
-  kennelHeaderEl.appendChild(kennelCloseBtn);
-
-  const kennelListEl = document.createElement('div');
-  kennelListEl.id = 'kennel-panel-list';
-
-  kennelPanelEl.appendChild(kennelHeaderEl);
-  kennelPanelEl.appendChild(kennelListEl);
-  document.body.appendChild(kennelPanelEl);
-
-  // ── Settings panel (modal overlay) ────────────────────────────────────────
-  const settingsPanelEl = document.createElement('div');
-  settingsPanelEl.id = 'settings-panel';
-  settingsPanelEl.setAttribute('role', 'dialog');
-  settingsPanelEl.setAttribute('aria-modal', 'true');
-  settingsPanelEl.setAttribute('aria-label', 'Settings');
-
-  const settingsHeaderEl = document.createElement('div');
-  settingsHeaderEl.id = 'settings-panel-header';
-
-  const settingsTitleEl = document.createElement('div');
-  settingsTitleEl.id = 'settings-panel-title';
-  settingsTitleEl.textContent = 'Settings';
-
-  const settingsCloseBtn = document.createElement('button');
-  settingsCloseBtn.id = 'settings-panel-close';
-  settingsCloseBtn.type = 'button';
-  settingsCloseBtn.textContent = '✕';
-  settingsCloseBtn.setAttribute('aria-label', 'Close settings');
-
-  settingsHeaderEl.appendChild(settingsTitleEl);
-  settingsHeaderEl.appendChild(settingsCloseBtn);
-
-  const settingsBodyEl = document.createElement('div');
-  settingsBodyEl.id = 'settings-panel-body';
-
-  // ── Mute toggle row ──────────────────────────────────────────────────
-  const muteRowEl = document.createElement('div');
-  muteRowEl.className = 'settings-row';
-
-  const muteLabelEl = document.createElement('label');
-  muteLabelEl.className = 'settings-row-label';
-  muteLabelEl.textContent = 'Mute audio';
-  muteLabelEl.setAttribute('for', 'settings-mute-toggle');
-
-  const muteToggleEl = document.createElement('input');
-  muteToggleEl.id = 'settings-mute-toggle';
-  muteToggleEl.type = 'checkbox';
-  muteToggleEl.className = 'settings-toggle';
-  muteToggleEl.setAttribute('aria-label', 'Mute audio');
-
-  muteRowEl.appendChild(muteLabelEl);
-  muteRowEl.appendChild(muteToggleEl);
-
-  // ── Reset progress row ───────────────────────────────────────────────
-  const resetRowEl = document.createElement('div');
-  resetRowEl.className = 'settings-row settings-row--reset';
-
-  const resetBtnEl = document.createElement('button');
-  resetBtnEl.id = 'settings-reset-btn';
-  resetBtnEl.type = 'button';
-  resetBtnEl.textContent = 'Reset progress';
-  resetBtnEl.setAttribute('aria-label', 'Reset all progress');
-
-  resetRowEl.appendChild(resetBtnEl);
-
-  // ── Stats readout row ────────────────────────────────────────────────
-  const statsRowEl = document.createElement('div');
-  statsRowEl.id = 'settings-stats';
-  statsRowEl.className = 'settings-row settings-row--stats';
-
-  // ── Achievements button row ──────────────────────────────────────────
-  const achievementsBtnRowEl = document.createElement('div');
-  achievementsBtnRowEl.className = 'settings-row settings-row--achievements';
-
-  const achievementsBtnEl = document.createElement('button');
-  achievementsBtnEl.id = 'settings-achievements-btn';
-  achievementsBtnEl.type = 'button';
-  achievementsBtnEl.textContent = '🏆 Achievements';
-  achievementsBtnEl.setAttribute('aria-label', 'View achievements');
-
-  achievementsBtnRowEl.appendChild(achievementsBtnEl);
-
-  settingsBodyEl.appendChild(muteRowEl);
-  settingsBodyEl.appendChild(achievementsBtnRowEl);
-  settingsBodyEl.appendChild(resetRowEl);
-  settingsBodyEl.appendChild(statsRowEl);
-
-  settingsPanelEl.appendChild(settingsHeaderEl);
-  settingsPanelEl.appendChild(settingsBodyEl);
-  document.body.appendChild(settingsPanelEl);
-
-  // ── Help panel (modal overlay) ────────────────────────────────────────────
-  const helpPanelEl = document.createElement('div');
-  helpPanelEl.id = 'help-panel';
-  helpPanelEl.setAttribute('role', 'dialog');
-  helpPanelEl.setAttribute('aria-modal', 'true');
-  helpPanelEl.setAttribute('aria-label', 'How to play');
-
-  const helpHeaderEl = document.createElement('div');
-  helpHeaderEl.id = 'help-panel-header';
-
-  const helpTitleEl = document.createElement('div');
-  helpTitleEl.id = 'help-panel-title';
-  helpTitleEl.textContent = 'How to Play';
-
-  const helpCloseBtn = document.createElement('button');
-  helpCloseBtn.id = 'help-panel-close';
-  helpCloseBtn.type = 'button';
-  helpCloseBtn.textContent = '✕';
-  helpCloseBtn.setAttribute('aria-label', 'Close how to play');
-
-  helpHeaderEl.appendChild(helpTitleEl);
-  helpHeaderEl.appendChild(helpCloseBtn);
-
-  const helpBodyEl = document.createElement('div');
-  helpBodyEl.id = 'help-panel-body';
-
-  const helpItems: [string, string][] = [
-    ['Watch the dog.', 'When it does the trick and a gold ring pulses around BRA, that\'s the moment.'],
-    ['Tap BRA on the pulse.', 'Closer to the peak = better; fill the bar to 100% to master the trick.'],
-    ['Don\'t tap the wrong thing.', 'A grey, turned-away dog is a distractor — marking it confuses your pup.'],
-    ['Chain it.', 'Back-to-back good marks build a combo for bonus rewards.'],
-    ['Pick your challenge.', 'Normal / Hard / Expert changes timing. Adopt new breeds and graduate fully-trained dogs for prestige.'],
-  ];
-
-  const helpListEl = document.createElement('ul');
-  helpListEl.id = 'help-panel-list';
-
-  for (const [bold, rest] of helpItems) {
-    const li = document.createElement('li');
-    li.className = 'help-panel-item';
-    const boldEl = document.createElement('strong');
-    boldEl.textContent = bold;
-    li.appendChild(boldEl);
-    li.appendChild(document.createTextNode(' ' + rest));
-    helpListEl.appendChild(li);
-  }
-
-  const helpGotItBtn = document.createElement('button');
-  helpGotItBtn.id = 'help-panel-got-it';
-  helpGotItBtn.type = 'button';
-  helpGotItBtn.textContent = 'Got it!';
-  helpGotItBtn.setAttribute('aria-label', 'Close how to play');
-
-  helpBodyEl.appendChild(helpListEl);
-  helpBodyEl.appendChild(helpGotItBtn);
-
-  helpPanelEl.appendChild(helpHeaderEl);
-  helpPanelEl.appendChild(helpBodyEl);
-  document.body.appendChild(helpPanelEl);
-
-  // ── Achievements panel (modal overlay) ──────────────────────────────────────
-  const achievementsPanelEl = document.createElement('div');
-  achievementsPanelEl.id = 'achievements-panel';
-  achievementsPanelEl.setAttribute('role', 'dialog');
-  achievementsPanelEl.setAttribute('aria-modal', 'true');
-  achievementsPanelEl.setAttribute('aria-label', 'Achievements');
-
-  const achievementsHeaderEl = document.createElement('div');
-  achievementsHeaderEl.id = 'achievements-panel-header';
-
-  const achievementsTitleEl = document.createElement('div');
-  achievementsTitleEl.id = 'achievements-panel-title';
-  achievementsTitleEl.textContent = '🏆 Achievements';
-
-  const achievementsCloseBtn = document.createElement('button');
-  achievementsCloseBtn.id = 'achievements-panel-close';
-  achievementsCloseBtn.type = 'button';
-  achievementsCloseBtn.textContent = '✕';
-  achievementsCloseBtn.setAttribute('aria-label', 'Close achievements');
-
-  achievementsHeaderEl.appendChild(achievementsTitleEl);
-  achievementsHeaderEl.appendChild(achievementsCloseBtn);
-
-  const achievementsListEl = document.createElement('div');
-  achievementsListEl.id = 'achievements-panel-list';
-
-  achievementsPanelEl.appendChild(achievementsHeaderEl);
-  achievementsPanelEl.appendChild(achievementsListEl);
-  document.body.appendChild(achievementsPanelEl);
-
-  // ── Settings panel wiring ───────────────────────────────────────────
-  let resetConfirmPending = false;
-  let resetConfirmTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function refreshSettingsPanel(): void {
-    muteToggleEl.checked = callbacks.isMuted();
-    const { prestigePoints, coins, level, tricksMastered, streak } = callbacks.getStats();
-    statsRowEl.innerHTML = '';
-
-    const items: [string, string | number][] = [
-      ['Prestige', prestigePoints > 0 ? `★${prestigePoints}` : '—'],
-      ['Coins', `🪙 ${coins}`],
-      ['Level', level],
-      ['Tricks mastered', tricksMastered],
-      ['Streak', `🔥 ${streak}-day streak`],
-    ];
-    for (const [label, value] of items) {
-      const itemEl = document.createElement('div');
-      itemEl.className = 'settings-stat-item';
-      const labelEl = document.createElement('span');
-      labelEl.className = 'settings-stat-label';
-      labelEl.textContent = label;
-      const valueEl = document.createElement('span');
-      valueEl.className = 'settings-stat-value';
-      valueEl.textContent = String(value);
-      itemEl.appendChild(labelEl);
-      itemEl.appendChild(valueEl);
-      statsRowEl.appendChild(itemEl);
-    }
-
-    // Reset confirm button state
-    resetConfirmPending = false;
-    if (resetConfirmTimer !== null) {
-      clearTimeout(resetConfirmTimer);
-      resetConfirmTimer = null;
-    }
-    resetBtnEl.textContent = 'Reset progress';
-    resetBtnEl.classList.remove('settings-reset-confirm');
-  }
-
-  function openSettingsPanel(): void {
-    closeAllPanels();
-    refreshSettingsPanel();
-    settingsPanelEl.style.display = 'flex';
-  }
-
-  function closeSettingsPanel(): void {
-    settingsPanelEl.style.display = 'none';
-    resetConfirmPending = false;
-    if (resetConfirmTimer !== null) {
-      clearTimeout(resetConfirmTimer);
-      resetConfirmTimer = null;
-    }
-    resetBtnEl.textContent = 'Reset progress';
-    resetBtnEl.classList.remove('settings-reset-confirm');
-  }
-
-  muteToggleEl.addEventListener('change', () => {
-    callbacks.onToggleMute(muteToggleEl.checked);
+  const adoptPanel = createAdoptPanel({
+    getAdoptableBreeds: callbacks.getAdoptableBreeds,
+    onAdoptBreed: callbacks.onAdoptBreed,
+    // Return to the refreshed select screen after a successful adoption.
+    onAdopted: () => showSelect(),
   });
 
-  resetBtnEl.addEventListener('pointerdown', (e) => {
+  const kennelPanel = createKennelPanel({
+    getKennelState: callbacks.getKennelState,
+    onBuyUpgrade: callbacks.onBuyUpgrade,
+  });
+
+  // The achievements panel is opened from a button inside the settings panel.
+  // Declare it before settings so the open callback can reference it, but
+  // assign it after help so the body append order stays settings → help →
+  // achievements (the closure runs only on click, well after assignment).
+  let achievementsPanel: PanelHandle;
+
+  const settingsPanel = createSettingsPanel({
+    isMuted: callbacks.isMuted,
+    onToggleMute: callbacks.onToggleMute,
+    onResetProgress: callbacks.onResetProgress,
+    getStats: callbacks.getStats,
+    onOpenAchievements: () => panelManager.open(achievementsPanel),
+  });
+
+  const helpPanel = createHelpPanel();
+
+  achievementsPanel = createAchievementsPanel({
+    getAchievementsState: callbacks.getAchievementsState,
+  });
+
+  panelManager.register(adoptPanel);
+  panelManager.register(kennelPanel);
+  panelManager.register(settingsPanel);
+  panelManager.register(helpPanel);
+  panelManager.register(achievementsPanel);
+
+  // Select-screen buttons open their panel exclusively (closing any other).
+  adoptBtnEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!resetConfirmPending) {
-      resetConfirmPending = true;
-      resetBtnEl.textContent = 'Tap again to confirm';
-      resetBtnEl.classList.add('settings-reset-confirm');
-      resetConfirmTimer = setTimeout(() => {
-        resetConfirmPending = false;
-        resetBtnEl.textContent = 'Reset progress';
-        resetBtnEl.classList.remove('settings-reset-confirm');
-        resetConfirmTimer = null;
-      }, 3000);
-    } else {
-      resetConfirmPending = false;
-      if (resetConfirmTimer !== null) {
-        clearTimeout(resetConfirmTimer);
-        resetConfirmTimer = null;
-      }
-      void callbacks.onResetProgress();
-    }
+    panelManager.open(adoptPanel);
   });
-
-  settingsCloseBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    closeSettingsPanel();
-  });
-
-  settingsPanelEl.style.display = 'none';
-
-  settingsBtnEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    openSettingsPanel();
-  });
-
-  // ── Help panel wiring ───────────────────────────────────────────────────
-  function openHelpPanel(): void {
-    closeAllPanels();
-    helpPanelEl.style.display = 'flex';
-  }
-
-  function closeHelpPanel(): void {
-    helpPanelEl.style.display = 'none';
-  }
-
-  helpBtnEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    openHelpPanel();
-  });
-
-  helpCloseBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    closeHelpPanel();
-  });
-
-  helpGotItBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    closeHelpPanel();
-  });
-
-  helpPanelEl.style.display = 'none';
-
-  // ── Achievements panel wiring ────────────────────────────────────────────────
-  function refreshAchievementsPanel(): void {
-    const { achievements, unlockedIds } = callbacks.getAchievementsState();
-    achievementsListEl.innerHTML = '';
-    for (const ach of achievements) {
-      const unlocked = unlockedIds.includes(ach.id);
-      const rowEl = document.createElement('div');
-      rowEl.className = 'achievement-row' + (unlocked ? ' unlocked' : ' locked');
-
-      const iconEl = document.createElement('div');
-      iconEl.className = 'achievement-icon';
-      iconEl.textContent = unlocked ? '✓' : '○';
-      iconEl.setAttribute('aria-hidden', 'true');
-
-      const infoEl = document.createElement('div');
-      infoEl.className = 'achievement-info';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'achievement-name';
-      nameEl.textContent = ach.name;
-
-      const descEl = document.createElement('div');
-      descEl.className = 'achievement-desc';
-      descEl.textContent = ach.description;
-
-      infoEl.appendChild(nameEl);
-      infoEl.appendChild(descEl);
-
-      rowEl.appendChild(iconEl);
-      rowEl.appendChild(infoEl);
-      achievementsListEl.appendChild(rowEl);
-    }
-  }
-
-  function openAchievementsPanel(): void {
-    closeAllPanels();
-    refreshAchievementsPanel();
-    achievementsPanelEl.style.display = 'flex';
-  }
-
-  function closeAchievementsPanel(): void {
-    achievementsPanelEl.style.display = 'none';
-  }
-
-  achievementsCloseBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    closeAchievementsPanel();
-  });
-
-  achievementsBtnEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    openAchievementsPanel();
-  });
-
-  achievementsPanelEl.style.display = 'none';
-
-  function refreshKennelPanel(): void {
-    const { kennelUpgradeIds, coins } = callbacks.getKennelState();
-    const mult = kennelMultiplier(kennelUpgradeIds);
-    kennelMultiplierEl.textContent = `Payout multiplier: ×${mult.toFixed(2)}`;
-
-    kennelListEl.innerHTML = '';
-    for (const upgrade of KENNEL_UPGRADES) {
-      const owned = kennelUpgradeIds.includes(upgrade.id);
-      const affordable = canBuy(kennelUpgradeIds, upgrade, coins);
-
-      const rowEl = document.createElement('div');
-      rowEl.className = 'kennel-upgrade-row';
-      if (owned) rowEl.classList.add('owned');
-      else if (affordable) rowEl.classList.add('affordable');
-      else rowEl.classList.add('too-expensive');
-
-      const infoEl = document.createElement('div');
-      infoEl.className = 'kennel-upgrade-info';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'kennel-upgrade-name';
-      nameEl.textContent = upgrade.name;
-
-      const costEl = document.createElement('div');
-      costEl.className = 'kennel-upgrade-cost';
-      costEl.textContent = owned ? 'Owned' : `🪙 ${upgrade.cost}`;
-
-      infoEl.appendChild(nameEl);
-      infoEl.appendChild(costEl);
-
-      const buyBtn = document.createElement('button');
-      buyBtn.className = 'kennel-buy-btn';
-      buyBtn.type = 'button';
-      buyBtn.dataset['upgradeId'] = upgrade.id;
-
-      if (owned) {
-        buyBtn.textContent = '✓';
-        buyBtn.disabled = true;
-        buyBtn.setAttribute('aria-label', `${upgrade.name} — already owned`);
-      } else if (affordable) {
-        buyBtn.textContent = 'Buy';
-        buyBtn.setAttribute('aria-label', `Buy ${upgrade.name} for ${upgrade.cost} coins`);
-        buyBtn.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          callbacks.onBuyUpgrade(upgrade.id);
-          refreshKennelPanel();
-        });
-      } else {
-        buyBtn.textContent = 'Buy';
-        buyBtn.disabled = true;
-        buyBtn.setAttribute('aria-label', `${upgrade.name} — not enough coins`);
-      }
-
-      rowEl.appendChild(infoEl);
-      rowEl.appendChild(buyBtn);
-      kennelListEl.appendChild(rowEl);
-    }
-  }
-
-  function openKennelPanel(): void {
-    closeAllPanels();
-    refreshKennelPanel();
-    kennelPanelEl.style.display = 'flex';
-  }
-
-  function closeKennelPanel(): void {
-    kennelPanelEl.style.display = 'none';
-  }
 
   kennelBtnEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    openKennelPanel();
+    panelManager.open(kennelPanel);
   });
 
-  kennelCloseBtn.addEventListener('pointerdown', (e) => {
+  settingsBtnEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    closeKennelPanel();
+    panelManager.open(settingsPanel);
   });
 
-  kennelPanelEl.style.display = 'none';
-
-  // ── Adopt panel wiring ──────────────────────────────────────────────────
-  function refreshAdoptPanel(): void {
-    adoptListEl.innerHTML = '';
-    const breeds = callbacks.getAdoptableBreeds();
-    if (breeds.length === 0) {
-      const emptyEl = document.createElement('div');
-      emptyEl.className = 'adopt-empty';
-      emptyEl.textContent = 'You own all available breeds!';
-      adoptListEl.appendChild(emptyEl);
-      return;
-    }
-    for (const { breed, affordable, levelGated } of breeds) {
-      const rowEl = document.createElement('div');
-      // Distinguish level-locked from coin-locked so the player knows which gate blocks them
-      rowEl.className = 'adopt-breed-row'
-        + (affordable ? ' affordable' : levelGated ? ' level-locked' : ' too-expensive');
-
-      const infoEl = document.createElement('div');
-      infoEl.className = 'adopt-breed-info';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'adopt-breed-name';
-      nameEl.textContent = breed.name;
-
-      const costEl = document.createElement('div');
-      costEl.className = 'adopt-breed-cost';
-      // Level wall: show required level, not a coin price (coins are moot until unlocked)
-      costEl.textContent = levelGated ? `Lvl ${breed.requiredLevel ?? 1}` : `🪙 ${breed.adoptCost ?? 0}`;
-
-      infoEl.appendChild(nameEl);
-      infoEl.appendChild(costEl);
-
-      const adoptBtn = document.createElement('button');
-      adoptBtn.className = 'adopt-buy-btn';
-      adoptBtn.type = 'button';
-      adoptBtn.textContent = 'Adopt';
-      adoptBtn.disabled = !affordable;
-      adoptBtn.setAttribute('aria-label',
-        affordable
-          ? `Adopt ${breed.name} for ${breed.adoptCost ?? 0} coins`
-          : levelGated
-            ? `${breed.name} — reach level ${breed.requiredLevel ?? 1} to unlock`
-            : `${breed.name} — not enough coins`
-      );
-
-      if (affordable) {
-        adoptBtn.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          callbacks.onAdoptBreed(breed.id);
-          // Return to the refreshed select screen and dismiss the adopt panel
-          showSelect();
-          closeAdoptPanel();
-        });
-      }
-
-      rowEl.appendChild(infoEl);
-      rowEl.appendChild(adoptBtn);
-      adoptListEl.appendChild(rowEl);
-    }
-  }
-
-  function openAdoptPanel(): void {
-    closeAllPanels();
-    refreshAdoptPanel();
-    adoptPanelEl.style.display = 'flex';
-  }
-
-  function closeAdoptPanel(): void {
-    adoptPanelEl.style.display = 'none';
-  }
-
-  adoptBtnEl.addEventListener('pointerdown', (e) => {
+  helpBtnEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    openAdoptPanel();
+    panelManager.open(helpPanel);
   });
-
-  adoptCloseBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    closeAdoptPanel();
-  });
-
-  adoptPanelEl.style.display = 'none';
-
-  // ── Panel exclusivity helper ─────────────────────────────────────────────
-  // Close all overlay panels before opening a new one so at most one is
-  // visible at any time. Calls each per-panel close fn so panel-local state
-  // (e.g. settings reset-confirm timer) is properly reset.
-  function closeAllPanels(): void {
-    closeSettingsPanel();
-    closeHelpPanel();
-    closeAchievementsPanel();
-    closeKennelPanel();
-    closeAdoptPanel();
-  }
 
   // ── Graduate button wiring ────────────────────────────────────────────────
   graduateBtnEl.addEventListener('pointerdown', (e) => {
@@ -784,6 +275,40 @@ export function createHud(callbacks: HudCallbacks): {
 
   statsEl.appendChild(coinsEl);
   statsEl.appendChild(levelEl);
+
+  // ── Engagement mood meter (top-right, below stats) ─────────────────────────
+  // The dog's eagerness this round: drains on sloppy/false marks, refills on
+  // precise ones. The fill colour escalates with the disengage beat
+  // (engaged → itch → flop → bark → walk-off). Revealed with the economy stage,
+  // when wrong-behavior beats begin to matter. Spec §Mistakes.
+  const engagementEl = document.createElement('div');
+  engagementEl.id = 'hud-engagement';
+  engagementEl.setAttribute('role', 'meter');
+  engagementEl.setAttribute('aria-label', 'Dog engagement');
+  engagementEl.setAttribute('aria-valuemin', '0');
+  engagementEl.setAttribute('aria-valuemax', '100');
+
+  const engagementIconEl = document.createElement('span');
+  engagementIconEl.id = 'hud-engagement-icon';
+  engagementIconEl.setAttribute('aria-hidden', 'true');
+  engagementIconEl.textContent = '🐾';
+
+  const engagementTrackEl = document.createElement('div');
+  engagementTrackEl.id = 'hud-engagement-track';
+  const engagementFillEl = document.createElement('div');
+  engagementFillEl.id = 'hud-engagement-fill';
+  engagementTrackEl.appendChild(engagementFillEl);
+
+  engagementEl.appendChild(engagementIconEl);
+  engagementEl.appendChild(engagementTrackEl);
+
+  // Top-right cluster: stacks the stats pill and the engagement meter as one
+  // unit so the meter always sits directly under coins/level (one flow slot,
+  // so it never drifts mid-screen via the HUD's space-between distribution).
+  const statsClusterEl = document.createElement('div');
+  statsClusterEl.id = 'hud-stats-cluster';
+  statsClusterEl.appendChild(statsEl);
+  statsClusterEl.appendChild(engagementEl);
 
   // Top-left: difficulty mode segmented control (below the bar, above loadout chip)
   const diffSelectorEl = document.createElement('div');
@@ -867,8 +392,21 @@ export function createHud(callbacks: HudCallbacks): {
   braBtn.setAttribute('aria-label', 'Mark behavior');
   braBtn.type = 'button';
 
+  // Swipe affordance: a faint "‹ swipe ›" hint shown only when more than one phrase
+  // is available, and a word chip that flashes the new phrase when a swap happens.
+  const braSwipeHintEl = document.createElement('div');
+  braSwipeHintEl.id = 'hud-bra-swipe-hint';
+  braSwipeHintEl.setAttribute('aria-hidden', 'true');
+  braSwipeHintEl.textContent = '‹ swipe ›';
+
+  const braSwapWordEl = document.createElement('div');
+  braSwapWordEl.id = 'hud-bra-swap-word';
+  braSwapWordEl.setAttribute('aria-hidden', 'true');
+
   tellWrapEl.appendChild(tellRingEl);
   tellWrapEl.appendChild(braBtn);
+  tellWrapEl.appendChild(braSwipeHintEl);
+  tellWrapEl.appendChild(braSwapWordEl);
 
   bottomEl.appendChild(masteredEl);
   bottomEl.appendChild(tellWrapEl);
@@ -881,7 +419,7 @@ export function createHud(callbacks: HudCallbacks): {
 
   hud.appendChild(trickLabelEl);
   hud.appendChild(barTrack);
-  hud.appendChild(statsEl);
+  hud.appendChild(statsClusterEl);
   hud.appendChild(diffSelectorEl);
   hud.appendChild(resultEl);
   hud.appendChild(comboEl);
@@ -893,10 +431,53 @@ export function createHud(callbacks: HudCallbacks): {
   // ── Wire tap ────────────────────────────────────────────────
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // BRA is press-then-release: a quick tap fires the timing mark (scored at the
+  // pointerdown instant, recorded in onBraTapDown), while a horizontal swipe swaps the
+  // loaded phrase instead of marking (specs §Marker Phrases). classifySwipe keeps a
+  // normal wobble/vertical drag a tap, so the timing tap is never lost.
+  let braDownX = 0;
+  let braDownY = 0;
+  let braPressed = false;
+  let swapAnimTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function animatePhraseSwap(dir: 'next' | 'prev'): void {
+    // Read the just-updated loaded phrase so the marker briefly shows the new word.
+    braSwapWordEl.textContent = callbacks.getLoadoutState().loadedPhrase.word;
+    tellWrapEl.classList.remove('swap-next', 'swap-prev');
+    void tellWrapEl.offsetWidth; // restart the animation if mid-flight
+    tellWrapEl.classList.add(dir === 'next' ? 'swap-next' : 'swap-prev');
+    if (swapAnimTimer !== null) clearTimeout(swapAnimTimer);
+    swapAnimTimer = setTimeout(() => {
+      tellWrapEl.classList.remove('swap-next', 'swap-prev');
+      swapAnimTimer = null;
+    }, 360);
+  }
+
   braBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    callbacks.onBraTap();
+    braDownX = e.clientX;
+    braDownY = e.clientY;
+    braPressed = true;
+    // Capture so the release still lands on the button if the finger drifts off.
+    // Guarded: synthetic events (e2e) have no active pointer and would throw.
+    try { braBtn.setPointerCapture?.(e.pointerId); } catch { /* no active pointer */ }
+    callbacks.onBraTapDown();
   });
+
+  function finishBraPress(e: PointerEvent): void {
+    if (!braPressed) return;
+    braPressed = false;
+    const outcome = classifySwipe(e.clientX - braDownX, e.clientY - braDownY);
+    if (outcome.type === 'swipe') {
+      callbacks.onSwapPhrase(outcome.dir);
+      animatePhraseSwap(outcome.dir);
+    } else {
+      callbacks.onBraTapCommit();
+    }
+  }
+
+  braBtn.addEventListener('pointerup', finishBraPress);
+  braBtn.addEventListener('pointercancel', finishBraPress);
 
   // Chip tap: cycle among available phrases
   loadoutChipEl.addEventListener('pointerdown', (e) => {
@@ -972,6 +553,12 @@ export function createHud(callbacks: HudCallbacks): {
       comboEl.removeAttribute('data-combo');
     }
 
+    // Engagement mood meter — fill width + beat-coloured class
+    const engagementPct = Math.round(vm.engagement * 100);
+    engagementFillEl.style.width = `${engagementPct}%`;
+    engagementEl.setAttribute('data-beat', vm.engagementBeat);
+    engagementEl.setAttribute('aria-valuenow', String(engagementPct));
+
     // Loadout chip (switcher)
     const { loadedPhrase, lastUsedAt, available, nextLocked, nextLockedIsLevelGated, coins } = callbacks.getLoadoutState();
     const now = performance.now();
@@ -979,6 +566,10 @@ export function createHud(callbacks: HudCallbacks): {
     chipWordEl.textContent = loadedPhrase.word;
     loadoutChipEl.classList.toggle('on-cooldown', !ready);
     loadoutChipEl.classList.toggle('can-cycle', available.length > 1);
+    // Surface the swipe affordance on the BRA marker only when there's a phrase to
+    // swap to (more than just base "bra"); also keep it current for the swap-word chip.
+    tellWrapEl.classList.toggle('swipeable', available.length > 1);
+    braSwapWordEl.textContent = loadedPhrase.word;
     if (!ready && loadedPhrase.cooldownMs > 0 && lastUsedAt !== null) {
       const elapsed = now - lastUsedAt;
       const remaining = Math.max(0, loadedPhrase.cooldownMs - elapsed);
@@ -1099,6 +690,12 @@ export function createHud(callbacks: HudCallbacks): {
 
   // ── Onboarding gating ─────────────────────────────────────────────────
   function applyRevealed(revealed: Revealed): void {
+    // Coins/level stats: hidden until the first payout (economy stage), so a
+    // brand-new player never sees "COINS 0 / LEVEL 1" before earning anything.
+    statsEl.classList.toggle('hud-gated', !revealed.economy);
+    // Engagement mood meter: revealed alongside the economy stage, when the
+    // dog's wrong-behavior beats begin to matter.
+    engagementEl.classList.toggle('hud-gated', !revealed.economy);
     // Loadout chip (phrases): hidden until phrases stage
     loadoutChipEl.classList.toggle('hud-gated', !revealed.phrases);
     // Difficulty selector: hidden until difficulty stage
@@ -1109,6 +706,11 @@ export function createHud(callbacks: HudCallbacks): {
 
   // Apply initial reveal flags from callbacks
   applyRevealed(callbacks.revealed);
+
+  // Public kennel refresh — delegates to the kennel panel factory.
+  function refreshKennelPanel(): void {
+    kennelPanel.update?.();
+  }
 
   // Start hidden — caller decides initial state
   selectEl.style.display = 'none';

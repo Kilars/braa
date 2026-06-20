@@ -177,13 +177,16 @@ button:focus-visible,
 }
 
 /* ── Stats: coins + level (top-right, below the bar) ──────── */
+/* Lives inside #hud-stats-cluster, which stretches it to the cluster width;
+   space-between spreads coins/level across that shared width so the stats pill
+   and the engagement meter below read as one aligned group. */
 #hud-stats {
-  align-self: flex-end;
   display: flex;
+  justify-content: space-between;
   gap: 10px;
   padding: 5px 14px;
   background: rgba(0, 0, 0, 0.45);
-  border-radius: 0 0 0 12px;
+  border-radius: 12px;
   pointer-events: none;
   user-select: none;
 }
@@ -196,6 +199,96 @@ button:focus-visible,
   color: #f0f0f0;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
   letter-spacing: 0.02em;
+}
+
+/* ── Top-right cluster: stats pill stacked over the engagement meter ──────── */
+/* align-items: stretch + a min-width gives both pills one shared width, so
+   their left and right edges line up as a single docked-right group. */
+#hud-stats-cluster {
+  align-self: flex-end;
+  /* Float inset from the right edge with the rest of the HUD chrome (diff
+     selector / kennel / loadout all sit 12–16px in), not docked to the edge.
+     The hud's own padding already accounts for safe-area-inset-right. */
+  margin-right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 118px;
+}
+
+/* ── Engagement mood meter (top-right, below stats) ────────
+   The dog's eagerness this round; the fill colour escalates with the disengage
+   beat (engaged → itch → flop → bark → walk-off). Spec §Mistakes.            */
+#hud-engagement {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 13px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#hud-engagement-icon {
+  font-size: 0.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+#hud-engagement-track {
+  flex: 1; /* fill the pill width so the meter aligns with the stats pill above */
+  height: 7px;
+  /* Light groove so the EMPTY remainder of the track stays visible against the
+     dark pill — the bar reads as a contained level, not a fill floating in the dark. */
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#hud-engagement-fill {
+  height: 100%;
+  width: 100%;
+  background: #4cde80;
+  border-radius: 4px;
+  transition: width 0.25s ease-out, background-color 0.25s ease-out;
+}
+
+/* Beat colours — warm/escalate as the meter drains */
+#hud-engagement[data-beat='engaged'] #hud-engagement-fill {
+  background: #4cde80;
+}
+#hud-engagement[data-beat='itch'] #hud-engagement-fill {
+  background: #b6e34c;
+}
+#hud-engagement[data-beat='flop'] #hud-engagement-fill {
+  background: #f0c040;
+}
+#hud-engagement[data-beat='bark'] #hud-engagement-fill {
+  background: #ff8a3d;
+}
+#hud-engagement[data-beat='walk-off'] #hud-engagement-fill {
+  background: #ff5040;
+}
+/* At 0% the fill is invisible, so tint the empty track red — the "checked out"
+   danger colour reads even when the bar is fully drained. */
+#hud-engagement[data-beat='walk-off'] #hud-engagement-track {
+  background: rgba(255, 80, 64, 0.4);
+}
+
+/* Walk-off: the pill pulses to flag the dog has checked out */
+#hud-engagement[data-beat='walk-off'] {
+  animation: engagement-walkoff-pulse 1s ease-in-out infinite;
+}
+@keyframes engagement-walkoff-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 
 /* ── Combo indicator (top-center, below trick label) ─────────
@@ -293,7 +386,8 @@ button:focus-visible,
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding-bottom: 32px;
+  /* Lifts BRA + its swipe hint clear of the bottom gesture/home-indicator zone. */
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
   pointer-events: none;
 }
 
@@ -370,6 +464,80 @@ button:focus-visible,
               0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
+/* Swipe affordance: a faint hint under the BRA marker, shown only when more than
+   one phrase is available to swap between (.swipeable set by the render loop). */
+#hud-bra-swipe-hint {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  white-space: nowrap;
+}
+#hud-tell-wrap.swipeable #hud-bra-swipe-hint {
+  opacity: 1;
+}
+
+/* Swap feedback: the new phrase word flashes over the marker, sliding in the swipe
+   direction. Hidden until a swap adds .swap-next / .swap-prev to the wrap. */
+#hud-bra-swap-word {
+  position: absolute;
+  top: -44px;
+  left: 50%;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: #ffe06a;
+  /* Dark halo lifts the gold off the green scene and ties it to the apex-tell gold. */
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.85), 0 2px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+#hud-tell-wrap.swap-next #hud-bra-swap-word {
+  animation: bra-swap-word-next 0.36s ease-out;
+}
+#hud-tell-wrap.swap-prev #hud-bra-swap-word {
+  animation: bra-swap-word-prev 0.36s ease-out;
+}
+#hud-tell-wrap.swap-next #hud-bra-btn {
+  animation: bra-nudge-next 0.32s ease-out;
+}
+#hud-tell-wrap.swap-prev #hud-bra-btn {
+  animation: bra-nudge-prev 0.32s ease-out;
+}
+
+@keyframes bra-swap-word-next {
+  0%   { opacity: 0; transform: translateX(-50%) translateX(22px); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateX(-10px); }
+}
+@keyframes bra-swap-word-prev {
+  0%   { opacity: 0; transform: translateX(-50%) translateX(-22px); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateX(10px); }
+}
+@keyframes bra-nudge-next {
+  0%, 100% { }
+  40% { transform: translateX(-7px); }
+}
+@keyframes bra-nudge-prev {
+  0%, 100% { }
+  40% { transform: translateX(7px); }
+}
+
 /* Confused: button pulses orange as a visual cue */
 #hud.confused #hud-bra-btn {
   background: #ff7040;
@@ -435,14 +603,14 @@ button:focus-visible,
 }
 
 /* ── Loadout chip (bottom-left, phrase switcher + unlock affordance) ────── */
-/* bottom = BRA-button height (80px) + hud-bottom padding (32px) + 16px gap
+/* bottom = BRA-button height (80px) + hud-bottom padding (40px) + 16px gap
    + env(safe-area-inset-bottom). This keeps the chip clearly above the BRA
-   button so they never touch.                                               */
+   button so they never touch (kept in sync with #hud-bottom padding).        */
 #hud-loadout-chip {
   --cooldown-pct: 0%;
 
   position: fixed;
-  bottom: calc(80px + 32px + 16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(80px + 40px + 16px + env(safe-area-inset-bottom, 0px));
   left: calc(16px + env(safe-area-inset-left, 0px));
   z-index: 11;
 
@@ -1224,6 +1392,14 @@ button:focus-visible,
   #hud-combo {
     transition: none;
   }
+
+  /* Engagement meter: instant fill, no walk-off pulse */
+  #hud-engagement-fill {
+    transition: none;
+  }
+  #hud-engagement[data-beat='walk-off'] {
+    animation: none;
+  }
   #hud-combo[data-combo="5"],
   #hud-combo[data-combo="6"],
   #hud-combo[data-combo="7"],
@@ -1243,6 +1419,22 @@ button:focus-visible,
   /* BRA button: no bounce/scale on press */
   #hud-bra-btn {
     transition: none;
+  }
+
+  /* Phrase swap: cross-fade the new word, no slide; no button nudge (D13 — the
+     swap stays legible via the word + the loadout chip, just without motion). */
+  #hud-tell-wrap.swap-next #hud-bra-btn,
+  #hud-tell-wrap.swap-prev #hud-bra-btn {
+    animation: none;
+  }
+  #hud-tell-wrap.swap-next #hud-bra-swap-word,
+  #hud-tell-wrap.swap-prev #hud-bra-swap-word {
+    animation: bra-swap-word-fade 0.36s ease-out;
+  }
+  @keyframes bra-swap-word-fade {
+    0%   { opacity: 0; transform: translateX(-50%); }
+    35%  { opacity: 1; transform: translateX(-50%); }
+    100% { opacity: 0; transform: translateX(-50%); }
   }
 
   /* Trick/roster/adopt/kennel buttons: no hover transitions */
