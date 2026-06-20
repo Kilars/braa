@@ -32,13 +32,25 @@ The **Pokémon-GO Visuals epic** remains gated on the **FBX → `.glb` conversio
 (`Labrador_FBX.rar`, tech-decisions §3c); once `public/models/dog.glb` is the real
 Labrador, 078/079 (+098's remainder) + phases 080–085 are the next major block.
 
-## Pokémon-GO Visuals epic (077–085) — needs FBX→glb conversion, then build
+## Pokémon-GO Visuals epic (077–085) — FBX→glb conversion DONE; integration is next
 
-No longer owner-blocked: the owner purchased + dropped the Labrador
-(`Labrador_FBX.rar` at repo root; manifest in tech-decisions §3c). The remaining
-gate is the **FBX → glb conversion** — the bought FBX must be converted and staged at
-`public/models/dog.glb`, replacing the CC0 placeholder. Roadmap in
-[`EPIC-pokemon-go-visuals.md`](EPIC-pokemon-go-visuals.md).
+**UNBLOCKED 2026-06-20.** The FBX → glb conversion that gated this epic is solved with a
+headless, no-sudo toolchain (`node-unrar-js` to extract the RAR-7 archive that system `7z`
+couldn't, then the `fbx2gltf` npm binary). The converted animated glb has the rigged mesh
+(8 682 verts, 60-node skeleton) + **113 clips** — every clip 079/098 needed (Sitting/Lie/
+Bark/Scratching/Digging/Trot/Turn/Idle…). Recipe + inventory in **tech-decisions §3e**;
+artifacts in gitignored `models-build/`. The old "archive corrupted / no tooling" blockers
+were both **false** — see the orchestration note at the bottom of this file.
+
+**Remaining gaps are narrower and do NOT block integration:**
+- *Missing texture (owner):* the FBX points at an external `Labrador_Albedo1.png` not in the
+  drop → model is untextured (white). 078/079 can still wire it now with a fawn fallback
+  colour and Visual-Review the silhouette/animation; photoreal skin drops in when the owner
+  supplies the texture folder.
+- *Web-PWA license (owner/legal, ship-time only):* pack/encrypt or native-gate the licensed
+  glb before it ships on web (§3b/§3d). Does not gate local flag-off integration.
+
+Roadmap in [`EPIC-pokemon-go-visuals.md`](EPIC-pokemon-go-visuals.md).
 
 - **`077-RESEARCH-dog-model-sourcing`** — DONE: research, shortlist, purchase, and
   file-drop all complete (tech-decisions §3a–§3c). Remaining handoff: convert FBX → glb.
@@ -321,6 +333,22 @@ e2e smoke PASS.
 ## Recently Completed
 
 ## Recently Completed
+
+## Orchestration note — VERIFY BLOCKERS BEFORE PARKING WORK (2026-06-20)
+- **Premature blocking has cost this project the most progress.** The FBX→glb conversion
+  was parked for *days* across multiple iterations on two assumptions that were **both false**
+  on a second look: "the .rar is corrupted" (it wasn't — system `7z` just can't decode RAR-7
+  and wrote 0-byte files) and "there's no FBX→glb tooling here" (there was — `node-unrar-js`
+  + the `fbx2gltf` npm binary, both no-sudo). That single false block stalled the entire
+  visuals epic (077/078/079/098).
+- **Rule:** before the orchestrator marks anything `on-hold`/blocked, it must **try at least
+  2–3 genuinely different approaches** and record each command + its actual error. One tool
+  failing is a tool problem, not a blocker. "No X on PATH" ≠ "X is impossible" — check npm/
+  WASM/prebuilt-binary routes first. Only escalate a block that survives multiple real attempts,
+  and write down exactly what was tried so the next iteration doesn't re-park it blind.
+- A true owner/legal gate (e.g. a missing paid asset, a licensing decision) is still a real
+  block — but state precisely *what* is missing and confirm the rest of the work can proceed
+  around it, rather than parking a whole epic.
 
 ## Subagent note
 - NEVER fabricate a screenshot. If a headless browser fails, run `node scripts/shoot-hud.mjs`

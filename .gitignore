@@ -14,3 +14,5 @@ loop.err
 *.fbx
 Labrador_FBX.rar
 public/models/dog.glb
+# Converted-but-licensed glb artifacts (FBX→glb output; see tech-decisions §3e).
+models-build/

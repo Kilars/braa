@@ -85,3 +85,10 @@ you can reasonably decide.
   vision). Batch these; don't drip one-off questions.
 - Prefer finishing a coherent slice and reporting outcomes over asking permission
   mid-stream.
+- **Verify a blocker before parking work on it.** Premature/false blocks are the
+  biggest source of lost progress here. Before marking anything blocked or `on-hold`
+  for a *technical* reason, try **2–3 genuinely different approaches** and record the
+  exact command + real error for each. One tool failing ≠ impossible ("not on PATH"
+  → check npm / WASM / prebuilt-binary routes first). Only escalate a block that
+  survives multiple real attempts. Genuine **owner/legal/asset** gates are still real —
+  but name precisely what's missing and keep the rest of the work moving around it.

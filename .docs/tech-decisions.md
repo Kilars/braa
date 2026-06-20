@@ -233,11 +233,11 @@ The owner purchased + dropped the Labrador. Archive at repo root: **`Labrador_FB
 | `Labrador_NoAlpha.fbx` | 681 KB | coat variant without alpha-mask texture |
 | `Import_settings/` | — | vendor screenshots: Blender / Maya / C4D FBX import settings (use for the convert step) |
 
-**Pending conversion (when the build resumes):** extract → in Blender, import
-`Labrador_anim_IP.fbx` (+ `Labrador_LowPoly` for the mobile mesh) using the supplied
-`Import_settings/Blender_*` references → export **glb** (mesh + skeleton + the In-Place
-animation groups) → stage at `public/models/dog.glb`, replacing the CC0 placeholder.
-Then flip `renderConfig.importedDog` on only after the Labrador slice passes Visual Review.
+**Conversion RESOLVED (2026-06-20) — see §3e.** The FBX → glb conversion was previously
+parked as "blocked" (no tooling / archive thought corrupted). Both assumptions were wrong:
+the archive is intact and a headless, no-sudo toolchain converts it cleanly. §3e has the
+working recipe, the full clip inventory, and the one genuine remaining gap (a missing
+texture map).
 
 **Licensing reminder (still applies — see §3b):** Royalty-Free / no-AI. Fine bundled in
 the compiled Capacitor app; the raw-`.glb`-in-a-web-PWA extraction question is unresolved
@@ -257,6 +257,49 @@ not served as a plain open-format file — decrypt in memory at load time. This 
 "not redistributed in an open format" letter of the RF license while keeping the realistic
 dog on the preferred web build. (The clause's real intent is to stop asset *resale*, not
 browser caching; packing addresses the letter, and practical risk for an indie PWA is low.)
+
+### 3e. FBX → glb conversion RESOLVED (2026-06-20) — headless toolchain + clip inventory
+
+The conversion that gated the whole visuals epic (077–079, 098 remainder) is **done and
+reproducible without sudo, Blender, or a GUI.** The two prior "blockers" were both false:
+
+- *"Archive corrupted / can't extract"* — **wrong.** `Labrador_FBX.rar` is RAR5 using
+  RAR-7.x compression (method `v6`). System `7z` (even 7-Zip **24.08**, current) reports
+  `Unsupported Method` — 7-Zip's RAR codec doesn't implement RAR 7's algorithm — so it
+  wrote **0-byte** files and looked like corruption. It isn't: **`node-unrar-js`** (npm,
+  WASM port of the official unRAR) extracts every entry at full size.
+- *"No FBX→glb tooling in the env"* — **wrong.** The **`fbx2gltf`** npm package ships a
+  prebuilt Linux binary (`node_modules/fbx2gltf/bin/Linux/FBX2glTF`, v0.9.7) that converts
+  cleanly.
+
+**Working recipe (dev-only deps; both keep the licensed asset out of git):**
+1. `npm i node-unrar-js fbx2gltf` (dev-only; not added to `package.json` — run ad hoc).
+2. Extract FBX from `Labrador_FBX.rar` via `node-unrar-js` (`createExtractorFromData`).
+3. `FBX2glTF --binary --anim-framerate bake30 -i Labrador_anim_IP.fbx -o dog`.
+
+**What the converted glb contains** (`Labrador_anim_IP.fbx` → 7.5 MB glb):
+- Rigged single mesh — **8 682 verts**, 60-node skeleton, 1 skin. (Base `Labrador.fbx` →
+  0.6 MB glb, same mesh, no clips.)
+- **113 animation clips**, covering *every* clip the gated tasks needed:
+  `Sitting_*` (Sitt), `Lie_*`/`Lie_belly_*` (Ligg / disengage flop), `Bark`,
+  `Scratching` (disengage itch), `Digging_*`, `Idle_1..7`, `Walk_*`/`Trot_*`/`Run_*`,
+  `Turn_*`/`Turn_*180` (walk-away/call-back), `Jump_*`, `Crouch_*`, plus many unused
+  (Swim/Attack/Death/Eat/Drink/Pissing/Defecate — ignore). The 098/079 animation gate is
+  fully satisfied. Artifacts persisted to gitignored `models-build/` (out_anim.glb /
+  out_base.glb).
+
+**Genuine remaining gap — missing texture (owner action):** the FBX references an
+**external** albedo map `Labrador_Albedo1.png` (absolute path `D:\My_Work\For_asset\Dogs 2\
+Labrador\texture\Labrador_Albedo1.png`); **that file is not in the archive** (the only
+images present are `Import_settings/` screenshots). So the glb converts with a material but
+**no colour texture → renders white.** To get the realistic Labrador skin the owner must
+supply the pack's texture folder (`Labrador_Albedo1.png` + any normal/roughness/AO maps).
+**This does not re-block integration:** 078/079 can wire the rigged + animated mesh now
+behind the default-off `renderConfig.importedDog` flag using a fawn fallback `baseColorFactor`,
+Visual-Review the silhouette + animation, and drop the photoreal texture in later.
+
+**Still owner/legal-gated before the licensed model ships (not before integration):** the
+web-PWA raw-`.glb` extraction clause (§3b/§3d) — pack/encrypt or native-gate at ship time.
 
 **TODO when wiring the real model:** add the pack/decrypt step to the load path (`078`
 `loadDogModel`) for the licensed `.glb` only; the CC0 placeholder needs no packing. A later
