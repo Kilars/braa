@@ -40,11 +40,15 @@ jobs:
       - name: Build
         run: bun run build
         env:
-          # Project site lives at https://<user>.github.io/bra/ — rename this if
-          # the repo is not "bra" (or drop it entirely for a user/org page).
-          BASE_PATH: /bra/
+          # Site lives at https://kilars.github.io/braa/ — must match the repo
+          # name exactly. If the repo is renamed to "bra", change this to /bra/.
+          BASE_PATH: /braa/
 
+      # enablement: true lets this step turn Pages on (source = GitHub Actions)
+      # via the API on the first deploy, so no manual Settings → Pages step.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

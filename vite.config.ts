@@ -3,7 +3,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   // GitHub Pages serves project sites under /<repo>/. The Pages workflow builds
-  // with BASE_PATH="/bra/"; local dev, tests, and the Capacitor wrap stay at "/".
+  // with BASE_PATH="/braa/"; local dev, tests, and the Capacitor wrap stay at "/".
   base: process.env.BASE_PATH ?? "/",
   test: {
     // Pure game-logic tests run under fast node; only the DOM-bearing UI layer
