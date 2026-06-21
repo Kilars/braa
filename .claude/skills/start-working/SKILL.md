@@ -1,6 +1,6 @@
 ---
 name: start-working
-description: Autonomously execute ALL tasks from the backlog until complete. Runs in a continuous loop — picks task, implements via subagent, moves to done, commits (caveman message), repeats. No user prompts between tasks. Follows task-board workflow (backlog -> in-progress -> done).
+description: Autonomously execute ALL tasks from the backlog until complete. Runs in a continuous loop — picks task, implements via subagent, moves to done, commits (caveman message) and pushes, repeats. No user prompts between tasks. Follows task-board workflow (backlog -> in-progress -> done).
 ---
 
 # Start Working Skill
@@ -20,16 +20,17 @@ This skill **autonomously executes ALL tasks** from the task board until the bac
 - **NEVER work on something not tracked in the task board**
 - Update task files with progress as you work
 
-### 2. GIT: ONE CAVEMAN COMMIT PER TASK (MAIN AGENT ONLY)
-The **main agent commits exactly once per completed task** — after the task is
-verified and moved to `done/` (see Step 9b). Nothing else touches git.
+### 2. GIT: ONE CAVEMAN COMMIT + PUSH PER TASK (MAIN AGENT ONLY)
+The **main agent commits exactly once per completed task and then pushes** — after
+the task is verified and moved to `done/` (see Step 9b). Nothing else touches git.
 - **Subagents NEVER use git** — no `git` of any kind in subagent prompts.
-- Main agent uses **only** `git add` + `git commit`. **No** `git push`,
+- Main agent uses **only** `git add` + `git commit` + `git push`. **No**
   `git checkout`, `git branch`, `git reset`, `git rebase`, or force-anything.
 - One commit = one task: stage the task's code changes **and** the moved task
-  file + board update together, commit, then start the next task.
+  file + board update together, commit, push, then start the next task.
 - **Commit message is caveman language** — see [Caveman Commit Format](#caveman-commit-format).
-- Only commit a **verified, complete** task (Step 8 passed). Never push.
+- Only commit and push a **verified, complete** task (Step 8 passed). Push the
+  current branch to its tracked upstream (`git push`) — never force-push.
 
 ### 3. USE SUBAGENTS FOR EACH TASK
 Each task MUST be executed using the **Agent tool** with a subagent:
@@ -160,16 +161,17 @@ After subagents return, verify:
 2. **Move file** from `.task-board/in-progress/` to `.task-board/done/`
 3. **Update PLANNING-BOARD.md**: remove completed item, add to "Recently Completed"
 
-### Step 9b: Commit the Task (caveman, main agent only)
+### Step 9b: Commit and Push the Task (caveman, main agent only)
 
 Only after Step 8 passed (verified, complete), the **main agent** makes exactly
-**one commit** capturing this task end-to-end:
+**one commit** capturing this task end-to-end, then pushes it:
 
 1. `git add -A` — stage code changes, tests, the moved task file, and the board update
 2. `git commit` with a **caveman-language** message — see
    [Caveman Commit Format](#caveman-commit-format)
+3. `git push` — push the current branch to its tracked upstream (never force-push)
 
-One task = one commit. **Never push.** Subagents never touch git. Then
+One task = one commit + one push. Subagents never touch git. Then
 **IMMEDIATELY start next task** — no waiting for user confirmation.
 
 ### Step 10: Loop
@@ -327,11 +329,11 @@ context from filling with vitest per-file lines and the vite build chunk table.
 - [ ] Functional code written test-first (TDD); tests pass
 - [ ] Task file updated with Progress Log and Resolution
 - [ ] Task moved to `.task-board/done/`
-- [ ] One caveman commit by main agent (code + tests + task move), no push
+- [ ] One caveman commit by main agent (code + tests + task move), then pushed
 
 ### Per Session:
 - [ ] All work tracked in `.task-board/`
-- [ ] Git touched only by main-agent commits — one per task, never pushed
+- [ ] Git touched only by main-agent commits — one commit + push per task
 - [ ] ALL tasks processed automatically (no stopping between tasks)
 - [ ] Tasks processed IN ORDER from PLANNING-BOARD.md
 - [ ] PLANNING-BOARD.md updated after each completion

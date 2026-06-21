@@ -16,3 +16,7 @@ Labrador_FBX.rar
 public/models/dog.glb
 # Converted-but-licensed glb artifacts (FBX→glb output; see tech-decisions §3e).
 models-build/
+# Packed/encrypted licensed model (scripts/pack-dog-model.mjs output; task 103).
+# Encrypted, but the bundle key makes it recoverable, so treat it like the raw
+# licensed asset and keep it out of git. Rebuild locally from models-build/.
+public/models/dog.pack

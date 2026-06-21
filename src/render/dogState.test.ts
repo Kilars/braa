@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dogVisualState, DogVisual } from './dogState';
+import { dogVisualState, isDownFamilyTrick, DogVisual } from './dogState';
 import { createRound, markAt, RoundState } from '../core/round';
 import { buildTimeline, SchedulerConfig, TimelineEvent } from '../core/scheduler';
 import { CONFUSE_MS } from '../core/session';
@@ -268,5 +268,136 @@ describe('dogVisualState — untraining (opts.untrain)', () => {
     expect(state.session.mastered).toBe(true);
     const result: DogVisual = dogVisualState(state, 5000, { untrain: true });
     expect(result).toBe('happy');
+  });
+});
+
+// ─── Disengagement (107): opts.disengaged → 'disengaged' (walk-off, procedural) ─
+
+describe('dogVisualState — disengaged (walk-off)', () => {
+  it('returns disengaged when opts.disengaged is set, overriding an active attempt', () => {
+    const state = freshRound();
+    // t=400 is inside the first attempt window → would be 'offering' normally
+    const result: DogVisual = dogVisualState(state, 400, { disengaged: true });
+    expect(result).toBe('disengaged');
+  });
+
+  it('returns disengaged over an idle gap (tellable apart from idle)', () => {
+    const state = freshRound();
+    const result: DogVisual = dogVisualState(state, 10000, { disengaged: true });
+    expect(result).toBe('disengaged');
+  });
+
+  it('returns disengaged over an active distractor (distinct from distractor)', () => {
+    const distractor: TimelineEvent = { kind: 'distractor', activeStart: 500, activeEnd: 900 };
+    const state = createRound([distractor]);
+    expect(dogVisualState(state, 700)).toBe('distractor'); // baseline
+    expect(dogVisualState(state, 700, { disengaged: true })).toBe('disengaged');
+  });
+
+  it('does NOT disengage when opts.disengaged is false/absent (normal play)', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 400, { disengaged: false })).toBe('offering');
+    expect(dogVisualState(state, 400)).toBe('offering');
+  });
+
+  it('mastered (happy) still wins over disengaged — a won round is never "walked off"', () => {
+    const timeline = buildTimeline(BASE_CFG, seqRng([0]), 13);
+    let state = createRound(timeline);
+    for (const ev of timeline.filter(e => e.kind === 'attempt')) {
+      state = markAt(state, ev.attempt!.peak);
+    }
+    expect(state.session.mastered).toBe(true);
+    expect(dogVisualState(state, 30000, { disengaged: true })).toBe('happy');
+  });
+});
+
+// ─── Disengage beats (112): opts.beat → itch/flop/bark over idle lulls only ────
+//
+// The engagement meter's graded escalation (engaged→itch→flop→bark→walk-off) must
+// read on the DOG, not only the HUD pill (spec §"Wrong-behavior beats"). The
+// intermediate beats surface during idle lulls — they never mask an active correct
+// `offering` (the player must always be able to read the markable behavior) and yield
+// to confused / disengaged (walk-off) / mastered. The empty-meter `walk-off` is handled
+// by opts.disengaged (task 107), so the beat tail only routes itch/flop/bark.
+
+describe('dogVisualState — disengage beats (itch/flop/bark)', () => {
+  it('returns itch over an idle lull when beat is itch', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000, { beat: 'itch' })).toBe('itch');
+  });
+
+  it('returns flop over an idle lull when beat is flop', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000, { beat: 'flop' })).toBe('flop');
+  });
+
+  it('returns bark over an idle lull when beat is bark', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000, { beat: 'bark' })).toBe('bark');
+  });
+
+  it('stays idle when the dog is still engaged (beat=engaged)', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000, { beat: 'engaged' })).toBe('idle');
+  });
+
+  it('stays idle when no beat is provided (back-compat)', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000)).toBe('idle');
+  });
+
+  it('a beat NEVER masks an active correct attempt — offering still wins', () => {
+    const state = freshRound();
+    // t=400 is inside the first attempt window → must read as the markable behavior
+    expect(dogVisualState(state, 400, { beat: 'bark' })).toBe('offering');
+  });
+
+  it('a distractor still reads as distractor — beats replace idle only (D9)', () => {
+    const distractor: TimelineEvent = { kind: 'distractor', activeStart: 500, activeEnd: 900 };
+    const state = createRound([distractor]);
+    expect(dogVisualState(state, 700, { beat: 'flop' })).toBe('distractor');
+  });
+
+  it('disengaged (walk-off) wins over any beat', () => {
+    const state = freshRound();
+    expect(dogVisualState(state, 10000, { beat: 'itch', disengaged: true })).toBe('disengaged');
+  });
+
+  it('confused wins over a beat', () => {
+    let state = freshRound();
+    state = markAt(state, 1000); // FALSE_MARK → confusedUntil = 1000 + CONFUSE_MS
+    expect(dogVisualState(state, 2000, { beat: 'bark' })).toBe('confused');
+  });
+
+  it('mastered (happy) wins over a beat', () => {
+    const timeline = buildTimeline(BASE_CFG, seqRng([0]), 13);
+    let state = createRound(timeline);
+    for (const ev of timeline.filter(e => e.kind === 'attempt')) {
+      state = markAt(state, ev.attempt!.peak);
+    }
+    expect(state.session.mastered).toBe(true);
+    expect(dogVisualState(state, 30000, { beat: 'flop' })).toBe('happy');
+  });
+});
+
+// ─── Down-family trick predicate (task 120) ──────────────────────────────────
+// The "down" tricks — Ligg, Legg deg, and the play-dead Sov — must read as a
+// distinct lie-down, not the generic upright sit, on the imported dog (D6/D11).
+// This predicate is the single tested home for that rule.
+describe('isDownFamilyTrick', () => {
+  it('is true for the lie-down tricks (ligg, legg-deg, sov)', () => {
+    expect(isDownFamilyTrick('ligg')).toBe(true);
+    expect(isDownFamilyTrick('legg-deg')).toBe(true);
+    expect(isDownFamilyTrick('sov')).toBe(true);
+  });
+
+  it('is false for upright/other tricks (sitt, rull)', () => {
+    expect(isDownFamilyTrick('sitt')).toBe(false);
+    expect(isDownFamilyTrick('rull')).toBe(false);
+  });
+
+  it('is false for an absent/unknown trick id', () => {
+    expect(isDownFamilyTrick(undefined)).toBe(false);
+    expect(isDownFamilyTrick('no-jump')).toBe(false);
   });
 });

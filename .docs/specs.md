@@ -1,3 +1,4 @@
+MAKE GLB REPÅLCAE PLACEHOLDER DOG
 # Bra! — Game Specification (Functional)
 
 > This document describes **what the game is and how it plays**. All technical
@@ -448,3 +449,118 @@ game is played and balanced — see [tech-decisions.md](tech-decisions.md). The
 - No monetization / in-app purchases.
 - Kennel is **not** a standalone auto-training game; active timing stays the
   only skill engine.
+
+## Product Owner Review
+
+> PO play-test notes. Each pass: add a dated subheading and list concrete,
+> buildable directives (Bugfixes / Improvements / Changes). Prune items that have
+> been verified fixed. This section reflects what is *still* wrong, not history.
+
+### PO Review — 2026-06-21
+
+Played a full session on phone-portrait (390×844): entered rounds, tapped BRA,
+hit OK / miss / false-mark / spam, drove the dog to confuse + disengage + call it
+back, switched tricks, opened Settings / Help / Adopt / Kennel, revealed the
+economy HUD, and walked the engagement meter from full to empty. The imported
+**Labrador renders genuinely well** — clear breed read, fur shading, contact
+shadow, distinct poses, a satisfying gold apex ring on the BRA button, and a
+readable mood meter that escalates green→yellow→red. The core loop is functional
+and the foundations are strong. The items below are what falls short of the spec.
+
+**Bugfixes**
+
+1. **Primitive placeholder dog flashes before the GLB loads.** On a cold start,
+   entering a round (or landing on it within ~1s of boot) shows the *old
+   capsule-body / sphere-head / cylinder-leg primitive* dog for ~0.3–1s before
+   the real Labrador swaps in (compare a shot at +300ms vs +1000ms after picking
+   Sitt). The spec is explicit that bare capsule/sphere/cylinder geometry does
+   **not** satisfy "reads as a dog" — *not even as a placeholder* (D1, D14).
+   *Good:* never show the primitive blob. Hold the dog hidden (or a neutral
+   loading state / silhouette) until the GLB is ready, then fade it in.
+
+2. **Trainer's-hand reward is bare primitive geometry.** The reward/treat gesture
+   (`scene.ts` builds it from a box palm + two box fingers + a sphere "treat" with
+   flat materials) pokes into frame on every mark and, bigger, on mastery. Next to
+   the polished Labrador it reads as unfinished blocks, and it lands at the
+   climactic mark/mastery beat — exactly where "the mark must always feel good"
+   matters most (D14, Design Principles). On the mastery capture it also appeared
+   at the right frame edge, partially cropped. *Good:* a stylized hand+treat asset
+   matching the dog's fidelity, fully in frame, that makes the reward feel earned.
+
+3. **Disengaged dog is clipped by the right viewport edge.** When the engagement
+   meter empties, the dog trots off and sits back-turned — but it ends up *half
+   outside the frame* on the right, not composed at the edge (D12 "fully in
+   frame"). It looks like a framing bug, not an intentional "at the edge" beat.
+   *Good:* the walked-off dog sits fully within the frame near the edge,
+   back-turned, never cropped.
+
+4. **The apex "mark now" ring fires while the dog is disengaged.** With the dog
+   walked off and the call-back prompt showing ("Hunden gikk — trykk for å kalle
+   den tilbake"), the gold apex ring still pulses around BRA — a "mark the peak"
+   signal at a moment when marking earns nothing and the player must instead tap
+   to call the dog back. Two opposite meanings on one cue. *Good:* suppress the
+   apex tell entirely while disengaged; the only affordance should read as "call
+   the dog back."
+
+5. **Corrupted first line in this spec file.** Line 1 reads
+   `MAKE GLB REPÅLCAE PLACEHOLDER DOG` — stray, misspelled non-spec text at the
+   very top of the design doc. *Good:* delete it.
+
+**Improvements**
+
+1. **Lie-down tricks don't have a distinct lie-down pose.** Sitt, Ligg, and Legg
+   deg all render the dog in the *same upright sit* at the markable moment — three
+   different commands look identical on the dog. (Rull, by contrast, shows a
+   clearly distinct rolling pose, so the model *can* carry distinct clips.) This
+   breaks "reading the behavior is part of the skill": the apex must read as the
+   *specific* trick, not one generic pose reused (D6, D11). *Good:* a clear,
+   visibly-down "lie down / settle" pose whose apex is unmistakably *down* and
+   different from sit.
+
+2. **The select/roster screen buries the dog in shadow.** Behind the trick menu
+   the 3D scene is dimmed so hard the Labrador is a near-invisible dark
+   silhouette; the whole screen reads muddy and dark — the opposite of the
+   "bright, vivid, clean, Pokémon-GO" presentation, and you can't admire the dog
+   you've collected. *Good:* brighten/spotlight the dog on the select screen so
+   it's the showcased focus, not a shadow.
+
+3. **Kennel upgrades don't say what they do.** The shop lists Treats Pouch (100),
+   Pro Clicker (250), Training Dummy (500) with names + costs but *no description
+   of each upgrade's effect*. A player can't tell what they're buying; the spec
+   says these boost payouts / widen windows / add idle trickle. *Good:* each
+   upgrade states its concrete effect (e.g. "+10% coins", "wider mark window").
+
+4. **Adopt panel shows a level gate but no price and no breed art.** Breeds list a
+   required level (Border Collie Lvl 3, Husky Lvl 5…) with a disabled ADOPT
+   button, but no coin cost and no image — so the two-step "level unlocks, coins
+   buy" model is invisible, and a core *collection* axis has nothing to look at.
+   *Good:* show the coin price + a clear locked state ("Reach Lv 3"), and a breed
+   thumbnail so each dog reads as a collectible.
+
+5. **No coin/level readout on the select shell.** Once the economy is revealed,
+   the select/roster screen (where you adopt dogs and open the kennel) still shows
+   no coin balance or level — you make spend decisions blind to your wallet; the
+   numbers live only in Settings and in-round. *Good:* a persistent coin + level
+   readout on the select shell.
+
+**Changes**
+
+1. **Restyle the "Mute audio" control.** In Settings it's a default unstyled white
+   HTML checkbox that clashes with the otherwise dark, rounded UI. *Good:* an
+   on-brand toggle matching the rest of the panel.
+
+2. **Distractor vs. disengaged read the same.** Help says a "grey, turned-away
+   dog" is a *distractor* (don't mark), but the *disengaged* (walked-off) dog is
+   also grey and turned away — same visual, opposite required response. Only the
+   text/meter disambiguates. *Good:* make the disengaged state visually distinct
+   from an in-round distractor (e.g. fully at the edge / smaller / different tint)
+   so the two cues don't collide (D9).
+
+3. **Recenter the standing idle dog.** In the standing idle pose the dog drifts
+   right-of-center with its snout near the right edge and empty space on the left
+   (seen across several idle frames). *Good:* keep the dog centered in portrait
+   across all poses (D12).
+
+*Not verifiable this pass:* audio (headless screenshots only) — the Maren-style
+marker voice and mark SFX could not be heard, so they are neither confirmed nor
+flagged here.

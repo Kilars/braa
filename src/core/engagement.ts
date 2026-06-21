@@ -1,4 +1,11 @@
 import type { MarkResult } from './mark';
+import {
+  MARK_ENGAGEMENT_DELTA,
+  REWARD_SNAPPY_MS,
+  REWARD_SLOW_MS,
+  REWARD_SNAPPY_REFILL,
+  REWARD_SLOW_DRAIN,
+} from './tuning';
 
 /**
  * The engagement meter is a 0..1 scalar describing how eager the dog is.
@@ -15,19 +22,17 @@ export type EngagementEvent =
   | { kind: 'mark'; result: MarkResult }
   | { kind: 'reward'; latencyMs: number };
 
-/** Per-mark engagement deltas (Normal). Good timing refills; sloppy/false marks drain. */
-export const MARK_ENGAGEMENT_DELTA: Record<MarkResult, number> = {
-  PERFECT: 0.15,
-  OK: 0.08,
-  MISS: -0.06,
-  FALSE_MARK: -0.2,
+// Balance knobs are homed in the central tuning module; re-exported here so
+// existing `./engagement` imports stay stable.
+//  - MARK_ENGAGEMENT_DELTA: per-mark deltas (good timing refills; bad marks drain).
+//  - REWARD_SNAPPY/SLOW: reward-latency response (snappy keeps the dog eager).
+export {
+  MARK_ENGAGEMENT_DELTA,
+  REWARD_SNAPPY_MS,
+  REWARD_SLOW_MS,
+  REWARD_SNAPPY_REFILL,
+  REWARD_SLOW_DRAIN,
 };
-
-/** Reward-latency response: a snappy reward keeps the dog eager; a slow one bores it. */
-export const REWARD_SNAPPY_MS = 800; // at/under → max refill
-export const REWARD_SLOW_MS = 2400; // at/over → max drain
-export const REWARD_SNAPPY_REFILL = 0.05;
-export const REWARD_SLOW_DRAIN = -0.15;
 
 function rewardLatencyDelta(latencyMs: number): number {
   if (latencyMs <= REWARD_SNAPPY_MS) return REWARD_SNAPPY_REFILL;

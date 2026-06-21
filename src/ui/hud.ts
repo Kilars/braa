@@ -9,6 +9,7 @@ import type { Revealed } from '../core/onboarding';
 import type { Dog } from '../core/roster';
 import type { Breed } from '../core/breeds';
 import type { Achievement } from '../core/achievements';
+import { RESULT_FLASH_MS } from '../core/tuning';
 import { createPanelManager } from './panels/panelManager';
 import type { PanelHandle } from './panels/panelManager';
 import { createAdoptPanel } from './panels/adoptPanel';
@@ -17,7 +18,10 @@ import { createSettingsPanel } from './panels/settingsPanel';
 import { createHelpPanel } from './panels/helpPanel';
 import { createAchievementsPanel } from './panels/achievementsPanel';
 
-const RESULT_FLASH_MS = 700;
+// How long the idle "welcome back" toast stays up before auto-fading. A UI
+// presentation timeout paired with the CSS fade — kept local (not a gameplay
+// tunable), per the tech-decisions §8 render/CSS-timeout convention.
+const IDLE_WELCOME_MS = 4200;
 
 export interface HudCallbacks {
   /** BRA pressed — record the press instant (scoring uses this, not release). */
@@ -26,6 +30,8 @@ export interface HudCallbacks {
   onBraTapCommit: () => void;
   /** BRA released as a horizontal swipe — swap the loaded phrase instead of marking. */
   onSwapPhrase: (dir: 'next' | 'prev') => void;
+  /** Pause control toggled (pause button or resume button / overlay) — flip in-round pause. */
+  onTogglePause: () => void;
   onSelectMode: (mode: DifficultyMode) => void;
   initialMode: DifficultyMode;
   // Select-screen
@@ -83,6 +89,9 @@ export function createHud(callbacks: HudCallbacks): {
   showTraining: (trickName: string) => void;
   refreshKennelPanel: () => void;
   applyRevealed: (revealed: Revealed) => void;
+  setCoachVisible: (visible: boolean, text?: string) => void;
+  showIdleWelcome: (coins: number) => void;
+  setPaused: (paused: boolean) => void;
   showLoading: () => void;
   hideLoading: () => void;
   celebrate: () => void;
@@ -103,6 +112,17 @@ export function createHud(callbacks: HudCallbacks): {
   loadingEl.appendChild(loadingSpinnerEl);
   loadingEl.appendChild(loadingTextEl);
   document.body.appendChild(loadingEl);
+
+  // ── Idle "welcome back" toast (task 115) ──────────────────────────────
+  // The kennel idle trickle is granted at load; this announces it on return so
+  // the "gentle reason to come back" payoff is visible. Shown on the select
+  // screen at bootstrap (driven by main.ts behind shouldShowIdleWelcome), then
+  // auto-fades. Hidden by default via the shared .hud-gated class.
+  const idleWelcomeEl = document.createElement('div');
+  idleWelcomeEl.id = 'hud-idle-welcome';
+  idleWelcomeEl.setAttribute('aria-live', 'polite');
+  idleWelcomeEl.classList.add('hud-gated');
+  document.body.appendChild(idleWelcomeEl);
 
   // ── Select screen ────────────────────────────────────────────
   const selectEl = document.createElement('div');
@@ -247,6 +267,25 @@ export function createHud(callbacks: HudCallbacks): {
   // Current trick label
   const trickLabelEl = document.createElement('div');
   trickLabelEl.id = 'hud-trick-label';
+
+  // First-run coach: an in-context prompt teaching the one core verb on the very
+  // first round (specs.md §Onboarding). Shown only to a brand-new player and
+  // auto-dismissed on the first successful mark — visibility is driven by main.ts
+  // via setCoachVisible (pure gate: shouldCoachCoreVerb). Hidden by default.
+  const COACH_CORE_VERB_TEXT = 'Vent på pulsen — trykk BRA!';
+  const coachEl = document.createElement('div');
+  coachEl.id = 'hud-coach';
+  coachEl.setAttribute('aria-live', 'polite');
+  coachEl.textContent = COACH_CORE_VERB_TEXT;
+  coachEl.classList.add('hud-gated');
+
+  // Call-back affordance (task 107): when the dog walks off (engagement empty),
+  // a faint pill tells the player a tap now calls the dog back rather than marks.
+  // Shown only while disengaged (toggled in renderTraining), mirroring the coach.
+  const callbackHintEl = document.createElement('div');
+  callbackHintEl.id = 'hud-callback-hint';
+  callbackHintEl.setAttribute('aria-live', 'polite');
+  callbackHintEl.textContent = 'Hunden gikk — trykk for å kalle den tilbake';
 
   // Learned bar track + fill
   const barTrack = document.createElement('div');
@@ -417,16 +456,78 @@ export function createHud(callbacks: HudCallbacks): {
   comboEl.setAttribute('aria-live', 'polite');
   comboEl.setAttribute('aria-label', 'Combo streak');
 
+  // ── Pause control (specs.md §Round States: "Pause/resume supported") ────────
+  // A small pause button (top-left of the training HUD) freezes the round; a
+  // dimmed full-overlay with a Resume button covers the scene while paused. While
+  // paused, taps are ignored (no false mark) and the timeline does not advance.
+  const pauseBtnEl = document.createElement('button');
+  pauseBtnEl.id = 'hud-pause-btn';
+  pauseBtnEl.type = 'button';
+  pauseBtnEl.textContent = '⏸';
+  pauseBtnEl.setAttribute('aria-label', 'Pause round');
+  pauseBtnEl.setAttribute('aria-pressed', 'false');
+
+  const pauseOverlayEl = document.createElement('div');
+  pauseOverlayEl.id = 'hud-pause-overlay';
+  pauseOverlayEl.setAttribute('role', 'dialog');
+  pauseOverlayEl.setAttribute('aria-modal', 'true');
+  pauseOverlayEl.setAttribute('aria-label', 'Paused');
+
+  const pauseLabelEl = document.createElement('div');
+  pauseLabelEl.id = 'hud-pause-label';
+  pauseLabelEl.textContent = 'Paused';
+
+  const resumeBtnEl = document.createElement('button');
+  resumeBtnEl.id = 'hud-pause-resume';
+  resumeBtnEl.type = 'button';
+  resumeBtnEl.textContent = '▶ Resume';
+  resumeBtnEl.setAttribute('aria-label', 'Resume round');
+
+  pauseOverlayEl.appendChild(pauseLabelEl);
+  pauseOverlayEl.appendChild(resumeBtnEl);
+
   hud.appendChild(trickLabelEl);
+  hud.appendChild(coachEl);
+  hud.appendChild(callbackHintEl);
   hud.appendChild(barTrack);
   hud.appendChild(statsClusterEl);
   hud.appendChild(diffSelectorEl);
   hud.appendChild(resultEl);
   hud.appendChild(comboEl);
   hud.appendChild(loadoutChipEl);
+  hud.appendChild(pauseBtnEl);
   hud.appendChild(bottomEl);
+  hud.appendChild(pauseOverlayEl);
 
   document.body.appendChild(hud);
+
+  // Pause / resume wiring — all routed through the single onTogglePause callback.
+  pauseBtnEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    callbacks.onTogglePause();
+  });
+  resumeBtnEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    callbacks.onTogglePause();
+  });
+  // Tapping the dimmed backdrop (not the Resume button) also resumes.
+  pauseOverlayEl.addEventListener('pointerdown', (e) => {
+    if (e.target === pauseOverlayEl) {
+      e.preventDefault();
+      callbacks.onTogglePause();
+    }
+  });
+
+  /**
+   * Show/hide the paused overlay and reflect state on the pause button.
+   * Driven by main.ts so the pure pause clock stays the single source of truth.
+   */
+  function setPaused(paused: boolean): void {
+    pauseOverlayEl.classList.toggle('visible', paused);
+    pauseBtnEl.classList.toggle('is-paused', paused);
+    pauseBtnEl.setAttribute('aria-pressed', String(paused));
+    pauseBtnEl.setAttribute('aria-label', paused ? 'Resume round' : 'Pause round');
+  }
 
   // ── Wire tap ────────────────────────────────────────────────
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -558,6 +659,15 @@ export function createHud(callbacks: HudCallbacks): {
     engagementFillEl.style.width = `${engagementPct}%`;
     engagementEl.setAttribute('data-beat', vm.engagementBeat);
     engagementEl.setAttribute('aria-valuenow', String(engagementPct));
+
+    // Call-back affordance — visible only while the dog has walked off (task 107):
+    // a tap now calls it back instead of marking. Mirrors the swipe/coach hint.
+    callbackHintEl.classList.toggle('visible', vm.disengaged);
+    // While disengaged, the call-back hint replaces the first-run coach so the two
+    // prompts never contradict each other ("trykk BRA" vs "kalle hunden tilbake").
+    // Orthogonal to setCoachVisible's .hud-gated gate — the coach returns to its
+    // gated state automatically once the dog is called back.
+    coachEl.classList.toggle('coach-suppressed', vm.disengaged);
 
     // Loadout chip (switcher)
     const { loadedPhrase, lastUsedAt, available, nextLocked, nextLockedIsLevelGated, coins } = callbacks.getLoadoutState();
@@ -704,6 +814,39 @@ export function createHud(callbacks: HudCallbacks): {
     kennelBtnEl.classList.toggle('hud-gated', !revealed.kennel);
   }
 
+  // Coach-pill visibility — driven by main.ts from the pure onboarding gates
+  // (shouldCoachCoreVerb / shouldCoachDistractors). Reuses the shared .hud-gated
+  // hide class so the coach occupies no space and is aria-hidden while gated off.
+  // Pass `text` to show the contextual distractor hint (task 109): the longer copy
+  // gets the .coach-wide modifier so it wraps instead of overflowing the viewport;
+  // omitting `text` restores the short core-verb prompt (task 108). One element,
+  // swapped text — keeps HUD stacking unchanged.
+  function setCoachVisible(visible: boolean, text?: string): void {
+    if (text !== undefined) {
+      coachEl.textContent = text;
+      coachEl.classList.add('coach-wide');
+    } else {
+      coachEl.textContent = COACH_CORE_VERB_TEXT;
+      coachEl.classList.remove('coach-wide');
+    }
+    coachEl.classList.toggle('hud-gated', !visible);
+  }
+
+  // Idle "welcome back" toast — announces the idle-income trickle collected on
+  // return (specs.md §Kennel). Driven by main.ts behind shouldShowIdleWelcome;
+  // shows the coin count, then auto-fades so it never blocks play.
+  let idleWelcomeTimer: ReturnType<typeof setTimeout> | undefined;
+  function showIdleWelcome(coins: number): void {
+    idleWelcomeEl.textContent = `Velkommen tilbake! +${coins} 🪙`;
+    idleWelcomeEl.classList.remove('hud-gated');
+    idleWelcomeEl.classList.add('idle-welcome-in');
+    if (idleWelcomeTimer !== undefined) clearTimeout(idleWelcomeTimer);
+    idleWelcomeTimer = setTimeout(() => {
+      idleWelcomeEl.classList.remove('idle-welcome-in');
+      idleWelcomeEl.classList.add('hud-gated');
+    }, IDLE_WELCOME_MS);
+  }
+
   // Apply initial reveal flags from callbacks
   applyRevealed(callbacks.revealed);
 
@@ -748,5 +891,5 @@ export function createHud(callbacks: HudCallbacks): {
     }, 1100);
   }
 
-  return { renderTraining, showSelect, showTraining, refreshKennelPanel, applyRevealed, showLoading, hideLoading, celebrate };
+  return { renderTraining, showSelect, showTraining, refreshKennelPanel, applyRevealed, setCoachVisible, showIdleWelcome, setPaused, showLoading, hideLoading, celebrate };
 }

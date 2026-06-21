@@ -10,11 +10,18 @@
  *     bun run e2e
  *
  * Strategy:
- *   - Apex signal: #hud[data-tell] attribute (tellStrength float 0→1, written every rAF by hud.ts:948).
- *     No production code changes needed — this attribute is already in the live DOM.
- *   - Tap BRA when data-tell >= APEX_THRESHOLD (near peak) to earn OK/PERFECT and fill the bar.
- *   - Assert mastery via: #hud-select becomes visible (app returns to select after mastery).
- *   - Assert payout: #hud-coins text before vs. after mastery.
+ *   - Apex timing: the DEV hook window.__bra.nextPeak() returns the performance.now()
+ *     timestamp of the soonest upcoming attempt peak. We schedule the BRA tap AT that
+ *     instant with an in-browser setTimeout, so the tap lands exactly on the apex →
+ *     PERFECT/OK and the bar fills.
+ *   - Why not the visual data-tell signal? Headless Chromium software-renders the
+ *     Babylon WebGL scene (no GPU), which throttles requestAnimationFrame to ~3 fps
+ *     under load. The rAF-driven data-tell is then too stale to time a ~400 ms window,
+ *     so every tap missed. setTimeout is NOT rAF-bound, so peak-timed taps are reliable
+ *     regardless of render rate. Scoring itself runs synchronously on pointerup, so it's
+ *     unaffected by the frame rate.
+ *   - Assert mastery via: app returns to 'select' (window.__bra.screen()).
+ *   - Assert payout: window.__bra.coins() before vs. after mastery.
  */
 
 // Nix glibc leaks in; let Chromium use system libs.
@@ -24,14 +31,13 @@ import { chromium } from 'playwright-core';
 
 const BASE_URL = process.env.E2E_URL ?? 'http://localhost:5173';
 
-// How close to the apex we need to be before tapping (0..1, 1 = perfect peak)
-const APEX_THRESHOLD = 0.65;
 // Overall deadline (ms) to drive a trick from fresh to mastery
 const MASTERY_DEADLINE_MS = 90_000;
-// How long to wait after a tap before polling again (avoid double-tapping same apex)
-const POST_TAP_COOLDOWN_MS = 400;
-// Poll interval inside the apex loop
-const APEX_POLL_MS = 40;
+// How long to wait after a tap before scheduling the next (avoid re-tapping same apex)
+const POST_TAP_COOLDOWN_MS = 250;
+// Cap on how far ahead we'll wait for a peak in one scheduling step (ms). Keeps the
+// outer loop responsive (peaks are ~attemptInterval apart, well under this).
+const MAX_PEAK_WAIT_MS = 4000;
 // How long to wait after mastery fires for the select screen to appear
 const POST_MASTERY_WAIT_MS = 3000;
 
@@ -60,21 +66,6 @@ async function readCoins(page) {
     const match = text.match(/(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
   });
-}
-
-/** Read tellStrength from the data-tell attribute on #hud (written every rAF). */
-async function readTellStrength(page) {
-  const val = await page.evaluate(() => document.querySelector('#hud')?.getAttribute('data-tell') ?? '0');
-  return parseFloat(val) || 0;
-}
-
-/** Read current bar fill width (0..100). */
-async function readBarWidth(page) {
-  const val = await page.evaluate(() => {
-    const fill = document.querySelector('#hud-bar-fill');
-    return parseFloat(fill?.style.width ?? '0') || 0;
-  });
-  return val;
 }
 
 /** Returns true when #hud-select is visible (display != none, not hidden). */
@@ -145,70 +136,88 @@ try {
   const coinsBefore = await readCoins(page);
   console.log(`  coins before mastery: ${coinsBefore}`);
 
-  // ── 5. Play to mastery by timing taps to the apex ─────────────────────────
-  // Poll data-tell on #hud (tellStrength 0→1); tap BRA when near peak (>= APEX_THRESHOLD).
-  // Loop until #hud-select is visible (mastery triggers showSelect) or deadline expires.
+  // ── 5. Play to mastery by timing taps to the exact apex ───────────────────
+  // For each upcoming attempt, ask the DEV hook for its peak timestamp and schedule
+  // a tap AT that instant inside the browser (setTimeout — not rAF-bound). This lands
+  // a PERFECT/OK on each attempt and fills the learned bar, deterministically, even
+  // when headless rendering crawls. Loop until the app returns to 'select' (mastery)
+  // or the deadline expires.
   let masteryReached = false;
-  let maxBarWidth = 0;
+  let maxLearned = 0;
   let tapCount = 0;
-  let lastTapAt = 0;
 
   const masteryDeadline = Date.now() + MASTERY_DEADLINE_MS;
 
   while (Date.now() < masteryDeadline) {
-    // Check if mastery already happened (select screen appeared)
-    const selectNow = await isSelectVisible(page);
-    if (selectNow) {
+    // Mastery returns the app to the select screen — check via the DEV hook.
+    const screen = await page.evaluate(() => window.__bra?.screen?.() ?? 'training');
+    if (screen === 'select') {
       masteryReached = true;
       break;
     }
 
-    // Read current bar width (track max for diagnostics)
-    const barW = await readBarWidth(page);
-    if (barW > maxBarWidth) maxBarWidth = barW;
+    // Schedule + perform one peak-timed tap entirely inside the browser, so the tap
+    // lands on the apex regardless of CDP latency or render frame rate.
+    //
+    // Precision matters: the PERFECT band is ±80 ms (it narrows to ±48 ms once a
+    // FALSE_MARK triggers the 3 s confuse debuff), but a single software-WebGL frame
+    // blocks the main thread for ~300 ms, so a plain setTimeout fires too late and the
+    // tap overshoots the window → MISS/FALSE_MARK → confusion spiral. So we sleep most
+    // of the gap with setTimeout (yields the thread, lets frames render), then BUSY-WAIT
+    // the final SPIN_MS. SPIN_MS (350) > one frame (~300), so even a one-frame-late
+    // setTimeout still hands off to the busy-wait before the peak; the busy-wait then
+    // holds the single JS thread (no frame can preempt it) until the exact peak, landing
+    // a reliable PERFECT.
+    const SPIN_MS = 350;
+    const tapped = await page.evaluate(async ({ maxWait, spinMs }) => {
+      const hook = window.__bra;
+      const peak = hook?.nextPeak?.() ?? null;
+      if (peak === null) return { tapped: false, reason: 'no-peak' };
+      const wait = peak - performance.now();
+      if (wait > maxWait) return { tapped: false, reason: 'too-far' };
+      if (wait < -spinMs) return { tapped: false, reason: 'passed' };
+      const sleep = wait - spinMs;
+      if (sleep > 0) await new Promise((r) => setTimeout(r, sleep));
+      // Precise busy-wait to the exact peak (no yield → no frame can preempt).
+      while (performance.now() < peak) { /* spin */ }
+      const btn = document.querySelector('#hud-bra-btn');
+      if (!btn) return { tapped: false, reason: 'no-btn' };
+      // BRA is press-then-release: the mark commits on pointerup. A zero-movement
+      // down→up is a tap (a horizontal drag would instead swap the phrase).
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
+      return { tapped: true, learned: hook?.learnedBar?.() ?? 0, screen: hook?.screen?.() ?? 'training' };
+    }, { maxWait: MAX_PEAK_WAIT_MS, spinMs: SPIN_MS });
 
-    // Read apex signal
-    const tell = await readTellStrength(page);
-
-    const now = Date.now();
-    const sinceLastTap = now - lastTapAt;
-
-    if (tell >= APEX_THRESHOLD && sinceLastTap >= POST_TAP_COOLDOWN_MS) {
-      // Tap BRA at the apex
-      await page.evaluate(() => {
-        const btn = document.querySelector('#hud-bra-btn');
-        if (btn) {
-          // BRA is press-then-release: the mark commits on pointerup (so a horizontal
-          // swipe can swap the phrase). A zero-movement down→up is a tap.
-          btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
-          btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
-        }
-      });
+    if (tapped.tapped) {
       tapCount++;
-      lastTapAt = Date.now();
-      // Brief pause after tap (avoid double-tapping same window)
+      if (typeof tapped.learned === 'number' && tapped.learned > maxLearned) maxLearned = tapped.learned;
+      if (tapped.screen === 'select') { masteryReached = true; break; }
+      // Cooldown so we don't re-tap the same window before the next peak appears.
       await new Promise((r) => setTimeout(r, POST_TAP_COOLDOWN_MS));
     } else {
-      await new Promise((r) => setTimeout(r, APEX_POLL_MS));
+      // No tappable peak right now (between timeline segments) — brief poll.
+      await new Promise((r) => setTimeout(r, 60));
     }
   }
 
-  // Give select screen time to render after the mastery transition
+  // Give the select screen time to render after the mastery transition.
   if (!masteryReached) {
     await new Promise((r) => setTimeout(r, POST_MASTERY_WAIT_MS));
-    masteryReached = await isSelectVisible(page);
+    masteryReached = (await page.evaluate(() => window.__bra?.screen?.() ?? 'training')) === 'select'
+      || (await isSelectVisible(page));
   }
 
   if (!masteryReached) {
-    const finalBar = await readBarWidth(page);
+    const finalLearned = await page.evaluate(() => window.__bra?.learnedBar?.() ?? 0);
     console.error(
       `E2E FULL-LOOP FAIL: trick never mastered within ${MASTERY_DEADLINE_MS / 1000}s. ` +
-      `Max bar width reached: ${maxBarWidth.toFixed(1)}%, final bar: ${finalBar.toFixed(1)}%, taps: ${tapCount}`
+      `Max learned: ${maxLearned.toFixed(1)}%, final learned: ${finalLearned.toFixed(1)}%, taps: ${tapCount}`
     );
     process.exit(1);
   }
 
-  console.log(`  mastery reached after ${tapCount} apex tap(s); max bar: ${maxBarWidth.toFixed(1)}%`);
+  console.log(`  mastery reached after ${tapCount} apex tap(s); max learned: ${maxLearned.toFixed(1)}%`);
 
   // ── 6. Assert payout: coins increased ────────────────────────────────────
   // Give HUD a moment to re-render after mastery + select

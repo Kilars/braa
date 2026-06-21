@@ -1,17 +1,266 @@
 # Planning Board
 
-**Current Focus**: Iteration 13 (2026-06-19) found the backlog drained and ran
-`scan-project` to replenish **three unblocked, non-epic tasks** (ids **099–101**;
-080–085 stay reserved for the visuals epic). Picks deliberately avoid the saturated
-quality/refactor (×4) and logic (×4) domains from the last 15 done, and steer clear of
-the FBX→glb-gated visuals epic: **099** (HIGH) closes a named v1 spec gap — *swipe the
-BRA marker to swap phrase* (specs §Marker Phrases; tech-decisions §7 still lists the
-selection UI as open); **100** (MED) wires the already-built reward-latency event into
-the live engagement meter, completing the "slow rewards drain it" half of 098 — and
-carves it out of 098's over-broad 079 deferral (it needs only tap-vs-apex timing, no
-clips); **101** (MED) adds a jsdom test env + unit coverage for the five untested panel
-factories (`adoptPanel`/`kennelPanel`/… have none — env is node-only today). Then worked
-the backlog (see below).
+**Current Focus**: Iteration 25 (2026-06-21) found the backlog drained (115/116/117 all DONE) →
+ran `scan-project`. The spec now carries a fresh, authoritative **PO Review — 2026-06-21** (the
+father pass play-tested the imported Labrador on phone-portrait): the **v1 core loop is functional,
+no P0**, and the Labrador "renders genuinely well". The review enumerates the precise remaining
+spec shortfalls (5 bugfixes / 5 improvements / 3 changes). Refactor is **saturated** (105/110/114/117
+= 4 of last 15) and was avoided; the scan turned the three highest-impact, well-scoped PO bugfixes/
+improvements into tasks. **PO Bugfix #5 (corrupted spec line 1, `MAKE GLB REPÅLCAE PLACEHOLDER DOG`)
+is NOT a task** — it requires editing `.docs/specs.md`, which is read-only for the build loop; only
+the PO/father pass can fix it. Created **118/119/120**:
+- **118 (HIGH, BUGFIX — core-loop signal correctness)** — **suppress the apex tell while
+  disengaged.** Today `viewModel.tellStrength`/`peakProximity` ignore `disengaged` (`viewModel.ts:42-52`),
+  so the gold "mark now" ring (and the on-dog apex) fire while the dog has walked off and the only
+  valid action is call-back — two opposite meanings on one cue (PO Bugfix #4). One clamp in
+  `toViewModel`, pure TDD. **Do first** (lowest risk, fully test-covered).
+- **119 (HIGH, BUGFIX — visual/loading, D1/D14)** — **never flash the primitive placeholder dog.**
+  `scene.ts` shows the capsule/sphere/cylinder dog for ~0.3–1 s before the GLB swaps in; the spec
+  forbids the blob *even as a placeholder* (PO Bugfix #1). Pure `proceduralDogVisible(...)` helper
+  (TDD) + hold-hidden-then-fade glue; **blocking real-screenshot Visual Review** (+300 ms no blob,
+  +1000 ms real Labrador, failure path still shows procedural).
+- **120 (HIGH, FEATURE — dog state-legibility, D6/D11)** — **distinct lie-down clip for the
+  down-family tricks.** Sitt/Ligg/Legg deg all render the same upright sit on the imported dog
+  because clip selection is trick-blind (`dogAnimationMap.ts` maps `offering`→Sitting for every
+  trick); the `trickId` reaches the scene but isn't threaded to `resolveStateClip` (PO Improvement #1).
+  Make imported clip selection trick-aware (prefer Lie/Lying for ligg/legg-deg/sov), pure-logic TDD +
+  **blocking Visual Review**.
+
+Remaining PO items for later scans (still spec-grounded, deliberately not picked this round to keep
+the trio scoped): Bugfix #2 (stylized hand+treat asset — heavier/asset-leaning), Bugfix #3
+(disengaged dog clipped at right edge), and the Improvements/Changes (kennel-upgrade descriptions,
+adopt price+art, select-shell coin/level readout, brighten select scene, restyle mute toggle,
+distractor-vs-disengaged distinction, recenter idle dog). **Still owner/legal/asset-gated (NOT
+eligible):** the **Maren marker voice recording** (§4) and the **licensed-Labrador default-ON public
+ship path** (§3i/§3j packaging).
+
+Recommended order: **118 → 120 → 119** (logic-only first, then the two Visual-Review-gated tasks).
+
+---
+
+**Prior focus**: Iteration 24 (2026-06-21) found the backlog drained (112/113/114 all DONE) →
+ran `scan-project`. Two analysis subagents (spec-vs-impl gap + code-quality) confirmed the **v1
+core loop is intact (PASS, no P0)** and nearly everything in the spec is Implemented. The only
+genuine **non-gated** v1 gaps left are narrow; the scan deliberately picked a **domain-balanced**
+trio that avoids the three saturated buckets (render-visual 102/103/107/111/112=5; tuning-refactor
+105/110/114=3; pure-test 101/104/113=3) and lands in **cold** domains (audio, economy-surfacing,
+core-logic). Created **115/116/117**:
+- **115 (MED-HIGH, FEATURE — economy/UI surfacing)** — **idle "welcome back" income on return.**
+  `idleIncome` is granted invisibly at load (`main.ts:150-156`); the spec's "gentle reason to come
+  back" payoff never reaches the screen. Pure `shouldShowIdleWelcome({earnedCoins, economyRevealed})`
+  (TDD) gates a select-screen toast behind the economy-reveal stage. Fully screenshot-verifiable —
+  **do first** (lowest risk).
+- **116 (MED-HIGH, FEATURE — audio, cold since 094)** — **marker-voice clip pipeline.** Every mark
+  is synth-only; the `registerClip`/`shouldUseClip`/`playBuffer` plumbing (074) is **never fed**.
+  Build the owner-unblocked half: a rejection-safe `loadClip` (fetch+decodeAudioData), a pure
+  phrase-keyed `voiceCue(result, phraseId?)` (TDD), wiring, + a license-clean placeholder so the
+  path is proven. The **real Maren recording stays the standing owner/likeness gate (§4)** — named,
+  not claimed delivered.
+- **117 (MED, REFACTOR — core-logic/correctness)** — extract the **tap engagement/call-back
+  decision** out of the untested `onBraTapCommit` IIFE into pure `isCallBackTap` + `tapEngagement`
+  in `gameHelpers.ts` (TDD). Locks down the loop's two most edit-fragile ordering rules (call-back
+  *before* classification; reward-latency *only* on PERFECT/OK+attempt) with direct unit coverage.
+  Behavior-preserving; guarded by `e2e/full-loop.mjs`. **Do last** (touches the delicate tap path).
+
+**Still owner/legal/asset-gated (NOT eligible tasks):** the **licensed-Labrador default-ON ship
+path** (080 engineering-done; packaging gate §3i/§3j) and the **Maren marker voice recording** (§4 —
+likeness/recording asset; task 116 builds the pipeline *around* it).
+
+Recommended order: **115 → 116 → 117** (ascending risk).
+
+---
+
+**Prior focus**: Iteration 23 (2026-06-21) found the backlog drained (109/110/111 all DONE) →
+ran `scan-project` → **shipped all 3 tasks + closed on-hold 098**. A spec-vs-impl gap subagent
+confirmed the v1 core loop is intact and most of the spec is implemented; remaining buildable
+gaps are narrow (mature project, 108 done). Two true gates stay owner/asset-bound and are **not**
+eligible tasks: the **licensed-Labrador default-ON ship path** (080 engineering-done; packaging
+gate §3i/§3j) and the **Maren marker voice** (§4 — a likeness/recording asset that can't be
+produced autonomously; flagged as the standing escalation item).
+- **112 (DONE — FEATURE)** — the intermediate **disengage beats (itch/flop/bark) now read on the
+  dog**, not only the HUD pill. `DogVisual`+`beat` routing (pure, TDD, 10 tests; beats replace
+  idle-lulls only, never mask `offering`), procedural poses (`dogPose.ts`) + a graded cool tint
+  ramp (`scene.ts`) landing on the walk-off blue, imported-rig clip map (itch→Scratching/
+  flop→Lie/bark→Bark). **This was on-hold 098's last slice → 098 is now CLOSED** (every part
+  shipped procedurally; nothing was ever truly 079-gated). Real-screenshot **Visual Review = PASS**
+  (`scripts/shoot-beats.mjs`; reduced-motion safe, D13). tech-decisions §"Intermediate disengage
+  beats on the dog".
+- **113 (DONE — TEST)** — resume round-trip integration guard: a 42% partial learned-bar now
+  proven to survive the real `buildGameSave → serialize → deserialize → restoreLearnedBar` chain
+  (+ fresh→0 and dog/trick-mismatch→0). 4 tests; existing code round-trips correctly (guard
+  passed first run — no bug surfaced). `gameHelpers.test.ts` 46 → 50.
+- **114 (DONE — REFACTOR)** — finished 110's tuning centralisation: `RESULT_FLASH_MS` moved
+  hud.ts → `tuning.ts`; src/ui+src/render audited, judgement-call locals (render decay windows,
+  CSS-paired timeouts, load timeout, texture size) documented kept-local. No behavior change.
+
+Gate after iteration 23: typecheck 0 · **833 tests** · build no-warn · e2e (smoke + full-loop)
+PASS. Backlog + in-progress empty; on-hold holds only the historical **077** research task.
+
+---
+
+**Prior focus**: Iteration 22 (2026-06-21) cleared the two lower-risk items the iteration-21
+scan queued, leaving the flagship visual task for a focused pass (the iteration-17 pattern):
+- **110 (DONE — REFACTOR)** — finished the §8/105 tuning centralisation. The playtest-relevant
+  stragglers now live in `src/core/tuning.ts`: `NORMAL_DELTAS` (mark.ts), the engagement
+  reward-latency feed + `MARK_ENGAGEMENT_DELTA` (engagement.ts), `CALL_BACK_ENGAGEMENT`
+  (disengage.ts), `CONFUSE_WINDOW_MULT`/`CONFUSE_DISTRACTOR_MULT` (difficulty.ts), and
+  `BASE_SCHEDULER_TIMING` (gameHelpers.ts). Each domain module imports from `tuning.ts`, thinly
+  re-exporting any widely-imported name so **every test passed unchanged** (pure, behavior-
+  preserving). `tuning.ts` still imports nothing from `src/core/*` (its few `Record`/`as const`
+  tables write key types inline). tech-decisions §8 extended.
+- **111 (DONE — QUALITY)** — hardened `importedDogMesh.ts` before the eventual flag-flip. Fixed a
+  real **per-frame head-bone Y drift** (`+=` → bind-relative assign via new pure, TDD'd
+  `headBoneY(bindY, lift)`; 3 tests), collapsed the dead-branch `setEmissiveMat` to one line, and
+  removed the unused Phase-2 `_originalDiffuse`/`_originalEmissive` captures (+ orphaned
+  `getDiffuse`). Visual Review waived per the task's own rationale (flag OFF; no-accumulation is a
+  pure-math property fully covered by the helper test; no visual output changed). tech-decisions §3j.
+- **109 (HIGH, QUEUED — flagship visual)** — contextual onboarding coach for the **distractor
+  reveal** (specs §Onboarding staged reveal). The highest-value uncoached moment: at
+  `masteredCount === 1` the dog starts offering wrong behaviors and a brand-new player gets no
+  explanation of why a tap was punished. Extends task 108's proven pattern (pure gate +
+  dismissible `#hud-coach` pill + reduced-motion/aria). **Left in backlog deliberately**: it has a
+  *blocking* real-screenshot Visual Review and deserves a focused, screenshot-heavy iteration
+  rather than being rushed at the tail of a multi-task pass (cf. iteration 17 queuing 080).
+
+Gate after iteration 22: typecheck 0 · **808 tests** (805 → 808) · build no-warn · e2e
+(smoke + full-loop) PASS. Backlog holds **109 only**; in-progress empty.
+
+---
+
+**Prior focus**: Iteration 20 (2026-06-21) **shipped 107 (Disengagement walk-off + call-back)** —
+the flagship, and the **biggest remaining v1 gameplay gap**. Completes the 098 remainder
+**procedurally on the shipping dog** (no licensed clips — the old "079-gated" deferral was
+over-broad). New pure `src/core/disengage.ts` (TDD, 7 tests: `isDisengaged`/`canScoreMark`/
+`callBackEngagement`→0.5=`itch`, above walk-off AND bark so it can't oscillate). At empty meter
+the dog enters a distinct `disengaged` state — **back-turned** (`bodyYaw=−π/2`: rump to camera,
+since the ArcRotateCamera at `alpha=−π/2` makes a 180° yaw show only the same flank), **seated**,
+**cool-blue** (distinct from distractor grey), sat **off to the frame edge** (narrow footprint
+once it faces into the screen → no clipping). A BRA tap now **calls the dog back** (restores
+engagement, breaks combo, never scores) — branched before mark classification in `main.ts`. Faint
+blue `#hud-callback-hint` pill while disengaged; first-run coach suppressed so prompts never
+contradict. Reduced-motion-safe (static pose/tint/position read; D13). Real-browser Visual Review:
+round 1 (independent) = FAIL (read as idle recolored) → fixed → round 2 (fresh independent) =
+PASS-WITH-NITS (only nit: uniform-crouch "sit" — primitive dog has no per-leg control; non-blocking).
+Decision in tech-decisions §"On-dog walk-off + call-back" (engagement section flipped PARTIAL →
+COMPLETE). **specs.md untouched.** Backlog + in-progress now empty.
+
+*Iteration 19 (2026-06-21)* shipped 106 (in-round Pause/Resume): pure `src/core/pauseClock.ts`
+(TDD, 8 tests) models round time as wall clock minus paused spans; pausing freezes the dog + apex
+tell and ignores taps, resume continues with no skip-ahead. 44px ⏸ button + dimmed "Paused"
+overlay (reduced-motion-safe), auto-pause on background. Decision in tech-decisions §"In-Round
+Pause Clock".
+
+*Iteration 18 (2026-06-21)* closed the flagship **080** (imported Labrador: camera-facing + 113
+embedded skeletal clips; verified against the real gate) then ran `scan-project`, shipping the
+low-risk **108** (first-run coach) and queueing the two HIGH flagships **106 + 107**.
+- **106 (DONE — 2026-06-21)** — in-round **Pause/Resume** (specs §Round States: "Pause/resume
+  supported"). Pure `pauseClock` effective-time offset (TDD) freezes the round clock + a paused
+  overlay (Visual Review). Touched the delicate `main.ts` round clock — handled in its own pass.
+- **107 (HIGH, QUEUED — flagship)** — **Disengagement walk-off + call-back** on the *shipping
+  procedural dog* (specs §Wrong-behavior beats). Completes the 098 remainder: the engagement
+  meter currently only tints the HUD; this makes the dog trot off / sit back-turned at empty
+  meter and adds the **tap-to-call-back** interaction. **No longer 079-gated** (procedural).
+  Render+gameplay → dedicated screenshot-heavy pass.
+- **108 (DONE)** — first-run **coach hint** teaching the core verb in-context (specs §Onboarding).
+  Pure `shouldCoachCoreVerb` (TDD, 3 cycles); gold `#hud-coach` pill via `setCoachVisible`,
+  reduced-motion-safe; runtime `hasMarkedSuccessfully` in `main.ts` shows it on the first round
+  and auto-dismisses it on the first scoring mark, never for returning players. Real-screenshot
+  Visual Review by an independent agent = **PASS**. Decision in tech-decisions §3k.
+
+Gate after iteration 19: typecheck 0 · **781 tests** (767 → 781) · build no-warn · e2e
+(smoke + full-loop) PASS. Backlog holds **107 only**; in-progress empty.
+
+**Next iteration**: take **107** (the disengagement flagship — biggest remaining v1 *gameplay*
+gap, gives the engagement meter real teeth; render+gameplay → dedicated screenshot-heavy pass).
+Still owner/legal-gated: the **licensed-Labrador default-ON ship path** (080 is engineering-done;
+the gap is packaging — §3i/§3j) and the **Maren marker voice** (§4).
+
+---
+
+**Prior focus**: Iteration 17 (2026-06-20) found the backlog drained → ran
+`scan-project`. The PO/father review (specs.md line 1: "MAKE GLB REPLACE PLACEHOLDER DOG")
+plus a fresh spec-vs-impl gap subagent confirm the **dominant remaining v1 gap is the
+look** — the procedural primitive dog is still live; the real licensed Labrador is built,
+textured, AES-GCM-packed and load-proven (task 103) but `renderConfig.importedDog` is OFF
+for two **pure-engineering** reasons (rig faces away from camera; 113 embedded skeletal
+clips unplayed). No owner/legal/asset gate remains for it. The scan created **3 tasks** —
+exactly the board's own named carry-forward candidates, re-validated by gap + code-quality
+subagents — and **shipped the two low-risk ones**, queueing the flagship visual task:
+- **080 (HIGH, QUEUED top priority)** — epic phase 2 promoted from outline + task-103's
+  recommended follow-up: face the imported Labrador to camera (base yaw on the framing
+  pivot, since `applyPose` owns `root.rotation.y`) + drive idle/offering/markable-apex/
+  happy/confused via the embedded `AnimationGroup`s (pure `resolveStateClip` resolver is
+  TDD; playback is Visual Review), then **flip the flag iff it reads ≥ procedural** (079
+  rule). Left in backlog: it's a Visual-Review-gated flagship deserving its own focused
+  iteration (079 was a whole iteration), not a rushed corner of a 3-task sprint.
+- **105 (DONE)** — centralize scattered tunables into `src/core/tuning.ts` (tech-decisions
+  §8's standing "Future" TODO). Behavior-preserving move: `difficulty.ts` mode literals +
+  `main.ts` `PANT_INTERVAL_MS`/`TIMELINE_EVENTS` now import 20 named consts from `tuning.ts`
+  (imports nothing from `src/core/*` → no cycle); §8 note flipped to DONE. Zero value
+  changed (each diffed against §8); all tests pass unchanged.
+- **104 (DONE)** — first direct coverage of the 752-line `createHud`: 15 jsdom
+  characterization tests for `renderTraining` (phrase-cooldown `--cooldown-pct` sweep,
+  combo visibility/multiplier, engagement %/beat, level-gate vs coin-gate affordance +
+  boundaries). Through the public handle, asserting observable DOM — no seam needed in
+  `hud.ts`. Answers the standing "unit tests for hud.ts orchestration" carry-forward.
+
+Gate after iteration 17: typecheck 0 · **744 tests** (729 → 744) · build clean · e2e
+(smoke + full-loop) PASS. Backlog now holds **080 only**; in-progress empty.
+
+**Prior focus**: Iteration 16 (2026-06-20) worked the single backlog task **102
+(one-line licensed-Labrador swap seam)** and shipped it. New `src/render/dogModelSource.ts`
+is the **single source of truth** for the model path: `DOG_MODEL_URL` (CC0 `/models/dog.glb`,
+web default) + a pure, TDD-covered `resolveDogModelSource({allowLicensed, licensedAssetPresent})`
+(4 tests; CC0 fallback never yields an empty path). `scene.ts` now calls the selector instead
+of a hard-coded string (`grep`-clean — no stray model path in `src/`). The CC0 → licensed swap
+is now genuinely **one line** (flip the selector inputs once the licensed glb is staged into a
+license-cleared build path). Documented in **tech-decisions §3h** (swap recipe + named gate) and
+cross-linked from `public/models/CREDITS.md`. `dist/models/` ships **only** `dog.glb` — no
+licensed file leaks into the web bundle. **No visual change** (CC0 stays live). Full gate green:
+typecheck · **715 tests** · build · e2e (smoke + full-loop). Backlog + in-progress now empty.
+**Notable concurrent development:** the owner supplied `Labrador_Textures.rar` mid-iteration, so
+the **texture gate is now resolved** (maps embedded in gitignored `models-build/out_anim.glb` via
+`scripts/skin-dog-model.mjs`); reconciled §3h/CREDITS accordingly. The **one operative remaining
+gate** for the real Labrador is now just the **web-PWA license decision** (§3b/§3d) — next scan
+should treat that, plus staging the textured glb behind `allowLicensed`, as the live frontier.
+
+**Prior focus**: Iteration 15 (2026-06-20) finished the in-progress dog-model slice:
+**078 + 079 are DONE** and the imported-dog pipeline is **proven end-to-end behind the
+default-off flag**. `createImportedDogMesh` renders the loaded glb through the `DogMesh`
+contract; the lazy `babylon-loaders` chunk keeps the glTF loader + PBR off flag-off users
+(tech-decisions §3f). Visual Review (real screenshots, `?importedDog=1`): the first pass
+rendered a **sliver** — root-caused to the CC0 model being a skinned rig (`AnimalArmature
+×100`) whose hierarchy/skeleton-bounds the framing stripped; **fixed** (re-parent topmost
+ancestor + `refreshBoundingInfo({applySkeleton:true})`). After the fix it's a recognizable
+dog but **oversized/generic → reads worse than the tuned procedural dog**, so the flag
+**stays OFF** per the task's conditional (the win is the proven pipeline; real swap = 102).
+Also fixed two gate breakages the snapshot left: the **build** (workbox 2 MiB precache +
+chunk-size — split + raised limits) and the **e2e full-loop** (headless rAF throttles to
+~3 fps so apex-by-`data-tell` always MISSed → now taps via a `nextPeak()` DEV hook + an
+in-browser busy-wait; tech-decisions §3g). Full gate green: typecheck · 711 tests · build ·
+e2e. **102 remains in backlog** (ready) for the next iteration.
+
+**Iteration 14 (2026-06-20)** found the backlog drained and ran
+`scan-project`. The big change since iteration 13: **the FBX→glb conversion that gated
+the visuals epic is DONE** (tech-decisions §3e) and a **CC0 placeholder glb is staged at
+`public/models/dog.glb`** — so the epic's phase-1 tasks are **no longer blocked**. The PO
+shout on **specs.md line 1** ("MAKE GLB REPLACE PLACEHOLDER DOG") makes the imported-dog
+path the unambiguous top priority. Rather than duplicate the already-detailed phase-1
+tasks, the scan **reactivated 078 + 079 from on-hold → backlog** (un-parking unblocked
+work — the project's #1 lesson) and added **one new task 102**:
+- **078** (HIGH) — loader glue: add `@babylonjs/loaders`, lazy `loadDogModel()`, scene
+  async wiring (spinner → `selectDogRenderMode` → fall back to procedural). Flag stays off.
+- **079** (HIGH) — `createImportedDogMesh` behind the `DogMesh` contract + scene render-mode
+  wiring + Visual Review. Flip `renderConfig.importedDog` **on only if** the imported dog
+  Visual-Reviews ≥ the procedural baseline (the staged model is a generic CC0 dog, not yet
+  the Labrador). Either way the pipeline is proven.
+- **102** (MED) — one-line licensed-Labrador swap seam (`DOG_MODEL_URL` +
+  TDD `resolveDogModelSource`) + a precisely-named owner/legal gate (missing albedo texture
+  + web-PWA license). Keeps the real-asset work moving around the genuine blocker.
+
+The only remaining gates are **owner/legal** and apply solely to the *licensed* Labrador
+(texture folder + PWA-license decision) — they do **not** block 078/079/102, which build
+against the safe CC0 placeholder. Then worked the backlog (see below).
 
 ---
 
@@ -66,27 +315,81 @@ Roadmap in [`EPIC-pokemon-go-visuals.md`](EPIC-pokemon-go-visuals.md).
 Phases 2–6 (`080`–`085`) stay outlined in the epic; **numbers 080–085 are reserved
 for those visual phases**, so new non-epic tasks start at **099**.
 
-## Top Priorities — next scan round (backlog drained again)
+## Top Priorities — backlog holds **080** (queued) after iteration 17
 
-**Backlog and in-progress are both empty** — iteration 13 shipped all three replenished
-tasks (099–101, below). The next iteration MUST run `scan-project` to replenish 3 fresh
-tasks (new ids start at **102**; 080–085 stay reserved for the epic).
+**Next iteration: take 080** — the imported-Labrador render-readiness slice (face camera +
+play the 113 embedded skeletal clips for the core states → Visual Review → flip
+`renderConfig.importedDog` iff ≥ procedural). It is the PO's #1 ask and the last
+pure-engineering step between the placeholder dog and the real licensed Labrador on web
+(texture supplied + license decided + packed-load proven, task 103). Give it a dedicated,
+screenshot-heavy pass; never fabricate a Visual Review (Subagent note below). After 080,
+the next scan should re-balance the domain mix (rendering + logic are the warm buckets) and
+weigh epic phases 081 (PBR look) / 082 (breed retarget). Still owner/legal-gated: the
+**Maren marker voice** (§4).
 
-The Pokémon-GO Visuals epic still needs the FBX → glb conversion (tech-decisions §3c)
-before 078/079/098-remainder can build against the real model — none of 099–101 touched it.
+## Recently Completed (iteration 17 — 2026-06-20)
 
-Carry-forward candidates for the next scan (re-rank against fresh findings): **unit tests
-for `hud.ts` orchestration** (the panel factories now have jsdom coverage from 101, but the
-686-line `createHud` orchestration does not); **centralize tunables into `src/core/tuning.ts`**
-(tech-decisions §8 "Future" note — but refactor domain is now warm); **`main.ts` is 760 LOC**
-and could shed more pure helpers. Still excluded: extend-levels-beyond-L5 (no content),
-Maren voice (owner-gated asset), and the on-dog engagement beats / walk-away (079-gated).
+- `105-REFACTOR-centralize-tunables-tuning-module` (MED) — new `src/core/tuning.ts` hosts 20
+  named primitive tuning constants (NORMAL/HARD/EXPERT window/peak/distractor, FALSE_MARK
+  overrides, reward mults, tell intensities) + the two app-level stragglers
+  `PANT_INTERVAL_MS` / `TIMELINE_EVENTS`. `src/core/difficulty.ts` and `src/main.ts` consume
+  them; the bare inline literals are gone (grep-clean). `tuning.ts` imports nothing from
+  `src/core/*` (no cycle). **Behavior-preserving** — every value diffed against tech-decisions
+  §8, all suites pass unchanged. §8's "Future: centralize into src/core/tuning.ts" note
+  flipped to DONE. Implements the long-standing §8 refactor TODO.
+- `104-TEST-hud-rendertraining-jsdom-coverage` (MED) — `src/ui/hud.test.ts`: **15 jsdom
+  characterization tests** for `createHud`/`renderTraining`, the previously-untested 752-line
+  HUD orchestration. Covers the phrase-cooldown `--cooldown-pct` sweep + ready/`on-cooldown`
+  class, combo visibility threshold + `xN` multiplier, engagement `Math.round(*100)` fill +
+  `aria-valuenow` + `data-beat`, and level-gate (`Lvl N`) vs coin-gate (`🪙N`) affordance —
+  each with boundary cases. Asserts observable DOM through the public handle (refactor-proof,
+  mirrors the panel tests); **no seam needed in `hud.ts`**. Characterization caught that
+  `renderTraining` reads cooldown/unlock state from `callbacks.getLoadoutState()` and that
+  `--cooldown-pct` is a one-decimal percent string (e.g. `"50.0%"`), not a 0–1 fraction.
+  Suite 729 → **744**.
+
+**Backlog + in-progress are now empty** (`.gitkeep` only); **078 + 079 + 102 are DONE**. The
+swap seam (102) is in place, so the next iteration that finds the board drained should run
+`scan-project` to replenish. The flag architecture (`renderConfig.importedDog` default off +
+mandatory procedural fallback) keeps the gate green; the procedural dog always renders.
+
+**Live frontier for the licensed Labrador (iteration 16 update):** the texture gate is now
+**resolved** (owner supplied `Labrador_Textures.rar`; maps baked into gitignored
+`models-build/out_anim.glb` via `scripts/skin-dog-model.mjs`). The **one operative remaining
+gate** is the **web-PWA license decision** (§3b/§3d). Once that's decided, staging the textured
+`labrador.glb` into a license-cleared build path + flipping the `resolveDogModelSource` inputs is
+the whole swap (task 102 built the seam). A scan should weigh: **decide/stage the licensed-model
+ship path** (the now-unblocked frontier), **epic phase 2 — play the glb's embedded skeletal
+clips** (113 clips; reserved id **080**), **unit tests for `hud.ts` orchestration** (686-line
+`createHud`, no coverage), **centralize tunables into `src/core/tuning.ts`** (§8). Still
+owner/legal-gated: the **PWA license** above, the **Maren voice**.
+
+After this epic phase-1 block lands, the **next scan** should re-balance the domain mix.
+Carry-forward candidates (re-rank against fresh findings): **epic phase 2 — play the glb's
+embedded skeletal clips** on the imported dog (113 clips available; reserved id **080**);
+**unit tests for `hud.ts` orchestration** (panel factories got jsdom coverage in 101, but
+the 686-line `createHud` orchestration has none); **centralize tunables into
+`src/core/tuning.ts`** (tech-decisions §8; refactor domain is warm). Still owner/legal-gated:
+the **licensed Labrador** (texture + PWA license — task 102 names it), the **Maren voice**,
+and **on-dog engagement beats** (those need the *licensed* Labrador's clips; 098 remainder).
 
 **Saturation note (iteration 13):** last-15-done now skews **feature/UI** (099 UI-interaction,
 096 UI) and **test** (088, 101); quality/refactor (076/089/092/093) and logic (075/087/091/097)
 remain the heaviest historical buckets. Audio (074/094) and persistence (086/090) sit at 2.
 Next scan should avoid stacking more UI-interaction; a correctness/perf or content gap would
 balance the mix.
+
+## Recently Completed (iteration 16 — 2026-06-20)
+
+- `102-FEATURE-licensed-labrador-swap-gate` (MED) — the one-line CC0 → licensed-Labrador
+  swap seam. New pure `src/render/dogModelSource.ts`: `DOG_MODEL_URL` (CC0 `/models/dog.glb`,
+  single source of truth) + TDD-covered `resolveDogModelSource({allowLicensed, licensedAssetPresent})`
+  (4 tests; CC0 fallback never empty). `scene.ts` calls the selector — no hard-coded model path
+  in `src/` (`grep`-clean). Swap recipe + named owner/legal gate in **tech-decisions §3h**,
+  cross-linked from `CREDITS.md`. `dist/models/` ships only `dog.glb` (no licensed leak). No
+  visual change (CC0 stays live). Reconciled §3h/CREDITS after the owner supplied
+  `Labrador_Textures.rar` mid-iteration (texture gate now resolved; PWA-license is the lone
+  remaining gate). Gate: typecheck 0 · **715 tests** · build clean · e2e (smoke + full-loop) PASS.
 
 ## Recently Completed (iteration 13 — 2026-06-19)
 

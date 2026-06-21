@@ -45,6 +45,34 @@ export function shouldUseClip(cue: string, registry: ReadonlyMap<string, AudioBu
   return registry.has(cue);
 }
 
+/**
+ * The cue key to look up for a mark's voice clip (task 116). A collectible phrase
+ * voices its own line via a `voice:<id>` key; with no phrase it falls back to the
+ * result-tier key (`'PERFECT'` | `'OK'` | …). Pure key derivation only — whether a
+ * clip is actually registered for the key is decided by `shouldUseClip` at the
+ * play site, which gates the synth fallback.
+ */
+export function voiceCue(result: MarkResult, phraseId?: string): string {
+  return phraseId ? `voice:${phraseId}` : result;
+}
+
+/**
+ * The cue to play for a mark's voice clip, or `null` to synthesize (task 116).
+ * Pure + registry-aware: prefer the phrase-specific clip (`voice:<id>`), else the
+ * result-tier clip, else `null`. Single source of truth for the "phrase line →
+ * tier line → synth" fallback so the play site stays thin glue.
+ */
+export function selectVoiceClip(
+  result: MarkResult,
+  phraseId: string | undefined,
+  registry: ReadonlyMap<string, AudioBuffer>,
+): string | null {
+  const phraseKey = voiceCue(result, phraseId);
+  if (shouldUseClip(phraseKey, registry)) return phraseKey;
+  if (shouldUseClip(result, registry)) return result;
+  return null;
+}
+
 export function masterySound(): SoundSpec[] {
   return [
     { freq: 523, durationMs: 120, type: 'sine', gain: 0.5 },
@@ -108,6 +136,32 @@ export class MarkAudio {
     this.clips.set(cue, buffer);
   }
 
+  /** Whether a clip is registered for this cue (observability for the loader path). */
+  hasClip(cue: string): boolean {
+    return shouldUseClip(cue, this.clips);
+  }
+
+  /**
+   * Fetch + decode an audio asset and register it under `cue` (task 116). Called at
+   * bootstrap, OFF the tap path, so it never adds mark latency. Fully graceful: a
+   * missing/failed asset, a decode error, or an unavailable AudioContext rejects
+   * quietly and the registry is left unchanged — the mark falls back to the existing
+   * synth (no throw, no console spam). The real Maren marker line drops into the same
+   * cue with no call-site change (the recording is the standing owner gate — §4).
+   */
+  async loadClip(cue: string, url: string): Promise<void> {
+    try {
+      const ctx = this.ensureCtx();
+      if (!ctx) return;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+      this.registerClip(cue, buf);
+    } catch {
+      // graceful: stay on synth, no throw
+    }
+  }
+
   isMuted(): boolean {
     return this._muted;
   }
@@ -161,13 +215,17 @@ export class MarkAudio {
     source.start(ctx.currentTime);
   }
 
-  play(result: MarkResult): void {
+  play(result: MarkResult, phraseId?: string): void {
     if (this._muted) return;
     try {
       const ctx = this.ensureCtx();
       if (!ctx) return;
-      if (shouldUseClip(result, this.clips)) {
-        this.playBuffer(ctx, this.clips.get(result)!);
+      // Voiced mark: a registered phrase line wins, else the result-tier clip,
+      // else fall through to synth (task 116). Selection is a Map lookup — zero
+      // added tap latency; the asset was loaded at bootstrap off the tap path.
+      const cue = selectVoiceClip(result, phraseId, this.clips);
+      if (cue !== null) {
+        this.playBuffer(ctx, this.clips.get(cue)!);
         return;
       }
       for (const layer of markLayers(result)) {

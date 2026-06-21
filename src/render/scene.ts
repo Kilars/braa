@@ -17,6 +17,12 @@ import { breedAppearance, type DogAppearance } from './dogAppearance';
 import { setupBackdrop, applyBackdropTier } from './backdrop';
 import { kennelTier } from './backdropTier';
 import { handAnim, type RewardKind } from './handReward';
+import { renderConfig, loadDogModel, loadPackedDogModel, resolveLoadState, selectDogRenderMode, devOverrideImportedDog, devOverrideLicensedDog, type DogLoadState } from './dogModelLoader';
+import { resolveDogModelDescriptor } from './dogModelSource';
+// NOTE: `createImportedDogMesh` is intentionally NOT imported statically — it
+// pulls in PBRMaterial + the glTF material stack. It is dynamically imported
+// inside the flag-gated block below so that weight lives in the lazy
+// `babylon-loaders` chunk and never ships when the imported-dog flag is off.
 
 // BASE_EMISSIVE is constant; BASE_COLOR is now derived from the breed coat at runtime.
 const BASE_EMISSIVE = new Color3(0, 0, 0);
@@ -42,6 +48,35 @@ const DISTRACTOR_SCALE = 0.9;                              // slightly smaller /
 // Misbehaving: agitated red tint — dog is doing the bad habit, do NOT mark
 const MISBEHAVING_COLOR = new Color3(0.85, 0.2, 0.15);   // vivid red
 const MISBEHAVING_EMISSIVE = new Color3(0.2, 0.0, 0.0);  // red glow
+
+// Disengaged (task 107): the dog has walked off (engagement empty). A muted, cool
+// blue-grey — deliberately distinct from the neutral distractor grey and the warm
+// offering — reads as "withdrawn / done with you". No glow. Paired with the seated,
+// back-turned pose + an edge offset below so it's tellable apart at a glance.
+// A clearly COOL blue — not just desaturated — so it never collides with the
+// neutral distractor grey. Reads as "withdrawn / sulking" on the warm grass.
+const DISENGAGED_COLOR = new Color3(0.34, 0.41, 0.6);
+const DISENGAGED_EMISSIVE = new Color3(0, 0, 0);          // no glow
+// Smaller than any in-play state: a walked-off dog reads as withdrawn / farther off.
+const DISENGAGED_SCALE = 0.82;
+// The back-turned dog faces into the screen (rump to camera), so its on-screen
+// footprint is narrow — it can sit well toward the frame edge without clipping,
+// which makes the "trotted off to the side" read spatially clear.
+const DISENGAGED_EDGE_X = 0.6;
+
+// Disengage beats (task 112): the meter's escalation, tinted as a graded ramp of
+// increasing withdrawal that lands on the cool DISENGAGED_COLOR — itch (warm-grey,
+// barely off) → flop (cool-grey, low energy) → bark (steely cool-blue, agitated). Each
+// pairs with its distinct pose in dogPose.ts; together they read at a glance on a phone.
+const ITCH_COLOR = new Color3(0.62, 0.6, 0.55);      // warm grey — mildly "meh"
+const ITCH_EMISSIVE = new Color3(0, 0, 0);
+const FLOP_COLOR = new Color3(0.52, 0.54, 0.58);     // cool grey — bored, low energy
+const FLOP_EMISSIVE = new Color3(0, 0, 0);
+const BARK_COLOR = new Color3(0.45, 0.5, 0.62);      // steely cool-blue — protest/sass
+const BARK_EMISSIVE = new Color3(0.05, 0.06, 0.1);   // faint cool glow — "awake / agitated"
+// Subtle shrink reinforces the "pulling away" ramp toward the walked-off DISENGAGED_SCALE.
+const FLOP_SCALE = 0.95;
+const BARK_SCALE = 0.93;
 
 /**
  * Creates and starts the Babylon.js placeholder scene.
@@ -99,9 +134,141 @@ export function createScene(
   light.diffuse = new Color3(1, 0.97, 0.9);
   light.groundColor = new Color3(0.45, 0.55, 0.4);
 
-  // Primitive-composed dog mesh (body, head, ears, snout, legs, tail)
-  const dog = createDogMesh(scene, initialAppearance);
+  // Primitive-composed dog mesh (body, head, ears, snout, legs, tail).
+  // Always built synchronously — guarantees no blank frame while the optional
+  // imported model loads in the background (task 078).
+  //
+  // `let` (not `const`) so task 079 can swap this binding to an importedDogMesh
+  // once the background glb load settles. All closures below (applyVisualTint,
+  // updateDog, setBreed, etc.) close over the `dog` BINDING, not its value, so
+  // a single reassignment here redirects every call-site automatically.
+  let dog = createDogMesh(scene, initialAppearance);
   dog.root.position.y = BASE_Y;
+
+  // ── Imported-dog background load (flag-gated, default OFF) ────────────────
+  // When renderConfig.importedDog is true (or the dev override ?importedDog=1
+  // is active in DEV mode), kick off an async load of the glb while the
+  // procedural dog renders immediately. The spinner (#hud-loading) is shown
+  // during the load window and hidden when the load settles — success, failure,
+  // or timeout.
+  //
+  // With the flag OFF and no dev override (the committed default): this entire
+  // block is skipped and scene.ts behaves byte-for-byte identically to before
+  // task 078/079.
+  //
+  // Dev-only Visual Review override: load with ?importedDog=1 in the URL to
+  // force the imported path on without touching renderConfig.importedDog.
+  // Example: http://localhost:5173/?importedDog=1
+  const _devForceImported = devOverrideImportedDog();
+  const MODEL_BUDGET_MS = 10_000; // 10 s timeout budget for the imported model
+  if (renderConfig.importedDog || _devForceImported) {
+    // Show the existing #hud-loading spinner while the model is in flight.
+    // The spinner is already used for the lazy-Babylon window (task 043).
+    const spinner = document.getElementById('hud-loading');
+    if (spinner) spinner.style.display = '';
+
+    let dogLoadState: DogLoadState = 'loading';
+    const loadStartMs = performance.now();
+    // Capture the appearance at load-kick-off time so we can pass it to
+    // createImportedDogMesh when the load settles (the breed may change
+    // in-flight, but we use the current appearance as the initial coat).
+    const appearanceAtLoad = initialAppearance;
+
+    // The selector resolves the model SOURCE descriptor: the CC0 placeholder (web
+    // default, a plain glb URL) or the licensed Labrador (a packed/encrypted artifact
+    // decrypted in memory — never a plain fetchable glb, tech-decisions §3d / task 103).
+    // Flipping { allowLicensed, licensedAssetPresent } to both true is the entire swap
+    // recipe (see tech-decisions §3h): the packed branch then loads the encrypted model.
+    // Committed default: allowLicensed false → the CC0 plain glb. The DEV-only
+    // `?licensedDog=1` override flips both inputs so the packed licensed Labrador
+    // can be Visual-Reviewed locally (no effect in production — DEV guard).
+    // PERSONAL-USE FLIP (temp, 2026-06-21): force the licensed packed Labrador on
+    // so a plain `bun run dev` (no ?licensedDog=1) shows the real model. Revert
+    // before any public ship — tech-decisions §3d. Public CI lacks dog.pack →
+    // fetch 404 → graceful procedural fallback, so the deployed site stays safe.
+    const _licensed = devOverrideLicensedDog() || true;
+    const source = resolveDogModelDescriptor({ allowLicensed: _licensed, licensedAssetPresent: _licensed });
+    const loadModel = source.kind === 'packed'
+      // Licensed web path: fetch the opaque .pack, decrypt with the bundle key, and
+      // load Babylon from the in-memory buffer. The key import is dynamic so the crypto
+      // key stays out of the default entry chunk while this branch is dormant (flag off).
+      ? (async () => {
+          const [{ loadDogPackKey }, res] = await Promise.all([
+            import('./dogPackKey'),
+            fetch(source.url),
+          ]);
+          if (!res.ok) throw new Error(`packed model fetch failed: ${res.status}`);
+          const packed = new Uint8Array(await res.arrayBuffer());
+          return loadPackedDogModel(scene, packed, await loadDogPackKey());
+        })()
+      // CC0 path (committed default): plain glb URL straight into Babylon.
+      : loadDogModel(scene, source.url);
+
+    loadModel
+      .then(async (loaded) => {
+        dogLoadState = 'ready';
+
+        // Apply the timeout budget retroactively to guard against an extremely
+        // slow load that squeaked past the budget at the very end.
+        const elapsed = performance.now() - loadStartMs;
+        dogLoadState = resolveLoadState({ state: dogLoadState, elapsedMs: elapsed, budgetMs: MODEL_BUDGET_MS });
+
+        // Use the OR of the committed flag and the dev override so the decision
+        // function sees a consistent boolean — the dev override has no effect in prod.
+        const flagEnabled = renderConfig.importedDog || _devForceImported;
+        const mode = selectDogRenderMode({ flagEnabled, loadState: dogLoadState });
+
+        if (mode === 'imported') {
+          // ── DONE(079): swap procedural dog for the imported DogMesh ────────
+          // Dynamic import so createImportedDogMesh (+ its PBRMaterial dependency)
+          // stays in the lazy `babylon-loaders` chunk — never shipped when the
+          // flag is off. The glTF loader chunk is already in flight from
+          // loadDogModel(), so this resolves from cache without an extra round-trip.
+          const { createImportedDogMesh } = await import('./importedDogMesh');
+
+          // Build the imported dog from the loaded model. It returns the exact
+          // same DogMesh interface, so every existing closure (applyVisualTint,
+          // updateDog, setBreed, the render loop's dog.updateShadowX / dog.applyPose)
+          // continues to work without modification.
+          const importedDog = createImportedDogMesh(scene, loaded, appearanceAtLoad);
+          importedDog.root.position.y = BASE_Y;
+
+          // Dispose the procedural dog (frees its geometry + materials from VRAM)
+          // and hide its root so it doesn't render even transiently.
+          dog.root.getChildMeshes().forEach(m => m.dispose());
+          dog.root.dispose();
+
+          // Redirect the `dog` binding — all closures below now call importedDog.*
+          // because they captured the `dog` variable, not its original value.
+          dog = importedDog;
+        }
+        // In all other cases (including unexpected mode) the procedural dog stays.
+      })
+      .catch((_err) => {
+        // Catch-all: load failed for any reason. Fall back to procedural silently —
+        // never let a rejected promise surface uncaught to the UI.
+        dogLoadState = 'failed';
+        const _mode = selectDogRenderMode({ flagEnabled: renderConfig.importedDog || _devForceImported, loadState: dogLoadState });
+        // mode === 'procedural' — the procedural dog already renders, nothing to do.
+      })
+      .finally(() => {
+        // Hide the spinner regardless of outcome (ready / failed / anything).
+        if (spinner) spinner.style.display = 'none';
+      });
+
+    // Belt-and-suspenders timeout: if the promise hasn't settled within the budget
+    // window, resolve the state ourselves and hide the spinner so the player is
+    // never stuck watching the spinner indefinitely.
+    setTimeout(() => {
+      if (dogLoadState === 'loading') {
+        dogLoadState = resolveLoadState({ state: 'loading', elapsedMs: MODEL_BUDGET_MS + 1, budgetMs: MODEL_BUDGET_MS });
+        // dogLoadState is now 'timeout' → selectDogRenderMode returns 'procedural'
+        // The procedural dog is already live. Just hide the spinner.
+        if (spinner) spinner.style.display = 'none';
+      }
+    }, MODEL_BUDGET_MS);
+  }
+  // ── End imported-dog block ─────────────────────────────────────────────────
 
   // Ground plane — material will be enhanced by setupBackdrop
   const ground = MeshBuilder.CreateGround(
@@ -259,6 +426,22 @@ export function createScene(
         dog.setTint(MISBEHAVING_COLOR);
         dog.setEmissive(MISBEHAVING_EMISSIVE);
         break;
+      case 'disengaged':
+        dog.setTint(DISENGAGED_COLOR);
+        dog.setEmissive(DISENGAGED_EMISSIVE);
+        break;
+      case 'itch':
+        dog.setTint(ITCH_COLOR);
+        dog.setEmissive(ITCH_EMISSIVE);
+        break;
+      case 'flop':
+        dog.setTint(FLOP_COLOR);
+        dog.setEmissive(FLOP_EMISSIVE);
+        break;
+      case 'bark':
+        dog.setTint(BARK_COLOR);
+        dog.setEmissive(BARK_EMISSIVE);
+        break;
       default:
         // idle → restore two-tone breed colours (coat + belly)
         dog.resetToBreedCoats();
@@ -269,9 +452,12 @@ export function createScene(
   // ── Scale per state (tint-layer only scale, unrelated to pose bounce) ──────
   function scaleFor(visual: ReturnType<typeof dogVisualState>): number {
     switch (visual) {
-      case 'offering':   return OFFERING_SCALE;
-      case 'distractor': return DISTRACTOR_SCALE;
-      default:           return BASE_SCALE;
+      case 'offering':    return OFFERING_SCALE;
+      case 'distractor':  return DISTRACTOR_SCALE;
+      case 'disengaged':  return DISENGAGED_SCALE;
+      case 'flop':        return FLOP_SCALE;
+      case 'bark':        return BARK_SCALE;
+      default:            return BASE_SCALE;
     }
   }
 
@@ -289,6 +475,12 @@ export function createScene(
     // applyVisualTint handles idle (two-tone reset) vs semantic states (flat tint)
     applyVisualTint(visual);
     dog.root.scaling.setAll(scaleFor(visual));
+
+    // ── Skeletal clip selection (imported model only, task 080) ──────────────
+    // The imported Labrador plays an embedded AnimationGroup per state; the
+    // procedural primitive dog has no setVisualState and is unaffected (optional
+    // chaining). reducedMotion damps the clip rate, consistent with the pose path.
+    dog.setVisualState?.(visual, { reducedMotion, trickId: opts?.trickId });
 
     // ── Pose (replaces all per-state jitter/bounce ad-hoc code) ─────────────
     // peakProximity + tellStrength are the SAME values that drive the UI apex ring
@@ -332,6 +524,12 @@ export function createScene(
     if (visual === 'distractor') {
       dog.root.position.x = 0.25;
       dog.root.position.y = BASE_Y - 0.05;
+    } else if (visual === 'disengaged') {
+      // Walked off toward the frame edge (still fully in view). Keep the seated y
+      // from the pose's crouchY (already applied above) — only the lateral offset
+      // changes, reading as "trotted off and sat down". The blob shadow follows
+      // via updateShadowX(dog.root.position.x) in the render loop.
+      dog.root.position.x = DISENGAGED_EDGE_X;
     }
   }
 

@@ -4,6 +4,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { Scene } from "@babylonjs/core/scene";
 import type { DogPose } from "./dogPose";
+import type { DogVisual } from "./dogState";
 import { type DogAppearance, breedAppearance } from "./dogAppearance";
 
 export interface DogMesh {
@@ -31,6 +32,17 @@ export interface DogMesh {
    * - breatheScaleY: body Y-scale (idle breathing)
    */
   applyPose: (pose: DogPose) => void;
+  /**
+   * OPTIONAL — drive the dog's gross body motion from an embedded skeletal
+   * AnimationGroup that matches the visual state (imported model only). The
+   * procedural primitive dog has no skeletal clips and omits this entirely; the
+   * imported model implements it (task 080). Call-sites must use optional
+   * chaining so both implementations stay drop-in interchangeable.
+   */
+  setVisualState?: (
+    state: DogVisual,
+    opts?: { reducedMotion?: boolean; trickId?: string },
+  ) => void;
 }
 
 /**

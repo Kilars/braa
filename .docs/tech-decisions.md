@@ -258,6 +258,12 @@ not served as a plain open-format file — decrypt in memory at load time. This 
 dog on the preferred web build. (The clause's real intent is to stop asset *resale*, not
 browser caching; packing addresses the letter, and practical risk for an indie PWA is low.)
 
+**Owner re-confirmed 2026-06-20 (interactive):** pack/encrypt on web, after the textured
+licensed glb was produced (`models-build/out_anim.glb`, albedo+normal embedded — see §3e).
+Implementation tracked in **task 103** (build-time AES-GCM pack + decrypt-in-memory load).
+Recorded caveat: client-side key = **deterrence, not DRM** (key ships in the bundle); it
+defeats casual raw-fetch and matches the compiled-bundle bar, but is not unbreakable.
+
 ### 3e. FBX → glb conversion RESOLVED (2026-06-20) — headless toolchain + clip inventory
 
 The conversion that gated the whole visuals epic (077–079, 098 remainder) is **done and
@@ -305,6 +311,162 @@ web-PWA raw-`.glb` extraction clause (§3b/§3d) — pack/encrypt or native-gate
 `loadDogModel`) for the licensed `.glb` only; the CC0 placeholder needs no packing. A later
 Capacitor native build can bundle the model compiled and skip packing entirely.
 
+### 3f. Imported `DogMesh` wired behind the flag (2026-06-20, tasks 078/079) — pipeline proven, flag OFF
+
+`createImportedDogMesh` (`src/render/importedDogMesh.ts`) implements the full `DogMesh`
+contract over a loaded glb, and `scene.ts` swaps to it when `selectDogRenderMode()==='imported'`.
+The flag (`renderConfig.importedDog`) stays **default OFF**: the CC0 placeholder renders a
+recognizable dog but reads worse than the tuned procedural one (oversized/generic) — the win
+is the **proven pipeline**, ready for the licensed Labrador (swap = task 102). Visual-Review
+the imported path in DEV with `?importedDog=1`.
+
+Implementation notes for whoever wires the **licensed** model:
+
+- **Lazy chunking (web-bundle hygiene).** The glTF loader (`@babylonjs/loaders/glTF`,
+  `Loading/sceneLoader`) and the **PBR material stack** are reached *only* via dynamic
+  `import()` (`loadDogModel` + a dynamic `import('./importedDogMesh')` inside the flag-gated
+  block in `scene.ts`). `vite.config.ts` `manualChunks` routes `@babylonjs/loaders` +
+  `Materials/PBR` to a separate **`babylon-loaders`** chunk (~315 kB) so none of it ships to
+  flag-off users at parse time. `import.meta.env` is typed via `src/vite-env.d.ts`. Babylon's
+  glb **scene-loader subsystem** does leak into the always-on `babylon` chunk (pushing it to
+  ~2.1 MB) because manualChunks can't cleanly split its transitive `@babylonjs/core/*` deps;
+  workbox `maximumFileSizeToCacheInBytes` is raised to 3 MiB and `chunkSizeWarningLimit` to
+  2500 so the engine still precaches for offline. The licensed file must **never** be copied
+  into `public/`/`dist/` on a web build (§3d).
+- **Skinned-model framing (the sliver trap).** The CC0 glb is a *rigged* model
+  (`RootNode → AnimalArmature ×100 → bones`, **1 skinned mesh, 1 material, ~3.6 k tris**).
+  `createImportedDogMesh` must (a) re-parent the model's **topmost ancestor** under its pivot
+  (re-parenting leaf meshes strips the armature/coordinate transforms → the mesh collapses to
+  a vertical sliver), and (b) compute the framing bbox with `mesh.refreshBoundingInfo({
+  applySkeleton: true })` so the 100× armature is reflected (bind-pose verts ignore it). The
+  real Labrador rig may differ — re-run the `?importedDog=1` Visual Review and tune
+  `TARGET_HEIGHT`/centering when it lands. **Gotcha (fixed in §3j/task 080):** `applySkeleton`
+  bakes whatever clip the loader auto-started into the bounds, so the load path now forces
+  `animationStartMode = NONE` to frame at the rest pose.
+- **Pose channels.** Whole-body channels (roll/yaw/breathe) map onto the root; per-part
+  channels (head/tail/spine) map onto bones found by case-insensitive name and **no-op
+  gracefully** if absent (full skeletal clips are a later phase).
+
+### 3h. Dog-model source-of-truth + the one-line licensed swap (2026-06-20, task 102)
+
+**`src/render/dogModelSource.ts` is the SINGLE place the model path lives.** All model-path knowledge lives here: the CC0 placeholder `DOG_MODEL_URL` (`/models/dog.glb`, web-safe, no attribution/redistribution issue) and the pure, TDD-covered `resolveDogModelSource({allowLicensed, licensedAssetPresent})` selector. Scene.ts calls the selector; no other hard-coded model path exists in `src/`.
+
+**The one-line swap recipe (when the owner delivers the texture + the PWA-license scope is decided):**
+1. Stage the licensed `labrador.glb` into the license-cleared build path (Capacitor native bundle or a pack/encrypt step on web — **never** into `public/` on a web build per §3d).
+2. Flip the selector inputs in `src/render/scene.ts` from `{allowLicensed: false, licensedAssetPresent: false}` to `{allowLicensed: true, licensedAssetPresent: true}`. That is the entire code change.
+
+**Owner/legal gate status for the real asset (neither blocks task 102, which keeps CC0 live):**
+- **(1) Texture — SUPPLIED (2026-06-20), no longer a gate.** Originally absent from the
+  drop (the PO-named `Labrador_Albedo1.png` + maps, §3e), but the owner has since supplied
+  `Labrador_Textures.rar`; the albedo + maps are embedded into the gitignored
+  `models-build/out_anim.glb` (~19.7 MB) via `scripts/skin-dog-model.mjs` (see
+  `public/models/CREDITS.md`). The task-102 selector is ready to consume the textured
+  licensed glb once it is staged into a license-cleared build.
+- **(2) Web-PWA license decision (owner/legal) — the one operative remaining gate.** The
+  Royalty-Free license forbids end-users extracting the raw file; the **CC0 placeholder** has
+  no such constraint. Decide the PWA scope (pack/encrypt-on-web vs native-only Capacitor, per
+  §3d) before the licensed `.glb` ships on web. The selector's `allowLicensed` flag gates the
+  choice architecturally — no code change needed once the policy is decided, only the
+  per-build-context selector input.
+
+**Web-bundle safety is structural:** the licensed `.glb` stays gitignored in `models-build/`; only the CC0 file at `public/models/dog.glb` is committed, so `bun run build` ships only `dog.glb`. The selector always falls back to CC0 if the licensed asset is absent or disallowed, never yielding an empty/broken path.
+
+### 3i. Pack/encrypt + decrypt-in-memory load IMPLEMENTED (2026-06-20, task 103)
+
+The §3d "pack on web" stance is now built and **verified end-to-end** — the real
+textured Labrador renders from an AES-GCM-encrypted artifact, never from a plain glb.
+
+- **Crypto core** — `src/render/assetCrypto.ts` (pure, TDD): `encryptAsset`/`decryptAsset`
+  over Web Crypto AES-256-GCM. Wire format `IV(12) ‖ ciphertext+tag`. Tested for lossless
+  round-trip, fresh-IV-per-call, and rejection on wrong key / tampered blob / truncation.
+  The identical scheme runs in the browser and in Node, so build and runtime agree.
+- **Bundle key** — `src/render/dogPackKey.ts` holds the base64 AES key. **Intentionally
+  public**: the browser must decrypt, so the key ships in the bundle → **deterrence, not
+  DRM** (documented in-file). The build script reads this same constant (single source of
+  truth) so the artifact decrypts with the runtime key.
+- **Source descriptor** — `resolveDogModelDescriptor()` (added alongside the unchanged
+  `resolveDogModelSource`, whose tests stay green) returns `{ kind: 'plain', url:
+  '/models/dog.glb' }` for CC0 or `{ kind: 'packed', url: '/models/dog.pack' }` for the
+  licensed web path. The loader branches on `kind`.
+- **In-memory load** — `loadPackedDogModel`/`packedToGlbFile` (`dogModelLoader.ts`):
+  decrypt → wrap bytes in an in-memory `File('dog.glb')` → Babylon's glTF loader reads from
+  memory. **No plaintext glb ever touches `public/`, `dist/`, git, or a fetchable URL.**
+- **Build step** — `scripts/pack-dog-model.mjs` (`bun run pack-dog-model`): AES-GCM-encrypts
+  `models-build/out_anim.glb` → `public/models/dog.pack`, self-verifies the round-trip, and
+  is **gitignored** (encrypted but key-recoverable → treated like the raw licensed asset).
+  The default (CC0) build does not carry it; regenerate on demand when shipping licensed.
+- **Reaching it for review** — DEV-only `?licensedDog=1` (+`?importedDog=1`) routes the load
+  through the packed descriptor (`devOverrideLicensedDog`, no effect in prod). Committed
+  default is unchanged: `allowLicensed:false` → CC0 plain glb.
+
+**Visual Review (2026-06-20):** packed path fetched (200, 18.7 MB), decrypted in memory, and
+rendered the Labrador with **correct matte fur (not white/metallic)** — the encryption
+deliverable is proven. The facing + skeletal-clip follow-ups are now done in **task 080
+(§3j)**: the licensed Labrador faces the camera and plays a distinct embedded clip per state,
+and on its own reads **clearly ≥ the procedural baseline**. The committed
+`renderConfig.importedDog` flag nonetheless **stays OFF** — but for a NEW reason (§3j): the
+default web build cannot carry the licensed pack, so flipping the flag would ship the much
+weaker *CC0* dog, not the Labrador. See §3j for the full flag rationale.
+
+### 3j. Imported dog — camera-facing + skeletal clips + the auto-start framing fix; flag still OFF (2026-06-20, task 080)
+
+Closes the two engineering follow-ups §3i named, plus a load-path bug they surfaced. The
+licensed Labrador now faces the camera and animates per state; on its own it reads **clearly
+≥ procedural**. The committed flag still stays OFF — for a packaging reason, not a quality one.
+
+- **Camera-facing yaw on a dedicated pivot, NOT the root.** `applyPose` owns `root.rotation.y`
+  (the `bodyYaw` spin trick), so a `facingPivot` between `root` and the framing pivot carries
+  the constant `CAMERA_FACING_YAW = 3π/4` (front-three-quarter hero angle). The fit *scale*
+  also lives on `facingPivot` (not `root`) because `scene.ts` overwrites `root.scaling` every
+  frame for the per-state pop; a Y-rotation about the centred axis is height/centre-preserving,
+  so facing + fit-scale compose cleanly on one node. The spin trick still works (composes on top).
+- **State → clip resolver** (`dogAnimationMap.ts`, pure + TDD, 16 tests): `resolveStateClip`
+  maps each `DogVisual` to a preferred embedded clip (matched past the `Arm_Labrador|` prefix,
+  case-insensitively, with family fallback) or `null` → keep the procedural pose. `clipMotionScale`
+  damps the playback *rate* under `prefers-reduced-motion` (D13: calm, not frozen); `clipLoops`
+  loops every sustained state. Render glue in `importedDogMesh.setVisualState` starts the resolved
+  `AnimationGroup` on state change and restores a bind-pose snapshot first so a subtle clip can't
+  inherit the previous clip's body pose.
+- **idle → `Idle_2`, NOT `Idle_1` (Visual-Review finding).** On this rig `Idle_1` is a *seated*
+  idle — visually identical to the seated `offering` (`Sitting_loop_1`). `Idle_2` is the *standing*
+  calm idle, so idle (standing) vs offering (sitting) are tellable apart at a glance. Falls back
+  to `Idle_1` then any `Idle`-family clip for rigs without `Idle_2`.
+- **Bug fix — disable the glTF loader's animation auto-start (`dogModelLoader.ts`).** Babylon's
+  glTF loader auto-plays the FIRST embedded clip on load. `createImportedDogMesh` frames the dog
+  from `refreshBoundingInfo({ applySkeleton: true })`, which **bakes that auto-started pose into the
+  bounds**. For the CC0 rig the first clip is `Death` (dog sprawled flat) → bbox went `x: 0..2.398`
+  → garbage fit scale → an *exploded* render. Fix: a scoped `SceneLoader.OnPluginActivatedObservable`
+  hook sets the glTF loader's `animationStartMode = NONE` for the load, so bounds + the bind-pose
+  snapshot are taken at the authored REST pose for any rig (CC0 bbox became a sane symmetric
+  `x: -0.475..0.475`); the per-state clip is then started explicitly. The Labrador happened to dodge
+  this (its first clip, `Attack_Bite`, is compact) but is correct now too.
+- **Flag decision — `renderConfig.importedDog` stays default OFF (per the 079 rule).** The rule is
+  "flip ON only if the dog that actually ships ≥ procedural." The licensed Labrador is ≥ procedural,
+  but it ships ONLY via the DEV `?licensedDog=1` override or a native/Capacitor license-cleared build
+  — never the default web build (the pack is gitignored, §3d/§3i). So flipping the committed flag would
+  put the **CC0** dog on the live web build, and CC0 Visual-Reviews **below** the polished procedural
+  dog (a jumble of blocky, semi-detached shapes vs a coherent stylised dog). Verified head-to-head on
+  a 390×844 portrait viewport: **Labrador ≫ procedural ≫ CC0-imported.**
+- **Remaining delta to default-ON** (no longer pure engineering): either (a) the licensed Labrador
+  ships in the default build — an **owner/license/packaging** decision (ship the 18.7 MB pack on web,
+  or ship native-only), and then validate that load/decrypt budget on a real device (perf phase 085);
+  or (b) source a web-safe CC0-class model that itself reads ≥ procedural. All the engineering above is
+  landed and stays in place behind the flag; the DEV override path renders the Labrador at full quality.
+
+**Hardening before the flag-flip (2026-06-21, task 111).** Three latent defects in
+`importedDogMesh.ts` were fixed while the flag is still OFF, so the eventual swap is clean:
+(1) **Head-bone Y drift** — `applyPose` did `headBone.position.y += pose.headLiftY` every frame,
+*accumulating* the lift onto the previous frame's value so the head walked upward unboundedly.
+Now bind-relative: `captureBindPose`-adjacent code snapshots the head bone's bind-pose Y once
+(`headBindY`) and `applyPose` *assigns* `headBone.position.y = headBoneY(headBindY, pose.headLiftY)`
+via a pure, TDD-covered helper (`headBoneY(bindY, lift) = bindY + lift`) — mirroring the procedural
+dog's `headPivot.position.y = 0.28 + headLiftY` rest-relative model. (2) **`setEmissiveMat`** collapsed
+to a single `emissiveColor.copyFrom` — both PBR and Standard expose `.emissiveColor`; only the
+*diffuse* split (`albedoColor` vs `diffuseColor`) needs the type branch. (3) **Dead Phase-2 captures**
+`_originalDiffuse`/`_originalEmissive` (and the `getDiffuse` reader that only fed them) removed — they
+had no consumer and were eslint-suppressed; **task 082 must re-capture** the glb's own diffuse/emissive
+if it wants raw-colour restoration (see the note at the foot of `importedDogMesh.ts`).
+
 ## 3e. UI test harness — jsdom for `src/ui/**` only (DECIDED, 2026-06-19, task 101)
 
 The pure game-logic suite runs under Vitest's fast `node` environment. The DOM-bearing
@@ -316,6 +478,74 @@ Task 101 added behavior tests for `adoptPanel` / `kennelPanel` / `settingsPanel`
 `helpPanel` / `achievementsPanel` (24 tests) through their public `PanelHandle` (gate
 legibility classes, buy/adopt/reset flows, open/close, list re-render) — characterization
 of current behavior, asserting observable DOM not internals so they survive refactors.
+
+### 3g. e2e full-loop is render-rate-independent (2026-06-20, task 079 follow-up)
+
+Headless Chromium software-renders the Babylon scene (`--disable-gpu` → SwiftShader), which
+throttles `requestAnimationFrame` to **~3 fps** under load. The full-loop e2e originally timed
+its taps to the apex by reading the rAF-driven `#hud[data-tell]` signal — at 3 fps that signal
+is too stale to hit the ~400 ms scoring window, so every tap MISSed and the gate failed (a pure
+environment limitation; gameplay/scoring code was unchanged and unit-tested). Fix:
+`window.__bra.nextPeak()` (DEV-only hook in `main.ts`) exposes the next attempt's peak
+timestamp, and `e2e/full-loop.mjs` schedules the tap *inside the browser* — sleeping most of the
+gap, then **busy-waiting** the final ~350 ms (> one ~300 ms frame) so the single JS thread can't
+be preempted by a render frame, landing a precise PERFECT regardless of frame rate. Scoring
+itself runs synchronously on `pointerup`, so it never depended on the frame rate. The deprecated
+`data-tell` polling path is removed.
+
+### 3k. First-run coach for the core verb — DECIDED (2026-06-21, task 108)
+
+specs.md §Onboarding wants the first session to **actively teach the one core verb**
+("wait for the apex, tap BRA"). Before this we only had the passive `?` help overlay
+(task 048) behind a button — a new player got no in-context prompt during their first
+round. Added an in-context coach pill `#hud-coach` ("Vent på pulsen — trykk BRA!") shown
+on the first round only.
+
+- **Pure gate** (`shouldCoachCoreVerb({ masteredCount, hasMarkedSuccessfully })` in
+  `src/core/onboarding.ts`, TDD): true only when `masteredCount === 0 &&
+  !hasMarkedSuccessfully`. So it shows for a brand-new player, **auto-dismisses on the
+  first scoring (PERFECT/OK) mark**, and never shows to a returning trainer.
+- **State**: `hasMarkedSuccessfully` is a **runtime** flag in `main.ts` (not persisted —
+  like `combo`/engagement). A player who quits before mastering may see the coach again
+  next session; harmless, since it dismisses on the first mark. Combined with the
+  persisted `masteredCount`, anyone who has mastered a trick never sees it.
+- **Render**: the HUD exposes `setCoachVisible(boolean)`, reusing the shared `.hud-gated`
+  (visibility+opacity) hide class; `main.ts` calls it on round start and on the first mark.
+  CSS is a gold attention pill below the trick label with a gentle pulse that is removed
+  under `prefers-reduced-motion` (D13). Visual-Reviewed on a 390×844 portrait viewport
+  (independent agent, PASS): coach legible + clean on first run, gone after the first mark.
+
+### 3l. Distractor-reveal coach — DECIDED (2026-06-21, task 109)
+
+specs.md §Onboarding stages systems in "never all at once": distractors arrive around the
+second trick. At `masteredCount === 1` the dog starts offering **wrong** behaviors the
+player must NOT mark — a real confusion/churn point (a false mark penalises) the spec
+calls out, previously uncoached. Extends the 3k pattern with a second contextual pill on
+the same `#hud-coach` element.
+
+- **Pure gate** (`shouldCoachDistractors({ masteredCount, dismissed })` in
+  `src/core/onboarding.ts`, TDD): true only when `masteredCount === 1 && !dismissed`.
+  Disjoint from `shouldCoachCoreVerb` by `masteredCount` (0 vs 1), so the two pills are
+  **mutually exclusive** — `main.ts` also guards `!coachVerb` explicitly. The band
+  **self-limits**: at `masteredCount >= 2` distractors are no longer new, so it never nags.
+- **State**: `distractorCoachDismissed` is a **runtime, per-round** flag in `main.ts` (no
+  `GameSave` change, like 3k). Reset on entering a round (`onSelectTrick`); set on that
+  round's first scoring (PERFECT/OK) mark. Re-showing on a return visit at the same stage
+  is acceptable/helpful.
+- **Render**: `setCoachVisible(visible, text?)` gained an optional `text` arg — passing the
+  distractor copy swaps `#hud-coach`'s text and adds `.coach-wide` (lets the full sentence
+  wrap, max-width matched to `#hud-callback-hint`); omitting it restores the short core-verb
+  text. One element, swapped text — HUD stacking unchanged; aria-live + reduced-motion
+  parity preserved.
+- **Copy**: "Noen ganger gjør hunden noe annet — ikke trykk da. Bare BRA på «{trick}»."
+  Names the active trick the player SHOULD wait for. Uses the game's marker voice ("trykk
+  BRA"), not an Anglicised "mark" — chosen during the polish pass over the task's example
+  wording (task copy was explicitly "e.g.").
+- **Visual Review** on a 390×844 portrait viewport (independent agent, PASS): pill legible
+  and well-placed below the trick label, clear of the pause button / coins-level chip /
+  engagement bar; distinct from the core-verb pill; confirmed gone after a scoring mark and
+  absent at `masteredCount >= 2`. Capture script: `scripts/shoot-distractor-coach.mjs`
+  (drives state via the `__setTrick` / `__setMasteredCount` dev hooks).
 
 ## 4. Marker Voice ("sound like Maren") (flagged)
 
@@ -338,6 +568,40 @@ research and decide:
 
 **Recommendation:** for v1, record an **original** voice in the right *style*
 (short, warm, punchy "bra!"). Revisit licensing only if the project goes public.
+
+### 4a. Marker-voice clip pipeline + placeholder — DONE (2026-06-21, task 116)
+
+The *target sound* above stays owner/likeness-gated, but the **whole playback pipeline
+is owner-unblocked** and was the dead half: task 074 built the seam (`registerClip` /
+`shouldUseClip` / `playBuffer`, and `play` already prefers a registered clip over synth),
+yet **nothing ever loaded or registered a clip** (`grep registerClip src/` found only the
+definition), so the voiced path was unreachable. 116 makes it live without touching the
+gated recording:
+
+- **Loader** `MarkAudio.loadClip(cue, url)` — `fetch` → `decodeAudioData` → `registerClip`,
+  called at **bootstrap, off the tap path** (zero added mark latency). Fully **graceful**:
+  a missing/failed asset, decode error, non-OK response, or unavailable `AudioContext`
+  rejects quietly and the registry is left unchanged — the mark stays on the existing synth
+  (no throw, no console spam). Proven by tests asserting `hasClip(cue)` stays `false` after
+  a load that can't complete.
+- **Pure phrase-keyed selection** (TDD): `voiceCue(result, phraseId?)` derives the lookup
+  key (`voice:<id>` when a phrase is loaded, else the result tier); `selectVoiceClip(result,
+  phraseId, registry)` is the registry-aware play-site decision — **phrase clip → tier clip
+  → `null` (synth)**. `play(result, phraseId?)` is thin glue over it, so each collectible
+  phrase can voice its own line (specs §Audio: *"each has its own line"*) with no call-site
+  change. `main.ts` threads `loadedPhrase.id` into the mark-time `play(...)`.
+- **Placeholder asset** `public/audio/bra-placeholder.wav` — a fully **synthesized,
+  original** marker chime (NOT a voice; generator: `scripts/gen-voice-placeholder.mjs`),
+  CC0/license-clean, registered under the `PERFECT` cue at bootstrap so a perfect mark
+  voices it end-to-end. Provenance in `public/audio/CREDITS.md`. It is explicitly a
+  **placeholder**: the real **Maren** marker line (§4 — owner/likeness gate, not producible
+  autonomously) is a **drop-in** under the same cue / per-phrase keys with no call-site
+  change. Asset path uses `import.meta.env.BASE_URL` so it resolves under the `/braa/` Pages base.
+
+**Verification:** audio is not headless-verifiable (precedent 074/094) — the gate is the
+**pure selection/loader tests** (clip chosen when registered, synth otherwise, graceful on
+failure) + this code-level record. A human on-device listen of the placeholder is the one
+non-blocking follow-up; the **real Maren line remains the owner gate**. **specs.md untouched.**
 
 ## 5. Persistence / Save
 
@@ -366,8 +630,22 @@ behaviors.
 
 ## 8. Tuning Targets — Audited Constant Table (iteration 11, 2026-06-14)
 
-> **Future:** centralize all constants below into a single `src/core/tuning.ts`
-> export (not done here — doc-only pass; a code refactor is a separate task).
+> **DONE (2026-06-20, task 105):** the difficulty mode constants and the app-level
+> `PANT_INTERVAL_MS` / `TIMELINE_EVENTS` now live in **`src/core/tuning.ts`** as named
+> primitive exports (`NORMAL_WINDOW_WIDTH_MS`, `HARD_FALSE_MARK_DELTA`, …); `difficulty.ts`
+> and `main.ts` import them. `tuning.ts` imports nothing from `src/core/*` (no cycle).
+>
+> **DONE (2026-06-21, task 110):** the playtest-relevant stragglers a balance pass will
+> touch are now homed in `tuning.ts` too — `NORMAL_DELTAS` (mark.ts), the engagement
+> reward-latency feed + `MARK_ENGAGEMENT_DELTA` (engagement.ts), `CALL_BACK_ENGAGEMENT`
+> (disengage.ts), `CONFUSE_WINDOW_MULT` / `CONFUSE_DISTRACTOR_MULT` (difficulty.ts), and
+> `BASE_SCHEDULER_TIMING` (gameHelpers.ts). Each domain module imports them from
+> `tuning.ts`, thinly re-exporting any name imported widely (e.g. `NORMAL_DELTAS` via
+> `mark.ts`) so call-sites stayed stable. Pure, behavior-preserving move — all tests
+> passed unchanged. `tuning.ts` still imports nothing from `src/core/*`; the few `Record`/
+> `as const` tables it now holds write their key types inline to keep it import-free.
+> A tuner edits one file. Remaining low-traffic tunables (kennel.ts, phrases.ts, …) can be
+> folded in later the same way.
 
 All values are placeholders authored during initial implementation and have not
 been validated by playtest. The table is the single reference for future tuning.
@@ -832,9 +1110,59 @@ taps of a fresh session are never eaten. Placeholder value; a one-line tuning kn
 
 We deliberately do **not** pause the round timeline on background: the loop time base
 is `performance.now()` and the scheduler loops, so swallowing the resume tap (what the
-spec mandates) is sufficient. Timeline pause is out of scope.
+spec mandates) is sufficient. Timeline pause is out of scope. **(Superseded by the
+In-Round Pause Clock below — task 106 now adds explicit pause/resume, including an
+auto-pause on background.)**
 
-## Engagement Meter + Disengage Beats — PARTIAL (2026-06-19, task 098)
+## In-Round Pause Clock — DECIDED (2026-06-21, task 106)
+
+Spec (specs.md §Round States: *"Pause/resume supported; no timer forces play."*) is a
+listed v1 behavior that had no implementation. Added a **pure pause clock**
+(`src/core/pauseClock.ts`): `createPauseClock(startNow)` → `{ isPaused, pause(now),
+resume(now), elapsed(now) }`.
+
+**Model — "effective time".** Round time is `now − startNow − lostMs`, where `lostMs`
+accumulates every paused span; while paused, `now` is clamped to the pause instant so
+`elapsed` freezes. The **timeline lives in this effective frame** and *every* round-time
+read in `main.ts` goes through it (`effNow(now) = pauseClock.elapsed(now)`): the rAF
+`tick` (timeline loop, confuse expiry, view model, dog pose), and `onBraTapCommit`
+(`attemptAt` / `classifyMark` / `applyMark` / `rewardLatencyMs` / scene `notifyMark`).
+Because `tick` early-returns while paused, the dog holds, the apex tell stops advancing,
+and the timeline never loops. A resumed round therefore **continues exactly where it
+left off** — no skip-ahead by the paused wall-clock span. One clock for the session:
+each round re-bases `timelineOffset = effNow(now)` at start, so carrying `lostMs` across
+rounds is harmless (the offset cancels it).
+
+**Why pure + time-injected:** the no-skip-ahead math is fully unit-tested without
+Babylon/DOM (8 tests: advances normally, frozen-while-paused, resume-continues,
+multi-cycle accumulation, double-pause/double-resume idempotence). The button + overlay
+are thin glue in `hud.ts` (`setPaused` on the handle, `onTogglePause` callback).
+
+**Frames kept separate on purpose.** Phrase cooldown stays in **wall clock** (it is a
+UI affordance the HUD compares against `performance.now()`), so `onBraTapCommit` scores
+the timeline in effective time (`tnow`) but stamps/reads `lastUsedAt` in wall time
+(`downAt`). The dev-only `__bra.nextPeak()` hook now converts the (effective-frame)
+timeline peaks back to wall clock by adding `lostMs` (0 when never paused, so the
+full-loop e2e — which never pauses — is unchanged).
+
+**Auto-pause on background.** `visibilitychange → hidden` during training auto-pauses
+(the round never runs without the player); resume is **manual** via the overlay. On
+manual resume we reuse the resume-grace window (`resumedAt = now`, D073) to swallow a
+stray tap landing on the resume frame. This replaces the "timeline pause out of scope"
+stance noted in Mobile Resume Grace above.
+
+**UI.** A 44px ⏸ pause button sits top-left of the training HUD; the difficulty selector
+shifts right (`left: 68px`) to clear it. The paused overlay is an opaque dimmed scrim
+(`rgba(6,12,9,0.88)` + 2px blur) with a "Paused" label and a big yellow "▶ Resume"
+pill; `prefers-reduced-motion` drops the fade-in. Visual-Reviewed by an independent
+agent on a 390×844 portrait viewport (PASS; review nits — uniform dim, 44px tap target,
+glyph contrast — applied).
+
+## Engagement Meter + Disengage Beats — COMPLETE (098 + 107 + 112; 2026-06-19 → 2026-06-21)
+<!-- 098 shipped the pure model + HUD meter; 100 wired reward-latency; 107 added the on-dog
+     walk-off + call-back; 112 added the intermediate itch/flop/bark beats on the dog (both
+     procedural, no clips). 098 is fully closed. See the three sub-sections below. -->
+
 
 Spec (specs.md §Mistakes → *Wrong-behavior beats & disengagement*) calls for an
 engagement meter that drains on sloppy/false marks or slow rewards and refills on good
@@ -873,7 +1201,9 @@ latencyMs })`. MISS/FALSE_MARK do **not** fire it — they are not rewards and t
 is already applied by the `mark` event (no double-count). So the spec's "slow rewards
 drain it" half is now live on the HUD mood meter: a correct-but-slow mark nets less
 engagement than a snappy one. Still transient (resets to `ENGAGEMENT_FULL` per round).
-Only the **on-dog** disengage beats / walk-away remain 079-gated.
+The **on-dog** beats are now fully expressed too: walk-off + call-back (task 107) and the
+intermediate itch/flop/bark beats (task 112) — both **procedural, no clips** — so the
+"079-gated" deferral is fully retired and **098 is closed** (see the two sub-sections below).
 
 **HUD chrome consistency change (deliberate):** stacking the meter under the stats pill
 exposed that `#hud-stats` was the *only* HUD element docked **flush to the screen edge
@@ -884,3 +1214,174 @@ in a `#hud-stats-cluster` that floats inset (`margin-right: 14px`) with `border-
 12px` and shares one width (`align-items: stretch` + `min-width`), with coins/level
 spread via `justify-content: space-between`. Net: stats moved from edge-docked to
 floating-inset to match the rest of the HUD.
+
+### On-dog walk-off + call-back — DONE (2026-06-21, task 107); completes the 098 remainder
+
+098's deferred remainder (the **on-dog disengage beats / walk-away + call-back**) was
+parked as **"079-gated"** — needing the licensed-Labrador clips. That deferral was
+**over-broad**: the licensed dog is DEV-only (flag OFF, packaging-gated — §3i/§3j); the
+**procedural primitive dog is what ships**, and the walk-off + call-back express
+**procedurally** on it exactly like the existing turned-away `distractor` state. So 107
+closes the remainder with **no clips** and gives the engagement meter real gameplay teeth.
+
+**Pure logic (`src/core/disengage.ts`, TDD):**
+- `isDisengaged(beat)` = `beat === 'walk-off'` — the dog has left only at the empty meter.
+- `canScoreMark(beat)` = `beat !== 'walk-off'` — no marks score while walked off.
+- `callBackEngagement(prev)` → **0.5** (clamped 0..1). `disengageBeat(0.5)` = `itch` —
+  comfortably above walk-off **and** the adjacent `bark` band, so a single subsequent bad
+  mark can't bounce the dog straight back off (anti-oscillation; tested through the beat).
+
+**State + render (`dogState.ts` / `dogPose.ts` / `scene.ts`):**
+- New `DogVisual` `'disengaged'`, selected when `opts.disengaged` (walk-off). Precedence:
+  `mastered (happy)` > `disengaged` > `confused` > `offering` > `distractor` > `idle` — a
+  won round still wins; otherwise a walked-off dog isn't "offering/confused/distracted".
+- `disengaged` pose: **back-turned** `bodyYaw = −π/2`, **seated** `crouchY = −0.34`, head
+  dropped `headPitch = −0.25`, near-still tail. The yaw is **−90°, not 180°**: the
+  `ArcRotateCamera` sits at `alpha = −π/2` (looking along +Z), so a 180° yaw only shows the
+  *other flank* — a −90° yaw turns the **rump toward the trainer** (a true back-turn) AND
+  narrows the on-screen footprint so the dog can sit at the frame edge **without clipping**.
+- `scene.ts`: a **cool blue** tint `(0.34, 0.41, 0.6)` (deliberately bluer than the neutral
+  `distractor` grey so the two never collide), `scale 0.82` (withdrawn/farther), and a
+  lateral edge offset `x = 0.6` (`DISENGAGED_EDGE_X`) — "trotted off to the side".
+- Static reads (yaw/crouch/pitch/tint/position) survive `prefers-reduced-motion`; only the
+  breathing/tail sway scales with `m` (D13 — dampened, not removed).
+- Imported-dog clip map (`dogAnimationMap.ts`, task 080) gains a `disengaged` preference
+  (`Sitting_loop_1` → … → `Idle_1`); the back-turn rides on yaw, not the clip.
+
+**Tap routing (`main.ts`):** in `onBraTapCommit`, **before** mark classification (and
+after the paused + resume-grace gates), `if (isDisengaged(disengageBeat(engagementMeter)))`
+→ `engagementMeter = callBackEngagement(...)`, `combo = 0` (the tempo cost), play a soft
+`playTap()` ack, and `return` — so a call-back **never scores nor false-marks**. The render
+loop threads `disengaged` into `updateDog` + the idle-pant gate so a walked-off dog reads
+disengaged (not idle), and `toViewModel` exposes a `disengaged` flag.
+
+**Apex-tell suppression while disengaged (2026-06-21, task 118; PO Review #4).** The tap is
+gated above, but the *cue* was not: `toViewModel` computed `tellStrength` (gold BRA ring) and
+`peakProximity` (on-dog apex crest) purely from the attempt geometry, so a peak overlapping a
+walked-off moment still pulsed "mark now" — directly contradicting the call-back affordance
+(two opposite meanings on one cue). Fix: after deriving `disengaged`, `toViewModel` clamps
+**both** `tellStrength` and `peakProximity` to `0` while disengaged. Engagement-scoped (an
+engaged dog at the peak is untouched) and a single source of truth — because the on-dog apex
+shares `peakProximity`, the mesh crest is suppressed for free. Pure logic, TDD
+(`viewModel.test.ts`); no `hud.ts` change (the ring opacity already tracks `tellStrength`).
+
+**HUD (`hud.ts` / `hud.css`):** a faint blue `#hud-callback-hint` pill ("Hunden gikk —
+trykk for å kalle den tilbake") shows only while `vm.disengaged`, mirroring the swipe/coach
+hint pattern. While disengaged the first-run **coach is suppressed** (`.coach-suppressed`,
+orthogonal to `setCoachVisible`'s `.hud-gated`) so the two prompts never contradict
+("trykk BRA" vs "kalle tilbake"); it returns automatically on call-back.
+
+**Visual Review (blocking):** real phone-portrait screenshots via
+`scripts/shoot-disengage.mjs` (engaged / walk-off / called-back / walk-off-reduced).
+Round 1 (independent agent) = **FAIL** — the dog read as the idle pose recolored: not
+back-turned (180° yaw showed the same flank), barely seated, centered, grey-not-blue.
+Fixed (−90° yaw rump-to-camera, deeper crouch + head-down, bluer tint, edge offset enabled
+by the narrow footprint). Round 2 (fresh independent agent) = **PASS WITH NITS** (the
+uniform-crouch "sit" reads as a low crouch rather than a haunches-down sit — the primitive
+dog has no per-leg control, so a uniform `crouchY` is the available approximation; nit, not
+blocking). **specs.md untouched** (read-only for the build loop).
+
+### Intermediate disengage beats on the dog — DONE (2026-06-21, task 112); closes 098
+
+107 expressed only the **empty-meter walk-off** on the dog; the meter's intermediate
+escalation (`itch → flop → bark`) drove the **HUD pill** but left the *dog* unchanged until
+it suddenly trotted off. The dog is the game's primary state channel (spec §The Dog), so the
+runup must read **off the dog**. 112 expresses the three intermediate beats procedurally (no
+licensed clips), which was **098's last remaining slice** — so 098 is now closed.
+
+**Routing (`dogState.ts`, pure, TDD — 10 new tests):** `DogVisual` gains `'itch' | 'flop' |
+'bark'`; `DogVisualOpts.beat?: DisengageBeat`. The beats **replace the plain `idle` state
+during lulls only** — they never mask an active correct `offering` (the player must always be
+able to read the markable behavior), and yield to the existing precedence
+(`mastered > disengaged(walk-off) > confused > offering > distractor > beat > idle`).
+`engaged` (or absent) stays idle. The empty-meter `walk-off` is still the `disengaged` branch
+(opts.disengaged), so the beat tail routes only itch/flop/bark — never walk-off.
+
+**Why idle-only (and distractor left intact):** the beats are a **meter-driven ambient layer**,
+conceptually separate from the timeline's `distractor` (a wrong *behavior* the player must not
+mark). Folding them together would blur D9 (distractor must read distinct from a correct
+attempt). Keeping beats on the idle lull preserves D9 and still surfaces the escalation during
+the natural gaps between attempts.
+
+**Poses (`dogPose.ts`) — a legible story, reduced-motion-safe:**
+- `itch` — `headTiltZ 0.32` (cocked toward an ear-scratch) + a quick rhythmic wobble: mild "meh".
+- `flop` — `crouchY −0.40` + `headPitch −0.30`: flopped low, head down, bored (forward-facing,
+  distinct from the **back-turned** walk-off).
+- `bark` — `headPitch 0.5` + `headLiftY 0.08` + small sharp `bounceY`: head-up protest/sass —
+  the last beat before walk-off.
+- Static channels (`headTiltZ`/`crouchY`/`headPitch`) survive `prefers-reduced-motion`; only the
+  oscillation scales with `m` (D13).
+
+**Tint/scale (`scene.ts`) — a graded withdrawal ramp** landing on the cool walk-off blue:
+`ITCH (0.62,0.6,0.55)` warm-grey → `FLOP (0.52,0.54,0.58)` cool-grey → `BARK (0.45,0.5,0.62)`
+steely cool-blue (+ faint emissive "agitated") → `DISENGAGED (0.34,0.41,0.6)`. `FLOP_SCALE 0.95`
+/ `BARK_SCALE 0.93` subtly reinforce the "pulling away".
+
+**Imported-rig map (`dogAnimationMap.ts`, flag-off):** the new states map to literal clips —
+`itch→Scratching`, `flop→Lie`, `bark→Bark` (each falling back to an `Idle` clip) — so the same
+escalation reads on either dog when the licensed model is enabled.
+
+**Wiring (`main.ts`):** `const beat = disengageBeat(engagementMeter)` is computed once and
+threaded into `updateDog` **and** the idle-pant gate (so a sulking dog isn't treated as idle
+and doesn't pant). `disengaged` is now derived from that same `beat`.
+
+**Visual Review (blocking) — PASS.** `scripts/shoot-beats.mjs` captures engaged → itch → flop →
+bark → walk-off on a 390×844 viewport (+ a reduced-motion pass). Because the beats show only in
+the idle gap, each capture waits for `offering` then for the beat (landing at the gap's start)
+so the screenshot can't race the cycle. Real screenshots confirmed a clearly graded, "funny not
+punishing" escalation — fidget → flop down → bark up → leave — each tellable apart at a glance;
+reduced-motion poses read identically (only motion damped). Nit (non-blocking): `itch` is the
+subtlest (tint + head-cock), which is appropriate for the mildest beat. **specs.md untouched.**
+
+### Tap engagement/call-back decisions extracted + unit-tested — DONE (2026-06-21, task 117)
+
+`onBraTapCommit` (`main.ts`) holds the loop's most ordering-sensitive logic, in the one
+source file with **no unit test** (the bootstrap IIFE), covered only indirectly by
+`e2e/full-loop.mjs`. Two braided rules were the edit-fragility risk: (1) **call-back must
+branch BEFORE mark classification** — a walked-off tap calls the dog back and must never
+score or false-mark; (2) the **reward-latency engagement leg fires only on a real reward**
+(`PERFECT|OK` **with** an `attempt`), *after* the unconditional `{kind:'mark'}` transition.
+Both are pure decisions that were tangled with side effects (audio/scene/coach), so they
+couldn't be unit-tested in place. 117 is a **surgical, behavior-preserving extraction** into
+two pure helpers in `gameHelpers.ts` (the established home for `main.ts`-extracted pure
+logic — tasks 033/092), each TDD'd:
+
+- `isCallBackTap(engagementMeter)` = `isDisengaged(disengageBeat(meter))` — names the "branch
+  before classification" rule. Tested: true at empty meter (walk-off), false at full, false at
+  a low-but-nonzero `bark` beat (only walk-off is a call-back).
+- `tapEngagement({ engagementMeter, result, attempt, tnow })` — single source of truth for the
+  mark transition **plus** the conditional reward-latency leg + its order. Tested: PERFECT/OK
+  with an attempt apply **both** transitions (asserted ≠ mark-only, proving the reward leg
+  ran); MISS/FALSE_MARK apply **only** the mark transition; `attempt === null` skips the reward
+  leg even for a PERFECT tier (guards the `&& attempt` condition).
+
+`onBraTapCommit` now calls the helpers instead of the inline expressions; the side effects
+(`combo = 0`, `playTap`, `return` on call-back; audio/scene/coach on a mark) stay in the
+handler — only the *decisions* moved. **Behavior-preserving**: full gate green **and**
+`e2e/full-loop.mjs` still masters a trick by apex-timed taps. **specs.md untouched.**
+
+## Idle "Welcome Back" Toast — DECIDED (2026-06-21, task 115)
+
+specs.md §Kennel calls the capped idle trickle the game's gentle reason to return, "collected
+on return." The economy half already existed — `idleIncome(idleTimestamp, now)` (capped at
+`IDLE_CAP_COINS = 110`) is granted at load (`main.ts`) — but nothing **announced** it, so the
+payoff never reached the screen. Task 115 adds the surfacing only:
+
+- **Pure gate** `shouldShowIdleWelcome({ earnedCoins, economyRevealed })` in `onboarding.ts`
+  (TDD): show iff coins accrued **and** the economy stage is revealed. The reveal gate matters —
+  a brand-new player's coins are still hidden (staged reveal §7m), so a coin toast then would leak
+  the economy before the first payout. Driven once at bootstrap (after `showSelect()`), never from
+  `tick()`, so it can't appear mid-round.
+- **HUD** `#hud-idle-welcome` toast + `showIdleWelcome(coins)` on the handle (mirrors the coach
+  pill, task 108): a green "Velkommen tilbake! +N 🪙" pill at top-centre of the select screen, opaque,
+  `aria-live="polite"`, distinct green from the gold coach. Slides + fades in, then auto-re-gates
+  after `IDLE_WELCOME_MS = 4200` (a CSS-paired UI timeout, kept local per §8 — not a gameplay
+  tunable) so it never blocks play. Reduced-motion drops the slide (pill still appears, D13).
+- The 110-coin cap means the widest copy is "+110 🪙" — barely wider than the reviewed "+37", well
+  clear of the side ?/⚙ buttons; no width-capping needed.
+
+**Visual Review (blocking) — PASS.** `scripts/shoot-idle-welcome.mjs` shoots the toast on a
+390×844 viewport (+ a reduced-motion pass); an independent review agent confirmed legibility,
+clear gaps to the ?/⚙ buttons and the "Rex" heading, safe-area clearance, and reward-positive fit
+(non-blocking nit only: the green is slightly higher-chroma than the muted chrome — intentional
+pop). **specs.md untouched.**

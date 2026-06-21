@@ -6,10 +6,15 @@ import {
   boostedDeltas,
   buildGameSave,
   restoreLearnedBar,
+  isCallBackTap,
+  tapEngagement,
 } from './gameHelpers';
 import type { EffectiveDifficulty } from '../core/difficulty';
 import type { Dog } from '../core/roster';
+import type { Attempt } from '../core/mark';
 import { newProfile } from '../core/economy';
+import { engagement } from '../core/engagement';
+import { serialize, deserialize } from '../state/save';
 
 // ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -384,5 +389,178 @@ describe('buildGameSave — active round persistence', () => {
   it('defaults learnedBar to 0 when not provided', () => {
     const save = buildGameSave(baseParams);
     expect(save.learnedBar).toBe(0);
+  });
+});
+
+// ── Resume round-trip integration (task 113) ────────────────────────────────────
+//
+// Spec §Round States: "Resumable: partial learned-bar progress persists." The links
+// (buildGameSave, serialize/deserialize, restoreLearnedBar) are each unit-tested in
+// isolation above + in save.test.ts, but nothing exercised the FULL persist→reload
+// chain. A regression in any link (a dropped GameSave field, a renamed key, a default
+// that clobbers the saved bar) would silently discard a player's partial progress on
+// restart while the per-link suites stayed green. This block is that guard — it runs
+// the real serialize/deserialize pair (no mocks), so it fails if the round-trip breaks.
+describe('resume round-trip — partial learned-bar persists (buildGameSave → serialize → deserialize → restoreLearnedBar)', () => {
+  const baseParams = {
+    profile: newProfile(),
+    roster: [makeDog('rex', [])],
+    kennelUpgradeIds: [],
+    difficultyMode: 'NORMAL' as const,
+    unlockedPhraseIds: [],
+    prestigePoints: 0,
+    idleTimestamp: 1000000,
+  };
+
+  it('restores the same partial bar after a real serialize → deserialize cycle', () => {
+    const save = buildGameSave({
+      ...baseParams,
+      activeRoundDogId: 'rex',
+      activeTrickId: 'sitt',
+      learnedBar: 42,
+    });
+
+    const restored = deserialize(serialize(save)); // the actual persistence path
+    expect(restored).not.toBeNull();
+
+    const bar = restoreLearnedBar({
+      savedDogId: restored!.activeRoundDogId,
+      savedTrickId: restored!.activeTrickId,
+      savedBar: restored!.learnedBar,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(bar).toBe(42); // ← the spec promise: partial progress survives a restart
+  });
+
+  it('resumes at 0 (fresh) when no round was in progress before the save', () => {
+    const save = buildGameSave(baseParams); // no active round fields → null/null/0
+    const restored = deserialize(serialize(save));
+    expect(restored).not.toBeNull();
+
+    const bar = restoreLearnedBar({
+      savedDogId: restored!.activeRoundDogId,
+      savedTrickId: restored!.activeTrickId,
+      savedBar: restored!.learnedBar,
+      startDogId: 'rex',
+      startTrickId: 'sitt',
+    });
+    expect(bar).toBe(0);
+  });
+
+  it('does not mis-apply a saved partial bar onto a different dog after reload', () => {
+    const save = buildGameSave({
+      ...baseParams,
+      activeRoundDogId: 'rex',
+      activeTrickId: 'sitt',
+      learnedBar: 80,
+    });
+    const restored = deserialize(serialize(save));
+    expect(restored).not.toBeNull();
+
+    const bar = restoreLearnedBar({
+      savedDogId: restored!.activeRoundDogId,
+      savedTrickId: restored!.activeTrickId,
+      savedBar: restored!.learnedBar,
+      startDogId: 'buddy', // resumed a different dog
+      startTrickId: 'sitt',
+    });
+    expect(bar).toBe(0);
+  });
+
+  it('does not mis-apply a saved partial bar onto a different trick after reload', () => {
+    const save = buildGameSave({
+      ...baseParams,
+      activeRoundDogId: 'rex',
+      activeTrickId: 'sitt',
+      learnedBar: 80,
+    });
+    const restored = deserialize(serialize(save));
+    expect(restored).not.toBeNull();
+
+    const bar = restoreLearnedBar({
+      savedDogId: restored!.activeRoundDogId,
+      savedTrickId: restored!.activeTrickId,
+      savedBar: restored!.learnedBar,
+      startDogId: 'rex',
+      startTrickId: 'ligg', // resumed a different trick
+    });
+    expect(bar).toBe(0);
+  });
+});
+
+// ── isCallBackTap ───────────────────────────────────────────────────────────
+// Names the "branch BEFORE classification" rule: when the dog has walked off
+// (engagement empty → disengageBeat 'walk-off') a tap calls it back, not marks.
+
+describe('isCallBackTap', () => {
+  it('is true at an empty meter (the dog has walked off)', () => {
+    expect(isCallBackTap(0)).toBe(true);
+  });
+
+  it('is false at a full meter (dog engaged)', () => {
+    expect(isCallBackTap(1)).toBe(false);
+  });
+
+  it('is false at a low-but-nonzero meter (a beat, not a walk-off)', () => {
+    // 0.1 → 'bark' beat; only 'walk-off' (empty) is a call-back.
+    expect(isCallBackTap(0.1)).toBe(false);
+  });
+});
+
+// ── tapEngagement ───────────────────────────────────────────────────────────
+// Composes the mark transition and the conditional reward-latency transition in
+// one tested place. Reward leg fires ONLY on PERFECT/OK with an attempt, AFTER
+// the unconditional mark transition. Relational asserts survive tuning changes.
+
+describe('tapEngagement', () => {
+  const ATTEMPT: Attempt = { start: 0, end: 2000, peak: 1000, peakRadius: 80 };
+  const PREV = 0.5;
+  const SLOW_TNOW = 1000 + 5000; // 5s after apex → draining reward latency
+
+  it('PERFECT with an attempt applies the mark then the reward transition', () => {
+    const markOnly = engagement(PREV, { kind: 'mark', result: 'PERFECT' });
+    const both = engagement(markOnly, { kind: 'reward', latencyMs: 5000 });
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'PERFECT', attempt: ATTEMPT, tnow: SLOW_TNOW }),
+    ).toBe(both);
+  });
+
+  it('the reward leg actually runs for PERFECT (differs from mark-only)', () => {
+    const markOnly = engagement(PREV, { kind: 'mark', result: 'PERFECT' });
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'PERFECT', attempt: ATTEMPT, tnow: SLOW_TNOW }),
+    ).not.toBe(markOnly);
+  });
+
+  it('OK with an attempt also applies both transitions', () => {
+    const both = engagement(
+      engagement(PREV, { kind: 'mark', result: 'OK' }),
+      { kind: 'reward', latencyMs: 5000 },
+    );
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'OK', attempt: ATTEMPT, tnow: SLOW_TNOW }),
+    ).toBe(both);
+  });
+
+  it('MISS applies only the mark transition (no reward leg)', () => {
+    const markOnly = engagement(PREV, { kind: 'mark', result: 'MISS' });
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'MISS', attempt: ATTEMPT, tnow: SLOW_TNOW }),
+    ).toBe(markOnly);
+  });
+
+  it('FALSE_MARK applies only the mark transition', () => {
+    const markOnly = engagement(PREV, { kind: 'mark', result: 'FALSE_MARK' });
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'FALSE_MARK', attempt: null, tnow: SLOW_TNOW }),
+    ).toBe(markOnly);
+  });
+
+  it('skips the reward leg when attempt is null even for a PERFECT tier', () => {
+    const markOnly = engagement(PREV, { kind: 'mark', result: 'PERFECT' });
+    expect(
+      tapEngagement({ engagementMeter: PREV, result: 'PERFECT', attempt: null, tnow: SLOW_TNOW }),
+    ).toBe(markOnly);
   });
 });

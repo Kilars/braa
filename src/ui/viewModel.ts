@@ -3,6 +3,7 @@ import { isConfused } from '../core/session';
 import { Profile, newProfile } from '../core/economy';
 import { attemptAt } from '../core/scheduler';
 import { disengageBeat, type DisengageBeat } from '../core/engagement';
+import { isDisengaged } from '../core/disengage';
 
 export interface HudViewModel {
   learnedPercent: number;
@@ -20,6 +21,8 @@ export interface HudViewModel {
   engagement: number;
   /** The escalating off-task beat the meter warrants (engaged → … → walk-off). */
   engagementBeat: DisengageBeat;
+  /** true at walk-off: the dog has trotted off; a tap calls it back (task 107). */
+  disengaged: boolean;
 }
 
 function clamp01(x: number): number {
@@ -49,6 +52,17 @@ export function toViewModel(
     tellStrength = peakProximity * tellIntensity;
   }
 
+  const beat = disengageBeat(engagementLevel);
+  const disengaged = isDisengaged(beat);
+  // A walked-off dog earns nothing from a mark, so the "mark now" apex cue must be
+  // fully suppressed — otherwise the gold ring (tellStrength) and the on-dog apex
+  // crest (peakProximity) contradict the call-back affordance, which is the only
+  // valid action while disengaged (PO Review 2026-06-21 #4).
+  if (disengaged) {
+    tellStrength = 0;
+    peakProximity = 0;
+  }
+
   return {
     learnedPercent: state.session.learned,
     mastered: state.session.mastered,
@@ -61,6 +75,7 @@ export function toViewModel(
     peakProximity,
     combo,
     engagement: engagementLevel,
-    engagementBeat: disengageBeat(engagementLevel),
+    engagementBeat: beat,
+    disengaged,
   };
 }

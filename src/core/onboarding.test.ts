@@ -1,5 +1,63 @@
 import { describe, it, expect } from 'vitest';
-import { onboardingStage, untrainTricksUnlocked } from './onboarding';
+import { onboardingStage, untrainTricksUnlocked, shouldCoachCoreVerb, shouldCoachDistractors, shouldShowIdleWelcome } from './onboarding';
+
+// ─── Cycle 1: first-run coach — fresh player sees the core-verb coach ─────────
+
+describe('shouldCoachCoreVerb — fresh first run', () => {
+  it('coaches a brand-new player (nothing mastered, no mark yet)', () => {
+    expect(shouldCoachCoreVerb({ masteredCount: 0, hasMarkedSuccessfully: false })).toBe(true);
+  });
+});
+
+// ─── Cycle 2: auto-dismiss — coach hides after the first successful mark ──────
+
+describe('shouldCoachCoreVerb — after the first mark', () => {
+  it('stops coaching once the player has landed a successful mark', () => {
+    expect(shouldCoachCoreVerb({ masteredCount: 0, hasMarkedSuccessfully: true })).toBe(false);
+  });
+});
+
+// ─── Cycle 3: returning player — never coach once anything is mastered ────────
+
+describe('shouldCoachCoreVerb — returning player', () => {
+  it('never coaches a player who has already mastered a trick', () => {
+    expect(shouldCoachCoreVerb({ masteredCount: 1, hasMarkedSuccessfully: false })).toBe(false);
+    expect(shouldCoachCoreVerb({ masteredCount: 5, hasMarkedSuccessfully: true })).toBe(false);
+  });
+});
+
+// ─── Cycle 1: distractor coach — first distractor-enabled round ───────────────
+
+describe('shouldCoachDistractors — first distractor round', () => {
+  it('coaches at the distractor-reveal band (1 mastered, not yet dismissed)', () => {
+    expect(shouldCoachDistractors({ masteredCount: 1, dismissed: false })).toBe(true);
+  });
+
+  it('does not coach a brand-new player (0 mastered — core-verb stage owns the screen)', () => {
+    expect(shouldCoachDistractors({ masteredCount: 0, dismissed: false })).toBe(false);
+  });
+
+  it('stops coaching once dismissed (first scoring mark of the round)', () => {
+    expect(shouldCoachDistractors({ masteredCount: 1, dismissed: true })).toBe(false);
+  });
+
+  it('never coaches an experienced trainer (distractors no longer new at ≥ 2)', () => {
+    expect(shouldCoachDistractors({ masteredCount: 2, dismissed: false })).toBe(false);
+    expect(shouldCoachDistractors({ masteredCount: 5, dismissed: false })).toBe(false);
+  });
+});
+
+// ─── Cross-gate guard: core-verb and distractor coaches are mutually exclusive ─
+
+describe('coach gates — never both visible', () => {
+  it('the two coach bands never overlap across the masteredCount range', () => {
+    for (let masteredCount = 0; masteredCount <= 4; masteredCount++) {
+      const verb = shouldCoachCoreVerb({ masteredCount, hasMarkedSuccessfully: false });
+      const dist = shouldCoachDistractors({ masteredCount, dismissed: false });
+      expect(verb && dist).toBe(false);
+    }
+  });
+});
 
 // ─── Cycle 1: 0 mastered — all flags false ────────────────────────────────────
 
@@ -159,5 +217,28 @@ describe('untrainTricksUnlocked(v1 range)', () => {
 
   it('returns false at count 10 (high v1 progression)', () => {
     expect(untrainTricksUnlocked(10)).toBe(false);
+  });
+});
+
+// ─── shouldShowIdleWelcome — surface the "welcome back" idle-income toast ──────
+// Idle income is granted at load (kennel idle trickle); the toast announcing it
+// must only appear when something accrued AND the economy stage is revealed (so a
+// brand-new player, whose coins are still hidden, never sees a coin toast).
+
+describe('shouldShowIdleWelcome', () => {
+  it('shows when idle income accrued and the economy stage is revealed', () => {
+    expect(shouldShowIdleWelcome({ earnedCoins: 12, economyRevealed: true })).toBe(true);
+  });
+
+  it('does not show when nothing accrued (earnedCoins 0)', () => {
+    expect(shouldShowIdleWelcome({ earnedCoins: 0, economyRevealed: true })).toBe(false);
+  });
+
+  it('does not show on a fresh run when the economy stage is still hidden', () => {
+    expect(shouldShowIdleWelcome({ earnedCoins: 30, economyRevealed: false })).toBe(false);
+  });
+
+  it('does not show when both gates fail (no income, not revealed)', () => {
+    expect(shouldShowIdleWelcome({ earnedCoins: 0, economyRevealed: false })).toBe(false);
   });
 });

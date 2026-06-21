@@ -29,6 +29,10 @@ MAX_TURNS=600          # per-invocation turn cap (scan + implement + gate)
 SOFT_CTX_WARN=150000   # warn if any single turn's prompt exceeds this (context heavy)
 MAX_RETRY=3            # attempts per invocation before giving up on a failing claude
 RETRY_BASE=30          # backoff seconds; grows 30 -> 60 -> 120 across retries
+ITER_TIMEOUT="${ITER_TIMEOUT:-1800}"    # hard wall-clock cap per claude invocation (s) — kills a runaway iteration
+MAX_BUDGET_USD="${MAX_BUDGET_USD:-15}"  # hard per-invocation API spend cap (claude --max-budget-usd)
+TOTAL_BUDGET_USD="${TOTAL_BUDGET_USD:-75}"  # cumulative spend cap across the whole run — stop the loop once exceeded
+TOTAL_SPENT=0                           # running sum of per-iteration cost (accumulated in report_run)
 LOG="loop.log"
 ERRLOG="loop.err"      # claude stderr (API errors etc.) — the stdout JSON alone hides these
 
@@ -43,15 +47,28 @@ spec_hash()     { sha1sum .docs/specs.md 2>/dev/null | cut -d' ' -f1; }
 run_claude() {  # $1 = prompt file, $2 = label
   local pf="$1" label="$2" attempt=1 backoff rc
   while :; do
-    out=$(claude -p "$(cat "$pf")" \
+    # Two hard guards so one iteration can't run away on time or money:
+    #   timeout            — wall-clock cap; SIGTERM the invocation past ITER_TIMEOUT.
+    #   --max-budget-usd   — claude stops once it has spent MAX_BUDGET_USD on API.
+    out=$(timeout --signal=TERM "$ITER_TIMEOUT" \
+          claude -p "$(cat "$pf")" \
           --model "$MODEL" \
           --output-format json \
           --dangerously-skip-permissions \
-          --remote-control \
           --max-turns "$MAX_TURNS" \
+          --max-budget-usd "$MAX_BUDGET_USD" \
           2> >(tee -a "$ERRLOG" >&2))
     rc=$?
     (( rc == 0 )) && return 0
+    # The old failure path lost everything (stderr was empty, stdout discarded), so
+    # a usage-cap / budget stop looked identical to a code crash. Capture the stdout
+    # JSON's error fields here so the NEXT failure is diagnosable, not guessed at.
+    {
+      echo "--- claude($label) FAILED rc=$rc @ $(date -u) ---"
+      (( rc == 124 )) && echo "rc=124 -> hit ITER_TIMEOUT=${ITER_TIMEOUT}s wall-clock cap (runaway iteration killed)."
+      jq -r '"is_error=\(.is_error) subtype=\(.subtype) api_error=\(.api_error_status) cost=$\(.total_cost_usd // 0)\nresult: \(.result // "" | .[0:400])"' <<<"$out" 2>/dev/null \
+        || echo "stdout (non-JSON, first 400): ${out:0:400}"
+    } | tee -a "$ERRLOG" >>"$LOG"
     if (( attempt >= MAX_RETRY )); then
       echo "claude($label) exited rc=$rc after $attempt attempt(s) — see $ERRLOG." | tee -a "$LOG"
       return "$rc"
@@ -81,11 +98,15 @@ report_run() {  # $1 = label
         | jq -r 'select(.message.usage) | (.message.usage.input_tokens // 0) + (.message.usage.cache_read_input_tokens // 0) + (.message.usage.cache_creation_input_tokens // 0)' 2>/dev/null \
         | sort -n | tail -1)
   ctx=${ctx:-0}
-  echo "$1: is_error=$is_err ctx_peak=$ctx cost=\$$cost" | tee -a "$LOG"
+  TOTAL_SPENT=$(LC_ALL=C awk -v a="$TOTAL_SPENT" -v b="$cost" 'BEGIN{printf "%.4f", a + b}')
+  echo "$1: is_error=$is_err ctx_peak=$ctx cost=\$$cost (run total \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD)" | tee -a "$LOG"
   if [[ "$ctx" =~ ^[0-9]+$ ]] && (( ctx > SOFT_CTX_WARN )); then
     echo "WARN: $1 peak turn used $ctx ctx (> $SOFT_CTX_WARN) — context getting heavy." | tee -a "$LOG"
   fi
 }
+
+# True (rc 0) once cumulative spend has reached the whole-run cap.
+over_budget() { LC_ALL=C awk -v s="$TOTAL_SPENT" -v c="$TOTAL_BUDGET_USD" 'BEGIN{exit !(s+0 >= c+0)}'; }
 
 echo "=== loop start $(date -u) — max $MAX_ITER iters, PO review every $FATHER_EVERY ===" | tee -a "$LOG"
 
@@ -108,6 +129,10 @@ for ((i=1; i<=MAX_ITER; i++)); do
     echo "mother reported error — stopping." | tee -a "$LOG"
     break
   fi
+  if over_budget; then
+    echo "TOTAL_BUDGET_USD cap reached (spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD) — stopping." | tee -a "$LOG"
+    break
+  fi
 
   # --- Father: PO review on schedule or when the dev side is starved ---------
   # "No new work created" = scan ran on an empty board and still left it empty.
@@ -128,6 +153,10 @@ for ((i=1; i<=MAX_ITER; i++)); do
     report_run "iter $i (father)"
     after=$(spec_hash)
     since_father=0
+    if over_budget; then
+      echo "TOTAL_BUDGET_USD cap reached (spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD) — stopping." | tee -a "$LOG"
+      break
+    fi
 
     # The ONLY genuine stop: the dev side had no work AND the PO, after actually
     # play-testing, left specs byte-for-byte unchanged (nothing left to improve).

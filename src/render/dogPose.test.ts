@@ -179,6 +179,46 @@ describe("dogPose", () => {
     });
   });
 
+  // Disengagement (107): the dog has walked off — seated, back-turned, calm tail
+  describe("disengaged (walk-off)", () => {
+    it("turns its back to the trainer — large bodyYaw, far past the distractor lean", () => {
+      const pose = dogPose("disengaged", 0, { reducedMotion: false });
+      // A clear back-turn (≈180°), not a subtle lean: well over 1 radian.
+      expect(Math.abs(pose.bodyYaw ?? 0)).toBeGreaterThan(1);
+    });
+
+    it("is seated — negative crouchY lowers the dog toward the ground", () => {
+      const pose = dogPose("disengaged", 0, { reducedMotion: false });
+      expect(pose.crouchY ?? 0).toBeLessThan(0);
+    });
+
+    it("is tellable apart from distractor — distractor neither turns fully nor sits", () => {
+      const dis = dogPose("disengaged", 0, { reducedMotion: false });
+      const distractor = dogPose("distractor", 0, { reducedMotion: false });
+      expect(Math.abs(dis.bodyYaw ?? 0)).toBeGreaterThan(Math.abs(distractor.bodyYaw ?? 0));
+      expect(dis.crouchY ?? 0).toBeLessThan(distractor.crouchY ?? 0);
+    });
+
+    it("has a calmer tail than the eager idle dog (not soliciting attention)", () => {
+      const now = 500; // non-zero so the wag term is non-zero
+      const dis = dogPose("disengaged", now, { reducedMotion: false });
+      const idle = dogPose("idle", now, { reducedMotion: false });
+      expect(Math.abs(dis.tailWagAngle)).toBeLessThan(Math.abs(idle.tailWagAngle));
+    });
+
+    it("retains the back-turn and seated read under reducedMotion (static pose, D13)", () => {
+      const reduced = dogPose("disengaged", 0, { reducedMotion: true });
+      expect(Math.abs(reduced.bodyYaw ?? 0)).toBeGreaterThan(1);
+      expect(reduced.crouchY ?? 0).toBeLessThan(0);
+    });
+
+    it("stays alive under reducedMotion — breathing still varies over time (not frozen)", () => {
+      const a = dogPose("disengaged", 0, { reducedMotion: true });
+      const b = dogPose("disengaged", 2000, { reducedMotion: true });
+      expect(a.breatheScaleY).not.toBe(b.breatheScaleY);
+    });
+  });
+
   // Slice 1: idle — time-varying breatheScaleY + non-zero tailWagAngle
   describe("idle", () => {
     it("returns different breatheScaleY at different timestamps (never frozen)", () => {

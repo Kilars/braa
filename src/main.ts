@@ -14,21 +14,24 @@ import { STARTER_ROSTER } from './state/save';
 import { classifyMark } from './core/mark';
 import { applyMark, isConfused } from './core/session';
 import { comboAfter, comboMultiplier } from './core/combo';
-import { engagement, ENGAGEMENT_FULL, rewardLatencyMs } from './core/engagement';
+import { ENGAGEMENT_FULL, disengageBeat } from './core/engagement';
+import { isDisengaged, callBackEngagement } from './core/disengage';
 import { cycleIndex } from './core/swipeGesture';
 import { BASE_PHRASE, PHRASE_CATALOG, availablePhrases, nextPurchasableEntry, type Phrase } from './core/phrases';
 import { resolvePhraseMark } from './core/markWithPhrase';
 import { RESUME_GRACE_MS, isWithinResumeGrace } from './core/resumeGrace';
+import { createPauseClock } from './core/pauseClock';
 import { MarkAudio } from './audio/markAudio';
 import { dogVisualState } from './render/dogState';
 import { STARTER_BREED, BREED_CATALOG, adoptableBreeds, canAdopt, isBreedLevelLocked, composeDifficulty, type Breed } from './core/breeds';
 import type { Dog } from './core/roster';
 import { recordMastery, addDog } from './core/roster';
 import { STARTER_TRICKS, UNTRAIN_TRICKS, SIGNATURE_TRICKS, tricksForBreed, graduationTrickIds, type Trick } from './core/tricks';
-import { onboardingStage, untrainTricksUnlocked } from './core/onboarding';
-import { totalMasteredCount, buildSchedulerCfg, boostedDeltas, buildGameSave, restoreLearnedBar, BASE_SCHEDULER_TIMING } from './app/gameHelpers';
+import { onboardingStage, untrainTricksUnlocked, shouldCoachCoreVerb, shouldCoachDistractors, shouldShowIdleWelcome } from './core/onboarding';
+import { totalMasteredCount, buildSchedulerCfg, boostedDeltas, buildGameSave, restoreLearnedBar, BASE_SCHEDULER_TIMING, isCallBackTap, tapEngagement } from './app/gameHelpers';
 import { updateStreak } from './core/streak';
 import { ACHIEVEMENTS, unlockedAchievements } from './core/achievements';
+import { PANT_INTERVAL_MS, TIMELINE_EVENTS } from './core/tuning';
 
 // ── Scene ──────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('scene');
@@ -54,8 +57,6 @@ let SCHEDULER_CFG: SchedulerConfig = {
   ...difficulty.scheduler,
   distractorRate: 0,      // gated to 0 until onboarding reveals distractors (see buildSchedulerCfg)
 };
-
-const TIMELINE_EVENTS = 20; // events per segment; loops on exhaustion
 
 // ── Phrase loadout ─────────────────────────────────────────────────────────
 // Phrases are sourced from PHRASE_CATALOG; loaded phrase cycles among available.
@@ -90,6 +91,9 @@ void (async () => {
   let savedActiveRoundDogId: string | null = null;
   let savedActiveTrickId: string | null = null;
   let savedLearnedBar: number = 0;
+  // Idle income granted on load (kennel trickle); surfaced once at bootstrap via
+  // the "welcome back" toast (task 115). 0 when nothing accrued / fresh run.
+  let idleEarned = 0;
 
   // Live tracking of the in-progress round; null when on the select screen.
   let activeRoundDogId: string | null = null;
@@ -148,6 +152,7 @@ void (async () => {
 
       // Grant idle income accumulated since last session
       const earned = idleIncome(save.idleTimestamp, Date.now());
+      idleEarned = earned;
       if (earned > 0) {
         profile = award(profile, { coins: earned, xp: 0 }, 1);
         // Persist the reset timestamp immediately so re-loading doesn't double-grant
@@ -195,8 +200,50 @@ void (async () => {
   let prevConfused = false;
   let wasAlreadyMastered = false;
 
+  // ── In-round pause (specs.md §Round States: "Pause/resume supported") ───────
+  // The timeline + every round-time read live in "effective time" = wall clock
+  // minus accumulated paused spans, so a paused round resumes exactly where it
+  // left off (no skip-ahead). One clock for the session: each round re-bases its
+  // timelineOffset to effNow() at start, so carrying lostMs across rounds is safe.
+  let paused = false;
+  const pauseClock = createPauseClock(0);
+  /** Round time for `now` (wall clock minus paused spans). Timeline + reads share it. */
+  const effNow = (now: number): number => pauseClock.elapsed(now);
+
   // ── Combo state ───────────────────────────────────────────────────────────
   let combo = 0;
+
+  // ── First-run coach (specs.md §Onboarding) ────────────────────────────────
+  // Runtime-only (not persisted): true until the player lands their first scoring
+  // mark this session. Combined with masteredCount via shouldCoachCoreVerb, this
+  // shows the in-context core-verb prompt to a brand-new player and dismisses it
+  // for good on the first success (and never shows it to a returning trainer).
+  let hasMarkedSuccessfully = false;
+  // Distractor-reveal coach (task 109, specs.md §Onboarding): a second contextual
+  // pill for the masteredCount === 1 band, when the dog first starts offering wrong
+  // behaviors the player must NOT mark. Runtime-only (not persisted), reset on
+  // entering such a round and set on that round's first scoring mark — so it self-
+  // limits and never nags. The copy names the active trick the player SHOULD wait
+  // for. Kept distinct from the core-verb pill; the two bands are mutually exclusive.
+  let distractorCoachDismissed = false;
+  // Copy mirrors the game's marker voice ("trykk BRA" in the core-verb pill /
+  // callback hint) rather than an Anglicised "mark"; tankestrek matches the other
+  // two pills. The trick name tells the player which behavior they SHOULD wait for.
+  const distractorHint = (trick: string) =>
+    `Noen ganger gjør hunden noe annet — ikke trykk da. Bare BRA på «${trick}».`;
+  const refreshCoach = () => {
+    const masteredCount = totalMasteredCount(roster);
+    const coachVerb = shouldCoachCoreVerb({ masteredCount, hasMarkedSuccessfully });
+    // Guard mutual exclusivity explicitly even though the gates already disjoint
+    // by masteredCount (0 vs 1): the two pills must never show simultaneously.
+    const coachDist =
+      !coachVerb &&
+      shouldCoachDistractors({ masteredCount, dismissed: distractorCoachDismissed });
+    setCoachVisible(
+      coachVerb || coachDist,
+      coachDist ? distractorHint(activeTrick.name) : undefined,
+    );
+  };
 
   // ── Engagement meter (0..1) ───────────────────────────────────────────────
   // The dog's eagerness this round: good marks refill it, sloppy/false marks
@@ -213,7 +260,6 @@ void (async () => {
 
   // ── Idle-pant throttle ────────────────────────────────────────────────────
   // Foley pant plays at most once per PANT_INTERVAL_MS while the dog is idle.
-  const PANT_INTERVAL_MS = 7000;
   let lastPantAt = -Infinity;
 
   // ── Phrase state ──────────────────────────────────────────────────────────
@@ -232,7 +278,14 @@ void (async () => {
   // of a resume (notification dismiss / lock wake / fat-finger) is ignored.
   let resumedAt = -Infinity;
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') resumedAt = performance.now();
+    if (document.visibilityState === 'visible') {
+      resumedAt = performance.now();
+    } else if (appState === 'training' && !paused) {
+      // Backgrounding auto-pauses so the round never runs without the player;
+      // resume is manual on return (the paused overlay stays up). Decision in
+      // tech-decisions.md (D: in-round pause clock).
+      setRoundPaused(true);
+    }
   });
 
   function persist(): void {
@@ -298,7 +351,12 @@ void (async () => {
   }
 
   function startFreshRound(now: number): void {
-    timelineOffset = now;
+    // A new round always starts unpaused; resume the clock first so effNow()
+    // reflects live wall-clock time when we re-base the timeline.
+    if (pauseClock.isPaused()) pauseClock.resume(now);
+    paused = false;
+    setPaused(false);
+    timelineOffset = effNow(now);
     state = createRound(makeTimeline(timelineOffset));
     prevMastered = false;
     prevConfused = false;
@@ -307,9 +365,9 @@ void (async () => {
   }
 
   function regenerateTimeline(now: number): void {
-    // Build a fresh segment starting from now, but PRESERVE learned progress —
-    // the bar must not reset just because the placeholder timeline looped.
-    timelineOffset = now;
+    // Build a fresh segment starting from now (effective frame), but PRESERVE
+    // learned progress — the bar must not reset just because the timeline looped.
+    timelineOffset = effNow(now);
     state = replaceTimeline(state, makeTimeline(timelineOffset));
   }
 
@@ -341,6 +399,13 @@ void (async () => {
   // Apply muted flag restored from save
   markAudio.setMuted(savedMuted);
 
+  // Marker-voice clip (task 116): load the bundled PLACEHOLDER off the tap path,
+  // fire-and-forget. Registered under the PERFECT tier so a perfect mark voices it;
+  // a failed/missing asset is swallowed and the mark stays on synth (loadClip is
+  // rejection-safe). The real Maren line drops into the same cue with no call-site
+  // change (the recording is the standing owner/likeness gate — tech-decisions §4).
+  void markAudio.loadClip('PERFECT', `${import.meta.env.BASE_URL}audio/bra-placeholder.wav`);
+
   // Ambient starts on first user gesture (autoplay policy). Only called once.
   let ambientStarted = false;
   function ensureAmbient(): void {
@@ -350,7 +415,7 @@ void (async () => {
   }
 
   // ── HUD ───────────────────────────────────────────────────────────────────
-  const { renderTraining, showSelect, showTraining, applyRevealed, showLoading, hideLoading, celebrate } = createHud({
+  const { renderTraining, showSelect, showTraining, applyRevealed, setCoachVisible, showIdleWelcome, setPaused, showLoading, hideLoading, celebrate } = createHud({
     // The BRA marker is press-then-release so a horizontal swipe can swap the phrase
     // (specs §Marker Phrases) without ever firing a stray mark. The press instant is
     // recorded here; the mark commits on release only if it wasn't a swipe.
@@ -363,56 +428,86 @@ void (async () => {
       pendingDownAt = null;
       cyclePhrase(dir);
     },
+    // Pause control: flip in-round pause (freezes the timeline + ignores taps).
+    onTogglePause() {
+      setRoundPaused(!paused);
+    },
     onBraTapCommit() {
       const downAt = pendingDownAt;
       pendingDownAt = null;
       if (downAt === null) return;
       if (appState !== 'training') return;
+      // Paused: the BRA marker is dead — taps are ignored (no false mark) while the
+      // paused overlay is up. Resume happens via the overlay's own controls.
+      if (paused) return;
       // Score using the *pointerdown* instant, not release — swipe support adds no
       // latency to the timing tap (the whole game is precise timing).
       const now = downAt;
       // Mobile grace: swallow stray taps right after returning from background
       // (notification dismiss / lock wake / fat-finger) so they never false-mark + confuse.
       if (isWithinResumeGrace(now, resumedAt, RESUME_GRACE_MS)) return;
+      // Round time for this tap: wall-clock minus paused spans, matching the timeline frame.
+      const tnow = effNow(now);
+      // Call-back (task 107): if the dog has walked off (engagement empty), this tap
+      // is NOT a mark — it CALLS THE DOG BACK. Restore engagement comfortably above
+      // the walk-off threshold and break the combo (the tempo cost), then return.
+      // Branched BEFORE mark classification so a call-back never scores or false-marks.
+      if (isCallBackTap(engagementMeter)) {
+        engagementMeter = callBackEngagement(engagementMeter);
+        combo = 0;
+        markAudio.playTap(); // soft tactile acknowledgement that the call-back registered
+        return;
+      }
       // For untraining tricks, the markable window is the calm gap (inverted).
       // For normal tricks, use the regular attemptAt.
       const active = activeTrick.untrain
-        ? untrainAttemptAt(state.timeline, now)
-        : attemptAt(state.timeline, now);
-      const { attempt, fired } = resolvePhraseMark(active, loadedPhrase, now, lastUsedAt);
-      const result = classifyMark(now, attempt);
+        ? untrainAttemptAt(state.timeline, tnow)
+        : attemptAt(state.timeline, tnow);
+      // Phrase cooldown is a UI concern tracked in wall-clock (downAt); timeline
+      // scoring below uses effective time (tnow).
+      const { attempt, fired } = resolvePhraseMark(active, loadedPhrase, downAt, lastUsedAt);
+      const result = classifyMark(tnow, attempt);
       // Apply combo multiplier to the learned-bar deltas (positive deltas only).
       const mult = comboMultiplier(combo);
       const deltas = boostedDeltas(roundDifficulty.deltas, mult);
       // Pass roundDifficulty.deltas so trick profile (learnMult) and difficulty mode
       // both influence how much each mark advances the learned bar.
-      state = { ...state, session: applyMark(state.session, result, now, deltas), lastResult: result };
+      state = { ...state, session: applyMark(state.session, result, tnow, deltas), lastResult: result };
       // Advance or reset combo based on this mark.
       combo = comboAfter(combo, result);
       // Track all-time best combo
       bestCombo = Math.max(bestCombo, combo);
       // Drain/refill the engagement meter: precise marks keep the dog eager,
-      // sloppy/false marks bore it (drives the HUD mood meter + disengage beat).
-      engagementMeter = engagement(engagementMeter, { kind: 'mark', result });
-      // "Slow rewards drain it" (spec §Mistakes): on a real reward (PERFECT/OK), how
-      // promptly the player marked the apex also nudges engagement. Pure timing —
-      // no dog clips, so this is unblocked (corrects 098's over-broad 079 deferral).
-      if ((result === 'PERFECT' || result === 'OK') && attempt) {
-        engagementMeter = engagement(engagementMeter, {
-          kind: 'reward',
-          latencyMs: rewardLatencyMs(now, attempt.peak),
-        });
-      }
+      // sloppy/false marks bore it (drives the HUD mood meter + disengage beat). The
+      // mark transition plus the conditional "slow rewards drain it" reward-latency
+      // leg (PERFECT/OK with an attempt; spec §Mistakes) are composed in one tested
+      // place — see gameHelpers.tapEngagement (task 117).
+      engagementMeter = tapEngagement({ engagementMeter, result, attempt, tnow });
       if (fired && loadedPhrase.cooldownMs > 0) {
-        lastUsedAt = now;
+        lastUsedAt = downAt;
       }
-      markAudio.play(result);
+      // Pass the loaded phrase so a phrase-specific voice line is preferred when
+      // registered (task 116); falls back to the tier clip, then synth.
+      markAudio.play(result, loadedPhrase.id);
       if (result === 'FALSE_MARK') markAudio.playFoley('false-huff');
       // Notify the 3D scene on every successful mark so the dog gives a brief
       // reward pulse (bounce + tail flick). PERFECT pops more than OK (per D8).
       // Subsequent calls REPLACE the stored mark (refresh-not-stack).
       if (result === 'PERFECT' || result === 'OK') {
-        sceneApi?.notifyMark(result, now);
+        sceneApi?.notifyMark(result, tnow);
+        // First scoring mark dismisses whichever onboarding coach is showing:
+        //  - the core-verb pill for good (session-wide flag, task 108)
+        //  - the distractor pill for this round (per-round flag, task 109)
+        let coachChanged = false;
+        if (!hasMarkedSuccessfully) {
+          hasMarkedSuccessfully = true;
+          coachChanged = true;
+        }
+        if (!distractorCoachDismissed) {
+          distractorCoachDismissed = true;
+          coachChanged = true;
+        }
+        if (coachChanged) refreshCoach();
       }
     },
     onSelectMode(mode: DifficultyMode) {
@@ -451,6 +546,11 @@ void (async () => {
         }
       }
       showTraining(trick.name);
+      // First-run coach: show the core-verb prompt iff this is a brand-new player.
+      // Distractor coach (task 109): un-dismiss it on entering a fresh round so it
+      // re-shows for the masteredCount === 1 band (the gate self-limits at ≥ 2).
+      distractorCoachDismissed = false;
+      refreshCoach();
       // Show loading indicator only if the scene is not yet ready
       if (sceneApi === null) {
         showLoading();
@@ -597,6 +697,24 @@ void (async () => {
     },
   });
 
+  // ── Pause control ─────────────────────────────────────────────────────────
+  // Single entry point for entering/leaving pause: drives the pure pause clock,
+  // the overlay, and (on resume) reuses the resume-grace window to swallow a
+  // stray tap landing on the resume frame. Only meaningful during training.
+  function setRoundPaused(next: boolean): void {
+    if (appState !== 'training') return;
+    if (next === paused) return;
+    const now = performance.now();
+    paused = next;
+    if (next) {
+      pauseClock.pause(now);
+    } else {
+      pauseClock.resume(now);
+      resumedAt = now; // a tap on the resume frame is swallowed by resume-grace
+    }
+    setPaused(next);
+  }
+
   // ── rAF clock ─────────────────────────────────────────────────────────────
   const TIMELINE_DURATION_MS =
     TIMELINE_EVENTS * SCHEDULER_CFG.attemptInterval + SCHEDULER_CFG.activeSpan;
@@ -608,6 +726,18 @@ void (async () => {
     }
 
     const now = performance.now();
+
+    // Paused: hold the whole round in place — the dog freezes, the apex tell stops
+    // advancing, and the timeline does not loop. Keep the rAF alive so resume is
+    // instant. (Render also stops, so the last painted frame stays under the overlay.)
+    if (paused) {
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    // Round time: wall-clock minus accumulated paused spans. The timeline and every
+    // time-based read below share this frame so a resumed round never skips ahead.
+    const tnow = effNow(now);
 
     // Detect mastered false→true transition
     const currentlyMastered = state.session.mastered;
@@ -623,7 +753,7 @@ void (async () => {
       celebrate();
 
       // Trigger the bigger/longer mastery hand gesture in the 3D scene
-      sceneApi?.notifyMastery(now);
+      sceneApi?.notifyMastery(tnow);
 
       // New mastery pays full; re-practicing an already-mastered trick pays the reduced
       // income floor (reduced coins, no XP) — keeps unlock-gating skill-driven.
@@ -642,7 +772,7 @@ void (async () => {
       // (session.mastered=true → dogVisualState returns 'happy').
       // Delay showSelect() by one rAF so the WebGL render loop paints
       // the gold bounce before the select screen overlays the canvas.
-      if (sceneApi) sceneApi.updateDog(state, now, { trickId: activeTrick.id, untrain: activeTrick.untrain });
+      if (sceneApi) sceneApi.updateDog(state, tnow, { trickId: activeTrick.id, untrain: activeTrick.untrain });
 
       // Transition back to select screen (deferred one frame so happy pose renders)
       appState = 'select';
@@ -655,7 +785,7 @@ void (async () => {
 
     // Confuse debuff: while confused, the active timeline uses a tighter window and
     // more distractors (spec "Mistakes"). Rebuild only on the on/off edge.
-    const confusedNow = isConfused(state.session, now);
+    const confusedNow = isConfused(state.session, tnow);
     if (confusedNow !== prevConfused) {
       const eff = confusedNow ? confuseDifficulty(roundDifficulty) : roundDifficulty;
       SCHEDULER_CFG = buildSchedulerCfg(totalMasteredCount(roster), eff);
@@ -665,26 +795,35 @@ void (async () => {
 
     // When the timeline is exhausted (and not yet mastered), loop it
     if (!state.session.mastered) {
-      const elapsed = now - timelineOffset;
+      const elapsed = tnow - timelineOffset;
       if (elapsed > TIMELINE_DURATION_MS) {
         regenerateTimeline(now);
       }
     }
 
-    // Soft idle pant — only while the dog is genuinely idle (waiting), infrequent.
+    // Walk-off (task 107): when the engagement meter empties, the dog has trotted
+    // off and sits back-turned until a call-back tap. Threaded into the dog state +
+    // the idle-pant gate so a walked-off dog reads as disengaged, not idle.
+    const beat = disengageBeat(engagementMeter);
+    const disengaged = isDisengaged(beat);
+
+    // Soft idle pant — only while the dog is genuinely idle (waiting), infrequent. Pass
+    // `beat` so a sulking dog (itch/flop/bark) is not treated as idle and doesn't pant.
     if (now - lastPantAt > PANT_INTERVAL_MS) {
-      const visual = dogVisualState(state, now, { trickId: activeTrick.id, untrain: activeTrick.untrain });
+      const visual = dogVisualState(state, tnow, { trickId: activeTrick.id, untrain: activeTrick.untrain, disengaged, beat });
       if (visual === 'idle') {
         markAudio.playFoley('idle-pant');
         lastPantAt = now;
       }
     }
 
-    const vm = toViewModel(state, now, profile, roundDifficulty.tellIntensity, combo, engagementMeter);
+    const vm = toViewModel(state, tnow, profile, roundDifficulty.tellIntensity, combo, engagementMeter);
     renderTraining(vm);
-    if (sceneApi) sceneApi.updateDog(state, now, {
+    if (sceneApi) sceneApi.updateDog(state, tnow, {
       trickId: activeTrick.id,
       untrain: activeTrick.untrain,
+      disengaged,
+      beat,
       // Thread the same peak signal driving the UI apex ring into the dog pose —
       // one source of truth so the on-dog apex and UI gold ring crest together.
       peakProximity: vm.peakProximity,
@@ -696,6 +835,18 @@ void (async () => {
 
   // Start in select state
   showSelect();
+
+  // Surface the idle-income trickle collected while away (task 115). Only once the
+  // economy stage is revealed, so a brand-new player (coins still hidden) never
+  // sees a coin toast before the first payout.
+  if (
+    shouldShowIdleWelcome({
+      earnedCoins: idleEarned,
+      economyRevealed: onboardingStage(totalMasteredCount(roster)).economy,
+    })
+  ) {
+    showIdleWelcome(idleEarned);
+  }
 
   // ── Dev-only test hook ────────────────────────────────────────────────────
   // Exposes a minimal read-only API on window.__bra for e2e tests.
@@ -710,6 +861,32 @@ void (async () => {
       screen: () => appState,
       /** Current learned-bar value (0–100). */
       learnedBar: () => state.session.learned,
+      /**
+       * performance.now() (wall-clock) timestamp of the soonest upcoming attempt
+       * peak, or null if none is pending. e2e timing aid: lets the full-loop test
+       * schedule a precise tap AT the apex via setTimeout, so it no longer depends
+       * on observing the rAF-driven `data-tell` signal — which is unreliable under
+       * headless software-WebGL throttling (~3 fps). Returns a future-or-current
+       * peak (>= now - one peakRadius) so a peak being entered is still tappable.
+       *
+       * The timeline lives in "effective time" (wall clock minus paused spans), so
+       * peaks are converted back to wall clock by adding the accumulated paused span
+       * (lostMs). When the round was never paused lostMs is 0, so this is identical
+       * to the pre-pause behaviour the full-loop e2e relies on.
+       */
+      nextPeak: () => {
+        const wallNow = performance.now();
+        const lostMs = wallNow - effNow(wallNow); // 0 unless the round has been paused
+        let soonest: number | null = null;
+        for (const ev of state.timeline) {
+          if (ev.kind !== 'attempt' || !ev.attempt) continue;
+          const wallPeak = ev.attempt.peak + lostMs;
+          if (wallPeak >= wallNow - ev.attempt.peakRadius && (soonest === null || wallPeak < soonest)) {
+            soonest = wallPeak;
+          }
+        }
+        return soonest;
+      },
     };
   }
 
@@ -733,7 +910,27 @@ void (async () => {
       appState = 'training';
       startFreshRound(performance.now());
       showTraining(found.name);
+      // Mirror onSelectTrick so screenshot runs at the distractor band show the pill.
+      distractorCoachDismissed = false;
+      refreshCoach();
     };
+    // Dev/screenshot hook — force the active dog's mastered-trick count so
+    // visual-review scripts can land on a specific onboarding band (e.g. count 1,
+    // the distractor-reveal coach) without grinding masteries. Re-applies the
+    // staged reveals + coach so the HUD reflects the new band. No-op outside dev
+    // use; no security surface.
+    (window as unknown as Record<string, unknown>)['__setMasteredCount'] = (n: number) => {
+      const ids = Array.from({ length: Math.max(0, Math.floor(n)) }, (_, i) => `__synthetic-${i}`);
+      roster = roster.map(d => (d.id === activeDogId ? { ...d, masteredTrickIds: ids } : d));
+      SCHEDULER_CFG = buildSchedulerCfg(totalMasteredCount(roster), roundDifficulty);
+      applyRevealed(onboardingStage(totalMasteredCount(roster)));
+      refreshCoach();
+    };
+    // Dev/screenshot hook — show the idle "welcome back" toast (task 115) with a
+    // given coin count, so visual-review scripts can capture it without simulating
+    // a real return. No-op outside dev use; no security surface.
+    (window as unknown as Record<string, unknown>)['__showIdleWelcome'] = (coins: number) =>
+      showIdleWelcome(coins);
     // Dev/screenshot hook — fire the trainer's-hand reward gesture without having
     // to land a real mark/mastery, so visual-review scripts can capture the hand
     // mid-window. 'mark' = quick treat offer; 'mastery' = bigger/longer gesture.

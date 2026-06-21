@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { soundForResult, masterySound, tapSound, ambientSpec, MarkAudio, markLayers, shouldUseClip, foleyLayers, ambientLayers } from './markAudio';
+import { soundForResult, masterySound, tapSound, ambientSpec, MarkAudio, markLayers, shouldUseClip, foleyLayers, ambientLayers, voiceCue, selectVoiceClip } from './markAudio';
 import type { MarkResult } from '../core/mark';
 import type { DogFoleyEvent } from './markAudio';
 
@@ -357,6 +357,106 @@ describe('ambientLayers', () => {
     const spec = ambientSpec();
     const firstLayer = ambientLayers()[0];
     expect(spec).toEqual(firstLayer);
+  });
+});
+
+// ─── voiceCue — phrase-keyed cue selection (task 116) ────────────────────────
+// Pure cue-key derivation: a phrase voices its own line when one is registered;
+// otherwise the mark falls back to the result-tier key (and then synth).
+
+describe('voiceCue', () => {
+  it('returns the result-tier key when no phraseId is given', () => {
+    expect(voiceCue('PERFECT')).toBe('PERFECT');
+  });
+
+  it('returns a phrase-specific key when a phraseId is given', () => {
+    expect(voiceCue('PERFECT', 'flink')).toBe('voice:flink');
+  });
+
+  it('keys by phrase regardless of result tier (the phrase voices the line, not the tier)', () => {
+    expect(voiceCue('OK', 'super')).toBe('voice:super');
+  });
+});
+
+// ─── selectVoiceClip — phrase clip → tier clip → synth (task 116) ─────────────
+// The play-site decision, made pure + registry-aware: prefer a registered phrase
+// clip, else a registered result-tier clip, else null (caller synthesizes).
+
+describe('selectVoiceClip', () => {
+  const buf = {} as unknown as AudioBuffer;
+
+  it('returns null when nothing is registered (the mark synthesizes)', () => {
+    const registry = new Map<string, AudioBuffer>();
+    expect(selectVoiceClip('PERFECT', undefined, registry)).toBeNull();
+  });
+
+  it('returns the result-tier cue when a tier clip is registered and there is no phrase', () => {
+    const registry = new Map<string, AudioBuffer>([['PERFECT', buf]]);
+    expect(selectVoiceClip('PERFECT', undefined, registry)).toBe('PERFECT');
+  });
+
+  it('returns the phrase cue when a phrase clip is registered', () => {
+    const registry = new Map<string, AudioBuffer>([['voice:flink', buf]]);
+    expect(selectVoiceClip('PERFECT', 'flink', registry)).toBe('voice:flink');
+  });
+
+  it('prefers the phrase clip over the tier clip when both are registered', () => {
+    const registry = new Map<string, AudioBuffer>([
+      ['voice:flink', buf],
+      ['PERFECT', buf],
+    ]);
+    expect(selectVoiceClip('PERFECT', 'flink', registry)).toBe('voice:flink');
+  });
+
+  it('falls back to the tier clip when the phrase has no registered clip', () => {
+    const registry = new Map<string, AudioBuffer>([['PERFECT', buf]]);
+    expect(selectVoiceClip('PERFECT', 'flink', registry)).toBe('PERFECT');
+  });
+});
+
+// ─── MarkAudio — clip registry + loader (task 116) ───────────────────────────
+// The voiced-mark path: a registered clip is preferred over synth. The loader is
+// rejection-safe — a load that can't complete leaves the registry untouched so the
+// mark stays on the existing synth (no throw, app unaffected).
+
+describe('MarkAudio — clip registry + loader', () => {
+  // A real AudioBuffer needs a browser AudioContext; the registry only stores +
+  // looks up by key, so a stand-in buffer is enough to exercise the seam.
+  const fakeBuffer = {} as unknown as AudioBuffer;
+
+  it('a fresh instance has no clip registered for a cue', () => {
+    const audio = new MarkAudio();
+    expect(audio.hasClip('PERFECT')).toBe(false);
+  });
+
+  it('a registered clip is observable for its cue (the voiced path is selectable)', () => {
+    const audio = new MarkAudio();
+    audio.registerClip('PERFECT', fakeBuffer);
+    expect(audio.hasClip('PERFECT')).toBe(true);
+  });
+
+  it('loadClip that cannot complete leaves the registry untouched (mark stays synth)', async () => {
+    // In the Node test env AudioContext is undefined, so the load cannot decode;
+    // loadClip must reject/bail GRACEFULLY — no throw, nothing registered.
+    const audio = new MarkAudio();
+    await expect(audio.loadClip('PERFECT', '/audio/bra-placeholder.wav')).resolves.toBeUndefined();
+    expect(audio.hasClip('PERFECT')).toBe(false);
+  });
+
+  it('loadClip with a failing fetch URL does not throw and registers nothing', async () => {
+    const audio = new MarkAudio();
+    await expect(
+      audio.loadClip('voice:flink', 'http://127.0.0.1:0/nonexistent.wav'),
+    ).resolves.toBeUndefined();
+    expect(audio.hasClip('voice:flink')).toBe(false);
+  });
+
+  it('play(result, phraseId) is headless-safe — no throw muted or with AudioContext undefined', () => {
+    const muted = new MarkAudio();
+    muted.setMuted(true);
+    expect(() => muted.play('PERFECT', 'flink')).not.toThrow();
+    const live = new MarkAudio();
+    expect(() => live.play('PERFECT', 'flink')).not.toThrow();
   });
 });
 

@@ -133,6 +133,59 @@ export function dogPose(
         bodyLeanX: -0.18,
         headTiltZ: -0.2,
       };
+    case "disengaged": {
+      // The dog has walked off (engagement empty, task 107): it sits back-turned,
+      // "done with you", until a call-back tap. The camera looks along +Z, so a
+      // ~90° yaw turns the dog's RUMP toward the trainer (a true back-turn — a 180°
+      // yaw would only show the other flank) AND narrows its on-screen footprint so
+      // it can sit at the frame edge without clipping. The back-turn + seated crouch
+      // + head-down are STATIC reads that survive reduced motion (D13 — dampened,
+      // not removed); only the breathing/tail sway scales with `m`. The lateral edge
+      // offset is applied in scene.ts.
+      return {
+        ...zero,
+        bodyYaw: -Math.PI / 2,            // rump toward the trainer — shows its back
+        crouchY: -0.34,                   // sat down low on its haunches
+        headPitch: -0.25,                 // head dropped — dejected, not alert
+        // Tail barely stirs — not soliciting attention (much calmer than idle's wag).
+        tailWagAngle: wag * 0.12,
+        // Slow, alive breathing so the dog never reads as frozen.
+        breatheScaleY: 1 + Math.sin(now * 0.0025) * 0.02 * m,
+      };
+    }
+    // ── Disengage beats (task 112) — the meter's escalation, read on the dog ──────
+    // Graded so it stays funny, never punishing (spec §"Wrong-behavior beats"):
+    //   itch  → fidgety ear-scratch    (mild "getting bored")
+    //   flop  → bored lie-down forward (head down, giving up — NOT the back-turned
+    //           walk-off, which is `disengaged`)
+    //   bark  → head-up sass/protest   (the last beat before it walks off)
+    // Static channels (headTiltZ / crouchY / headPitch) survive reduced motion; only the
+    // oscillation scales with `m` (D13 — dampened, not removed).
+    case "itch":
+      return {
+        ...zero,
+        headTiltZ: 0.32,                              // head cocked toward the scratch (static read)
+        // Quick rhythmic scratch wobble — faster than idle's calm sway.
+        headLiftY: Math.abs(Math.sin(now * 0.03)) * 0.05 * m,
+        bodyLeanX: Math.sin(now * 0.03) * 0.05 * m,
+        tailWagAngle: wag * 0.4,                      // tail half-interested
+      };
+    case "flop":
+      return {
+        ...zero,
+        crouchY: -0.40,                               // flopped low to the ground (static)
+        headPitch: -0.30,                             // head resting down — bored (static)
+        tailWagAngle: wag * 0.1,                      // tail almost still
+        breatheScaleY: 1 + Math.sin(now * 0.0028) * 0.025 * m, // slow heavy breathing
+      };
+    case "bark":
+      return {
+        ...zero,
+        headPitch: 0.5,                               // head up, barking at the trainer (static)
+        headLiftY: 0.08,                              // chin lifted (static read)
+        bounceY: Math.abs(Math.sin(now * 0.022)) * 0.09 * m, // sharp little bounces with each "woof"
+        tailWagAngle: wag * 0.3,                       // stiff, not friendly
+      };
     default:
       return { ...zero };
   }

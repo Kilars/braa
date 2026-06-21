@@ -7,12 +7,15 @@
 
 import type { SchedulerConfig } from '../core/scheduler';
 import type { EffectiveDifficulty } from '../core/difficulty';
-import type { MarkResult } from '../core/mark';
+import type { MarkResult, Attempt } from '../core/mark';
 import type { Dog } from '../core/roster';
 import type { Profile } from '../core/economy';
 import type { DifficultyMode } from '../core/difficulty';
 import type { GameSave } from '../state/save';
 import { onboardingStage } from '../core/onboarding';
+import { engagement, rewardLatencyMs, disengageBeat } from '../core/engagement';
+import { isDisengaged } from '../core/disengage';
+import { BASE_SCHEDULER_TIMING } from '../core/tuning';
 
 // ── totalMasteredCount ─────────────────────────────────────────────────────────
 
@@ -46,11 +49,11 @@ export function effectiveDistractorRate(
  * Base scheduler timing applied before any difficulty/breed/trick overrides.
  * Single source of truth so the bootstrap config in main.ts and buildSchedulerCfg
  * can never drift apart. Both spread roundDifficulty.scheduler on top of this.
+ *
+ * Homed in the central tuning module; re-exported here so the existing
+ * `./app/gameHelpers` import in main.ts stays stable.
  */
-export const BASE_SCHEDULER_TIMING = {
-  attemptInterval: 2000, // 2 s between correct attempts
-  activeSpan: 800,       // behavior visible for 800 ms
-} as const;
+export { BASE_SCHEDULER_TIMING } from '../core/tuning';
 
 /**
  * Assemble a SchedulerConfig from the current round difficulty and onboarding
@@ -155,4 +158,40 @@ export function buildGameSave(params: {
     activeTrickId: params.activeTrickId ?? null,
     learnedBar: params.learnedBar ?? 0,
   };
+}
+
+// ── Tap decisions (extracted from main.ts onBraTapCommit) ───────────────────────
+
+/**
+ * Whether a BRA tap should CALL THE DOG BACK instead of marking. True only when
+ * the dog has fully disengaged (engagement empty → `disengageBeat` 'walk-off').
+ * Names the loop's "branch BEFORE classification" rule (task 107) so a call-back
+ * can never score or false-mark. Pure.
+ */
+export function isCallBackTap(engagementMeter: number): boolean {
+  return isDisengaged(disengageBeat(engagementMeter));
+}
+
+/**
+ * The engagement meter after a scoring tap. Applies the unconditional
+ * `{ kind:'mark', result }` transition, then — only on a real reward
+ * (`PERFECT`/`OK` with an `attempt`) — the subsequent `{ kind:'reward', latencyMs }`
+ * transition driven by how promptly the apex was rewarded (spec §Mistakes: "slow
+ * rewards drain it"). Single source of truth for the order + the reward condition,
+ * so the loop's most edit-fragile composition is unit-tested. Pure.
+ */
+export function tapEngagement(params: {
+  engagementMeter: number;
+  result: MarkResult;
+  attempt: Attempt | null;
+  tnow: number;
+}): number {
+  let meter = engagement(params.engagementMeter, { kind: 'mark', result: params.result });
+  if ((params.result === 'PERFECT' || params.result === 'OK') && params.attempt) {
+    meter = engagement(meter, {
+      kind: 'reward',
+      latencyMs: rewardLatencyMs(params.tnow, params.attempt.peak),
+    });
+  }
+  return meter;
 }

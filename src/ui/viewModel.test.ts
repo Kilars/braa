@@ -207,3 +207,54 @@ describe('toViewModel — engagement', () => {
     expect(vm.engagementBeat).toBe('engaged');
   });
 });
+
+// ─── Disengagement (107): a `disengaged` flag for the call-back affordance ─────
+
+describe('toViewModel — disengaged flag', () => {
+  it('is true at an empty meter (walk-off → dog has walked off)', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    expect(toViewModel(state, 0, newProfile(), 1, 0, 0).disengaged).toBe(true);
+  });
+
+  it('is false while the dog is still in play (any non-walk-off meter)', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    expect(toViewModel(state, 0, newProfile(), 1, 0, 0.1).disengaged).toBe(false);
+    expect(toViewModel(state, 0, newProfile(), 1, 0, 1).disengaged).toBe(false);
+  });
+
+  it('defaults to not-disengaged when the meter is omitted (fresh eager dog)', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    expect(toViewModel(state, 0).disengaged).toBe(false);
+  });
+});
+
+// ─── Tell suppression while disengaged (118, PO Review 2026-06-21 #4) ──────────
+// A walked-off dog earns nothing from a mark, so the "mark now" apex cue must not
+// fire — it would contradict the call-back affordance. Both tellStrength (drives
+// the gold ring) and peakProximity (drives the on-dog apex shape) must be 0.
+
+describe('toViewModel — apex tell suppressed while disengaged', () => {
+  it('forces tellStrength to 0 even with an attempt sitting exactly at its peak', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    // Event 0: window=[100,700], peak=400 → at now=400 an engaged dog yields
+    // tellStrength=tellIntensity (1). Empty meter (engagementLevel=0) ⇒ disengaged.
+    const vm = toViewModel(state, 400, newProfile(), 1, 0, 0);
+    expect(vm.disengaged).toBe(true);
+    expect(vm.tellStrength).toBe(0);
+  });
+
+  it('forces peakProximity to 0 while disengaged (no on-dog apex crest)', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    const vm = toViewModel(state, 400, newProfile(), 1, 0, 0);
+    expect(vm.peakProximity).toBe(0);
+  });
+
+  it('leaves the tell intact for an engaged dog at the peak (gate is engagement-scoped)', () => {
+    const state = createRound(buildTimeline(cfg, rng, 5));
+    // Healthy meter (1) at the same peak — the suppression must NOT touch this.
+    const vm = toViewModel(state, 400, newProfile(), 1, 0, 1);
+    expect(vm.disengaged).toBe(false);
+    expect(vm.tellStrength).toBeCloseTo(1, 5);
+    expect(vm.peakProximity).toBeCloseTo(1, 5);
+  });
+});

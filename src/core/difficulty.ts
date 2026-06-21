@@ -1,6 +1,15 @@
 import { MarkResult, NORMAL_DELTAS } from './mark';
 import { SchedulerConfig } from './scheduler';
 import type { Trick } from './tricks';
+import {
+  NORMAL_WINDOW_WIDTH_MS, NORMAL_PEAK_RADIUS_MS, NORMAL_DISTRACTOR_RATE,
+  NORMAL_TELL_INTENSITY, NORMAL_REWARD_MULT,
+  HARD_WINDOW_WIDTH_MS, HARD_PEAK_RADIUS_MS, HARD_DISTRACTOR_RATE,
+  HARD_TELL_INTENSITY, HARD_REWARD_MULT, HARD_FALSE_MARK_DELTA,
+  EXPERT_WINDOW_WIDTH_MS, EXPERT_PEAK_RADIUS_MS, EXPERT_DISTRACTOR_RATE,
+  EXPERT_TELL_INTENSITY, EXPERT_REWARD_MULT, EXPERT_FALSE_MARK_DELTA,
+  CONFUSE_WINDOW_MULT, CONFUSE_DISTRACTOR_MULT,
+} from './tuning';
 
 export type DifficultyMode = 'NORMAL' | 'HARD' | 'EXPERT';
 
@@ -14,9 +23,9 @@ export interface EffectiveDifficulty {
 
 // Normal baseline scheduler values (matching SchedulerConfig defaults used in tests)
 const NORMAL_SCHEDULER: Pick<SchedulerConfig, 'windowWidth' | 'peakRadius' | 'distractorRate'> = {
-  windowWidth: 400,
-  peakRadius: 80,
-  distractorRate: 0.2,
+  windowWidth: NORMAL_WINDOW_WIDTH_MS,
+  peakRadius: NORMAL_PEAK_RADIUS_MS,
+  distractorRate: NORMAL_DISTRACTOR_RATE,
 };
 
 export function effectiveDifficulty(mode: DifficultyMode): EffectiveDifficulty {
@@ -25,40 +34,40 @@ export function effectiveDifficulty(mode: DifficultyMode): EffectiveDifficulty {
       return {
         scheduler: { ...NORMAL_SCHEDULER },
         deltas: { ...NORMAL_DELTAS },
-        rewardMultiplier: 1,
-        tellIntensity: 1,
+        rewardMultiplier: NORMAL_REWARD_MULT,
+        tellIntensity: NORMAL_TELL_INTENSITY,
         learnMult: 1,
       };
 
     case 'HARD':
       return {
         scheduler: {
-          windowWidth: 280,      // tighter than NORMAL 400
-          peakRadius: 50,        // tighter than NORMAL 80
-          distractorRate: 0.45,  // higher than NORMAL 0.2
+          windowWidth: HARD_WINDOW_WIDTH_MS,      // tighter than NORMAL 400
+          peakRadius: HARD_PEAK_RADIUS_MS,        // tighter than NORMAL 80
+          distractorRate: HARD_DISTRACTOR_RATE,   // higher than NORMAL 0.2
         },
         deltas: {
           ...NORMAL_DELTAS,
-          FALSE_MARK: -8,        // harsher than NORMAL -4
+          FALSE_MARK: HARD_FALSE_MARK_DELTA,      // harsher than NORMAL -4
         },
-        rewardMultiplier: 1.3,   // higher than NORMAL 1
-        tellIntensity: 0.6,      // fainter than NORMAL 1
+        rewardMultiplier: HARD_REWARD_MULT,       // higher than NORMAL 1
+        tellIntensity: HARD_TELL_INTENSITY,       // fainter than NORMAL 1
         learnMult: 1,
       };
 
     case 'EXPERT':
       return {
         scheduler: {
-          windowWidth: 160,      // tighter than HARD 280
-          peakRadius: 25,        // tighter than HARD 50
-          distractorRate: 0.55,  // higher than HARD 0.45
+          windowWidth: EXPERT_WINDOW_WIDTH_MS,    // tighter than HARD 280
+          peakRadius: EXPERT_PEAK_RADIUS_MS,      // tighter than HARD 50
+          distractorRate: EXPERT_DISTRACTOR_RATE, // higher than HARD 0.45
         },
         deltas: {
           ...NORMAL_DELTAS,
-          FALSE_MARK: -10,       // harsher than HARD -8
+          FALSE_MARK: EXPERT_FALSE_MARK_DELTA,    // harsher than HARD -8
         },
-        rewardMultiplier: 2.5,   // higher than HARD 1.5
-        tellIntensity: 0.3,      // fainter than HARD 0.6
+        rewardMultiplier: EXPERT_REWARD_MULT,     // higher than HARD 1.3
+        tellIntensity: EXPERT_TELL_INTENSITY,     // fainter than HARD 0.6
         learnMult: 1,
       };
   }
@@ -89,9 +98,6 @@ export function applyTrickProfile(eff: EffectiveDifficulty, trick: Trick): Effec
     learnMult: trick.learnMult,
   };
 }
-
-const CONFUSE_WINDOW_MULT = 0.6;     // window narrows ≈ −40%
-const CONFUSE_DISTRACTOR_MULT = 1.5; // distractors increase ≈ +50%
 
 /** Apply the false-mark confuse debuff to a difficulty: tighter window, more
  *  distractors. Pure/immutable; other fields preserved. */

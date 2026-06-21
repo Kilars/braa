@@ -54,6 +54,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // The Babylon engine chunk (~2.1 MB raw) exceeds workbox's default 2 MiB
+        // precache cap. We deliberately precache it so the 3D game works fully
+        // offline once installed (it's the engine — downloaded once, cached
+        // forever). 3 MiB leaves headroom as the engine grows.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
   ],
@@ -61,14 +66,27 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // The glTF loader + PBR material stack are used ONLY by the imported-dog
+          // path (default-off, task 078/079). Route them to their own chunk so they
+          // load lazily on demand instead of bloating the always-on `babylon` chunk
+          // (which must stay under workbox's 2 MiB precache limit). Both are reached
+          // only via dynamic import() (loadDogModel + createImportedDogMesh), so this
+          // chunk is never fetched while the flag is off.
+          if (id.includes("@babylonjs/loaders") || id.includes("Materials/PBR")) {
+            return "babylon-loaders";
+          }
           if (id.includes("@babylonjs")) return "babylon";
           if (id.includes("node_modules")) return "vendor";
         },
       },
     },
-    // Babylon is a 3D engine; its chunk (~1.46 MB raw / 342 kB gzip) will always
-    // exceed the 500 kB default. Raising the limit suppresses noise for this
-    // known-large, separately cacheable chunk — not to hide app-code bloat.
-    chunkSizeWarningLimit: 1500,
+    // Babylon is a 3D engine; its chunk (~2.1 MB raw / 500 kB gzip) will always
+    // exceed the 500 kB default. The size grew when the imported-dog path (task
+    // 078/079) added Babylon's glTF scene-loader subsystem; the glTF loader + PBR
+    // material stack themselves are split into a lazy `babylon-loaders` chunk (see
+    // manualChunks) and load only when the imported-dog flag is on. Raising the
+    // limit suppresses noise for this known-large, separately cacheable engine
+    // chunk — not to hide app-code bloat.
+    chunkSizeWarningLimit: 2500,
   },
 });
