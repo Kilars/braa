@@ -399,12 +399,14 @@ void (async () => {
   // Apply muted flag restored from save
   markAudio.setMuted(savedMuted);
 
-  // Marker-voice clip (task 116): load the bundled PLACEHOLDER off the tap path,
-  // fire-and-forget. Registered under the PERFECT tier so a perfect mark voices it;
-  // a failed/missing asset is swallowed and the mark stays on synth (loadClip is
-  // rejection-safe). The real Maren line drops into the same cue with no call-site
-  // change (the recording is the standing owner/likeness gate — tech-decisions §4).
-  void markAudio.loadClip('PERFECT', `${import.meta.env.BASE_URL}audio/bra-placeholder.wav`);
+  // Marker-voice clips (tasks 116/121): load the bundled spoken Norwegian "Bra!"
+  // off the tap path, fire-and-forget. PERFECT gets the brighter take, OK the softer
+  // one, so the better mark voices a warmer praise. A failed/missing asset is
+  // swallowed and that mark stays on synth (loadClip is rejection-safe). These are
+  // machine-generated TTS PLACEHOLDERS (no human likeness); the real Maren line drops
+  // into the same cues with no call-site change (owner/likeness gate — tech-decisions §4).
+  void markAudio.loadClip('PERFECT', `${import.meta.env.BASE_URL}audio/mark-bra-perfect.wav`);
+  void markAudio.loadClip('OK', `${import.meta.env.BASE_URL}audio/mark-bra-ok.wav`);
 
   // Ambient starts on first user gesture (autoplay policy). Only called once.
   let ambientStarted = false;

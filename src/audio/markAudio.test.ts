@@ -439,7 +439,7 @@ describe('MarkAudio — clip registry + loader', () => {
     // In the Node test env AudioContext is undefined, so the load cannot decode;
     // loadClip must reject/bail GRACEFULLY — no throw, nothing registered.
     const audio = new MarkAudio();
-    await expect(audio.loadClip('PERFECT', '/audio/bra-placeholder.wav')).resolves.toBeUndefined();
+    await expect(audio.loadClip('PERFECT', '/audio/mark-bra-perfect.wav')).resolves.toBeUndefined();
     expect(audio.hasClip('PERFECT')).toBe(false);
   });
 

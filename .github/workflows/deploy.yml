@@ -2,11 +2,14 @@ name: Deploy to GitHub Pages
 
 # Builds the PWA on the runner and publishes dist/ to GitHub Pages.
 #
-# Why CI-build (not a local `dist` push): the paid, no-redistribution Labrador
-# asset (public/models/dog.glb) is gitignored and never enters git history. The
-# runner checks out the repo *without* it, so the deployed site can never leak
-# the paid asset — and the app falls back to the procedural dog (renderConfig
-# .importedDog is false by default), so the site stays fully functional.
+# Dog asset: the licensed Labrador now ships PUBLICLY as the AES-GCM-packed
+# public/models/dog.pack (force-committed despite .gitignore; renderConfig
+# .importedDog is ON and scene.ts forces the licensed path). This is an
+# OWNER-AUTHORIZED personal-use deploy — the encryption is deterrence, not DRM
+# (key ships in the bundle), satisfying the "no open-format redistribution"
+# letter (tech-decisions §3d/§4b). Known debt: the paid asset is now in public
+# git history; the clean long-term path is a Capacitor native-only bundle.
+# The app still falls back to the procedural dog if the pack fails to load.
 
 on:
   push:

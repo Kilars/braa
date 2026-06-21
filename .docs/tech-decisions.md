@@ -603,6 +603,31 @@ gated recording:
 failure) + this code-level record. A human on-device listen of the placeholder is the one
 non-blocking follow-up; the **real Maren line remains the owner gate**. **specs.md untouched.**
 
+### 4b. Marker placeholder upgraded chime → spoken Norwegian "Bra!" (2026-06-21, task 121)
+
+The §4a chime placeholder was an abstract tone, not the actual word. The owner asked for
+"good sounds" and to **source real "Bra!" noises without blocking on a human listen**, so
+the placeholder is now a **spoken Norwegian "Bra!"** — `public/audio/mark-bra-perfect.wav`
+(PERFECT, brighter) and `mark-bra-ok.wav` (OK, softer/snappier), registered under those two
+cues at bootstrap. Pipeline (reproducible, `scripts/gen-marker-voice.sh`): **espeak-ng**
+(Norwegian Bokmål female voice) → an **ffmpeg** warming chain (trim silence, slight pitch
+lift, warmth/air EQ + vocal presence, gentle de-robotize via chorus + a tiny room,
+`loudnorm` to ≈−16 LUFS, fades).
+
+- **Why TTS, not a chime:** it reads as the real word "Bra!", which is the spec's marker
+  intent, while staying fully autonomous. espeak-ng was installed **without sudo** by
+  extracting the `.deb`s locally (`apt-get download` → `dpkg-deb -x`) — recorded so the next
+  iteration doesn't re-park this as "no TTS in the env" (cf. the verify-blockers rule).
+- **License / likeness:** machine-generated TTS output, **no human recording and no imitation
+  of an identifiable person** → no personality/likeness exposure (§4). Treated as
+  license-clean/public-domain; espeak-ng claims no copyright over generated audio. The
+  generator runs **dev-only**; CI just serves the committed WAVs.
+- **Still the owner gate:** the real **"sound like Maren"** marker line (§4) — these TTS takes
+  are an honest placeholder and drop out for it under the same cues with **no code change**.
+  The one non-blocking follow-up is an on-device listen to judge the robotic edge; the
+  pure-synth chime generator (`scripts/gen-voice-placeholder.mjs`) is kept as a no-TTS
+  fallback. **specs.md untouched.**
+
 ## 5. Persistence / Save
 
 Single-player, local progression (coins, XP/level, unlocks, kennel, idle
