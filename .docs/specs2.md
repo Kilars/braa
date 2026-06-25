@@ -142,97 +142,186 @@ Phase 1 is done **only** when, on a real phone-portrait viewport (e.g. 390×844)
 
 ---
 
-## Phase 2 — The learning loop (one dog, real progression)
+## Phase 2 — More tricks, same quality bar
 
-**Goal:** turn the single mark into a *round* you can finish.
+**Goal:** the player can **select and teach more tricks**, each rendered to the
+**exact same standard as the Phase-1 Sitt** — clean, distinct animation, legible
+apex, no bugs. Breadth of tricks, zero drop in polish.
 
-- **P2-1 — Learned bar.** *As a player, each well-timed BRA fills a "learned" bar
-  so I feel the dog learning.* PERFECT fills more than OK; the bar only ever
-  stalls, **never** empties — no fail state. (Training Sessions)
-- **P2-2 — Mastery + a reason to repeat.** *As a player, filling the bar to 100%
-  masters Sitt with a clear celebratory beat,* then I can practice it again.
-  (Mastery)
-- **P2-3 — Resumable round.** *As a player, I can leave and return with my
-  learned-bar progress intact* (introduces save — IndexedDB). (Round States)
-- **P2-4 — More starter tricks.** *As a player, I can teach **Ligg** and **Legg
-  deg**, each with its own clearly-distinct down pose* (not the same sit reused).
-  (D11, PO-Improvement-1)
-- **P2-5 — Pause/resume.** No timer forces play. (Round States)
+This phase also lands the supporting *round* mechanics the first extra trick needs
+to be meaningful (a learned bar to fill, mastery, resumable progress) — but the
+headline deliverable is **more good tricks**.
 
----
+### Stories
 
-## Phase 3 — Mistakes & restraint (the verb gets depth)
+- **P2-1 — Pick a trick.** *As a player, I can choose which trick to train from a
+  small, clear selector,* staying in the one-page, portrait, one-verb feel — the
+  selector is not a second gameplay verb.
+- **P2-2 — Each trick has its own clean, distinct animation.** *As a player, every
+  trick visibly performs the **specific** behavior with a clear apex* — never one
+  generic pose reused. Starter set: **Sitt**, **Ligg** (lie down), **Legg deg**
+  (settle), then expand (e.g. **Gi labb** [shake], **Rull** [roll over], **Snurr**
+  [spin]). The lie-down tricks must read as **down**, clearly different from sit.
+  (D6, D11, PO-Improvement-1)
+- **P2-3 — Same Phase-1 polish gate per trick.** *As a player, every new trick is
+  as bug-free and satisfying as Sitt* — no foot-sliding, clipping, snapping, or
+  T-pose; smooth loops; honest apex tell; the mark feels good. **Each trick passes
+  its own Visual Review** before it counts as done.
+- **P2-4 — Learned bar + mastery.** *As a player, well-timed BRAs fill a "learned"
+  bar; 100% masters the trick with a celebratory beat,* then it's re-practiceable.
+  PERFECT fills more than OK; the bar only ever stalls — **no fail state**.
+  (Training Sessions, Mastery)
+- **P2-5 — Resumable + pause.** *As a player, I can leave/pause and return with my
+  per-trick progress intact* (introduces IndexedDB save). (Round States)
 
-- **P3-1 — False mark vs. miss.** *As a player, tapping BRA when no window is open
-  is punished (small bar setback), while tapping during a genuine attempt is
-  forgiven,* so mashing loses and patience wins. (Mistakes, Tap tiers)
-- **P3-2 — Confuse debuff.** *As a player, a false mark briefly confuses the dog
-  (narrower window, more distractors, visible jitter) for ~3s,* refreshing rather
-  than stacking. (Mistakes, D7)
-- **P3-3 — Distractors.** *As a player, the dog sometimes offers the **wrong**
-  behavior I must NOT mark, visibly distinct from a real attempt.* (Core loop, D9)
-- **P3-4 — Mobile grace.** *As a player, taps right after the app resumes from
-  background are ignored,* so notifications never cause a false mark. (Mistakes)
-
----
-
-## Phase 4 — Economy & progression
-
-- **P4-1 — Coins + XP on mastery.** (Economy)
-- **P4-2 — Trainer levels unlock tiers; coins buy the item** (two-step model).
-  (Economy)
-- **P4-3 — Persistent coin + level readout** on the shell. (PO-Change/Improvement-5)
-- **P4-4 — Staged onboarding** reveals each system in turn, never all at once.
-  (Onboarding)
+> **Mistakes/confuse, distractors, mobile-grace** (the old "restraint" depth) ride
+> along here as the bar gains stakes, but are **secondary** to nailing more clean
+> tricks. Keep them light until the trick roster feels good.
 
 ---
 
-## Phase 5 — Collection: breeds & roster
+## Phase 3 — Dog breeds (races), each with its own tricks  *(needs further spec)*
 
-- **P5-1 — Persistent roster** of dogs housed in a kennel/select shell. (Roster)
-- **P5-2 — Multiple recognizable breeds**, each reading clearly as its real breed,
-  with personality stats driving difficulty levers. (Breeds, D2)
-- **P5-3 — Adopt panel** with coin price + locked state ("Reach Lv 3") + breed
-  thumbnail. (PO-Improvement-4)
-- **P5-4 — Showcased dog on select** — brightened/spotlit, not buried in shadow.
-  (PO-Improvement-2)
-- **P5-5 — Switch dogs anytime**; each dog's repertoire grows. (Roster)
+**Goal:** the player can **select different dog breeds**, each a recognizable real
+breed with its **own set of tricks / signature behaviors** and its own feel.
+
+> **⚠️ This phase is deliberately under-specified and must be detailed before
+> build.** The open design calls are listed below — resolve them (with the owner
+> where flagged) before slicing work.
+
+### Stories (provisional)
+
+- **P3-1 — Choose a breed.** *As a player, I can pick which dog I'm training,* and
+  it reads **clearly as that real breed** at phone size — silhouette, proportions,
+  coat, color. (D2)
+- **P3-2 — Breeds bring different tricks.** *As a player, different breeds open
+  different / signature tricks,* so collecting breeds is also collecting moves.
+- **P3-3 — Breeds feel different to train.** *As a player, each breed's personality
+  changes how it trains* (learn speed, distractibility, window stability, energy).
+  (Breeds)
+- **P3-4 — Persistent, showcased roster.** *As a player, my dogs persist across
+  sessions and are shown off** (bright/spotlit on select, not buried in shadow).
+  (D3, PO-Improvement-2)
+
+### Open questions to resolve (own this before building)
+
+- **Which breeds ship first?** The licensed pack covers **Labrador, Border Collie,
+  French Bulldog, Husky** (no Poodle). Proposed starter set = those four.
+- **Universal vs. signature tricks.** Which tricks does *every* breed know vs. which
+  are breed-exclusive? Proposed: a shared core (Sitt/Ligg/Legg deg) + 1–2 signature
+  tricks per breed.
+- **How are breeds acquired?** Free select of all, or unlocked/adopted via
+  progression? This is the first point that **may require an economy** (coins /
+  level gate). Decide whether Phase 3 pulls economy forward or ships with all
+  breeds free.
+- **Per-breed animation cost.** Each breed × each of its tricks needs a clean clip
+  at Phase-1 quality. Confirm the rig/clip coverage per breed before committing the
+  trick list (the pack ships shared clips, but signature tricks may not exist).
 
 ---
 
-## Phase 6 — Kennel (idle / upgrade layer)
+## Phase 4 — Difficulty
 
-- **P6-1 — Buy facilities/equipment** that boost active payouts and add a small,
-  capped idle coin trickle (never XP). (Kennel)
-- **P6-2 — Upgrades state their concrete effect** (e.g. "+10% coins", "wider mark
-  window"). (PO-Improvement-3)
-- **P6-3 — Backdrop visibly upgrades** with kennel tier. (Kennel)
+**Goal:** the player can **change difficulty**, trading challenge for reward.
 
----
-
-## Phase 7 — Marker phrases & difficulty modes
-
-- **P7-1 — Collectible Norwegian marker phrases** (flink, dyktig, super…), voice
-  variety for the one tap; base "bra" always default, no cooldown. (Phrases)
-- **P7-2 — Loadout selection** (chip cycle or swipe the BRA marker), never an
-  extra in-round button; stronger phrases carry a trade-off + cooldown. (Phrases)
-- **P7-3 — Global difficulty** (Normal / Hard / Expert): tighter windows, more
-  distractors, harsher penalties, fainter/faster tell, higher rewards. (Difficulty
-  Modes)
-- **P7-4 — Engagement meter & disengagement** — off-task → sass → walk-off + call
-  back; disengaged state visually distinct from a distractor and fully in frame.
-  (Wrong-behavior beats, PO-Bugfix-3, PO-Change-2)
+- **P4-1 — Global difficulty setting.** *As a player, I can set Normal / Hard /
+  Expert,* applied to all training. (Difficulty Modes)
+- **P4-2 — Difficulty changes the read.** Higher = **tighter window, fainter &
+  faster apex tell, more distractors, harsher false-mark penalty.** (Difficulty)
+- **P4-3 — Pain pays.** Higher difficulty **raises rewards** so each mode is the
+  rational choice at a different skill level. (Difficulty)
+- **P4-4 — Composes with breed.** Effective difficulty = global mode × breed
+  intrinsic. (Breeds)
 
 ---
 
-## Phase 8 — Later depth (only once the core is solid)
+## Phase 5 — Better marker words (collectible "bra" phrases)
 
-- **P8-1 — Behavior chains / combos** (sit → stay → heel) for multipliers.
-- **P8-2 — Untraining** — mark the *absence* of a bad habit (a new verb, same tap).
-  (D10)
-- **P8-3 — Bigger catalogs** — more breeds, tricks, phrases.
-- **P8-4 — Higher-fidelity art at catalog scale** — the real Maren voice, bespoke
-  per-breed signature animations, the licensed-model swap on the default build.
+**Goal:** the player **unlocks alternative, more-effective Norwegian marker words**
+— *dyktig, flink, super, kjempebra* — beyond the base **bra**.
+
+- **P5-1 — Unlock new phrases.** *As a player, I progressively unlock new marker
+  words,* each with its own voiced line in the Maren delivery. (Phrases, Audio)
+- **P5-2 — Stronger words, real trade-off.** *As a player, better words are more
+  effective (wider window / bonus) but carry a **cooldown / downside**,* so I mix
+  them with base "bra" instead of spamming one. Base "bra" is always the default,
+  no cooldown. (Phrases)
+- **P5-3 — They pop up on screen.** *As a player, the marker word visibly **pops /
+  floats on screen** on a successful mark* (big, juicy, on-beat) — reinforcing the
+  praise moment and showing which word fired. *(Visual treatment open — a floating
+  word burst from the BRA button is the working idea.)*
+- **P5-4 — Loadout without a second verb.** *As a player, I load/swap the active
+  word outside the tap* (chip cycle or swipe the BRA marker) — the round stays one
+  tap. (Phrases)
+
+---
+
+## Phase 6 — Shaping (steps) + Play mode  *(the learning-technique phase — needs further spec)*
+
+**Goal:** teach tricks the way **real marker training** does — by **shaping in
+steps** (successive approximation) — and add a **chaotic free Play mode** (toys,
+praise, petting) that **bonds the dog and significantly boosts learning**. This is
+the phase that turns "tap the apex" into "train a dog."
+
+### 6a — Shaping / steps
+
+- **P6-1 — Tricks taught in steps.** *As a player, a complex trick is broken into
+  **markable sub-steps** I master in order,* mirroring real shaping. Example —
+  **Legg deg**: step 1 = **step onto the bed/mat** (not lying down yet), step 2 =
+  lower the front, step 3 = full settle. Each step is its own behavior with its own
+  apex and learned bar; mastering a step unlocks the next.
+- **P6-2 — Scenarios / props.** *As a player, steps can introduce a **prop /
+  scenario*** the behavior references — e.g. a **dog bed/mat** for *Legg deg*, a
+  cone, a target. The scene gains the object for that trick.
+
+#### Open questions to resolve (own before building)
+
+- **Do the intermittent steps need their own animations?** Almost certainly **yes**
+  — each step is a distinct pose/motion (e.g. *stepping onto a bed* is locomotion,
+  not the final down). Movement must be **clean** (no foot-slide/clip); confirm the
+  rig has — or can get — clips for each step, or design steps around clips we have.
+  This is the main cost/risk of the phase.
+- **All tricks, or only some?** Proposed: **only some.** Positional/compound tricks
+  (Legg deg, Rull, Dau) earn real steps; atomic tricks (Sitt, Snurr) stay
+  single-step. Shaping should feel earned, not bolted onto everything. **Owner call.**
+- **How granular?** 2–3 steps max per trick to start, so it teaches the idea
+  without dragging. Tunable.
+
+### 6b — Play mode (engagement → faster learning)
+
+- **P6-3 — Go chaotic with the dog.** *As a player, I can enter a free **Play mode**
+  and interact loosely* — **throw toys, pet, praise ("flink gutt!"), tug, pet
+  "aggressively"** — many tappable things at once, deliberately the *opposite* of
+  the precise single-tap training. It should feel joyful and a little unhinged.
+- **P6-4 — Play builds bond, bond boosts learning.** *As a player, playing raises
+  the dog's **engagement/bond**, which **significantly speeds up** subsequent
+  training* (faster learned-bar fill / better mood). Play is the carrot that makes
+  the disciplined training pay off — and models the real "build the relationship
+  first" technique.
+
+#### Open questions to resolve
+
+- **How does Play feed learning?** A persistent bond/engagement stat that
+  multiplies learn-speed? A temporary buff after a play session? Proposed: a
+  **bond meter** that decays slowly and grants a learn-speed multiplier — play to
+  top it up. **Needs tuning + owner steer.**
+- **Animation scope.** Play multiplies the clip count (fetch, tug, roll, get-pet,
+  zoomies). Confirm coverage; reuse existing pack clips where possible.
+
+---
+
+## Beyond Phase 6 (parked — preserved from the full vision, not yet scheduled)
+
+These were in the original spec and remain the long-term target; slot them once the
+six phases above feel great:
+
+- **Economy depth & kennel idle/upgrade layer** (coins/XP/levels as the substrate
+  for unlocks, a capped idle trickle, backdrop upgrades). *Note: Phases 3 & 5
+  ("unlock"/"adopt") may pull a* light *economy forward — decide per phase.*
+- **Behavior chains / combos** (sit → stay → heel) for multipliers.
+- **Untraining** — mark the *absence* of a bad habit (a new verb, same tap). (D10)
+- **The real Maren marker voice** (owner/likeness-gated drop-in) and **bespoke
+  per-breed signature animation at catalog scale.**
 
 ---
 
