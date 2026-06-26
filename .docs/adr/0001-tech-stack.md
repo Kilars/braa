@@ -38,8 +38,7 @@ juice are Godot-native.
   playable offline after first load** (e.g. on a plane). The self-contained WASM
   export + local `user://` saves make this largely inherent; the one open piece is
   a **PWA precache strategy** that caches the whole WASM bundle + assets on first
-  load (heavier payload vs browser cache limits). Folded here for now; promote to
-  its own ADR only if a real trade-off emerges.
+  load (heavier payload vs browser cache limits). **Now its own record: ADR-0004.**
 - **Follow-ups:** ADR-0002 — 3D dog model & asset pipeline (glTF/FBX import into
   Godot; the licensed Labrador survives the engine change). A later ADR may fix the
   scripting language (GDScript vs C#) — GDScript is the working assumption.
