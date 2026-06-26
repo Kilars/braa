@@ -21,3 +21,4 @@ into ADRs; consult it for historical 3D-model pipeline detail until superseded.
 | [0002](0002-3d-model-pipeline.md) | 3D dog model & asset pipeline | Accepted |
 | [0003](0003-scripting-language.md) | Scripting language (GDScript) | Accepted |
 | [0004](0004-offline-capability.md) | Offline capability (PWA precache) | Accepted |
+| [0005](0005-repo-project-structure.md) | Repo & project structure | Accepted |
