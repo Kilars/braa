@@ -34,6 +34,12 @@ juice are Godot-native.
   (Chrome-targeted). Heavier WASM first-load than a JS web app. Implementation may
   live in a **separate repo**; this decision is engine-level, not a migration plan
   for the current Babylon code.
+- **Constraint — must satisfy offline (spec X-7):** the build must be **fully
+  playable offline after first load** (e.g. on a plane). The self-contained WASM
+  export + local `user://` saves make this largely inherent; the one open piece is
+  a **PWA precache strategy** that caches the whole WASM bundle + assets on first
+  load (heavier payload vs browser cache limits). Folded here for now; promote to
+  its own ADR only if a real trade-off emerges.
 - **Follow-ups:** ADR-0002 — 3D dog model & asset pipeline (glTF/FBX import into
   Godot; the licensed Labrador survives the engine change). A later ADR may fix the
   scripting language (GDScript vs C#) — GDScript is the working assumption.

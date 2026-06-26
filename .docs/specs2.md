@@ -587,9 +587,16 @@ Long-term target; slot once the phases above feel great.
   every piece of game logic gated by TDD, so that "it compiles / tests pass" is
   never mistaken for done.* (CLAUDE.md)
 
-- **X-7 — Client-only, offline-friendly.**
-  *As a player, I want my progress saved locally with no account or server, so
-  that the game just works offline.* (No backend; IndexedDB save.)
+- **X-7 — Fully offline-capable.**
+  *As a player, I want the whole game to run with no network after the first load
+  — e.g. on a plane — with progress saved locally and no account or server, so
+  that it just works anywhere.*
+  Acceptance:
+  - After first load, every phase is fully playable with the network off
+    (airplane mode): no request blocks gameplay.
+  - All assets (engine/WASM, model, audio) are cached on first load; saves are
+    local (Godot `user://`, IndexedDB-backed on web). No backend.
+  - *How* this is achieved rides on the engine/PWA decision (ADR-0001).
 
 ---
 
