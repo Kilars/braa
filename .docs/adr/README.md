@@ -18,4 +18,4 @@ into ADRs; consult it for historical 3D-model pipeline detail until superseded.
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](0001-tech-stack.md) | Tech stack & animation strategy | Accepted |
-| 0002 | 3D dog model & asset pipeline | _next_ |
+| [0002](0002-3d-model-pipeline.md) | 3D dog model & asset pipeline | Accepted |

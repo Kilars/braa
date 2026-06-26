@@ -35,6 +35,11 @@ breed *available*, coins *buy* it. Personality drives the difficulty levers
 | `french-bulldog` | French Bulldog | planned | Slow but steady (wide stable windows, low energy) | TBD | TBD | TBD | P3-2 |
 | `husky` | Husky | planned | High energy, chaotic (jittery windows, rewarding) | TBD | TBD | TBD | P3-2 |
 
+> **Asset sourcing (ADR-0002):** only the **Labrador** model is owned today. Each
+> `planned` breed needs its model **purchased from the same *Dogs Big Pack*** (shared
+> rig + clips → no retargeting) before it can go `live`. Per-breed purchase is
+> owner-approved spend.
+
 > **Open (P3-D1 / P3-D4):** confirm the level/cost values and confirm each breed
 > has clean clips for every trick it's assigned before locking its trick list.
 
