@@ -5,6 +5,9 @@
 > sliced so each phase ships something coherent and playable. Technical decisions
 > (engine, stack, asset pipeline, tuning constants) still live in
 > [CLAUDE.md](../.claude/CLAUDE.md) and [tech-decisions.md](tech-decisions.md).
+> The concrete **content** these stories operate on — which breeds, tricks, and
+> scenarios exist — lives in [content-catalog.md](content-catalog.md); stories
+> here reference its IDs.
 >
 > **Format:** every item is a user story —
 > *As a [role], I want [capability], so that [benefit]* — with acceptance
