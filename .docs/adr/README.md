@@ -19,3 +19,4 @@ into ADRs; consult it for historical 3D-model pipeline detail until superseded.
 |-----|-------|--------|
 | [0001](0001-tech-stack.md) | Tech stack & animation strategy | Accepted |
 | [0002](0002-3d-model-pipeline.md) | 3D dog model & asset pipeline | Accepted |
+| [0003](0003-scripting-language.md) | Scripting language (GDScript) | Accepted |
