@@ -1,8 +1,13 @@
 # ADR-0002: 3D dog model & asset pipeline
 
-- **Status:** Accepted
+- **Status:** Accepted (web-licensing clause amended by ADR-0006)
 - **Date:** 2026-06-26
 - **Deciders:** Lars (owner), Claude
+
+> **Amendment (ADR-0006):** the "no AES encryption" decision below assumed a
+> compiled-app distribution. ADR-0005 chose **public GitHub Pages**, which serves
+> the `.pck` fetchably — so the licensed web build **is now encrypted** (option C).
+> The CC0 build remains unencrypted. See ADR-0006.
 
 ## Context
 

@@ -22,3 +22,4 @@ into ADRs; consult it for historical 3D-model pipeline detail until superseded.
 | [0003](0003-scripting-language.md) | Scripting language (GDScript) | Accepted |
 | [0004](0004-offline-capability.md) | Offline capability (PWA precache) | Accepted |
 | [0005](0005-repo-project-structure.md) | Repo & project structure | Accepted |
+| [0006](0006-licensed-asset-encryption.md) | Licensed asset encryption (public web) | Accepted |

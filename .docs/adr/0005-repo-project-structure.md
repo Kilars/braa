@@ -26,11 +26,10 @@ that a separate repo is likely.
     Our single-threaded choice is already compatible — Pages reinforces it.
   - **Base path:** a project Pages site serves at `user.github.io/<repo>/`, so the
     export must use the matching base/relative paths.
-- **⚠️ Licensing tension with ADR-0002 (must reconcile — see Consequences).** A
-  public repo + public Pages means the licensed Labrador is publicly fetchable in
-  the deployed build, which is beyond ADR-0002's "compiled-app bar." Default taken
-  here: **the public Pages build ships only the CC0 placeholder**; the licensed
-  Labrador is reserved for a license-safe channel. Owner to confirm (escalated).
+- **Licensing tension with ADR-0002 — RESOLVED by ADR-0006 (option C).** A public
+  repo + public Pages makes an embedded licensed model publicly fetchable. Owner
+  chose to **encrypt the licensed `.pck`** (custom export templates) and keep the CC0
+  build unencrypted. See ADR-0006.
 - **Godot project layout** (conventional):
   ```
   project.godot          # at repo root
@@ -54,19 +53,8 @@ that a separate repo is likely.
   assets are tracked.
 - **Cost:** git history of the design discussion stays in `braa` (link it from the
   new repo's README); a one-time docs migration.
-- **⚠️ Open licensing fork (escalated to owner) — conflicts with ADR-0002's "ship
-  the licensed Labrador":** a public Pages deployment serves the build's `.pck`
-  fetchably, so any embedded licensed model is publicly extractable (worse than an
-  app-store binary). Options:
-  - **(A) CC0 on public Pages** *(default here)* — licensed Labrador only via a
-    license-safe build later (native, or a private/encrypted build). Safe; the
-    public game looks less polished than the Labrador.
-  - **(B) Licensed on public Pages anyway** — accept the deterrence-not-DRM
-    exposure as the owner did before (riskier on an open website than in a binary).
-  - **(C) Encrypt the `.pck`** for the licensed build — raises the bar; the key
-    still ships in the client, so still not true DRM.
-  Resolve before any licensed-model web deploy; **ADR-0002 may need superseding** to
-  match whichever is chosen.
+- **Licensing fork — RESOLVED (ADR-0006, option C):** licensed `.pck` is encrypted
+  for the public Pages build; CC0 build stays unencrypted. Amends ADR-0002.
 - **Follow-up:** create the repo + scaffold `project.godot`, the folder skeleton, a
   `.gitignore`, the Web export preset, and a **GitHub Actions → Pages** deploy
   workflow; copy docs over and add a back-link to the `braa` design history.
