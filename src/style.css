@@ -1,0 +1,262 @@
+:root {
+  --sky-top: rgb(82, 140, 224);
+  --sky-horizon: rgb(194, 227, 250);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky-horizon);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app,
+.app-shell {
+  position: fixed;
+  inset: 0;
+}
+
+.scene-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: linear-gradient(to bottom, var(--sky-top), var(--sky-horizon));
+  touch-action: none;
+}
+
+.ui-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(env(safe-area-inset-top), 24px) 16px
+    max(env(safe-area-inset-bottom), 32px);
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* The chooser and the verb, anchored together at the bottom of the page and
+   stacked. The generous gap keeps the trick chips clear of the tier readout and
+   the apex ring's glow (which overflows ~26px above the button) — the chooser is
+   never part of the timing read (X-2). */
+.bottom-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+/* The pick-a-trick row (P2-1): a small, calm chip row that reads as a chooser,
+   not a second BRA. Wraps centred so it scales to a few more tricks (~3–6)
+   without crowding the page; each chip stays a thumb-friendly hit target. */
+.trick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.trick-chip {
+  pointer-events: auto;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 9999px;
+  /* Inactive: a translucent dark pill — clearly secondary to the orange BRA so
+     it never competes for the gameplay tap, but legible over the bright field. */
+  background: rgba(21, 16, 10, 0.32);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 80ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.trick-chip:active {
+  transform: translateY(2px);
+}
+
+/* Active: a solid white pill with dark text — unmistakably "this is the trick
+   I'm training", and a different colour language from the BRA so the two never
+   read as the same control. */
+.trick-chip.is-active {
+  background: #fff;
+  border-color: #fff;
+  color: #15100a;
+  text-shadow: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+/* Match the marker's focus language: a dark ring at an offset, legible over both
+   the chip and the green field (the Phase-1 close-out :focus-visible pattern). */
+.trick-chip:focus-visible {
+  outline: 4px solid #15100a;
+  outline-offset: 3px;
+}
+
+/* The verb and its tap feedback, anchored together at the bottom of the page.
+   The gap clears the apex ring (which overflows ~26px above the button) so the
+   tier readout never sits under the ring's glow. */
+.marker-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 44px;
+}
+
+.tier-readout {
+  min-height: 2.5rem;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  /* A crisp dark outline built from four 1-px offset shadows plus a soft drop —
+     this keeps the bright tier colour legible over BOTH the pale sky gradient
+     and the apex ring's glow. A single soft blur washed the pale words out over
+     the bloom: PERFECT read faint and OK/MISS vanished (Visual-Review blocker,
+     P1-7). Layered text-shadow renders reliably here (the title proves it),
+     where -webkit-text-stroke did not. */
+  text-shadow: -1.5px -1.5px 0 #15100a, 1.5px -1.5px 0 #15100a,
+    -1.5px 1.5px 0 #15100a, 1.5px 1.5px 0 #15100a, 0 0 3px #15100a,
+    0 3px 12px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(6px) scale(0.9);
+}
+
+.tier-readout.show {
+  animation: tier-pop 700ms ease both;
+}
+
+/* Vivid, well-separated tier fills so each word reads as itself at a glance:
+   a warm gold celebration for PERFECT, a clear sky-blue for OK, and a plain
+   coral for MISS — bright enough to be legible, but no sparkle/celebration so
+   a miss never looks like a reward (P1-5). All sit over the dark stroke above. */
+.tier-readout[data-tier="PERFECT"] {
+  color: #ffd23f;
+}
+.tier-readout[data-tier="OK"] {
+  /* A bright, high-luminance cyan rather than a mid sky-blue: a mid blue sits
+     too close in value to the green field and reads recessed over the ring glow
+     (Visual-Review). The light fill pops off the dark outline on any background
+     while staying clearly cool — a notch below the gold PERFECT. */
+  color: #bfe8ff;
+}
+.tier-readout[data-tier="MISS"] {
+  color: #ff8f7e;
+}
+
+@keyframes tier-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(1);
+  }
+}
+
+.marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The honest apex tell: a soft ring that brightens/expands as the sit reaches
+   its scoring peak, driven per frame by --apex (0..1) from the render loop. */
+.apex-ring {
+  --apex: 0;
+  position: absolute;
+  inset: -26px;
+  border-radius: 9999px;
+  pointer-events: none;
+  border: 8px solid rgba(255, 240, 150, 1);
+  /* Ramp opacity faster than proximity so the cue is unmistakable near the
+     peak (and still legible the instant after), then clamp at full. */
+  opacity: min(1, calc(var(--apex) * 1.6));
+  transform: scale(calc(1 + var(--apex) * 0.2));
+  box-shadow: 0 0 calc(var(--apex) * 52px) rgba(255, 214, 90, 0.95),
+    inset 0 0 calc(var(--apex) * 18px) rgba(255, 244, 176, 0.8);
+}
+
+.bra-button {
+  pointer-events: auto;
+  min-width: 220px;
+  min-height: 96px;
+  border: none;
+  border-radius: 9999px;
+  background: #ff8a3d;
+  color: #fff;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 0 #d96a1f, 0 14px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.bra-button:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #d96a1f, 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Keyboard focus needs a visible ring: `border: none` + the pill radius make the
+   UA default outline read tight and faint over the orange fill. A dark ring at an
+   offset matches the tier-readout/title outline language and stays legible over
+   both the button and the green field, without touching pointer/tap visuals. */
+.bra-button:focus-visible {
+  outline: 4px solid #15100a;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bra-button,
+  .trick-chip {
+    transition: none;
+  }
+
+  /* Dampen, never remove: the ring still brightens at the apex, it just
+     doesn't expand; the tier still appears, it just doesn't bounce (X-5). */
+  .apex-ring {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .tier-readout.show {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

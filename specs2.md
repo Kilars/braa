@@ -605,3 +605,58 @@ Long-term target; slot once the phases above feel great.
 No landscape/desktop builds; no multiplayer/social; no monetization/IAP; the
 kennel is **not** a standalone auto-training game (active timing stays the only
 skill engine).
+
+---
+
+## Product Owner Review
+
+> Owner play-test notes from driving the **real running game** on a phone-portrait
+> viewport (390×844). Each pass replays the app, prunes what is now fixed, and
+> lists concrete, buildable directives. The build loop turns these into tasks; this
+> section is the only thing the PO pass touches.
+
+### PO Review — 2026-06-27
+
+Replayed the full live Phase-1 loop on a 390×844 portrait viewport — driving the
+real BRA button through the real scoring path, and freezing the exact apex-offset
+poses so "what it looks like" can be compared against "what it scores." The core is
+**close**: scoring is honest end-to-end (PERFECT/OK/MISS all land correctly through
+the real button; the window edges are inclusive at apex±200 ms → OK; a dead tap in
+IDLE scores NONE and does nothing; the apex tell is dark on empty air); the dog
+reads clearly as a Labrador, stays centered, and is anchored by a contact shadow on
+a clean bright backdrop.
+
+**Verified fixed this pass (pruned):**
+- *The understated mark reaction* — OK now gives a clear chin/chest lift and PERFECT
+  a big head-up celebration, distinctly punchier than OK, paws kept on the shadow.
+  Reads as joy on the pose alone. (was I1)
+- *The lumpy mid-build silhouette* — the build now reads as one continuous fold
+  (standing → hips drop → seat) with no rearward bulge through sitAmount 0.3–0.65.
+  (was I2)
+- *The `favicon.ico` 404* — clean load: zero console errors, no failed requests.
+  (was B1)
+
+*Scope note: audio still can't be heard in the headless harness, so the "Bra!"
+voice/SFX is judged only as wired + correctly gated (nothing fires on MISS / dead
+tap), not on how it sounds — worth an on-device listen before final sign-off.*
+
+**Changes**
+
+- **C1 — A residual "looks-seated-but-MISS" tail at the start of stand-up.**
+  *What I saw:* the old flat-hold dead zone is gone — the 200 ms hold now ends
+  exactly as the scoring window closes (good). But RELEASE eases *in* slowly, so the
+  dog stays visually fully seated for ~130 ms after the window closes. Frozen at
+  apex+250 ms the dog is 98.5 % seated and at apex+300 ms it is 94.5 % seated —
+  both pixel-indistinguishable from the full apex — yet both score **MISS** with the
+  apex ring already dark (verified live through the real scoring path). The stand-up
+  only becomes visible around apex+350 ms.
+  *Why it falls short:* same P1-3 intent as before — the player should be able to
+  "mark off the dog itself, not just the UI." For ~130 ms past the close the pose
+  still says "fully seated" while a tap scores an unfair MISS; only a player watching
+  the ring is safe, which inverts the design (just over a smaller window than before).
+  *What good looks like:* make the dog *visibly* leave the seat the instant scoring
+  closes — give RELEASE an ease-*out* start (immediate upward lift off the apex)
+  instead of the current slow ease-in, or add a small (~80 ms) grace so the window
+  closes where the pose stops reading as fully seated (~apex+330 ms). Keep PERFECT
+  centered on the apex. The test: a tap on any frame where the dog still looks fully
+  seated must never score MISS.

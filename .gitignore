@@ -8,3 +8,7 @@ dist/
 
 # headless loop runtime (process/loop.sh)
 loop.err
+
+# test + review artifacts (regenerable)
+test-results/
+.screenshots/
