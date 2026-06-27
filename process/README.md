@@ -1,8 +1,10 @@
 # Process — autonomous build loop
 
-These are the two prompts that drove *Bra!*'s headless "ralph" build loop. They are
-kept here for **provenance** — they document *how* the game was actually built — not as
-live tooling for this docs repo.
+These are the two prompts and the runner for *Bra!*'s headless "ralph" build loop.
+As of the **v2** rebuild they are **live tooling for this repo** — the loop builds the
+v2 game here, from scratch, against [`specs2.md`](../specs2.md) (exposed to the toolchain
+as `.docs/specs.md`). (They originally drove the deprecated game in the sibling `bra`
+tree; that history is preserved on the `deprecated-game` branch.)
 
 - [mother_prompt.md](mother_prompt.md) — one **builder** iteration: read the
   `.task-board/`, replenish via `scan-project` when empty, run `start-working`, then
@@ -22,13 +24,29 @@ live tooling for this docs repo.
 An external runner alternated the two passes (build → review → build …), each in a fresh
 context with disk as the only shared memory.
 
-## These target the deprecated game, not this repo
+## Running it (v2, in this repo)
 
-Every path in the prompts and in `loop.sh` — `.task-board/`, `.docs/specs.md`,
-`scripts/shoot.mjs`, `bun run dev`, the `mother_prompt.md` / `father_prompt.md` the runner
-`cat`s from the repo root — refers to the original game repo, **not** this docs-only repo.
-`loop.sh` will not do anything useful here: it `cd`s to its parent's parent and expects the
-game tree (task board, scripts, the v1 `specs.md` these prompts read and write). That tree
-lives on the
-[`deprecated-game`](https://github.com/Kilars/braa/tree/deprecated-game) branch and in
-the local `bra` working copy. Run these against that tree, not against the files here.
+`loop.sh` `cd`s to the repo root (its parent's parent) and drives the build from there:
+
+```bash
+cd /home/larsski/Code/braa && ./process/loop.sh        # unbounded; stops only on the
+                                                        # budget cap or a hard failure
+```
+
+What's wired for v2:
+
+- **Spec** — `.docs/specs.md` is a symlink to [`specs2.md`](../specs2.md) (phased user
+  stories). Everything that reads `.docs/specs.md` (scan, the prompts, `spec_hash`) sees
+  the v2 spec; edit `specs2.md` as the source of truth.
+- **Skills** — `scan-project` / `start-working` / `task-board` / `tdd` live in
+  `.claude/skills/`. `scan-project` is tuned for a **from-scratch, phased** build: it
+  scaffolds a runnable bun skeleton first, then works the **current phase** (Phase 1),
+  refusing to start later phases until the current one is complete.
+- **Father (PO) is deferred** — the play-test pass needs a runnable app, so `loop.sh`
+  skips it until `package.json` exposes a `dev` script (see `app_runnable`).
+- **No auto-stop** — `MAX_ITER=0` (the default) runs until `TOTAL_BUDGET_USD` or a hard
+  failure. The old "stop when the game matches the spec" `break` is now just a log;
+  re-add it in the father block if you want that behaviour back.
+
+> ⚠️ The loop runs `claude` with `--dangerously-skip-permissions`. Only run it in a
+> sandbox / throwaway environment.

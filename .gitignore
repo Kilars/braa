@@ -1,2 +1,10 @@
 .DS_Store
 *.log
+
+# bun / build output (v2 build tree)
+node_modules/
+dist/
+*.local
+
+# headless loop runtime (process/loop.sh)
+loop.err

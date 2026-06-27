@@ -6,8 +6,8 @@ mobile-only dog-training timing game.
 - [specs2.md](specs2.md) — functional spec v2 (user stories, phased).
 - [tech-decisions.md](tech-decisions.md) — running log of technical decisions.
 - [adr/](adr/README.md) — Architecture Decision Records (0001–0006).
-- [process/](process/README.md) — the mother/father prompts that drove the
-  deprecated game's autonomous build loop (provenance).
+- [process/](process/README.md) — the mother/father prompts + runner for the v2
+  autonomous build loop (builds the game here from `specs2.md`).
 
 ## Provenance
 

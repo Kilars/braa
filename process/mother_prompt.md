@@ -15,6 +15,10 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
    `backlog → in-progress → done` as you go.
 4. **Gate** — before exit, run the full verify gate and confirm green:
    `bun run typecheck` (0 errors) · `bun run test` · `bun run build` (no warnings) · `bun run e2e`.
+   **If the project isn't scaffolded yet** (no `package.json`, or these scripts don't
+   exist), the current task *is* scaffolding: its definition of done is a runnable bun
+   skeleton that makes these four gate commands exist and pass green. From the next
+   iteration on, every iteration must end on a green gate.
 5. **Exit** — leave `.task-board/` consistent on disk. Stop.
 
 ## Rules

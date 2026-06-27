@@ -26,7 +26,7 @@ cd "$SCRIPT_DIR/.." || exit 1
 MOTHER_PROMPT="$SCRIPT_DIR/mother_prompt.md"
 FATHER_PROMPT="$SCRIPT_DIR/father_prompt.md"
 MODEL="${MODEL:-opus}"   # driver model; override: MODEL=sonnet scripts/loop.sh
-MAX_ITER="${1:-20}"
+MAX_ITER="${1:-0}"       # 0 = run until the budget cap or a hard failure (no auto-stop on "done")
 FATHER_EVERY="${FATHER_EVERY:-5}"  # run the PO review at least this often
 MAX_TURNS=600          # per-invocation turn cap (scan + implement + gate)
 SOFT_CTX_WARN=150000   # warn if any single turn's prompt exceeds this (context heavy)
@@ -45,6 +45,9 @@ ERRLOG="loop.err"      # claude stderr (API errors etc.) — the stdout JSON alo
 backlog_count() { find .task-board/backlog    -maxdepth 1 -name '*.md' 2>/dev/null | wc -l; }
 inprog_count()  { find .task-board/in-progress -maxdepth 1 -name '*.md' 2>/dev/null | wc -l; }
 spec_hash()     { sha1sum .docs/specs.md 2>/dev/null | cut -d' ' -f1; }
+# v2 is built from scratch: until there's a runnable app the father (PO play-test) has
+# nothing to run, so it's deferred. "Runnable" = a package.json that exposes a dev server.
+app_runnable()  { [[ -f package.json ]] && grep -q '"dev"' package.json 2>/dev/null; }
 
 # Distinguish a *temporarily unavailable session* (subscription usage-limit reset,
 # API overload / 429 / 5xx, OAuth/credential expiry) from a real failure. The first
@@ -173,11 +176,13 @@ report_run() {  # $1 = label
 # True (rc 0) once cumulative spend has reached the whole-run cap.
 over_budget() { LC_ALL=C awk -v s="$TOTAL_SPENT" -v c="$TOTAL_BUDGET_USD" 'BEGIN{exit !(s+0 >= c+0)}'; }
 
-echo "=== loop start $(date -u) — max $MAX_ITER iters, PO review every $FATHER_EVERY ===" | tee -a "$LOG"
+if (( MAX_ITER == 0 )); then iter_desc="unbounded (until \$$TOTAL_BUDGET_USD budget or failure)"; else iter_desc="max $MAX_ITER iters"; fi
+echo "=== loop start $(date -u) — $iter_desc, PO review every $FATHER_EVERY (deferred until app runnable) ===" | tee -a "$LOG"
 
 since_father=0
-for ((i=1; i<=MAX_ITER; i++)); do
-  echo "=== iter $i/$MAX_ITER $(date -u) ===" | tee -a "$LOG"
+for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
+  if (( MAX_ITER == 0 )); then iter_label="$i"; else iter_label="$i/$MAX_ITER"; fi
+  echo "=== iter $iter_label $(date -u) ===" | tee -a "$LOG"
 
   # Snapshot the board BEFORE the iteration. Only an iteration that *starts*
   # empty runs scan-project (per mother_prompt.md step 2); we use this to tell
@@ -207,7 +212,12 @@ for ((i=1; i<=MAX_ITER; i++)); do
   no_work_created=$(( start_empty == 1 && board_empty == 1 ? 1 : 0 ))
   (( since_father++ ))
 
-  if (( no_work_created == 1 || since_father >= FATHER_EVERY )); then
+  if ! app_runnable; then
+    # No runnable app yet (Phase 1 MVP not playable) — the PO has nothing to play-test.
+    # Skip the father entirely and keep the build loop turning toward a runnable skeleton.
+    (( no_work_created == 1 )) && echo "scan created no new work this pass; PO is deferred (no runnable app) — continuing build loop." | tee -a "$LOG"
+    since_father=0
+  elif (( no_work_created == 1 || since_father >= FATHER_EVERY )); then
     if (( no_work_created == 1 )); then why="no new work created"; else why="every $FATHER_EVERY iters"; fi
     echo "--- father (PO) review: $why ---" | tee -a "$LOG"
     before=$(spec_hash)
@@ -223,13 +233,13 @@ for ((i=1; i<=MAX_ITER; i++)); do
       break
     fi
 
-    # The ONLY genuine stop: the dev side had no work AND the PO, after actually
-    # play-testing, left specs byte-for-byte unchanged (nothing left to improve).
+    # This loop is set to NOT auto-stop on "done" (see MAX_ITER=0). Previously the loop
+    # stopped here when the dev side had no work AND the PO left specs unchanged; now we
+    # only log that signal and keep going. Re-add a `break` here if you want the old
+    # "stop when the game matches the spec" behaviour back.
     if (( no_work_created == 1 )) && [[ "$before" == "$after" ]]; then
-      echo "father play-tested and added no new PO notes — game matches the spec. Stopping." | tee -a "$LOG"
-      break
-    fi
-    if [[ "$before" == "$after" ]]; then
+      echo "father play-tested and added no new PO notes — game matches the spec (no auto-stop; continuing)." | tee -a "$LOG"
+    elif [[ "$before" == "$after" ]]; then
       echo "father review done — specs unchanged; resuming build loop." | tee -a "$LOG"
     else
       echo "father review done — specs updated with PO notes; resuming build loop." | tee -a "$LOG"
