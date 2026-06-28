@@ -37,7 +37,10 @@
           ];
 
           shellHook = ''
-            echo "braa devshell — $(godot --version 2>/dev/null || echo 'godot unavailable')"
+            # Banner to stderr, NOT stdout: CI captures `nix develop -c godot --version`
+            # (and --main-pack output), and `nix develop -c` runs this hook first — a
+            # stdout banner would contaminate those captures (broke the version assert).
+            echo "braa devshell — $(godot --version 2>/dev/null || echo 'godot unavailable')" >&2
           '';
         };
       });

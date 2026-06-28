@@ -146,8 +146,11 @@ jobs:
         if: steps.guard.outputs.has == 'true'
         run: |
           set -euo pipefail
-          VER="$(nix develop -c godot --version)"
-          echo "export tool reports: $VER"
+          # `nix develop -c` runs the flake shellHook before the command; capture both
+          # streams and keep only the line that looks like an engine version, so a stray
+          # banner can't masquerade as the version string.
+          VER="$(nix develop -c godot --version 2>&1 | grep -E '^[0-9]+\.[0-9]+\.[0-9]' | tail -n1 || true)"
+          echo "export tool reports: ${VER:-<none>}"
           case "$VER" in
             ${{ env.GODOT_EXPECT }}*) echo "OK — matches ${{ env.GODOT_EXPECT }} (template tag ${{ env.GODOT_TAG }})" ;;
             *) echo "::error::engine $VER != expected ${{ env.GODOT_EXPECT }} — bump GODOT_TAG/EM_VERSION to match the flake before building, or decryption will fail"; exit 1 ;;
