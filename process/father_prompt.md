@@ -31,7 +31,7 @@ it like a demanding owner** who wants this to be a great game. Disk is your only
 **Append Product Owner notes to `specs2.md`. That is the only file you may touch,
 and the only thing you do this pass.**
 
-- Do **not** edit code, tests, `tech-decisions.md`, the task board, or any other file.
+- Do **not** edit code, tests, ADRs, the task board, or any other file.
 - Do **not** run the verify gate, implement fixes, or start/move tasks — that is the build
   loop's job. You set direction; the mother loop builds it.
 - Keep all PO notes under a single section titled **`## Product Owner Review`** near the

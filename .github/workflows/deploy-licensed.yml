@@ -10,7 +10,7 @@ name: Build licensed (encrypted) Web bundle
 # WHY a whole from-source template build: the official Godot web templates are compiled
 # with the DEFAULT (empty) encryption key. They can ENCRYPT a custom-key .pck at export
 # time but CANNOT DECRYPT it at runtime (verified — MD5 mismatch, see
-# .docs/tech-decisions.md). The decryption key is baked into the template at COMPILE
+# adr/0006-licensed-asset-encryption.md). The decryption key is baked in at COMPILE
 # time. So the licensed web build genuinely needs a custom web/wasm template built from
 # source with SCRIPT_AES256_ENCRYPTION_KEY compiled in.
 #

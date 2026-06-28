@@ -41,6 +41,28 @@ good-faith licensing effort: **option C — encrypt the PCK.**
   extract the key and decrypt.
 - **Amends ADR-0002** (its "no AES encryption" web-licensing clause) and **resolves
   the open licensing fork in ADR-0005** (selects C over A/B).
-- **Follow-up:** stand up the two build profiles in the GitHub Actions → Pages
-  workflow; store the licensed asset + key as secrets; verify the encrypted build
-  installs + plays offline on Chrome.
+## Implementation (2026-06-28)
+
+Built as `.github/workflows/deploy-licensed.yml` (+ `tools/web_boot_check.mjs`).
+Decisions made while implementing:
+
+- **Version match is load-bearing.** The export tool (flake-pinned Godot, `4.6.3.stable`)
+  and the from-source template must be the *same* engine version or the PCK fails to
+  decrypt (MD5 mismatch). The template is built from `godotengine/godot` tag `4.6.3-stable`
+  with **emscripten 4.0.11** (Godot's own pinned web toolchain for that tag, read from its
+  `web_builds.yml`); the workflow asserts the engine version before exporting.
+- **Asset delivery: encrypted blob in the repo** — *amends* the "injected from a non-public
+  source (secret / private artifact)" clause above. The ~19 MB glb can't be a GitHub secret
+  (48 KB cap), so it rides in the repo as an AES-256 `openssl` blob
+  `assets/models/dog_licensed.glb.enc` (gitignore un-ignores only the `.enc`; the raw glb
+  stays out) and is decrypted in CI. **One secret total:** `GODOT_SCRIPT_ENCRYPTION_KEY` is
+  reused as the template bake key, the export key, *and* the openssl passphrase. Trade-off
+  accepted: ciphertext in git history; bends ADR-0002 to "encrypted-only in the public repo."
+- **Proven in CI, not self-certified.** A headless-Chromium boot of the encrypted bundle
+  gates the artifact: reaching `window.__appReady` proves the custom-key template decrypted
+  the PCK; console signals prove it's the licensed dog and it Sitts. A negative test also
+  asserts the empty-key runtime *cannot* open the PCK.
+- **Safe rollout.** `workflow_dispatch` only; uploads an artifact by default and publishes
+  to Pages only on an explicit `publish=true`, after validation — the live CC0 site is never
+  replaced by an unproven build. The compiled template is cached so the ~45-min build runs
+  once, not per deploy.

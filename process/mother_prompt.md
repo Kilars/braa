@@ -30,7 +30,9 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   — not to mark things done, add scope, or "fix" it. Only the **PO/father** review pass
   writes to specs; you read it and build to it. If it looks wrong or conflicts with a
   task, record the discrepancy in the task file and build to the spec as written.
-  Implementation notes go in `.docs/tech-decisions.md` or the task file.
+  Implementation notes go in the task file; a durable technical *decision* becomes an
+  ADR in `adr/` (the source of truth). Do NOT create `.docs/tech-decisions.md` — it was a
+  v1 artifact deliberately removed (see `adr/README.md`).
 - **Don't block features — retry first.** Premature/false blocks are the single biggest
   source of lost progress here. Before you ever mark a task `blocked`/`on-hold` for a
   *technical* reason, try **2–3 genuinely different approaches** and record the exact
