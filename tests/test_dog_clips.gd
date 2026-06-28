@@ -9,13 +9,14 @@ extends "res://tests/test_case.gd"
 const CC0 := ["AnimalArmature|Idle", "AnimalArmature|Walk", "AnimalArmature|Run",
 	"AnimalArmature|Jump", "AnimalArmature|Idle_Eating", "AnimalArmature|Death"]
 
-# The licensed Labrador's relevant clip leaves (verified from out_anim.glb). Note
-# the decoy `Crouch_Idle_loop_1`: it contains both "idle" and "loop" but is NOT a
-# sit — the resolver must not mistake it for the idle or the Sitt loop.
+# The licensed Labrador's relevant clip leaves AS GODOT IMPORTS THEM (verified from the
+# imported dog_licensed.glb): the glTF importer renames `Sitting_loop_1/2` to `Sitting_1/2`
+# (strips "loop"), so the resolver must match the hold loop by exclusion, not "loop". Note
+# the decoy `Crouch_Idle_loop_1`: it has "idle" and "loop" but is NOT a sit.
 const LAB := ["Arm_Labrador|Idle_1", "Arm_Labrador|Idle_2",
 	"Arm_Labrador|Crouch_Idle_loop_1",
-	"Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_loop_1",
-	"Arm_Labrador|Sitting_loop_2", "Arm_Labrador|Sitting_end",
+	"Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_1",
+	"Arm_Labrador|Sitting_2", "Arm_Labrador|Sitting_end",
 	"Arm_Labrador|Walk_F_IP"]
 
 func test_cc0_resolves_plain_idle_and_has_no_sit() -> void:
@@ -29,7 +30,7 @@ func test_labrador_resolves_idle_and_sit_clips() -> void:
 	assert_eq(c.idle, "Arm_Labrador|Idle_1", "first Idle-prefixed leaf when no exact 'Idle'")
 	assert_true(c.has_sit(), "the Labrador has a real Sitt")
 	assert_eq(c.sit_start, "Arm_Labrador|Sitting_start", "sit build-in clip")
-	assert_eq(c.sit_loop, "Arm_Labrador|Sitting_loop_1", "first sit hold-loop clip")
+	assert_eq(c.sit_loop, "Arm_Labrador|Sitting_1", "first sit hold-loop clip (Godot strips 'loop')")
 	assert_eq(c.sit_end, "Arm_Labrador|Sitting_end", "sit stand-up clip")
 
 func test_crouch_idle_is_not_mistaken_for_idle_or_sit() -> void:
@@ -81,6 +82,29 @@ func test_committed_dog_exposes_a_real_idle_clip() -> void:
 		# Same gate for the payoff reaction (024f): no authored celebration on CC0, so
 		# the live dog can't react until the licensed Labrador ships (025).
 		assert_false(c.has_reaction(), "the committed CC0 dog has no reaction clip (see 024f)")
+	dog.free()
+
+func test_licensed_dog_if_present_resolves_a_real_sit() -> void:
+	# Binds to the REAL imported licensed Labrador against Godot's ACTUAL clip names — the
+	# guard that would have caught the importer renaming Sitting_loop_1 -> Sitting_1. The
+	# asset is gitignored, so it's absent in public CI: skip cleanly there (the assert_true
+	# keeps this from tripping the 0-assertion gate), and verify for real in local dev. (025)
+	var p := "res://assets/models/dog_licensed.glb"
+	if not ResourceLoader.exists(p):
+		assert_true(true, "licensed dog absent (e.g. public CI) — skipped")
+		return
+	var packed := load(p) as PackedScene
+	assert_true(packed != null, "the licensed dog glb must load as a PackedScene")
+	if packed == null:
+		return
+	var dog := packed.instantiate()
+	var ap := _find_animation_player(dog)
+	assert_true(ap != null, "the licensed dog must have an AnimationPlayer")
+	if ap != null:
+		var c := DogClips.resolve(ap.get_animation_list())
+		assert_true(c.has_sit(), "the licensed Labrador must resolve a real Sitt (start + hold loop)")
+		assert_true(ap.has_animation(c.sit_start), "resolved sit_start must be a real clip on the dog")
+		assert_true(ap.has_animation(c.sit_loop), "resolved sit_loop must be a real clip on the dog")
 	dog.free()
 
 func _find_animation_player(n: Node) -> AnimationPlayer:

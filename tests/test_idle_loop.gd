@@ -10,6 +10,9 @@ extends "res://tests/test_case.gd"
 func _instantiate_main() -> Node:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	var main := packed.instantiate()
+	# Pin the CC0 dog so this scene-mount test is deterministic whether or not the
+	# gitignored licensed Labrador is present locally (it changes the bounds/centre). (025)
+	main.dog_path_override = "res://assets/models/dog.glb"
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.add_child(main)
 	# The headless runner quits before any process frame, so _ready is deferred;

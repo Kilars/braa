@@ -32,7 +32,7 @@ static func resolve(names: PackedStringArray) -> DogClips:
 	var c := DogClips.new()
 	c.idle = _pick_idle(names)
 	c.sit_start = _pick(names, "sitting", "start")
-	c.sit_loop = _pick(names, "sitting", "loop")
+	c.sit_loop = _pick_sit_loop(names)
 	c.sit_end = _pick(names, "sitting", "end")
 	c.reaction = _pick_reaction(names)
 	return c
@@ -65,6 +65,18 @@ static func _pick_idle(names: PackedStringArray) -> String:
 		if fallback == "" and leaf.begins_with("idle"):
 			fallback = n
 	return fallback
+
+## The fully-seated hold loop: the first "sitting" clip that is neither the build-in
+## (start) nor the stand-up (end). Matched by EXCLUSION, not the literal "loop" substring,
+## because Godot's glTF importer renames `Sitting_loop_1/2` to `Sitting_1/2` — the held
+## loop must still resolve so has_sit() is true on the imported Labrador. The "sitting"
+## guard still rejects decoys like `Crouch_Idle_loop_1`. (025)
+static func _pick_sit_loop(names: PackedStringArray) -> String:
+	for n in names:
+		var leaf := _leaf(n).to_lower()
+		if leaf.contains("sitting") and not leaf.contains("start") and not leaf.contains("end"):
+			return n
+	return ""
 
 ## First clip whose leaf contains both substrings (case-insensitive).
 static func _pick(names: PackedStringArray, a: String, b: String) -> String:

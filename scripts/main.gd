@@ -9,7 +9,12 @@ extends Node3D
 ##
 ## Stack: Godot 4 (ADR-0001), typed GDScript (ADR-0003).
 
+## The tracked CC0 placeholder dog — public, no Sitt clip. Fallback only.
 const DOG_SCENE_PATH := "res://assets/models/dog.glb"
+## The licensed Labrador (gitignored, ADR-0002/0006) — carries the real
+## `Sitting_start/loop/end`, idle, and reaction clips. Present in local dev; absent in
+## public CI until the ADR-0006 encrypted pack ships. When here, it's preferred.
+const LICENSED_DOG_PATH := "res://assets/models/dog_licensed.glb"
 
 ## Emitted on every BRA tap with the scored tier (SitWindow.Tier). The payoff
 ## (voice + SFX + dog reaction, P1-6/024f) and the timing readout (P1-7/024g) hang
@@ -165,18 +170,34 @@ func _visual_instances(n: Node) -> Array[VisualInstance3D]:
 		out.append_array(_visual_instances(c))
 	return out
 
-## Load + instantiate the dog. The committed glb IS the dog — no bare
-## primitive geometry stands in for it (P1-1, ADR-0002). Returns the instance,
-## or null if it failed to load.
+## Pick the dog to load: the licensed Labrador (real Sitt) when it's present locally,
+## else the tracked CC0 placeholder. ResourceLoader.exists() is a presence check that
+## doesn't error when the licensed asset is absent (public CI), so the scene degrades
+## cleanly to the CC0 dog there until the ADR-0006 encrypted pack ships. (025)
+## Test seam: when set (before _ready), forces a specific dog so scene-mount tests are
+## deterministic regardless of which assets sit on disk locally. Production leaves it ""
+## → auto-select below. (025)
+var dog_path_override := ""
+
+func _dog_path() -> String:
+	if dog_path_override != "":
+		return dog_path_override
+	if ResourceLoader.exists(LICENSED_DOG_PATH):
+		return LICENSED_DOG_PATH
+	return DOG_SCENE_PATH
+
+## Load + instantiate the dog. The loaded glb IS the dog — no bare primitive geometry
+## stands in for it (P1-1, ADR-0002). Returns the instance, or null if it failed to load.
 func _load_dog() -> Node:
-	var packed := load(DOG_SCENE_PATH) as PackedScene
+	var path := _dog_path()
+	var packed := load(path) as PackedScene
 	if packed == null:
-		push_error("[Bra!] dog model failed to load: %s" % DOG_SCENE_PATH)
+		push_error("[Bra!] dog model failed to load: %s" % path)
 		return null
 	var dog := packed.instantiate()
 	dog.name = "Dog"
 	add_child(dog)
-	print("[Bra!] dog loaded: %s" % DOG_SCENE_PATH)
+	print("[Bra!] dog loaded: %s" % path)
 	return dog
 
 ## Bring the dog to life: loop its ambient idle so it isn't a frozen rest pose

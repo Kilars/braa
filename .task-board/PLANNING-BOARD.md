@@ -12,7 +12,16 @@ Source of truth: [`specs2.md`](../specs2.md) (phased user stories) and the ADRs 
 trust-nothing audit of the committed Phase-1 tree then found the board was over-claiming.
 Reconciled below. Two findings dominate:
 
-### ⛔ Blocker 1 — the Phase-1 core loop is DORMANT on the live site
+### 🟡 Blocker 1 — core loop now LIVE IN DEV; deployed site still CC0 (025-wire done 2026-06-28)
+**Update:** the licensed Labrador is now wired in. With it present locally, `main` loads it,
+the dog **sits** (boot: `dog can Sitt — apex at 1.250s, markable 0.000..2.917s`), and the
+whole loop (sit → apex → tap → score → payoff) is live in dev; verify green at 74 tests.
+What remains is the **deployed** half: the public Pages build still ships the CC0 dog (the
+licensed asset is gitignored / absent in CI), so the *live site the father reviews* can't
+sit until the **ADR-0006 encrypted pack** ships — one **owner-gated** CI secret (025). The
+original dormancy analysis below stands for the deployed build only.
+
+
 The shipped CC0 dog (`assets/models/dog.glb`) has **no Sitt clip** (and no reaction clip).
 So at runtime: the sit never opens → every BRA tap scores **DEAD** → no score, no apex
 tell, no payoff (silent), no dog reaction. **A player cannot experience Phase 1 on the
@@ -60,12 +69,10 @@ correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
 ## Before restarting the autonomous loop — DO THESE FIRST
 1. ✅ **026** — DONE. The test gate is honest (runtime aborts fail; `main.gd` viewport
    guarded; boot leg hardened). Bonus: fixed the un-aimed dog camera.
-2. **025** — wire in the **already-bought** Labrador (`models-build/out_anim.glb` has
-   `Sitting_start/loop/end`; the code already resolves them). Point the loader at it, import
-   it, and ship it to public Pages without leaking the license (ADR-0006 encrypted pack —
-   one CI secret, set once by the owner). Local proof needs no secret. Until 024b/d/e/f run
-   on this dog, they stay parked and Phase-1 live review is impossible. NB: if pointed at the
-   visual slices with no real sit clip, the loop will fake a sit — but the real one IS here.
+2. ✅ **025-wire** — DONE. Licensed Labrador wired; dog sits in dev; gate green (74).
+   **Remaining (025 proper):** ship it to public Pages via the ADR-0006 encrypted pack —
+   one **owner-gated** CI secret. Until then the deployed site the father reviews is still
+   CC0 (idle only), so Phase-1 live visual review (024b/d/e/f → P1-10) stays blocked on that.
 
 ## In progress
 - **024** — Phase 1 epic (stays open until the P1-10 done-gate passes).

@@ -1,6 +1,12 @@
 # FEATURE: 025 — Ship the licensed Labrador as an encrypted .pck (ADR-0006)
 
-**Status**: Backlog
+**Status**: Backlog — **local wire DONE** (2026-06-28): `main.gd` loads the licensed
+Labrador when it's present (`assets/models/dog_licensed.glb`, gitignored), the dog
+**sits in dev** (boot logs `dog can Sitt — apex at 1.250s`), and the verify gate is
+green at 74 tests. `DogClips` fixed to match Godot's renamed hold loop (`Sitting_1`,
+not `Sitting_loop_1`). **REMAINING (this card's real scope) = the encrypted CI deploy**
+so the live site shows the sit without leaking the license — still **owner-gated** (needs
+the CI secret/key). Until then the deployed dog is still CC0 (idle only).
 **Priority**: High — **unblocks the visible Sitt (024b/P1-3) and all of Phase 1's
 real gameplay on the live deploy.** Without it the deployed dog (CC0 placeholder)
 has no Sitt clip and the live site the father reviews cannot perform the core verb.

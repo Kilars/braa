@@ -16,6 +16,12 @@ loop.err
 # secret-injected .glb — that asset never lands in this public repo.)
 models-build/
 *.fbx
+# Local-dev copy of the licensed Labrador, placed where Godot can import it so the dog
+# actually sits in dev. Still NEVER committed — public deploy gets it via the ADR-0006
+# encrypted pack, not this plain glb. main.gd loads it when present, else the CC0 dog.
+# Broad glob: covers the glb, its .import, AND the textures Godot's importer extracts
+# out of it (dog_licensed_Labrador_Albedo.png, dog_licensed_Texture.png, …). All licensed.
+assets/models/dog_licensed*
 
 # Godot import cache (regenerated on import; never tracked)
 .godot/

@@ -8,6 +8,9 @@ extends "res://tests/test_case.gd"
 func _instantiate_main() -> Node:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	var main := packed.instantiate()
+	# Pin the CC0 dog: deterministic whether or not the gitignored licensed Labrador is
+	# present locally (it changes what main loads, hence what a tap scores). (025)
+	main.dog_path_override = "res://assets/models/dog.glb"
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.add_child(main)
 	# The headless test runner quits inside _initialize() before any process frame,
