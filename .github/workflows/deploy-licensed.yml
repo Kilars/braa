@@ -20,17 +20,22 @@ name: Build licensed (encrypted) Web bundle
 # the SAME tag with emscripten 4.0.11 (Godot's own pinned web toolchain for 4.6.3). The
 # job asserts the engine version before exporting and fails loudly on any drift.
 #
-# REQUIRED SECRETS (owner-only; the job no-ops cleanly if any are missing):
-#   GODOT_SCRIPT_ENCRYPTION_KEY  64 hex chars  (openssl rand -hex 32). Baked into the
-#                                template AND passed at export time — both must match.
-#                                KEEP A COPY: lose it and the published pck can't be
-#                                rebuilt to match a re-exported template.
-#   LICENSED_DOG_URL             a PRIVATE URL to the self-contained ~19 MB licensed glb
-#                                (the glb is too big to be a GitHub secret — 48 KB cap).
-#                                Use a presigned S3/GCS/Backblaze link, or a private
-#                                GitHub release asset API URL. Treat the URL as a secret.
-#   LICENSED_DOG_AUTH  OPTIONAL  full value of an Authorization header if the URL needs
-#                                auth, e.g. "Bearer ghp_…" for a private GitHub asset.
+# SETUP (owner-only; the job no-ops cleanly if either piece is missing):
+#   1. SECRET  GODOT_SCRIPT_ENCRYPTION_KEY — 64 hex chars (openssl rand -hex 32). Does
+#              triple duty: baked into the template, passed at export time, AND used as the
+#              openssl passphrase for the encrypted glb below — so one secret covers it all.
+#              Both template-build and export must see the same value. KEEP A COPY: lose it
+#              and the published pck can't be rebuilt to match a re-exported template.
+#   2. FILE    assets/models/dog_licensed.glb.enc — the ~19 MB licensed glb, AES-256
+#              encrypted (it's too big to be a GitHub secret — 48 KB cap — so it rides in
+#              the repo as ciphertext; .gitignore un-ignores only this .enc). Create it
+#              locally and commit it:
+#                export KEY=<the 64-hex key>   # same value as the secret; MUST be exported
+#                openssl enc -aes-256-cbc -pbkdf2 -salt \
+#                  -in assets/models/dog_licensed.glb \
+#                  -out assets/models/dog_licensed.glb.enc -pass env:KEY
+#                git add assets/models/dog_licensed.glb.enc && git commit && git push
+#              The raw .glb itself stays gitignored and never enters the repo.
 #
 # This pipeline is AUTHORED but UNPROVEN until its first real run with these secrets:
 # the from-source emscripten build and the encrypted-bundle browser boot cannot be
@@ -72,14 +77,13 @@ jobs:
         uses: actions/checkout@v4
 
       # Secrets aren't available to job-level `if:`, so gate every real step on this.
-      - name: Guard — secrets present?
+      - name: Guard — key secret + encrypted glb present?
         id: guard
         env:
           KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
-          URL: ${{ secrets.LICENSED_DOG_URL }}
         run: |
           set -euo pipefail
-          if [ -n "$KEY" ] && [ -n "$URL" ]; then
+          if [ -n "$KEY" ] && [ -f assets/models/dog_licensed.glb.enc ]; then
             # AES-256 key must be exactly 64 hex chars, or export/decrypt silently misbehave.
             if ! printf '%s' "$KEY" | grep -qiE '^[0-9a-f]{64}$'; then
               echo "::error::GODOT_SCRIPT_ENCRYPTION_KEY must be 64 hex chars (openssl rand -hex 32)"; exit 1
@@ -87,7 +91,7 @@ jobs:
             echo "has=true" >> "$GITHUB_OUTPUT"
           else
             echo "has=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::GODOT_SCRIPT_ENCRYPTION_KEY and/or LICENSED_DOG_URL not set — skipping licensed build (this is expected on forks/PRs)."
+            echo "::warning::need GODOT_SCRIPT_ENCRYPTION_KEY secret AND a committed assets/models/dog_licensed.glb.enc — skipping licensed build (expected on forks / before setup)."
           fi
 
       - name: Install Nix (flake-pinned export tool + official templates)
@@ -170,26 +174,22 @@ jobs:
           cp -f "$TEMPLATE_ZIP" "$DEST/web_nothreads_release.zip"
           echo "installed templates:"; ls -la "$DEST"
 
-      # Fetch the licensed glb from the private URL (it's too big to be a GitHub secret).
-      - name: Fetch licensed Labrador (private URL)
+      # Decrypt the committed encrypted glb in place. The glTF-magic check is also the
+      # wrong-key tripwire: a bad key yields garbage that won't start with "glTF".
+      - name: Decrypt licensed Labrador
         if: steps.guard.outputs.has == 'true'
         env:
-          URL: ${{ secrets.LICENSED_DOG_URL }}
-          AUTH: ${{ secrets.LICENSED_DOG_AUTH }}
+          KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
           out="assets/models/dog_licensed.glb"
-          if [ -n "${AUTH:-}" ]; then
-            curl -fsSL -H "Authorization: $AUTH" -H "Accept: application/octet-stream" "$URL" -o "$out"
-          else
-            curl -fsSL "$URL" -o "$out"
-          fi
-          # Catch a truncated download or an HTML error page masquerading as the asset.
+          openssl enc -d -aes-256-cbc -pbkdf2 -in assets/models/dog_licensed.glb.enc -out "$out" -pass env:KEY \
+            || { echo "::error::openssl could not decrypt dog_licensed.glb.enc — wrong key, or it was encrypted with different options than -aes-256-cbc -pbkdf2"; exit 1; }
           sz="$(stat -c %s "$out")"
-          echo "downloaded $sz bytes"
-          test "$sz" -gt 1000000 || { echo "::error::licensed glb suspiciously small ($sz bytes) — URL/auth wrong?"; exit 1; }
-          head -c4 "$out" | grep -q 'glTF' || { echo "::error::downloaded file is not a binary glTF (.glb) — got: $(head -c64 "$out" | tr -dc '[:print:]')"; exit 1; }
-          echo "licensed glb looks valid"
+          echo "decrypted $sz bytes"
+          test "$sz" -gt 1000000 || { echo "::error::decrypted glb suspiciously small ($sz bytes)"; exit 1; }
+          head -c4 "$out" | grep -q 'glTF' || { echo "::error::decrypted file is not a binary glTF (.glb) — wrong key or corrupt blob"; exit 1; }
+          echo "licensed glb decrypted and valid"
 
       - name: Import resources
         if: steps.guard.outputs.has == 'true'

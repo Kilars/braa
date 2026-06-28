@@ -22,6 +22,11 @@ models-build/
 # Broad glob: covers the glb, its .import, AND the textures Godot's importer extracts
 # out of it (dog_licensed_Labrador_Albedo.png, dog_licensed_Texture.png, …). All licensed.
 assets/models/dog_licensed*
+# ...EXCEPT the AES-256-encrypted blob: ciphertext, not the asset (ADR-0006 is
+# deterrence, not DRM). It rides in the repo because the 19 MB glb can't fit a 48 KB
+# GitHub secret; deploy-licensed.yml decrypts it in CI with GODOT_SCRIPT_ENCRYPTION_KEY.
+# The raw .glb / .import / textures above stay ignored — only this .enc is committed.
+!assets/models/dog_licensed.glb.enc
 
 # Godot import cache (regenerated on import; never tracked)
 .godot/

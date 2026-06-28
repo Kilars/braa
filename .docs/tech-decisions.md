@@ -111,19 +111,33 @@ flake + Godot source (not guessed):
   `.tpz` templates dir (which supplies `version.txt` + the other templates), so only the
   one template we ship carries the key.
 
-### Secret-delivery correction (important)
+### Asset delivery: encrypted blob in the repo (not a secret, not a URL)
 
-`LICENSED_DOG_GLB_B64` **does not work** — GitHub Actions secrets are capped at **48 KB**
-and the self-contained glb is ~19 MB (the glb embeds its 3 textures: `materials/extract=0`,
-so a single file suffices, but it's still far too big for a secret). The workflow instead
-fetches the glb from a **private URL**:
+`LICENSED_DOG_GLB_B64` as a secret **does not work** — GitHub Actions secrets are capped at
+**48 KB** and the self-contained glb is ~19 MB (it embeds its 3 textures,
+`materials/extract=0`). The 48 KB cap is on *secrets*, not on repo files or URLs, so the
+options were: encrypted blob in the repo / private URL / separate private repo. **Chosen:
+encrypted blob in this repo** — no external host, no second repo, no expiring URLs.
 
-- `GODOT_SCRIPT_ENCRYPTION_KEY` — 64 hex (`openssl rand -hex 32`). **Keep a copy.**
-- `LICENSED_DOG_URL` — private/presigned URL to the glb (presigned S3/GCS/Backblaze, or a
-  private GitHub release-asset API URL). The URL itself is the secret.
-- `LICENSED_DOG_AUTH` *(optional)* — an `Authorization` header value if the URL needs auth
-  (e.g. `Bearer ghp_…` + the workflow adds `Accept: application/octet-stream` for GitHub
-  release assets).
+- **One secret:** `GODOT_SCRIPT_ENCRYPTION_KEY` — 64 hex (`openssl rand -hex 32`). It's
+  reused three ways: baked into the template, passed at export time, AND the openssl
+  passphrase for the blob below. **Keep a copy.**
+- **One committed file:** `assets/models/dog_licensed.glb.enc` — AES-256 ciphertext of the
+  glb. `.gitignore` un-ignores *only* this `.enc` (raw `.glb`/`.import`/textures stay
+  ignored). Create + commit it once (the key must be exported for openssl to read it):
+  ```
+  export KEY=<the 64-hex key>
+  openssl enc -aes-256-cbc -pbkdf2 -salt \
+    -in assets/models/dog_licensed.glb -out assets/models/dog_licensed.glb.enc -pass env:KEY
+  git add assets/models/dog_licensed.glb.enc && git commit && git push
+  ```
+- CI decrypts with `openssl enc -d -aes-256-cbc -pbkdf2 … -pass env:KEY`. The decrypted
+  file is checked for the `glTF` magic — a wrong key yields garbage that fails that check,
+  so a key mismatch fails loudly instead of exporting a broken bundle.
+- **Verified locally:** encrypt→decrypt of the real glb is byte-identical (sha256 match);
+  a wrong key does not produce `glTF`; `.gitignore` keeps the raw glb out while allowing
+  the `.enc`. The trade-off (accepted by the owner): ~19 MB of ciphertext in git history,
+  and it bends ADR-0002's "licensed asset never in the public repo" to "only encrypted."
 
 ### Validation layering (why this isn't self-certified-blind)
 
