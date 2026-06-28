@@ -6,98 +6,81 @@ Source of truth: [`specs2.md`](../specs2.md) (phased user stories) and the ADRs 
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase 1 begun: the scoring math, test-first (2026-06-28)
+## Status — trust-nothing reconcile (2026-06-28)
 
-Task **024** (Phase 1 — the perfect single mark) is a large epic; per the spec it's
-built **per story, not as a monolith**, so it was decomposed into slices **024a–024g**
-(idle, sit+apex, tell, BRA+scoring, payoff, readout) and moved to **in-progress**.
+`main` was reset to a clean single Godot root commit (Babylon gone). A source-level,
+trust-nothing audit of the committed Phase-1 tree then found the board was over-claiming.
+Reconciled below. Two findings dominate:
 
-The first slice, **024a**, is **done**: the apex-band / scoring-window math — the pure
-heart of "mark the moment" — built test-first. `scripts/sit_window.gd` (`class_name
-SitWindow`): a sit is markable over its clip span; a tap is scored by closeness to the
-apex → **PERFECT / OK / MISS**, or **DEAD** (no sit active → no penalty, P1-5). 12 new
-unit tests cover the bands, inclusivity (with a float-noise epsilon), active bounds,
-asymmetric apex, and the `is_successful` audio gate (P1-6). The visual slices
-(024b–024g) wire onto this proven core. **Gate-integrity fix** bundled in: the test
-runner silently passed test files that failed to *parse* — added a `can_instantiate()`
-guard so a broken test now fails the gate (no more hollow green). Verify gate green
-end-to-end (import · boot · test → 15 tests · export).
+### ⛔ Blocker 1 — the Phase-1 core loop is DORMANT on the live site
+The shipped CC0 dog (`assets/models/dog.glb`) has **no Sitt clip** (and no reaction clip).
+So at runtime: the sit never opens → every BRA tap scores **DEAD** → no score, no apex
+tell, no payoff (silent), no dog reaction. **A player cannot experience Phase 1 on the
+deployed site today** — they see a centered, idling dog and a BRA button that does nothing
+audible/visible. The sit/tell/tap/payoff code is real and unit-correct but **dormant**,
+unblocked only by **025** (ship the sit-capable licensed Labrador via the ADR-0006
+encrypted PCK — an **owner-gated asset**, not something the loop can generate).
+P1-3/4/5/6 cannot pass their **live** acceptance until 025.
 
-## Status — bun toolchain removed, Godot verify gate live (2026-06-28)
+### ⛔ Blocker 2 — the verify gate is partly lying (026)
+The headless test runner reports `all green / exit 0` **even when a test throws a runtime
+SCRIPT ERROR mid-method** (an aborted method records zero failures). Right now
+`scripts/main.gd:123` (`get_visible_rect()` on a null headless viewport) crashes
+`test_bra_button` and `test_payoff_wiring`, which therefore **never run their asserts** yet
+read green. Until **026** fixes this, "verify gate green" is not trustworthy and the loop
+is building on a gate that can't catch a broken scene.
 
-Task **023** ripped out the dead Babylon/TS/Vite/Bun stack (`package.json`, `bun.lock`,
-`tsconfig.json`, `vite.config.ts`, `playwright.config.ts`, `src/`, `e2e/`, `index.html`,
-`public/`, `node_modules/`, `dist/`) — the repo is now a clean Godot project. The verify
-gate moved off the bun four onto **Godot headless** (`nix develop -c bash verify.sh`):
-**import → boot `main.tscn` → GDScript unit tests (`tests/test_runner.gd`) → Web/PWA
-export + bundle-exists gate**, fail-closed. A self-contained test runner (no addon /
-network) is in `tests/` so Phase 1 logic (task 024) can TDD. Verified green end-to-end;
-the export `.pck` no longer carries the stray bun config files (the old leak is gone).
-Process docs (`mother_prompt`, `father_prompt`, `process/README`, `loop.sh`'s
-`app_runnable`) now reference only the Godot gate / deployed-site review. The licensing
-decision is **not** lost: ADR-0006 (encrypted PCK, native to Godot's export) supersedes
-the deleted client-side TS crypto — see task 023's notes.
+### Per-system audit result
+| System (card) | Code | Tests | Live on CC0 dog? | Board |
+|---|---|---|---|---|
+| scoring math `SitWindow`/`SitSession` (024a) | real | real, pure | n/a (logic) | **done** |
+| idle loop (024c) | real | ok | **LIVE** | in-progress (needs visual review) |
+| camera framing `DogFraming` | real | real, pure | **LIVE** | (part of 021/024) |
+| sit (024b) | real | — | dormant | **on-hold → 025** |
+| apex tell (024d) | real | real, pure | dormant | **on-hold → 025** |
+| BRA tap (024e) | real | **hollow** (026) | tap always DEAD | **on-hold → 025** |
+| payoff (024f) | real, synth WAV (not Maren voice) | real | silent | **on-hold → 025** |
+| readout P1-7 (024g) | **MISSING** (only `print()`) | — | none | backlog |
+| reduced-motion P1-8 (024g) | **MISSING** (dead seam, no caller) | — | none | backlog |
 
-## Status — Godot Web/PWA export now deploys (2026-06-28)
-
-Task **022** rewrote `deploy.yml`: a push to `main` now exports the Godot Web/PWA build
-(nix-pinned engine **and** templates, 4.6.3 — version match designed out) and publishes
-`build/web/` to Pages, **gated on a real export** (fails closed if the bundle is
-missing). Verified locally by reproducing the CI commands and **booting the export in a
-headless browser under a `/braa/` mount** — `window.__appReady` fires, zero errors, the
-dog renders centered on the bright backdrop, PWA manifest is standalone/portrait. The
-live site should now serve the Godot scaffold instead of the bun placeholder (father/PO
-confirms on the live URL). `export_presets.cfg` added at repo root.
-
-The bun toolchain is **still on disk** (and its gate still green) — its removal is the
-next card (023), deliberately ordered AFTER the Godot deploy proved out.
-
-## Status — Godot pivot, scaffold landed (2026-06-28)
-
-The stack is **Godot 4 + GDScript + PWA** (ADR-0001/0003/0004/0005). Babylon/bun was
-the wrong path. The pivot was **half-finished** as of "initial commit v2": the docs
-(ADRs, README, flake.nix) declared Godot, but the code, CI, and verify-gate were still
-Babylon/bun and **no `project.godot` existed**.
-
-**This iteration (task 021) scaffolded the Godot project** — verified by booting it
-headless (`nix develop -c godot --headless`): the dog loads from
-`res://assets/models/dog.glb`, the readiness hook fires, exit 0. Layout (ADR-0005, at
-repo root): `project.godot`, `scenes/main.tscn`, `scripts/main.gd` (typed), the kept CC0
-`assets/models/dog.glb`. `.gdignore` markers keep Godot's importer out of the
-transitional bun dirs.
-
-**Was transitional, now resolved:** the bun toolchain and the bun→vite→Pages `deploy.yml`
-were left in place through 021/022 so the live site never went dark mid-pivot, then
-removed in **023** once the Godot export was deploying. The pre-pivot state is recoverable
-on branch **`backup/pre-rip-out-2026-06-28`**; old cards under [`archive/`](./archive/).
+> Note: `scripts/main.gd` comments claiming "the readout (024g) consumes `marked`" are
+> **false/aspirational** — no UI consumer exists. Clean up with 024g.
 
 ## Current phase
 
-**Phase 1 — the perfect single mark** (specs2.md §Phase 1). Build it in Godot on top of
-the scaffold; the loaded dog drives the pose system — the committed glb is the dog, no
-bare primitive geometry as the shipped product. See task 024.
+**Phase 1 — the perfect single mark** (specs2.md §Phase 1). The logic is largely built and
+correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
+
+## Before restarting the autonomous loop — DO THESE FIRST
+1. **026** — fix the lying test gate (runtime errors must fail; guard `main.gd:123`).
+   Otherwise every loop iteration trusts a gate that can read green on a crash.
+2. **025** — resolve the sit-capable dog (owner action: drop in the licensed Labrador, or
+   choose a CC0 model that has a Sitt clip). The loop **cannot generate this asset and will
+   fake it** if pointed at Phase-1 visual slices without it. Until 025, 024b/d/e/f stay
+   parked and Phase-1 live review is impossible.
 
 ## In progress
+- **024** — Phase 1 epic (stays open until the P1-10 done-gate passes).
+- **024c** — idle loop: LIVE + real; needs a live **visual review** to close (P1-2).
 
-- **024** — Phase 1 epic (idle → sit+apex → BRA → payoff). Decomposed into 024a–024g;
-  build one slice per iteration. Stays open until the **P1-10 done-gate** passes.
+## On-hold (code written + committed, blocked on 025 — do NOT rebuild, do NOT mark done)
+- **024b** — the sit (P1-3) — dormant on CC0.
+- **024d** — the apex tell (P1-4) — dormant (sit never opens).
+- **024e** — BRA tap + scoring (P1-5) — every tap DEAD live; button tests hollow (026).
+- **024f** — payoff voice/SFX/reaction (P1-6) — silent live; audio is synth placeholder,
+  not the Maren voice.
 
-## Backlog (Phase 1 slices, in build order)
+## Backlog (in priority order)
+- **026** — BUG: verify gate swallows SCRIPT ERRORs (gate integrity). **HIGH — first.**
+- **025** — ship the sit-capable licensed dog (ADR-0006 encrypted PCK). **Owner-gated;**
+  the Phase-1 unblocker.
+- **024g** — honest on-screen timing readout (P1-7) + reduced-motion wiring (P1-8). Both
+  currently MISSING; also delete the false `marked`-consumer comments in `main.gd`.
 
-- **024b** — a legible sit with a clear apex (P1-3) [visual]
-- **024c** — alive at rest: ambient idle loop (P1-2) [visual]
-- **024d** — the apex tell (P1-4) [visual] — fires on the *same* apex 024a/024b use
-- **024e** — BRA button + wire scoring to taps (P1-5) [interaction; uses 024a's `SitWindow`]
-- **024f** — the mark feels good: voice + SFX + dog reaction (P1-6) [audio/visual]
-- **024g** — honest timing readout + reduced motion (P1-7, P1-8) [visual]
-
-## Done (recent)
-
-- **024a** — apex-band / scoring-window math (`SitWindow`), test-first (12 tests);
-  plus a test-runner hardening so un-parseable test files fail the gate.
-- **023** — Removed the bun/Babylon toolchain; verify gate switched to Godot headless
-  (`verify.sh`: import · boot · test · export). Self-contained GDScript test runner added;
-  process docs de-bunned; export `.pck` no longer leaks bun config files.
-- **022** — CI exports the Godot Web/PWA build to Pages (export-gated, nix-pinned);
-  verified by a real-browser boot of the export that renders the dog.
-- **021** — Godot 4 project scaffold; boots headless with the dog loaded.
+## Done (verified)
+- **024a** — apex-band / scoring-window math (`SitWindow`/`SitSession`), test-first,
+  source-audit confirmed real (mutation-tested).
+- **023** — bun/Babylon toolchain removed; verify gate is Godot headless
+  (`nix develop -c bash verify.sh`: import · boot · test · export).
+- **022** — CI exports Godot Web/PWA to Pages (export-gated, nix-pinned).
+- **021** — Godot 4 scaffold; boots headless with the dog loaded + centered (real framing).

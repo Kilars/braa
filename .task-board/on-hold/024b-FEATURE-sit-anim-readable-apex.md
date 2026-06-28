@@ -1,6 +1,6 @@
 # FEATURE: 024b — A legible sit with a clear apex (P1-3)
 
-**Status**: Backlog
+**Status**: On-hold (2026-06-28) — blocked on 025 (sit-capable dog). Sit code real but DORMANT on the CC0 dog (no Sitt clip); P1-3 unverifiable on the live site until 025 ships.
 **Parent**: 024
 **Priority**: High (next after 024a; the dog must visibly sit before the tap matters)
 **Labels**: gameplay, godot, phase-1, visual

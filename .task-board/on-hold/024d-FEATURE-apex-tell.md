@@ -1,6 +1,6 @@
 # FEATURE: 024d — The apex tell (P1-4)
 
-**Status**: Done (2026-06-28) — visible pulse is 025-gated on the CC0 dog (findings)
+**Status**: On-hold (reopened 2026-06-28, was Done) — tell logic real + unit-tested, but DORMANT on the CC0 dog (sit never opens → tell never fires). P1-4 unverifiable on live until 025.
 **Parent**: 024
 **Priority**: High (timing must be readable, not a guess)
 **Labels**: gameplay, godot, phase-1, visual

@@ -1,6 +1,6 @@
 # FEATURE: 024c — Alive at rest: ambient idle loop (P1-2)
 
-**Status**: Done (2026-06-28)
+**Status**: In-progress (reopened 2026-06-28, was Done) — idle is LIVE + real on the CC0 dog, but P1-2 (smooth, no T-pose snap, no pop, stays centered) needs live visual review to close.
 **Parent**: 024
 **Priority**: Medium (the resting state between sits)
 **Labels**: gameplay, godot, phase-1, visual

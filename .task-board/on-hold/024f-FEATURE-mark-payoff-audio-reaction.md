@@ -1,6 +1,6 @@
 # FEATURE: 024f — The mark feels good: voice + SFX + dog reaction (P1-6)
 
-**Status**: Done (2026-06-28) — logic + wiring landed and unit-verified; the audible/
+**Status**: On-hold (reopened 2026-06-28, was Done) — logic + wiring real + unit-verified; the audible/
 visible beat is 025-gated on the CC0 dog (every tap is DEAD → silent), exactly like the
 tell (024d) and the taps (024e). Lights up with zero code change when the licensed
 Labrador ships.

@@ -1,6 +1,6 @@
 # FEATURE: 024e — The BRA tap: button + wire scoring to taps (P1-5)
 
-**Status**: Done (2026-06-28)
+**Status**: On-hold (reopened 2026-06-28, was Done) — scoring core (SitWindow/SitSession) real + tested, but every tap is DEAD on the CC0 dog; the button's scene-mount tests are hollow (gate hole, see 026). Blocked on 025 for a live, non-DEAD tap.
 **Parent**: 024
 **Priority**: High (the one verb — turns the math into gameplay)
 **Labels**: gameplay, godot, phase-1, interaction
