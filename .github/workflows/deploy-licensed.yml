@@ -1,0 +1,266 @@
+name: Build licensed (encrypted) Web bundle
+
+# ADR-0006 / task 025 — the owner-gated remainder of the encrypted licensed deploy.
+#
+# WHAT: builds the licensed Labrador into an ENCRYPTED Godot Web/PWA bundle and proves
+# it actually decrypts + runs in a real browser, then uploads it as a CI ARTIFACT for
+# owner review. It does NOT publish to GitHub Pages unless you explicitly dispatch with
+# publish=true — so the public CC0 site (deploy.yml) stays live until you flip it.
+#
+# WHY a whole from-source template build: the official Godot web templates are compiled
+# with the DEFAULT (empty) encryption key. They can ENCRYPT a custom-key .pck at export
+# time but CANNOT DECRYPT it at runtime (verified — MD5 mismatch, see
+# .docs/tech-decisions.md). The decryption key is baked into the template at COMPILE
+# time. So the licensed web build genuinely needs a custom web/wasm template built from
+# source with SCRIPT_AES256_ENCRYPTION_KEY compiled in.
+#
+# VERSION MATCH IS LOAD-BEARING: a template built at a different engine version than the
+# tool that packs the .pck reproduces the exact MD5/decrypt failure. The export tool is
+# the flake-pinned Godot (4.6.3-stable); the template is built from godotengine/godot at
+# the SAME tag with emscripten 4.0.11 (Godot's own pinned web toolchain for 4.6.3). The
+# job asserts the engine version before exporting and fails loudly on any drift.
+#
+# REQUIRED SECRETS (owner-only; the job no-ops cleanly if any are missing):
+#   GODOT_SCRIPT_ENCRYPTION_KEY  64 hex chars  (openssl rand -hex 32). Baked into the
+#                                template AND passed at export time — both must match.
+#                                KEEP A COPY: lose it and the published pck can't be
+#                                rebuilt to match a re-exported template.
+#   LICENSED_DOG_URL             a PRIVATE URL to the self-contained ~19 MB licensed glb
+#                                (the glb is too big to be a GitHub secret — 48 KB cap).
+#                                Use a presigned S3/GCS/Backblaze link, or a private
+#                                GitHub release asset API URL. Treat the URL as a secret.
+#   LICENSED_DOG_AUTH  OPTIONAL  full value of an Authorization header if the URL needs
+#                                auth, e.g. "Bearer ghp_…" for a private GitHub asset.
+#
+# This pipeline is AUTHORED but UNPROVEN until its first real run with these secrets:
+# the from-source emscripten build and the encrypted-bundle browser boot cannot be
+# validated on a dev laptop without the key. The in-job browser boot check is the proof.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "After validation, PUBLISH to GitHub Pages (replaces the live CC0 site). Leave false to only build the artifact."
+        type: boolean
+        default: false
+
+# pages/id-token only used when publish=true; harmless otherwise.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Share the single Pages concurrency group with deploy.yml so a licensed publish and a
+# CC0 deploy never race each other.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  GODOT_TAG: "4.6.3-stable"        # godotengine/godot git tag — MUST match the flake engine
+  GODOT_EXPECT: "4.6.3.stable"     # engine --version prefix the export tool must report
+  EM_VERSION: "4.0.11"             # emscripten Godot 4.6.3 pins for its web templates
+
+jobs:
+  build-licensed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90            # the from-source web template build is the slow part
+    outputs:
+      built: ${{ steps.guard.outputs.has }}
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      # Secrets aren't available to job-level `if:`, so gate every real step on this.
+      - name: Guard — secrets present?
+        id: guard
+        env:
+          KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
+          URL: ${{ secrets.LICENSED_DOG_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEY" ] && [ -n "$URL" ]; then
+            # AES-256 key must be exactly 64 hex chars, or export/decrypt silently misbehave.
+            if ! printf '%s' "$KEY" | grep -qiE '^[0-9a-f]{64}$'; then
+              echo "::error::GODOT_SCRIPT_ENCRYPTION_KEY must be 64 hex chars (openssl rand -hex 32)"; exit 1
+            fi
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GODOT_SCRIPT_ENCRYPTION_KEY and/or LICENSED_DOG_URL not set — skipping licensed build (this is expected on forks/PRs)."
+          fi
+
+      - name: Install Nix (flake-pinned export tool + official templates)
+        if: steps.guard.outputs.has == 'true'
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Assert the export tool is exactly the version we'll build the template at. Any
+      # drift here is the #1 cause of the MD5/decrypt failure, so fail closed.
+      - name: Assert engine version matches the template tag
+        if: steps.guard.outputs.has == 'true'
+        run: |
+          set -euo pipefail
+          VER="$(nix develop -c godot --version)"
+          echo "export tool reports: $VER"
+          case "$VER" in
+            ${{ env.GODOT_EXPECT }}*) echo "OK — matches ${{ env.GODOT_EXPECT }} (template tag ${{ env.GODOT_TAG }})" ;;
+            *) echo "::error::engine $VER != expected ${{ env.GODOT_EXPECT }} — bump GODOT_TAG/EM_VERSION to match the flake before building, or decryption will fail"; exit 1 ;;
+          esac
+
+      - name: Check out Godot source @ matching tag
+        if: steps.guard.outputs.has == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_TAG }}
+          path: godot
+          submodules: recursive
+
+      - name: Set up Emscripten (Godot's pinned web toolchain)
+        if: steps.guard.outputs.has == 'true'
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EM_VERSION }}
+
+      - name: Set up SCons
+        if: steps.guard.outputs.has == 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade "scons>=4.0"
+          emcc -v
+          scons --version
+
+      # The single load-bearing step: compile the web/wasm export template FROM SOURCE
+      # with the encryption key baked in. Single-threaded (threads=no) to match the
+      # project's export_presets (variant/thread_support=false → web_nothreads_release.zip).
+      # No production=yes/LTO on this first cut: correctness over size, and it sidesteps
+      # the LTO OOM/time risk on a CI runner. (Enable production=yes once it's proven.)
+      - name: Build encrypted web template from source
+        if: steps.guard.outputs.has == 'true'
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          cd godot
+          scons platform=web target=template_release threads=no use_closure_compiler=no verbose=yes
+          ls -la bin/
+          # scons names it godot.web.template_release.wasm32.nothreads.zip; glob to be robust.
+          built="$(find bin -maxdepth 1 -name 'godot.web.template_release.wasm32*nothreads*.zip' | head -1)"
+          test -n "$built" || { echo "::error::no nothreads web template zip produced"; ls -la bin; exit 1; }
+          echo "TEMPLATE_ZIP=$PWD/$built" >> "$GITHUB_ENV"
+          echo "built template: $built"
+
+      # Start from the official .tpz (gives version.txt + all the templates the editor
+      # may sanity-check), then OVERLAY just our custom-key nothreads-release template.
+      - name: Install templates (official base + our encrypted web template)
+        if: steps.guard.outputs.has == 'true'
+        run: |
+          set -euo pipefail
+          TPL="$(nix build --no-link --print-out-paths .#export-templates)"
+          VER="$(cat "$TPL"/share/godot/export_templates/*/version.txt)"
+          echo "official templates version: $VER"
+          DEST="$HOME/.local/share/godot/export_templates/$VER"
+          mkdir -p "$DEST"
+          cp -rL "$TPL/share/godot/export_templates/$VER/." "$DEST/"
+          chmod -R u+w "$DEST"
+          # Overlay our from-source, custom-key, single-threaded release template.
+          cp -f "$TEMPLATE_ZIP" "$DEST/web_nothreads_release.zip"
+          echo "installed templates:"; ls -la "$DEST"
+
+      # Fetch the licensed glb from the private URL (it's too big to be a GitHub secret).
+      - name: Fetch licensed Labrador (private URL)
+        if: steps.guard.outputs.has == 'true'
+        env:
+          URL: ${{ secrets.LICENSED_DOG_URL }}
+          AUTH: ${{ secrets.LICENSED_DOG_AUTH }}
+        run: |
+          set -euo pipefail
+          out="assets/models/dog_licensed.glb"
+          if [ -n "${AUTH:-}" ]; then
+            curl -fsSL -H "Authorization: $AUTH" -H "Accept: application/octet-stream" "$URL" -o "$out"
+          else
+            curl -fsSL "$URL" -o "$out"
+          fi
+          # Catch a truncated download or an HTML error page masquerading as the asset.
+          sz="$(stat -c %s "$out")"
+          echo "downloaded $sz bytes"
+          test "$sz" -gt 1000000 || { echo "::error::licensed glb suspiciously small ($sz bytes) — URL/auth wrong?"; exit 1; }
+          head -c4 "$out" | grep -q 'glTF' || { echo "::error::downloaded file is not a binary glTF (.glb) — got: $(head -c64 "$out" | tr -dc '[:print:]')"; exit 1; }
+          echo "licensed glb looks valid"
+
+      - name: Import resources
+        if: steps.guard.outputs.has == 'true'
+        run: nix develop -c godot --headless --import
+
+      - name: Export encrypted "Web Licensed" bundle
+        if: steps.guard.outputs.has == 'true'
+        env:
+          GODOT_SCRIPT_ENCRYPTION_KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/web-licensed
+          nix develop -c godot --headless --export-release "Web Licensed" build/web-licensed/index.html
+          for f in index.html index.js index.wasm index.pck \
+                   index.manifest.json index.service.worker.js; do
+            test -s "build/web-licensed/$f" || { echo "::error::export missing build/web-licensed/$f"; exit 1; }
+          done
+          echo "export OK:"; ls -la build/web-licensed
+
+      # NEGATIVE proof of encryption: the flake's empty-key linux runtime must NOT be able
+      # to open the pck. If it boots (prints the readiness line), the pck wasn't encrypted.
+      - name: Assert the pck is actually encrypted
+        if: steps.guard.outputs.has == 'true'
+        run: |
+          set -euo pipefail
+          set +e
+          out="$(nix develop -c godot --headless --main-pack build/web-licensed/index.pck --quit-after 5 2>&1)"
+          set -e
+          echo "$out"
+          if echo "$out" | grep -q '\[Bra!\] scaffold ready'; then
+            echo "::error::empty-key runtime opened index.pck — it is NOT encrypted"; exit 1
+          fi
+          echo "OK — empty-key runtime cannot open the pck (it is encrypted)"
+
+      # POSITIVE proof: boot the REAL web bundle in headless Chromium. Reaching
+      # window.__appReady proves the custom-key template decrypted the pck; the required
+      # console signals prove it loaded the LICENSED dog and it can Sitt (not the CC0 one).
+      - name: Boot the encrypted bundle in a browser
+        if: steps.guard.outputs.has == 'true'
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null 2>&1
+          npx playwright install --with-deps chromium
+          node tools/web_boot_check.mjs build/web-licensed \
+            --require "dog_licensed.glb" \
+            --require "dog can Sitt"
+
+      - name: Upload licensed bundle artifact (for owner review)
+        if: steps.guard.outputs.has == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-licensed-bundle
+          path: build/web-licensed
+          retention-days: 14
+
+      # Only stage for Pages when explicitly publishing. Validation above has already
+      # passed (set -e), so a broken bundle can never reach this step.
+      - name: Stage bundle for GitHub Pages
+        if: steps.guard.outputs.has == 'true' && inputs.publish
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web-licensed
+
+  publish:
+    needs: build-licensed
+    if: ${{ inputs.publish && needs.build-licensed.outputs.built == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
