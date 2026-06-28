@@ -103,24 +103,34 @@ func _frame_camera(dog: Node) -> void:
 		return
 	var cam := Camera3D.new()
 	cam.name = "Camera3D"
+	# add_child BEFORE look_at_from_position: look_at requires the node to be inside the
+	# tree — called before, it errors and no-ops, leaving the camera at identity (origin,
+	# -Z) so the dog is never actually framed. (026 — honest gate caught this.)
+	add_child(cam)
 	var aspect := _viewport_aspect()
 	var eye := DogFraming.eye(box, cam.fov, aspect, FRAME_FILL)
 	cam.look_at_from_position(eye, DogFraming.target(box), Vector3.UP)
-	add_child(cam)
 	cam.make_current()
 
 ## Default camera if the dog can't be measured/loaded — keeps the scene viewable.
 func _fallback_camera() -> void:
 	var cam := Camera3D.new()
 	cam.name = "Camera3D"
+	add_child(cam)  # before look_at — see _frame_camera (026)
 	cam.look_at_from_position(Vector3(0.0, 1.0, 3.0), Vector3(0.0, 0.9, 0.0), Vector3.UP)
-	add_child(cam)
 	cam.make_current()
 
 ## Viewport width/height. The project pins a 720×1280 logical viewport (stretch=keep),
 ## so this is a stable portrait aspect everywhere — headless, browser, any device.
 func _viewport_aspect() -> float:
-	var size := get_viewport().get_visible_rect().size
+	# get_viewport() is null when the node isn't inside a SceneTree — e.g. a headless
+	# test that instantiates main and calls _ready() directly. Guard it (never call
+	# get_visible_rect() on null) so _ready() is headless-safe; fall back to the pinned
+	# 720×1280 portrait ratio. This used to throw at _ready and the runner hid it. (026)
+	var vp := get_viewport()
+	if vp == null:
+		return 720.0 / 1280.0
+	var size := vp.get_visible_rect().size
 	if size.y <= 0.0:
 		return 720.0 / 1280.0
 	return size.x / size.y

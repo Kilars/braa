@@ -27,13 +27,14 @@ points at it. **025 = wire + ship the Labrador**, not acquire one. The only owne
 piece is shipping it to the **public** Pages site without leaking the license (ADR-0006
 encrypted pack → one CI secret/key, set once). Local review needs no secret.
 
-### ⛔ Blocker 2 — the verify gate is partly lying (026)
-The headless test runner reports `all green / exit 0` **even when a test throws a runtime
-SCRIPT ERROR mid-method** (an aborted method records zero failures). Right now
-`scripts/main.gd:123` (`get_visible_rect()` on a null headless viewport) crashes
-`test_bra_button` and `test_payoff_wiring`, which therefore **never run their asserts** yet
-read green. Until **026** fixes this, "verify gate green" is not trustworthy and the loop
-is building on a gate that can't catch a broken scene.
+### ✅ Blocker 2 — RESOLVED: the verify gate is now honest (026, done 2026-06-28)
+The runner used to read `all green / exit 0` even when a test aborted on a runtime SCRIPT
+ERROR (zero recorded failures). Fixed: `test_case.gd` counts assertions and `test_runner.gd`
+fails any `test_*` that ends with 0 assertions (silent abort or empty test); the
+`main.gd:123` null-viewport crash is guarded; the boot leg now greps `is_inside_tree`. The
+honest gate immediately caught a hollow camera test, which exposed and got us a **real
+production bugfix** (the dog camera was never aimed — `look_at` before `add_child`). Full
+gate green for real at 73 tests.
 
 ### Per-system audit result
 | System (card) | Code | Tests | Live on CC0 dog? | Board |
@@ -57,8 +58,8 @@ is building on a gate that can't catch a broken scene.
 correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
 
 ## Before restarting the autonomous loop — DO THESE FIRST
-1. **026** — fix the lying test gate (runtime errors must fail; guard `main.gd:123`).
-   Otherwise every loop iteration trusts a gate that can read green on a crash.
+1. ✅ **026** — DONE. The test gate is honest (runtime aborts fail; `main.gd` viewport
+   guarded; boot leg hardened). Bonus: fixed the un-aimed dog camera.
 2. **025** — wire in the **already-bought** Labrador (`models-build/out_anim.glb` has
    `Sitting_start/loop/end`; the code already resolves them). Point the loader at it, import
    it, and ship it to public Pages without leaking the license (ADR-0006 encrypted pack —
@@ -78,7 +79,6 @@ correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
   not the Maren voice.
 
 ## Backlog (in priority order)
-- **026** — BUG: verify gate swallows SCRIPT ERRORs (gate integrity). **HIGH — first.**
 - **025** — wire + ship the **already-bought** Labrador (`out_anim.glb`, has the sit). Code
   already resolves its clips; load it + import it + ship via ADR-0006 encrypted pack (one CI
   secret = the only owner-gated bit). The Phase-1 unblocker — small, mostly code.
@@ -86,6 +86,8 @@ correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
   currently MISSING; also delete the false `marked`-consumer comments in `main.gd`.
 
 ## Done (verified)
+- **026** — BUG: verify gate made honest (assertion-count guard + null-viewport fix + boot
+  grep). Surfaced & fixed a real camera-framing bug (look_at before add_child).
 - **024a** — apex-band / scoring-window math (`SitWindow`/`SitSession`), test-first,
   source-audit confirmed real (mutation-tested).
 - **023** — bun/Babylon toolchain removed; verify gate is Godot headless

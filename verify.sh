@@ -25,8 +25,8 @@ godot --headless --import
 step "2/4 boot main scene"
 boot_log="$(mktemp)"
 godot --headless --quit-after 60 2>&1 | tee "$boot_log"
-if grep -qE 'SCRIPT ERROR|SCENE ERROR|dog model failed to load|Failed to (load|instantiate)' "$boot_log"; then
-	echo "::error:: boot produced a script/scene/load error"; exit 1
+if grep -qE 'SCRIPT ERROR|SCENE ERROR|dog model failed to load|Failed to (load|instantiate)|is_inside_tree' "$boot_log"; then
+	echo "::error:: boot produced a script/scene/load error (incl. look_at-before-add_child / out-of-tree)"; exit 1
 fi
 grep -q '\[Bra!\] scaffold ready' "$boot_log" || { echo "::error:: readiness signal '[Bra!] scaffold ready' missing"; exit 1; }
 

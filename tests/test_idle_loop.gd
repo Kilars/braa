@@ -37,21 +37,23 @@ func test_idle_is_playing_and_loops_seamlessly() -> void:
 # recomputing here would be both a tautology and wrong.
 const DOG_CENTRE := Vector3(0.0, 0.928, 0.279)
 
-func test_camera_is_aimed_at_the_dog_centre() -> void:
+func test_camera_target_is_the_dog_centre() -> void:
+	# main aims the camera at _dog_bounds().get_center() (the scaffold regression aimed at
+	# (0,0.5,0), ~0.36 below it). The APPLIED look_at transform can't be asserted in the
+	# --script unit tree — look_at requires a running SceneTree, which the headless runner
+	# never starts, so the camera stays at identity here regardless of correctness. The
+	# live aim is gated in verify.sh's boot leg (a real tree; it now fails on the
+	# `!is_inside_tree()` error a pre-add_child look_at would emit). Here we pin the two
+	# deterministic facts: the target the aim is built from is the real dog centre, and
+	# main actually creates a Camera3D. (026)
 	var main := _instantiate_main()
-	# The active camera, not a tree search: the dog glb ships its own embedded
-	# Camera3D, so we must assert against the one main actually made current.
-	var cam := main.get_viewport().get_camera_3d()
-	assert_true(cam != null, "the scene must have an active camera")
-	if cam != null:
-		# Perpendicular distance from the dog centre to the camera's forward ray ≈ 0
-		# when the camera is aimed at the centre. The old scaffold aimed at (0,0.5,0),
-		# ~0.36 off — so this fails on that camera; it's a real guard, not a tautology.
-		var o := cam.global_position
-		var d := -cam.global_transform.basis.z.normalized()
-		var to := DOG_CENTRE - o
-		var perp := (to - to.dot(d) * d).length()
-		assert_true(perp < 0.1, "camera must point at the dog centre, perp=%.3f" % perp)
+	var dog := main.get_node_or_null("Dog")
+	assert_true(dog != null, "the dog must be loaded")
+	if dog != null:
+		var centre: Vector3 = main._dog_bounds(dog).get_center()
+		assert_true(centre.distance_to(DOG_CENTRE) < 0.05,
+			"camera target (dog bounds centre) must be the dog centre, got %s" % centre)
+	assert_true(main.get_node_or_null("Camera3D") != null, "main must create a Camera3D")
 	main.queue_free()
 
 func _find_ap(n: Node) -> AnimationPlayer:

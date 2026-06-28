@@ -33,6 +33,11 @@ func _initialize() -> void:
 			test_case.call(method_name)
 			for failure in test_case.failures:
 				failures.append("%s::%s — %s" % [path.get_file(), method_name, failure])
+			# A test that recorded ZERO assertions either is empty or aborted on a
+			# runtime SCRIPT ERROR before asserting — `call()` returns regardless, so
+			# this is the only signal an abort even happened. Fail it, never hollow-pass. (026)
+			if test_case.assertions == 0:
+				failures.append("%s::%s — ran but made 0 assertions (empty test, or a runtime error aborted it before any assert)" % [path.get_file(), method_name])
 
 	print("\n── Bra! test gate ─────────────────────────")
 	print("  ran %d test(s), %d failure(s)" % [total, failures.size()])
