@@ -1,0 +1,85 @@
+class_name DogClips
+extends RefCounted
+## Resolves a dog's idle / sit clip names from its AnimationPlayer clip list so the
+## sit director (024b) is dog-agnostic. The CC0 placeholder
+## (assets/models/dog.glb) ships no Sitt clip; the licensed Labrador (ADR-0002
+## shared clip library) has real `Sitting_start / loop / end`. Matching is by the
+## clip's leaf name — the segment after the last '|' — so it survives both the
+## `AnimalArmature|...|Idle` and `Arm_Labrador|Sitting_start` naming schemes, and
+## "sitting" (not the looser "sit") guards against decoys like `Crouch_Idle_loop`.
+
+var idle: String       ## the ambient idle clip (P1-2); "" if the dog has none
+var sit_start: String  ## build-into-the-sit clip; the apex is its end. "" if none
+var sit_loop: String   ## fully-seated hold loop. "" if none
+var sit_end: String    ## stand-back-up clip. "" if none
+var reaction: String   ## positive reaction on a mark (024f, P1-6); "" if the dog has none
+
+## Leaf substrings that name a POSITIVE reaction, in priority order. Deliberately
+## reaction-specific — no generic locomotion ("jump", "walk", "run") — so the CC0
+## placeholder, which ships only those, resolves no reaction and stays idle rather
+## than faking a celebration (the 024f asset gate). The licensed Labrador's authored
+## reaction drops in under whichever of these its clip set carries (confirmed at 025).
+const REACTION_VOCAB := ["wag", "happy", "excit", "greet", "celebrat", "perk", "bark"]
+
+func _init() -> void:
+	idle = ""
+	sit_start = ""
+	sit_loop = ""
+	sit_end = ""
+	reaction = ""
+
+static func resolve(names: PackedStringArray) -> DogClips:
+	var c := DogClips.new()
+	c.idle = _pick_idle(names)
+	c.sit_start = _pick(names, "sitting", "start")
+	c.sit_loop = _pick(names, "sitting", "loop")
+	c.sit_end = _pick(names, "sitting", "end")
+	c.reaction = _pick_reaction(names)
+	return c
+
+## True when this dog can actually perform a sit (build + hold both present). The
+## CC0 placeholder returns false — the director then stays in idle and never fakes
+## a sit (P1-1 "no placeholder stand-in", and the 024b asset gate).
+func has_sit() -> bool:
+	return sit_start != "" and sit_loop != ""
+
+## True when this dog has an authored positive-reaction clip (024f). False on the CC0
+## placeholder — the director then skips the reaction (stays in its resting pose) and
+## never fakes a celebration; the real reaction ships with the licensed Labrador (025).
+func has_reaction() -> bool:
+	return reaction != ""
+
+static func _leaf(name: String) -> String:
+	var parts := name.split("|")
+	return parts[parts.size() - 1]
+
+## Idle = the leaf that is exactly "idle" if present (the CC0 dog's "Idle"), else
+## the first leaf that *starts with* "idle" (the Labrador's "Idle_1"). The
+## starts-with rule rejects decoys like "Crouch_Idle_loop_1".
+static func _pick_idle(names: PackedStringArray) -> String:
+	var fallback := ""
+	for n in names:
+		var leaf := _leaf(n).to_lower()
+		if leaf == "idle":
+			return n
+		if fallback == "" and leaf.begins_with("idle"):
+			fallback = n
+	return fallback
+
+## First clip whose leaf contains both substrings (case-insensitive).
+static func _pick(names: PackedStringArray, a: String, b: String) -> String:
+	for n in names:
+		var leaf := _leaf(n).to_lower()
+		if leaf.contains(a) and leaf.contains(b):
+			return n
+	return ""
+
+## The positive-reaction clip: the first clip matching the highest-priority reaction
+## term present (vocab order, not clip order, so the choice is stable regardless of how
+## the pack lists its clips). "" when none match — the CC0 dog, which never reacts.
+static func _pick_reaction(names: PackedStringArray) -> String:
+	for term in REACTION_VOCAB:
+		for n in names:
+			if _leaf(n).to_lower().contains(term):
+				return n
+	return ""

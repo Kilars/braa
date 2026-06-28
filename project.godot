@@ -1,0 +1,31 @@
+; Bra! — Godot 4 project (v2 stack: ADR-0001 Godot 4, ADR-0003 GDScript,
+; ADR-0004 PWA web export, ADR-0005 repo layout). Scaffold only — Phase 1
+; gameplay (sit / mark / score, specs2.md) is built in later TDD tasks.
+;
+; Engine config format version 5 (Godot 4.6.x).
+
+config_version=5
+
+[application]
+
+config/name="Bra!"
+config/description="One-tap dog-training timing game (v2). Phase 1: the perfect single mark."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon=""
+
+[display]
+
+; Mobile portrait is the only target (specs2: mobile-only, phone-portrait).
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/handheld/orientation="portrait"
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+; Single-threaded GL Compatibility (WebGL2) — the web/PWA-compatible renderer
+; for GitHub Pages without COOP/COEP isolation (ADR-0001 / ADR-0005).
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -1,0 +1,87 @@
+name: Deploy to GitHub Pages
+
+# Every push to main exports the Godot 4 Web/PWA build and publishes it to Pages.
+# Live at https://kilars.github.io/braa/. The export uses relative asset paths and
+# a manifest start_url of "./index.html", so it works under the /braa/ project
+# sub-path with no base rewriting (verified locally in a headless browser).
+#
+# Toolchain: nix (the project's flake) pins Godot 4.6.3 and the matching Web export
+# templates, so the engine that packs the .pck and the wasm runtime template are
+# always the same version (the #1 export risk — version mismatch — is designed out).
+# Single-threaded (variant/thread_support=false in export_presets.cfg) → no COOP/COEP
+# cross-origin-isolation headers needed, which Pages cannot set (ADR-0001/0004/0005).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages deploy needs these; contents:read for checkout.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One live deploy at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Web export templates from the flake's `export-templates` output — the SAME
+      # pinned nixpkgs (flake.lock) as the godot_4 engine `nix develop` uses, so the
+      # engine and the wasm template are always the same version (NOT the floating
+      # `nixpkgs#…` registry, which could drift). Godot finds them under
+      # ~/.local/share/godot/export_templates/<version>/.
+      # (Pulled from cache.nixos.org each run; caching the store is a later
+      # optimisation — correctness first, and the deploy may be slow.)
+      - name: Install Godot Web export templates
+        run: |
+          set -euo pipefail
+          TPL=$(nix build --no-link --print-out-paths .#export-templates)
+          VER=$(cat "$TPL"/share/godot/export_templates/*/version.txt)
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          ln -sfn "$TPL/share/godot/export_templates/$VER" \
+                  "$HOME/.local/share/godot/export_templates/$VER"
+          echo "installed export templates: $VER"
+
+      # Import resources (glTF dog → .scn, textures → .ctex) before export.
+      - name: Import resources
+        run: nix develop -c godot --headless --import
+
+      # Export, then GATE: fail the build (no deploy) unless the export actually
+      # produced the Web bundle. Guards against a green-but-empty publish.
+      - name: Export Godot Web/PWA build
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          nix develop -c godot --headless --export-release "Web" build/web/index.html
+          for f in index.html index.js index.wasm index.pck \
+                   index.manifest.json index.service.worker.js; do
+            test -s "build/web/$f" || { echo "::error::export missing build/web/$f"; exit 1; }
+          done
+          echo "export OK:"; ls -la build/web
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
