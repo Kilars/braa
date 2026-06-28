@@ -94,6 +94,24 @@ jobs:
             echo "::warning::need GODOT_SCRIPT_ENCRYPTION_KEY secret AND a committed assets/models/dog_licensed.glb.enc — skipping licensed build (expected on forks / before setup)."
           fi
 
+      # FAIL FAST: decrypt before the ~45-min template build, so a wrong key / bad blob
+      # fails in seconds instead of after the slow compile. Needs only openssl + the repo.
+      # The glTF-magic check is the wrong-key tripwire (a bad key yields non-glTF garbage).
+      - name: Decrypt licensed Labrador
+        if: steps.guard.outputs.has == 'true'
+        env:
+          KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          out="assets/models/dog_licensed.glb"
+          openssl enc -d -aes-256-cbc -pbkdf2 -in assets/models/dog_licensed.glb.enc -out "$out" -pass env:KEY \
+            || { echo "::error::openssl could not decrypt dog_licensed.glb.enc — wrong key, or it was encrypted with options other than -aes-256-cbc -pbkdf2"; exit 1; }
+          sz="$(stat -c %s "$out")"
+          echo "decrypted $sz bytes"
+          test "$sz" -gt 1000000 || { echo "::error::decrypted glb suspiciously small ($sz bytes)"; exit 1; }
+          head -c4 "$out" | grep -q 'glTF' || { echo "::error::decrypted file is not a binary glTF (.glb) — wrong key or corrupt blob"; exit 1; }
+          echo "licensed glb decrypted and valid"
+
       - name: Install Nix (flake-pinned export tool + official templates)
         if: steps.guard.outputs.has == 'true'
         uses: cachix/install-nix-action@v30
@@ -173,23 +191,6 @@ jobs:
           # Overlay our from-source, custom-key, single-threaded release template.
           cp -f "$TEMPLATE_ZIP" "$DEST/web_nothreads_release.zip"
           echo "installed templates:"; ls -la "$DEST"
-
-      # Decrypt the committed encrypted glb in place. The glTF-magic check is also the
-      # wrong-key tripwire: a bad key yields garbage that won't start with "glTF".
-      - name: Decrypt licensed Labrador
-        if: steps.guard.outputs.has == 'true'
-        env:
-          KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
-        run: |
-          set -euo pipefail
-          out="assets/models/dog_licensed.glb"
-          openssl enc -d -aes-256-cbc -pbkdf2 -in assets/models/dog_licensed.glb.enc -out "$out" -pass env:KEY \
-            || { echo "::error::openssl could not decrypt dog_licensed.glb.enc — wrong key, or it was encrypted with different options than -aes-256-cbc -pbkdf2"; exit 1; }
-          sz="$(stat -c %s "$out")"
-          echo "decrypted $sz bytes"
-          test "$sz" -gt 1000000 || { echo "::error::decrypted glb suspiciously small ($sz bytes)"; exit 1; }
-          head -c4 "$out" | grep -q 'glTF' || { echo "::error::decrypted file is not a binary glTF (.glb) — wrong key or corrupt blob"; exit 1; }
-          echo "licensed glb decrypted and valid"
 
       - name: Import resources
         if: steps.guard.outputs.has == 'true'
