@@ -17,10 +17,15 @@ The shipped CC0 dog (`assets/models/dog.glb`) has **no Sitt clip** (and no react
 So at runtime: the sit never opens → every BRA tap scores **DEAD** → no score, no apex
 tell, no payoff (silent), no dog reaction. **A player cannot experience Phase 1 on the
 deployed site today** — they see a centered, idling dog and a BRA button that does nothing
-audible/visible. The sit/tell/tap/payoff code is real and unit-correct but **dormant**,
-unblocked only by **025** (ship the sit-capable licensed Labrador via the ADR-0006
-encrypted PCK — an **owner-gated asset**, not something the loop can generate).
-P1-3/4/5/6 cannot pass their **live** acceptance until 025.
+audible/visible. The sit/tell/tap/payoff code is real and unit-correct but **dormant**.
+
+**The fix is small — the sit asset already exists and the code already supports it.** The
+bought licensed Labrador (`models-build/out_anim.glb`, 113 clips incl.
+`Arm_Labrador|Sitting_start / loop / end`) is on disk; `DogClips.resolve()` already matches
+those names, so `has_sit()` would be true and the loop would light up the moment the loader
+points at it. **025 = wire + ship the Labrador**, not acquire one. The only owner-gated
+piece is shipping it to the **public** Pages site without leaking the license (ADR-0006
+encrypted pack → one CI secret/key, set once). Local review needs no secret.
 
 ### ⛔ Blocker 2 — the verify gate is partly lying (026)
 The headless test runner reports `all green / exit 0` **even when a test throws a runtime
@@ -54,10 +59,12 @@ correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
 ## Before restarting the autonomous loop — DO THESE FIRST
 1. **026** — fix the lying test gate (runtime errors must fail; guard `main.gd:123`).
    Otherwise every loop iteration trusts a gate that can read green on a crash.
-2. **025** — resolve the sit-capable dog (owner action: drop in the licensed Labrador, or
-   choose a CC0 model that has a Sitt clip). The loop **cannot generate this asset and will
-   fake it** if pointed at Phase-1 visual slices without it. Until 025, 024b/d/e/f stay
-   parked and Phase-1 live review is impossible.
+2. **025** — wire in the **already-bought** Labrador (`models-build/out_anim.glb` has
+   `Sitting_start/loop/end`; the code already resolves them). Point the loader at it, import
+   it, and ship it to public Pages without leaking the license (ADR-0006 encrypted pack —
+   one CI secret, set once by the owner). Local proof needs no secret. Until 024b/d/e/f run
+   on this dog, they stay parked and Phase-1 live review is impossible. NB: if pointed at the
+   visual slices with no real sit clip, the loop will fake a sit — but the real one IS here.
 
 ## In progress
 - **024** — Phase 1 epic (stays open until the P1-10 done-gate passes).
@@ -72,8 +79,9 @@ correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
 
 ## Backlog (in priority order)
 - **026** — BUG: verify gate swallows SCRIPT ERRORs (gate integrity). **HIGH — first.**
-- **025** — ship the sit-capable licensed dog (ADR-0006 encrypted PCK). **Owner-gated;**
-  the Phase-1 unblocker.
+- **025** — wire + ship the **already-bought** Labrador (`out_anim.glb`, has the sit). Code
+  already resolves its clips; load it + import it + ship via ADR-0006 encrypted pack (one CI
+  secret = the only owner-gated bit). The Phase-1 unblocker — small, mostly code.
 - **024g** — honest on-screen timing readout (P1-7) + reduced-motion wiring (P1-8). Both
   currently MISSING; also delete the false `marked`-consumer comments in `main.gd`.
 
