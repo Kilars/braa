@@ -112,6 +112,27 @@ jobs:
           head -c4 "$out" | grep -q 'glTF' || { echo "::error::decrypted file is not a binary glTF (.glb) — wrong key or corrupt blob"; exit 1; }
           echo "licensed glb decrypted and valid"
 
+      # Cache the compiled web template so the ~45-min from-source build runs ONCE, not on
+      # every father/PO review. The template depends ONLY on engine version + emscripten +
+      # the key — NOT on game code or the glb — so that's the whole cache key. A cache hit
+      # skips the godot checkout/emsdk/scons/build entirely; a review then costs just the
+      # re-export + browser-validate (~minutes). The key is fingerprinted (sha256, first 12
+      # hex) so rotating it busts the cache without putting the secret in a cache key.
+      - name: Template cache fingerprint
+        id: fp
+        if: steps.guard.outputs.has == 'true'
+        env:
+          KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
+        run: echo "fp=$(printf '%s' "$KEY" | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached web template
+        id: tplcache
+        if: steps.guard.outputs.has == 'true'
+        uses: actions/cache@v4
+        with:
+          path: webtpl
+          key: licensed-webtpl-${{ env.GODOT_TAG }}-em${{ env.EM_VERSION }}-${{ steps.fp.outputs.fp }}-v1
+
       - name: Install Nix (flake-pinned export tool + official templates)
         if: steps.guard.outputs.has == 'true'
         uses: cachix/install-nix-action@v30
@@ -133,7 +154,7 @@ jobs:
           esac
 
       - name: Check out Godot source @ matching tag
-        if: steps.guard.outputs.has == 'true'
+        if: steps.guard.outputs.has == 'true' && steps.tplcache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: godotengine/godot
@@ -142,13 +163,13 @@ jobs:
           submodules: recursive
 
       - name: Set up Emscripten (Godot's pinned web toolchain)
-        if: steps.guard.outputs.has == 'true'
+        if: steps.guard.outputs.has == 'true' && steps.tplcache.outputs.cache-hit != 'true'
         uses: emscripten-core/setup-emsdk@v16
         with:
           version: ${{ env.EM_VERSION }}
 
       - name: Set up SCons
-        if: steps.guard.outputs.has == 'true'
+        if: steps.guard.outputs.has == 'true' && steps.tplcache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           python -m pip install --upgrade "scons>=4.0"
@@ -161,19 +182,21 @@ jobs:
       # No production=yes/LTO on this first cut: correctness over size, and it sidesteps
       # the LTO OOM/time risk on a CI runner. (Enable production=yes once it's proven.)
       - name: Build encrypted web template from source
-        if: steps.guard.outputs.has == 'true'
+        if: steps.guard.outputs.has == 'true' && steps.tplcache.outputs.cache-hit != 'true'
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_SCRIPT_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
-          cd godot
-          scons platform=web target=template_release threads=no use_closure_compiler=no verbose=yes
-          ls -la bin/
+          ( cd godot && scons platform=web target=template_release threads=no use_closure_compiler=no verbose=yes )
+          ls -la godot/bin/
           # scons names it godot.web.template_release.wasm32.nothreads.zip; glob to be robust.
-          built="$(find bin -maxdepth 1 -name 'godot.web.template_release.wasm32*nothreads*.zip' | head -1)"
-          test -n "$built" || { echo "::error::no nothreads web template zip produced"; ls -la bin; exit 1; }
-          echo "TEMPLATE_ZIP=$PWD/$built" >> "$GITHUB_ENV"
-          echo "built template: $built"
+          built="$(find godot/bin -maxdepth 1 -name 'godot.web.template_release.wasm32*nothreads*.zip' | head -1)"
+          test -n "$built" || { echo "::error::no nothreads web template zip produced"; ls -la godot/bin; exit 1; }
+          # Stash into the cached dir under the editor's expected filename — this is what
+          # gets cached (key in the fingerprint step) and reused on the next review.
+          mkdir -p webtpl
+          cp -f "$built" webtpl/web_nothreads_release.zip
+          echo "built + cached template: $built"
 
       # Start from the official .tpz (gives version.txt + all the templates the editor
       # may sanity-check), then OVERLAY just our custom-key nothreads-release template.
@@ -188,8 +211,10 @@ jobs:
           mkdir -p "$DEST"
           cp -rL "$TPL/share/godot/export_templates/$VER/." "$DEST/"
           chmod -R u+w "$DEST"
-          # Overlay our from-source, custom-key, single-threaded release template.
-          cp -f "$TEMPLATE_ZIP" "$DEST/web_nothreads_release.zip"
+          # Overlay our from-source, custom-key, single-threaded release template — from the
+          # cached dir (populated by the build step on a miss, or restored from cache on a hit).
+          test -s webtpl/web_nothreads_release.zip || { echo "::error::webtpl/web_nothreads_release.zip missing — both cache restore and build failed"; exit 1; }
+          cp -f webtpl/web_nothreads_release.zip "$DEST/web_nothreads_release.zip"
           echo "installed templates:"; ls -la "$DEST"
 
       - name: Import resources
