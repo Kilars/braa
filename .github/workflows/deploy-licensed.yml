@@ -222,7 +222,16 @@ jobs:
 
       - name: Import resources
         if: steps.guard.outputs.has == 'true'
-        run: nix develop -c godot --headless --import
+        run: |
+          set -euo pipefail
+          # The from-source engine tree (checked out into ./godot on a cache miss) must
+          # NOT be scanned or exported as project resources — the "Web Licensed" preset
+          # uses export_filter=all_resources, which would otherwise sweep the entire
+          # engine source into the encrypted pck (and spew GDExtension/UID scan errors).
+          # A .gdignore makes Godot's importer skip the folder. No-op on cache-hit runs,
+          # where ./godot is never checked out.
+          [ -d godot ] && touch godot/.gdignore || true
+          nix develop -c godot --headless --import
 
       - name: Export encrypted "Web Licensed" bundle
         if: steps.guard.outputs.has == 'true'
