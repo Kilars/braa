@@ -6,29 +6,38 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase-1 buildable work COMPLETE, construction-audit CLEAN (2026-06-29)
+## Status — Phase-1 PO re-play REOPENED work; loop building the remaining improvements (2026-06-30)
 
-Every buildable Phase-1 PO directive is now landed and pushed:
+The 2026-06-29 "buildable work COMPLETE / construction clearance" framing was **premature**:
+the PO's live re-play (`po-review.md`) reopened **P1-4** (the apex tell rendered only under
+the `?bra_force_tell=1` seam, invisible in real play) and surfaced **three buildable
+improvements**. P1-4 is now **re-fixed and landed (036)** — the live path was blanked by a
+null-Variant web-marshal collapsing `motion_scale` to 0; fixed + a headless live-path
+regression test. Its **pixel sign-off remains a PO action** on the deployed build.
 
-- **Bugfixes:** 030 apex tell renders · 031 contact shadow · 032 opaque coat — all done + pixel-verified.
-- **Improvements:** 033 tier-readout contrast · **034 joyful hop reaction** (vocab leads
-  `jump_place`/`jumpair` over `bark`; 0.2 s blend; verified via `web_capture_reaction.mjs`,
-  proof in `.screenshots/034-reaction-*`).
-- **Voice:** **035** payoff voice is now a genuinely spoken `bra_tts_placeholder.wav`
-  (espeak-ng), blip only as absent-asset fallback; gate intact (silent on MISS/DEAD,
-  PERFECT louder than OK).
+**Current top 3 (backlog → in-progress) — the PO's remaining Phase-1 improvements:**
 
-**Construction audit (empty-board clearance gate) — CLEAN.** Cold/adversarial re-check of
-030–035 on the committed tree: all fixes real and reachable (32's `CoatOpaque.flatten` is
-actually called at `main.gd:395`, not the old dead-early-return fake); 115 tests, **0 hollow**
-(zero-assertion) tests; audio `.play()` guarded; no `_init add_child`; no faked assets; no
-dead seams. `verify.sh` green (import · boot · test · export).
+- **037 — DONE (2026-06-30).** Apex ring now frames the "BRA" word (marker 200→320 px,
+  ring 62–74→~99 px); forced-tell capture 3290 gold px, word legible inside the ring
+  (`.screenshots/037-ring-frames-bra.png`). Verify green.
+- **038 — IMPROVEMENT — tier readout into clear sky** (P1-7 polish). The flashed tier overlaps
+  the dog's ears/crown; lift the readout band up. Positioning-only; forced-tier Visual Review.
+- **039 — SPIKE — coat seams + stray sliver root-cause** (P1-1/P1-9). Symmetric chest seams +
+  flank arcs + a hard-edged sliver between the front legs on the licensed Labrador; cause
+  unknown (texture/UV vs normal-map vs `CoatOpaque` vs stray geometry) → research, then route
+  to a `040` build task or an informed flag.
 
-**Backlog is intentionally EMPTY → this is the construction clearance hand-off to the PO.**
-The loop has done everything buildable on Phase 1. What remains is **owner/PO-gated only**
-(see `FLAGS.md`): the **P1-10 visual sign-off** on the live licensed deploy; confirming the
-**ADR-0006 encrypted licensed deploy** is live so the PO can review the complete build (task
-025; `deploy-licensed.yml` auto-runs on push but no-ops without the key secret + encrypted
+**Already landed this round:**
+
+- **Bugfixes:** 030 apex tell renders · 031 contact shadow · 032 opaque coat · **036 apex
+  tell live-path fix** (null-Variant web-marshal guard + live regression test).
+- **Improvements:** 033 tier-readout contrast · 034 joyful hop reaction.
+- **Voice:** 035 genuinely spoken `bra_tts_placeholder.wav` (espeak-ng), gate intact.
+
+**Owner/PO-gated, still open (see `FLAGS.md`):** the **P1-10 visual sign-off** on the live
+licensed deploy (including the live pixel proof of the 036 apex tell — a no-seam burst with
+gold > 0, or a `?bra_autotap=1` apex frame); confirming the **ADR-0006 encrypted licensed
+deploy** is live (task 025; `deploy-licensed.yml` no-ops without the key secret + encrypted
 glb); an **on-device audio listen**; and the warm **human Maren "Bra!"** recording. Nothing
 past Phase 1 starts until P1-10 is signed off in `po-review.md`.
 

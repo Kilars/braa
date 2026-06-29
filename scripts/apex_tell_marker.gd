@@ -30,7 +30,29 @@ const HALO_ALPHA := 0.40   ## soft bloom disc (base alpha)
 const RING_ALPHA := 1.0    ## the crisp "now" ring (base alpha) — opaque at peak
 const RING_WIDTH := 10.0   ## ring line width in px at the pinned 720-wide viewport
 
+## The pulse square's edge, at the pinned 720-wide viewport. Sized so the ring ENCIRCLES
+## the BRA word rather than crossing it (P1-4 polish, 037): unit = SIZE*0.5 = 160, so the
+## resting ring radius is 160*RING_BASE ≈ 99 px — outside WORD_HALF_WIDTH. main.gd sizes
+## and centres the marker from this single constant.
+const SIZE := 320.0
+## Half-width of the "BRA" glyph run at the button's font_size 96 — the clearance the ring
+## must beat so it frames the word. The invariant test below locks ring radius > this.
+const WORD_HALF_WIDTH := 90.0
+
+## Radius growth: a soft halo and a crisp ring that each bloom slightly toward the apex.
+const HALO_BASE := 0.78
+const HALO_GROW := 0.18
+const RING_BASE := 0.62
+const RING_GROW := 0.12
+
 var intensity: float = 0.0  ## current tell intensity in [0,1]; 0 = dormant
+
+## Pure radius helpers (render-free, so the framing geometry is unit-testable).
+static func ring_radius(unit: float, intensity: float) -> float:
+	return unit * (RING_BASE + RING_GROW * intensity)
+
+static func halo_radius(unit: float, intensity: float) -> float:
+	return unit * (HALO_BASE + HALO_GROW * intensity)
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE  # never eat a tap meant for BRA
@@ -58,8 +80,6 @@ func _draw() -> void:
 		return
 	var center := size * 0.5
 	var unit := minf(size.x, size.y) * 0.5
-	# Soft halo: a translucent disc that blooms a touch as the apex nears.
-	draw_circle(center, unit * (0.78 + 0.18 * intensity), Color(GLOW, HALO_ALPHA))
-	# Crisp apex ring: brighter, blooming slightly — marks the "now".
-	draw_arc(center, unit * (0.62 + 0.12 * intensity), 0.0, TAU, 64,
+	draw_circle(center, halo_radius(unit, intensity), Color(GLOW, HALO_ALPHA))
+	draw_arc(center, ring_radius(unit, intensity), 0.0, TAU, 64,
 		Color(GLOW, RING_ALPHA), RING_WIDTH, true)

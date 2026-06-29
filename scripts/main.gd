@@ -257,11 +257,13 @@ const BRA_OFFSET_LEFT := 48.0
 const BRA_OFFSET_RIGHT := -48.0
 const BRA_OFFSET_TOP := -280.0
 const BRA_OFFSET_BOTTOM := -88.0
-## Apex-tell marker: 4 px outside the button band so the pulse rings the verb (024d).
-const TELL_RING_MARGIN := 4.0
-const TELL_HALF_WIDTH := 100.0  ## half of the 200px-wide pulse square, centred on the band
-const TELL_OFFSET_TOP := BRA_OFFSET_TOP - TELL_RING_MARGIN
-const TELL_OFFSET_BOTTOM := BRA_OFFSET_BOTTOM + TELL_RING_MARGIN
+## Apex-tell marker: centred on the button so the pulse rings the verb (024d, 037).
+const TELL_HALF_WIDTH := ApexTellMarker.SIZE * 0.5  ## 160 — half the pulse square (037)
+## Button-band centre above the bottom edge (anchor_*=1.0 space): keep the ring concentric
+## with the centred "BRA" glyphs so it frames the word instead of crossing it (P1-4, 037).
+const BRA_CENTER_Y := (BRA_OFFSET_TOP + BRA_OFFSET_BOTTOM) * 0.5
+const TELL_OFFSET_TOP := BRA_CENTER_Y - TELL_HALF_WIDTH
+const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
 ## Timing readout: a band across the upper portrait area, clear of dog and button (024g).
 const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
@@ -458,10 +460,9 @@ func _setup_bra_button() -> void:
 func _setup_tell_marker(ui: CanvasLayer) -> void:
 	var marker := ApexTellMarker.new()
 	marker.name = "TellMarker"
-	# A 200×200 square centred on the BRA button band (button centre ≈ 184px above
-	# the bottom edge), so the pulse rings the verb the thumb is reaching for. The
-	# top/bottom offsets are derived from the button band (± TELL_RING_MARGIN), so the
-	# ring follows the verb if the button band ever moves.
+	# A 320×320 square centred on the BRA button band, so the ring frames the "BRA" word
+	# rather than crossing it (P1-4 polish, 037). The top/bottom offsets are derived from
+	# the button band's centre, so the ring stays concentric with the verb if it ever moves.
 	marker.anchor_left = 0.5
 	marker.anchor_right = 0.5
 	marker.anchor_top = 1.0
