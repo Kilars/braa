@@ -72,9 +72,12 @@ feedback is crisp and fair.
   *As a player, I want every successful BRA to give me voice + sound + a dog
   reaction on the beat, so that the mark is the payoff.*
   Acceptance:
-  - A warm, Maren-style spoken **"Bra!"** plays on a successful mark (placeholder
-    TTS acceptable for Phase 1; real Maren voice is the later owner-gated drop-in
-    under the same cue). (Audio)
+  - A warm, Maren-style spoken **"Bra!"** plays on a successful mark. A *genuinely
+    spoken* word is required even before the real recording — synthesize one (e.g.
+    offline TTS) rather than substituting an abstract tone/beep. The warm **human**
+    Maren voice is the owner-gated drop-in under the same stable cue id; if it can't
+    be produced, that gap is **flagged** (`.task-board/FLAGS.md`), never silently
+    stubbed. (Audio, PO-Directive 2026-06-29)
   - A crisp UI click sits under the voice. (Mark SFX)
   - PERFECT sounds/feels brighter than OK.
   - The dog gives a clearly positive reaction (perk-up / bounce / tail wag) on a

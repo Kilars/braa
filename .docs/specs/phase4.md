@@ -15,6 +15,9 @@
   - Higher = tighter window, fainter & faster apex tell, more distractors, and a
     harsher false-mark penalty (the fuller Mistakes/confuse model lands here).
     (Difficulty, Mistakes, D7, D9)
+  - The **learned-bar erosion rate** (P2-4 negative learning) scales with difficulty:
+    gentle by default, harsher on higher modes — a mistimed / wrong-moment tap removes
+    more, up to an "unforgiving training" tier. More feints, too. (PO-Directive 2026-06-29)
 
 - **P4-3 — Pain pays.**
   *As a player, I want harder modes to reward more, so that opting into difficulty

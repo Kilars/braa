@@ -39,7 +39,19 @@ Entry format:
 
 ## Open
 
-_(none)_
+### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated
+- **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
+- **Decision needed:** Supply a real, warm, **human "Bra!"** recording (the "Maren" delivery) to
+  drop in under the stable voice cue id — and later the Phase-5 praise words (*dyktig, flink,
+  super, kjempebra*), each as its own voiced line.
+- **Why it's user-only:** a specific person's warm voice is an asset the loop cannot synthesize
+  or acquire — there is no technical fork to reason out. (X-7 keeps the game offline, so a
+  cloud-voice substitute is out too.)
+- **Assumption made to keep going:** the abstract sine-tone "blip" was not an honest attempt at
+  a spoken word. Replaced it with a *genuinely spoken* one — an offline `espeak-ng` Norwegian
+  **"Bra!"** (`assets/audio/bra_tts_placeholder.wav`), wired under the same cue id (task **035**).
+  It is robotic and a clear placeholder; your recording replaces the file with **no code change**.
+  Until then the spoken stand-in ships instead of a tone.
 
 ## Resolved
 

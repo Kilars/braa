@@ -104,3 +104,38 @@ to Phase 2; reopen Phase-1 work below.**
 *Scope note: audio can't be heard in the headless harness, so the "Bra!" voice/SFX is
 judged only as wired + gated (silent on MISS / dead tap) — worth an on-device listen
 before final sign-off.*
+
+---
+
+## Forward PO Directives (captured 2026-06-29)
+
+> Owner design decisions captured ahead of their phase. **These are not current-phase
+> play-test notes**, and the build loop should **not** action the Phase-2/4 items until
+> that phase is current — they are already formalized into the phase specs cited below.
+> Listed here only for provenance: what the PO asked for, and when. (The father pass owns
+> the two sections above and leaves this one alone.)
+
+### 2026-06-29 — grilled feature set (→ Phase 2 / Phase 4)
+
+1. **Anti-mash freeze on BRA.** After every tap, lock BRA ~350 ms, swallow taps during the
+   lock, don't reset the timer. → **P2-7**.
+2. **A living dog: wander + variable rhythm + feints.** The dog roams a bounded patch on no
+   fixed cadence and sometimes fakes a sit; only a real, completed Sitt is markable. → **P2-8**
+   (rides the garden, P2-10).
+3. **Negative learning.** Wrong-timing / wrong-moment taps **remove** learning — gentle by
+   default, erodible, floors at 0, mastery is a safe checkpoint; a bad tap shows a confused
+   beat. → **amends P2-4**; harshness scales in **P4-2**.
+4. **A fading timing trainer.** A bold approach-ring "now" cue for a new trick that fades with
+   the learned bar and is gone at mastery; honest (rides `SitWindow`), dark during feints.
+   → **P2-9**.
+5. **The garden.** Look-down Pokémon-GO view — sky + sun above, grass below, BRA floating over
+   the grass; fixed camera, dog roams a bounded patch. Functional garden in Phase 2 (it enables
+   the wandering); environment art polish deferred to **Phase 7**. → **P2-10**.
+
+### 2026-06-29 — the voice is not "placeholder-acceptable" (current phase, P1-6)
+
+The synthesized **sine-tone beep** was not an honest attempt at a spoken "Bra!". A *genuinely
+spoken* word is now required for Phase 1 (P1-6 amended): an offline-TTS stand-in (`espeak-ng`
+"Bra!", `assets/audio/bra_tts_placeholder.wav`) ships until the warm **human** Maren recording —
+which is **owner-gated** — is supplied. The owner gap is an **open flag** (`.task-board/FLAGS.md`);
+the wiring is **task 035**. This is current-phase work (not parked under "Forward").
