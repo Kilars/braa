@@ -20,83 +20,77 @@ _(none yet — current phase is Phase 1)_
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-06-29
+### PO Review — 2026-06-30
 
-Re-drove the **real Godot Web/PWA build** (local export of the licensed Labrador —
-`build/web`; console confirms `res://assets/models/dog_licensed.glb`, "dog can Sitt",
-looping every 1.2 s) in a headless browser at 390×844. Captured the idle pose, a free-run
-burst across several full sit cycles, apex-synced frames (the live PERFECT path via
-`?bra_autotap=1`), forced-tell / forced-tier reference frames, and 10 real BRA taps —
-reading the live console throughout. **Phase 1 is still NOT done: the apex tell — the
-core "now" cue (P1-4) — renders only under the `?bra_force_tell=1` capture seam and is
-invisible in actual play. Do not advance to Phase 2.**
+Re-drove the **real Godot Web/PWA build** — a local export carrying the **licensed
+Labrador** (`build/web`, rebuilt 01:29; the full sit loop runs live — the dog idles,
+builds into a clear seated apex, marks score, and it loops) — in headless Chromium at
+390×844. Captured a **no-seam** free-run apex burst, a `?bra_autotap=1` live PERFECT mark
+(reaction + readout), the forced-tier readout reference, a reduced-motion burst, and a
+magnified coat crop. **The carried-over P1-4 blocker is RESOLVED.** Phase 1 is **not**
+signed off this pass — the only gaps left are owner-gated (the spoken-voice listen + the
+coat re-export) plus a live-deployed-site visual check. Do not advance to Phase 2.
 
-Most of the 2026-06-28 defects are genuinely fixed and are pruned from this log (see
-"what holds up"). The apex tell is the one carried-over blocker — with a sharper
-diagnosis now: it is a **live-path** failure, not a draw or curve failure.
+**The blocker is gone (P1-4 — proven live, no seam):** a free-run 90-frame burst across
+several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring at the
+seated apex — **max 2621 gold px, 4/90 frames**, the pulse building and tapering across the
+button band (2621 → 2145 → 374 → 120) like a soft "now" pulse, and dark in idle
+(`.screenshots/po-live-apex-burst.png`). This is the binding live proof the prior pass
+demanded (a no-seam burst with max gold > 0), **not** the forced seam. The core "now" cue
+now reads in actual play — timing is a readable skill again, not a blind guess.
 
-**What holds up (re-verified live, keep it):**
-- **Scoring honest end to end (P1-5/P1-7).** Autotap scored PERFECT; 10 blind manual taps
-  scored only MISS / DEAD and did nothing — no penalty, no payoff. Console tiers never
-  contradicted the readout.
-- **Contact shadow grounds the dog (P1-1 — was a blocker, fixed).** A soft dark disc sits
-  under the feet in every pose; the dog no longer floats.
-- **Coat is opaque (P1-1/P1-9 — was a blocker, fixed).** Magnified, no sky shows through
-  the chest/belly/flanks at any pose — the see-through panels are gone. (Faint hairline
-  seams remain — see Improvements.)
-- **Readout contrast fixed (P1-7 — was an improvement).** MISS / OK / PERFECT each carry a
-  dark outline and pop against the bright sky; PERFECT is the brightest. All three legible
-  at 390×844.
-- **Reaction reads as joy (P1-6 — was an improvement).** A successful mark fires a clear
-  happy hop (front paws up, ears flying), blended cleanly from the seat — not a lone bark.
-- **The dog reads, the sit is legible, it stays centered, and the loop repeats**
-  idle → sit → apex → reaction → idle with no console errors (P1-1/P1-2/P1-3/P1-9).
+**What holds up (re-verified live this pass, keep it):**
+- **Apex ring frames "BRA", doesn't bury it (P1-4 polish — was an improvement, fixed).**
+  In the live apex frame the gold ring rings the marker and the "BRA" word stays fully
+  legible inside it (`.screenshots/po-live-apex-burst.png`).
+- **Tier readout sits in clear sky above the crown (P1-7 polish — was an improvement, fixed).**
+  Forced PERFECT/OK/MISS each flash high above the dog's head, well clear of the ears
+  (`.screenshots/033-readout-perfect.png`); the prior ear/crown overlap is gone.
+- **Reduced motion dampens the tell, never removes it (P1-8).** With `prefers-reduced-motion`
+  the apex ring is faint but present (**max 127 gold px** vs 2621 normal) and the seated
+  apex stays fully readable by pose (`.screenshots/po-reduced-apex.png`).
+- **Reaction reads as joy (P1-6).** A live PERFECT mark fires a clear happy hop — front paws
+  up, head high, ears flying (`.screenshots/po-reaction-06.png`).
+- **Readout contrast (P1-7).** All three tiers carry a dark outline and pop against the sky
+  (outline px: miss 32019 / ok 29892 / perfect 30667).
+- **The dog reads, the sit is legible, it stays centered, opaque coat, contact shadow, and
+  the loop repeats with no console errors (P1-1/P1-2/P1-3/P1-9).** Clear Labrador silhouette,
+  grounded by the shadow disc, no see-through panels, no primitive-blob flash.
 
-#### Bugfixes
+#### Improvements (still open — owner-gated, not loop-buildable)
 
-- **The apex tell still never renders in live play (P1-4 — blocker, carried over).** With
-  the `?bra_force_tell=1` seam the warm-gold halo+ring renders boldly on the BRA marker
-  (saturated-gold detector: **1647 gold px, 6/6 frames**). In **normal play it never
-  appears**: a free-run 90-frame burst across multiple full sit cycles scored **0 gold px
-  in 0/90 frames** with the same detector, and the seated **apex** frame captured the
-  instant a live PERFECT mark fired (`?bra_autotap=1`, which drives the real live-intensity
-  path) shows a plain grey BRA slab — no ring. *Why it's wrong:* P1-4 is the core "now"
-  cue; without it timing is a blind guess, not a readable skill — this is the same
-  2026-06-28 blocker, still open. The forced-only pixel-proof (`web_capture_apex.mjs` with
-  `BRA_FORCE=1`) passed and **masked** it: the gate exercised the seam, not gameplay.
-  *Suspect (sharper now):* the draw and the curve are both proven good — the forced
-  `set_intensity(1.0)` draws fine, `ApexTell.intensity()` returns ~0.65→1.0 near the apex,
-  and autotap confirms the clock reaches the band. The fault is in the **live application**
-  at `main.gd:181-184` (the `elif _tell != null and _session.is_open()` branch) — the
-  live-intensity `set_intensity()` never reaches the marker as a visible value. *Good looks
-  like:* on the running 390×844 build, **with no seam**, a soft warm pulse is clearly
-  visible ringing the BRA marker, building to a peak at the seated apex and dark in idle.
-  **The binding proof must be a live capture** — a free-run burst with max gold > 0, or a
-  `?bra_autotap=1` apex frame showing the ring — **not** the `bra_force_tell` seam, which
-  must no longer be accepted as the gate.
+- **Coat UV/tangent seam down the chest/belly (P1-1 / P1-9).** Magnified, the opaque coat
+  shows a hard vertical shading band down the body-symmetry centerline plus symmetric flank
+  arcs (`.screenshots/po-coat-magnified.png`) — subtle at native phone size but a real
+  shading artifact, not real fur, up close. (What the 2026-06-29 note called a stray "sliver"
+  *is* this centerline band — the 039 spike confirmed it is **not** stray geometry and **not**
+  a transparency gap.) Root-caused to the **licensed asset's mirrored-UV / missing-tangent
+  layout**; it is **owner-gated** — needs a re-export with baked tangents / a re-baked normal
+  map (`.task-board/FLAGS.md`, 2026-06-30). Task 040's in-engine mitigation was correctly
+  found to be a deploy no-op and rerouted, so **there is no new loop task here**. *Good looks
+  like:* smooth opaque coat with no hard centerline band or flank arcs at any pose, confirmed
+  by a magnified capture.
 
-#### Improvements
+#### Sign-off is blocked only on owner/PO actions (no buildable Phase-1 code remains)
 
-- **Residual coat seams + a stray geometry sliver (P1-1 / P1-9).** Magnified, the now-opaque
-  coat still shows faint symmetric hairline seams down the chest and curved arcs across both
-  flanks, plus a small hard-edged sliver dangling between the front legs (clearest in idle).
-  Subtle at native phone size, but they break the clean real-dog silhouette up close. *Good
-  looks like:* smooth opaque coat with no hard-edged seams or stray dangling geometry at any
-  pose, confirmed by a magnified capture.
+With P1-4 fixed and the two readout/ring improvements verified, the visual core loop is
+there. Phase 1 is **not** signed off only because three acceptance items can be cleared
+solely off-loop:
 
-- **The apex ring buries the "BRA" word at peak (P1-4 polish).** In the forced-tell
-  reference the gold ring is centered tightly over the button and partially occludes the
-  "BRA" text. When the live tell is fixed, size/position the ring to frame the marker
-  without hiding the word.
+1. **Spoken "Bra!" listen (P1-6).** Audio can't be heard in the headless harness. The
+   espeak stand-in is wired and gated (silence on MISS/DEAD, payoff only on a successful
+   mark), but the subjective "warm, Maren-style" delivery and "PERFECT brighter than OK"
+   need an **on-device listen**, and the warm **human** Maren voice stays **owner-gated**
+   (`.task-board/FLAGS.md`).
+2. **Coat re-export (P1-1/P1-9)** — the seam above; owner-gated.
+3. **Live deployed-site visual check (P1-10).** This pass reviewed a **local** licensed
+   export; the deployed Pages site no-ops to the CC0 idle-only dog unless the encryption
+   secret + committed `.glb.enc` are in place (`deploy-licensed.yml`, ADR-0006). The P1-10
+   sign-off must be taken on the **live site actually serving the licensed Sitt build**.
 
-- **Tier readout lands on the dog's head, not clear sky (P1-7 polish).** The PERFECT/OK/MISS
-  word flashes low enough to overlap the dog's ears/crown. It's legible (the dark outline
-  carries it), but it would read cleaner pulled up into clear sky above the dog.
-
-*Scope note: audio can't be heard in the headless harness, so the spoken "Bra!" voice/SFX
-(task 035 espeak placeholder — wired + gated: console confirms silence on MISS/DEAD, payoff
-only on a successful mark) is judged only as wired. It needs an on-device listen, and the
-warm human Maren voice remains owner-gated (`.task-board/FLAGS.md`), before final sign-off.*
+When the owner supplies the human voice + coat re-export and confirms the live site serves
+the licensed build, a PO pass can sign Phase 1 off. Until then the build loop has **no
+remaining buildable Phase-1 task** — do not invent one, and do not start Phase 2.
 
 ---
 
