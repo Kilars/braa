@@ -73,12 +73,30 @@ Findings are blocking.
 
 ## Acceptance Criteria
 
-- [ ] Readout band offsets lifted so the flashed tier sits above the dog's crown
-      (`READOUT_OFFSET_TOP`/`_BOTTOM` reduced; band height + horizontal anchors unchanged).
-- [ ] `TierReadout` behaviour untouched (fade math, colours, 033 outline, DEAD-shows-
+- [x] Readout band offsets lifted so the flashed tier sits above the dog's crown
+      (`READOUT_OFFSET_TOP` 96→56, `_BOTTOM` 220→180; 124 px band height + horizontal anchors
+      unchanged).
+- [x] `TierReadout` behaviour untouched (fade math, colours, 033 outline, DEAD-shows-
       nothing) — existing readout tests stay green.
-- [ ] Comfortable top margin retained (word not clipped by the top edge / notch).
-- [ ] Visual Review on the running 390×844 licensed export: the PERFECT/OK/MISS word reads
+- [x] Comfortable top margin retained (word not clipped by the top edge / notch).
+- [x] Visual Review on the running 390×844 licensed export: the PERFECT/OK/MISS word reads
       in clear sky, fully clear of the dog's ears/crown, still legible — captured proof in
       `.screenshots/038-readout-clear-sky.png`.
-- [ ] `nix develop -c bash verify.sh` green (import → boot → test → export).
+- [x] `nix develop -c bash verify.sh` green (import → boot → test → export).
+
+## Resolution (2026-06-30)
+
+Pure positioning change: lifted the readout band up `~40 px` — `READOUT_OFFSET_TOP` 96→56,
+`READOUT_OFFSET_BOTTOM` 220→180 (`scripts/main.gd`) — keeping the 124 px band height and the
+full-width left/right anchors. `TierReadout` itself is untouched (fade math, tier colours, the
+033 dark outline, DEAD-shows-nothing all stay), so the existing readout tests stay green.
+
+**Visual Review — PASS.** Re-exported `build/web` and ran `env -u LD_LIBRARY_PATH node
+tools/web_capture_readout.mjs build/web` (forced-tier seam, licensed Labrador, 390×844): every
+tier keeps a dark outline (miss 32137 / ok 29897 / perfect 30601 px). Eyeballed the PERFECT
+frame (`.screenshots/038-readout-clear-sky.png`): the word now sits in clear sky with a
+comfortable gap above the dog's ears/crown (was nearly on the head at the old 96 px band) and
+is not clipped by the top letterbox. Captured against the worst-case tall idle forward pose —
+the seated apex pose leaves even more sky.
+
+Gate: `nix develop -c bash verify.sh` green (import · boot · test · export), 123 tests, 0 failures.

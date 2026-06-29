@@ -267,8 +267,11 @@ const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
 ## Timing readout: a band across the upper portrait area, clear of dog and button (024g).
 const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
-const READOUT_OFFSET_TOP := 96.0
-const READOUT_OFFSET_BOTTOM := 220.0
+## Lifted into the clear sky above the dog's crown (P1-7 polish, 038): the centred dog's
+## ears reached the old 96–220 band, so the flashed tier overlapped the head. Pulled up
+## ~40 px (band height unchanged) while keeping a comfortable top margin off the letterbox.
+const READOUT_OFFSET_TOP := 56.0
+const READOUT_OFFSET_BOTTOM := 180.0
 
 ## Centre the dog in portrait and fit the camera to its actual bounds, so it reads
 ## centred whichever dog ships — the CC0 placeholder or the licensed Labrador, with

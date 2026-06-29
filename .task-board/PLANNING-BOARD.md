@@ -20,8 +20,9 @@ regression test. Its **pixel sign-off remains a PO action** on the deployed buil
 - **037 — DONE (2026-06-30).** Apex ring now frames the "BRA" word (marker 200→320 px,
   ring 62–74→~99 px); forced-tell capture 3290 gold px, word legible inside the ring
   (`.screenshots/037-ring-frames-bra.png`). Verify green.
-- **038 — IMPROVEMENT — tier readout into clear sky** (P1-7 polish). The flashed tier overlaps
-  the dog's ears/crown; lift the readout band up. Positioning-only; forced-tier Visual Review.
+- **038 — DONE (2026-06-30).** Tier readout band lifted ~40 px (TOP 96→56, BOTTOM 220→180);
+  forced-tier capture shows PERFECT/OK/MISS in clear sky above the dog's crown, not clipped
+  (`.screenshots/038-readout-clear-sky.png`). Verify green.
 - **039 — SPIKE — coat seams + stray sliver root-cause** (P1-1/P1-9). Symmetric chest seams +
   flank arcs + a hard-edged sliver between the front legs on the licensed Labrador; cause
   unknown (texture/UV vs normal-map vs `CoatOpaque` vs stray geometry) → research, then route
