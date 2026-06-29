@@ -1,6 +1,6 @@
 # FEATURE: 035 — Ship a genuinely spoken "Bra!" (replace the sine-tone placeholder) (P1-6)
 
-**Status**: Backlog
+**Status**: Done (2026-06-29)
 **Created**: 2026-06-29
 **Priority**: High — open **PO directive** (P1-6, current phase). The synth blip is not an
 honest spoken word; Phase 1 ships a real spoken "Bra!" before P1-10 sign-off. Non-owner-gated
@@ -57,13 +57,41 @@ Follow `.claude/skills/tdd/SKILL.md` (red → green → refactor).
   loaded under the cue** — note in `po-review.md` that an **on-device listen** + the **human-voice
   flag** remain before final P1-10 sign-off.
 
+## Results (2026-06-29)
+
+**Wired (TDD red→green).** `scripts/payoff_player.gd` now sets `_voice.stream = _load_voice()`
+in `_init()`. `_load_voice()` prefers the real spoken asset — `ResourceLoader.exists(VOICE_ASSET)`
+→ `load(VOICE_ASSET)` (new `const VOICE_ASSET := "res://assets/audio/bra_tts_placeholder.wav"`) —
+and falls back to `_voice_blip()` only when the asset is absent (mirrors the dog-loader's
+degrade-cleanly pattern; public CI without the file still boots). `_voice_blip()` is kept,
+re-documented as the fallback. The class doc now states the voice is a genuinely spoken "Bra!".
+
+New test (red first, then green): `test_voice_is_the_real_spoken_asset_when_present` asserts
+`voice_stream().resource_path == res://assets/audio/bra_tts_placeholder.wav` (the loaded resource,
+not a freshly-synthesized blip whose `resource_path` is `""`). Confirmed red against the old code,
+green after the wiring. **115 tests, 0 failures**; `nix develop -c bash verify.sh` green
+(import · boot · test · export). The `.wav` was already committed; its generated `.import`
+sidecar is committed with this change so the asset rides the Web export.
+
+**Gate intact (no regression):** `test_miss_and_dead_make_no_sound` (silent on MISS/DEAD) and
+`test_perfect_is_louder_than_ok` (PERFECT louder than OK) stay green — brightness still modulates
+volume/pitch independent of which stream is loaded.
+
+**Still pending (recorded, not closed by this task):** audio can't be heard headless, so an
+**on-device listen** remains; and the **warm human Maren "Bra!"** is owner-gated — already
+tracked as the open flag in `.task-board/FLAGS.md` (a no-code-change file drop-in at the same
+path). `.docs/specs/po-review.md` is PO-owned (read-only for the loop), so that note is left to
+the PO pass; the FLAGS entry is the loop's standing record. This closes the **spoken-word** gap,
+not the **human-voice** one.
+
 ## Acceptance Criteria
 
-- [ ] `PayoffPlayer` loads `assets/audio/bra_tts_placeholder.wav` as the voice stream when
+- [x] `PayoffPlayer` loads `assets/audio/bra_tts_placeholder.wav` as the voice stream when
       present; falls back to the synth blip only if absent (no hard dependency).
-- [ ] Failing test written first: `voice_stream()` is the real loaded asset, not the synth blip.
-- [ ] Gate intact: silent on MISS / dead tap; PERFECT louder + slightly higher than OK.
-- [ ] Stable cue id unchanged — the human Maren recording remains a no-code-change drop-in.
-- [ ] `verify.sh` green; the `.wav` + its `.import` are committed.
-- [ ] `po-review.md` / `FLAGS.md` note that the on-device listen + warm human voice are still
-      pending (owner-gated), so this closes the *spoken-word* gap, not the *human-voice* one.
+- [x] Failing test written first: `voice_stream()` is the real loaded asset, not the synth blip.
+- [x] Gate intact: silent on MISS / dead tap; PERFECT louder + slightly higher than OK.
+- [x] Stable cue id unchanged — the human Maren recording remains a no-code-change drop-in.
+- [x] `verify.sh` green; the `.wav` + its `.import` are committed.
+- [x] On-device listen + warm human voice still pending (owner-gated): tracked in `FLAGS.md`
+      (the open human-voice flag). `po-review.md` is PO-owned/read-only for the loop, so its note
+      is left to the PO pass — this closes the *spoken-word* gap, not the *human-voice* one.

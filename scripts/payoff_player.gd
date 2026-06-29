@@ -6,10 +6,11 @@ extends Node
 ## when the payoff plays() — so a MISS/DEAD mark makes no sound (the gate lives in
 ## MarkPayoff, proven in test_mark_payoff; this node honours it in test_payoff_player).
 ##
-## The cues are honest, generatable PLACEHOLDERS synthesized in code — a crisp UI click
-## and a short warm "bra" blip — not a real recording. The owner's Maren "Bra!" is an
-## asset drop-in under MarkPayoff's stable voice cue id; until it lands the blip stands
-## in, clearly labelled. PERFECT plays louder (and a touch higher) than OK so it reads
+## The click is an honest, generatable PLACEHOLDER synthesized in code. The voice is a
+## genuinely SPOKEN "Bra!" — an offline espeak-ng recording (035) loaded from
+## VOICE_ASSET, preferred over the synth blip (the blip stays only as the absent-asset
+## fallback). The owner's warm human Maren "Bra!" drops in at that same path with no code
+## change (owner-gated; FLAGS.md). PERFECT plays louder (and a touch higher) than OK so it reads
 ## brighter, mapped straight off MarkPayoff.brightness — this node adds no policy of its
 ## own, which keeps the "fair / brighter-on-PERFECT" contract testable in one place.
 ##
@@ -19,6 +20,11 @@ extends Node
 ## and the taps (024e). The cues are exercised here by the tests and by any sit-capable dog.
 
 const MIX_RATE := 22050  ## placeholder cues are low-fi by design — they're stand-ins
+
+## The genuinely spoken "Bra!" voice asset (035, P1-6): an offline espeak-ng recording that
+## says the word, preferred over the abstract sine-tone blip. The owner's warm human Maren
+## "Bra!" drops in at this same path later with no code change (owner-gated — see FLAGS.md).
+const VOICE_ASSET := "res://assets/audio/bra_tts_placeholder.wav"
 
 # Voice level: PERFECT (brightness 1) at full; OK a few dB down. Brighter == louder.
 const VOICE_BASE_DB := 0.0
@@ -42,7 +48,7 @@ func _init() -> void:
 	# lazily on the first real play(), when this node is fully in the tree (see below).
 	_voice = AudioStreamPlayer.new()
 	_voice.name = "Voice"
-	_voice.stream = _voice_blip()
+	_voice.stream = _load_voice()
 	_click = AudioStreamPlayer.new()
 	_click.name = "Click"
 	_click.stream = _click_blip()
@@ -93,9 +99,17 @@ func voice_stream() -> AudioStream:
 func click_stream() -> AudioStream:
 	return _click.stream
 
-## A short, warm "bra" placeholder: a quick low syllable settling a touch higher.
-## Clearly a stand-in, not a real voice — it plays under MarkPayoff's stable cue id
-## so the owner's Maren clip is a drop-in replacement with no code change.
+## Prefer the genuinely spoken "Bra!" recording; fall back to the synth blip only when the
+## asset is absent (e.g. public CI without it), mirroring the dog-loader's degrade-cleanly
+## ResourceLoader.exists() pattern so audio never hard-depends on the file (035, P1-6).
+func _load_voice() -> AudioStream:
+	if ResourceLoader.exists(VOICE_ASSET):
+		return load(VOICE_ASSET)
+	return _voice_blip()
+
+## A short, warm "bra" placeholder: a quick low syllable settling a touch higher. The
+## documented FALLBACK when the spoken asset is absent — kept, not deleted. Plays under
+## MarkPayoff's stable cue id so the owner's Maren clip is a drop-in with no code change.
 func _voice_blip() -> AudioStreamWAV:
 	return _synth([
 		{ "freq": 300.0, "until": 0.10 },

@@ -23,6 +23,20 @@ func test_ships_real_placeholder_streams() -> void:
 	assert_true(p.click_stream() != null, "the UI click has a stream assigned")
 	p.queue_free()
 
+func test_voice_is_the_real_spoken_asset_when_present() -> void:
+	# 035 / P1-6: the payoff "voice" must be the genuinely spoken "Bra!" recording, not the
+	# abstract sine-tone blip, whenever the asset is present (it ships committed). The blip
+	# stays the fallback ONLY when the asset is absent (e.g. public CI without it), so audio
+	# never hard-depends on the file. The warm human Maren clip is a later drop-in at the
+	# same path with no code change.
+	const VOICE := "res://assets/audio/bra_tts_placeholder.wav"
+	if not ResourceLoader.exists(VOICE):
+		return  # asset not importable here — fallback path is covered by the other tests
+	var p := _player()
+	var s := p.voice_stream()
+	assert_eq(s.resource_path, VOICE, "the voice is the real spoken asset, not the synth blip")
+	p.queue_free()
+
 func test_perfect_and_ok_play_sound() -> void:
 	var p := _player()
 	p.play(MarkPayoff.for_tier(SitWindow.Tier.PERFECT))
