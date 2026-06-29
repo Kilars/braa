@@ -5,22 +5,6 @@ extends "res://tests/test_case.gd"
 ## (button missing, or never connected) can't read green. On the committed CC0 dog
 ## (no Sitt) a tap must be DEAD: the button works but does nothing, no penalty.
 
-func _instantiate_main() -> Node:
-	var packed := load("res://scenes/main.tscn") as PackedScene
-	var main := packed.instantiate()
-	# Pin the CC0 dog: deterministic whether or not the gitignored licensed Labrador is
-	# present locally (it changes what main loads, hence what a tap scores). (025)
-	main.dog_path_override = "res://assets/models/dog.glb"
-	var tree := Engine.get_main_loop() as SceneTree
-	tree.root.add_child(main)
-	# The headless test runner quits inside _initialize() before any process frame,
-	# so Godot defers _ready and the scene never builds itself. Invoke the real
-	# _ready path explicitly so we assert against the *production* wiring (the same
-	# code the boot leg runs through actual frames), not a stripped-down stub.
-	if not main.is_node_ready():
-		main._ready()
-	return main
-
 func _find_button(n: Node) -> Button:
 	if n is Button:
 		return n
@@ -31,7 +15,7 @@ func _find_button(n: Node) -> Button:
 	return null
 
 func test_main_scene_mounts_the_bra_button() -> void:
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var btn := _find_button(main)
 	assert_true(btn != null, "the scene must mount a BRA button (the one verb, P1-5)")
 	if btn != null:
@@ -47,7 +31,7 @@ func test_main_scene_mounts_the_bra_button() -> void:
 	main.queue_free()
 
 func test_tap_on_the_cc0_dog_is_dead_and_silent() -> void:
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var got: Array[int] = []
 	main.marked.connect(func(t: int) -> void: got.append(t))
 	main._on_bra_pressed()

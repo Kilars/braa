@@ -24,6 +24,13 @@ enum Tier { DEAD, MISS, OK, PERFECT }
 ## ~0.01ms — far below 60fps frame granularity, so it can't cause real misscoring.
 const EPSILON := 1e-5
 
+## Canonical scoring bands (specs2.md P1-5) — the home of the apex-tolerance rule.
+## They live on the scoring class (not the AnimationPlayer driver) so a designer
+## tuning difficulty finds them next to the math that uses them. `from_sit_clips`
+## still takes explicit radii so difficulty can override these later (029).
+const DEFAULT_PERFECT_RADIUS := 0.08  ## the PERFECT band is apex ±80 ms
+const DEFAULT_OK_RADIUS := 0.20       ## the OK window is apex ±200 ms
+
 var apex: float           ## seconds: the fully-seated scoring peak
 var perfect_radius: float ## half-width of the PERFECT band, inclusive
 var ok_radius: float      ## half-width of the OK window, inclusive (>= perfect_radius)

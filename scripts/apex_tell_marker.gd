@@ -15,8 +15,20 @@ extends Control
 ##   - `mouse_filter = IGNORE` so the marker, sitting on top of the BRA button,
 ##     passes every touch straight through to the button (P1-5).
 
-## Warm, soft pulse colour — reads as a friendly "now", not an alarm.
-const GLOW := Color(1.0, 0.93, 0.55)
+## Warm pulse colour — reads as a friendly "now", not an alarm. A genuinely
+## SATURATED gold (not a pale cream): it must still read as gold once alpha-blended
+## over the dark BRA button, where a washed-out tint collapses toward grey. (030)
+const GLOW := Color(1.0, 0.78, 0.20)
+## Boldness of the pulse, fenced by test (030). The tell renders fine — the forced-
+## intensity capture proved the composite — but as first authored it was a thin,
+## ~half-alpha cream ring that desaturated over the dark button and was halved again
+## under reduced motion (×ReducedMotion.DAMPED), so it read as "never renders" to both
+## the eye and a saturated-gold detector (PO 2026-06-28, the #1 reopened defect). These
+## are the per-element base alphas/width; the whole node also fades by
+## `self_modulate.a == intensity`, so the effective on-screen alpha is `base * intensity`.
+const HALO_ALPHA := 0.40   ## soft bloom disc (base alpha)
+const RING_ALPHA := 1.0    ## the crisp "now" ring (base alpha) — opaque at peak
+const RING_WIDTH := 10.0   ## ring line width in px at the pinned 720-wide viewport
 
 var intensity: float = 0.0  ## current tell intensity in [0,1]; 0 = dormant
 
@@ -47,7 +59,7 @@ func _draw() -> void:
 	var center := size * 0.5
 	var unit := minf(size.x, size.y) * 0.5
 	# Soft halo: a translucent disc that blooms a touch as the apex nears.
-	draw_circle(center, unit * (0.78 + 0.18 * intensity), Color(GLOW, 0.22))
-	# Crisp apex ring: brighter, thin, also blooming slightly — marks the "now".
-	draw_arc(center, unit * (0.62 + 0.12 * intensity), 0.0, TAU, 48,
-		Color(GLOW, 0.85), 4.0, true)
+	draw_circle(center, unit * (0.78 + 0.18 * intensity), Color(GLOW, HALO_ALPHA))
+	# Crisp apex ring: brighter, blooming slightly — marks the "now".
+	draw_arc(center, unit * (0.62 + 0.12 * intensity), 0.0, TAU, 64,
+		Color(GLOW, RING_ALPHA), RING_WIDTH, true)

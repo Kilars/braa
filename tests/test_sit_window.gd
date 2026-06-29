@@ -92,6 +92,22 @@ func test_tier_name_is_human_readable() -> void:
 	assert_eq(SitWindow.tier_name(SitWindow.Tier.MISS), "MISS", "miss label")
 	assert_eq(SitWindow.tier_name(SitWindow.Tier.DEAD), "DEAD", "dead label")
 
+func test_canonical_scoring_radii_live_on_the_scoring_class() -> void:
+	# 029: the apex ±80ms / ±200ms gameplay rule is a scoring concern, so its
+	# canonical default belongs on SitWindow (not the AnimationPlayer driver). A
+	# designer tuning the bands should find them here.
+	assert_eq(SitWindow.DEFAULT_PERFECT_RADIUS, 0.08, "PERFECT band default = apex ±80ms")
+	assert_eq(SitWindow.DEFAULT_OK_RADIUS, 0.20, "OK window default = apex ±200ms")
+
+func test_window_from_canonical_defaults_scores_the_specced_bands() -> void:
+	# A sit built with the canonical radii scores the spec's bands exactly.
+	var w := SitWindow.from_sit_clips(0.8, 1.5,
+		SitWindow.DEFAULT_PERFECT_RADIUS, SitWindow.DEFAULT_OK_RADIUS)
+	assert_eq(w.score(0.8), SitWindow.Tier.PERFECT, "apex tap is perfect")
+	assert_eq(w.score(0.8 + 0.08), SitWindow.Tier.PERFECT, "edge of ±80ms is perfect")
+	assert_eq(w.score(0.8 + 0.20), SitWindow.Tier.OK, "edge of ±200ms is ok")
+	assert_eq(w.score(0.8 + 0.21), SitWindow.Tier.MISS, "past the ok window is a miss")
+
 func test_scoring_tap_is_audible_only_on_perfect_or_ok() -> void:
 	# P1-6 gate: the payoff (voice + SFX + reaction) fires on a successful mark
 	# only — never on MISS or DEAD. Expose the predicate the audio layer keys off.

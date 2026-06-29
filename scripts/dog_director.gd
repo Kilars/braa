@@ -8,9 +8,6 @@ extends RefCounted
 ## placeholder stand-in", and the 024b asset gate). Clip names are resolved by
 ## DogClips, so the director is the same code for both dogs.
 
-const PERFECT_RADIUS := 0.08  ## specs2.md: the PERFECT band is apex ±80 ms
-const OK_RADIUS := 0.20       ## specs2.md: the OK window is apex ±200 ms
-
 var clips: DogClips
 var _ap: AnimationPlayer
 
@@ -52,7 +49,10 @@ func sit_window() -> SitWindow:
 		return null
 	var start_len := _ap.get_animation(clips.sit_start).length
 	var loop_len := _ap.get_animation(clips.sit_loop).length
-	return SitWindow.from_sit_clips(start_len, loop_len, PERFECT_RADIUS, OK_RADIUS)
+	# The scoring bands' canonical home is SitWindow (029); the apex stays the end
+	# of `Sitting_start`. Pass the defaults explicitly so difficulty can override later.
+	return SitWindow.from_sit_clips(start_len, loop_len,
+		SitWindow.DEFAULT_PERFECT_RADIUS, SitWindow.DEFAULT_OK_RADIUS)
 
 ## Play the dog's positive reaction ONCE on a successful mark (024f, P1-6), then fall
 ## back to its resting pose (the seated hold if sitting, else idle) so it doesn't freeze

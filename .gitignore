@@ -35,3 +35,7 @@ assets/models/dog_licensed*
 result
 result-*
 .direnv/
+
+# Playwright for the web capture harness (tools/web_*.mjs) — a symlink to the npx
+# cache (~/.npm/_npx/.../node_modules), not a project dep. Never tracked.
+node_modules

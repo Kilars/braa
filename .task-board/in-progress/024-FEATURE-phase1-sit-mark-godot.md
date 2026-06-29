@@ -57,10 +57,35 @@
       green, verify green. Adds **no new UI**; on the CC0 dog every tap is DEAD so the
       voice/click/reaction are **provably dormant** (silent live, live frame unchanged
       from 024d) — lights up with **025**. See 024f card.
-- [ ] **024g** — honest timing readout + reduced motion (P1-7, P1-8) [visual]
+- [x] **024g** — honest timing readout + reduced motion (P1-7, P1-8) [visual] **Done**
+      2026-06-28: pure `scripts/tier_readout.gd` (`TierReadout`, PERFECT/OK/MISS flash,
+      DEAD shows nothing, PERFECT brighter than OK, immediate-then-fade) + pure
+      `scripts/reduced_motion.gd` (`ReducedMotion.scale_for` → dampened-not-removed 0.35,
+      `query()` reads prefers-reduced-motion); `main._apply_reduced_motion()` now actually
+      feeds `_motion_scale` before the tell builds. 14 new tests (88 green), verify green,
+      dormant idle frame visually verified (`.screenshots/024g-readout-idle.png`). See 024g
+      card. **Found there:** licensed Labrador is mis-framed — logged on 024c (not 024g).
+- [x] **024c framing regression** — **FIXED** 2026-06-28: the licensed Labrador was
+      mis-framed (head cut off — its skinned mesh `get_aabb()` is centred below the floor,
+      so the camera aimed under it). New pure `scripts/dog_bounds.gd` (`DogBounds.measure`)
+      measures the skeleton **rest-pose bone span** (feet-on-floor, model-agnostic) instead
+      of the mesh AABB; `main._dog_bounds()` delegates to it. 2 new tests (90 green), verify
+      green, **pixel-verified on the licensed dog** (`.screenshots/024c-licensed-framing-fixed.png`
+      — whole dog centred, head in frame). See 024c card "Framing regression — FIXED".
+
+- [x] **027** — the loop actually **repeats** (P1-9) **Done** 2026-06-28: found that
+      `main.gd._start_dog` played the sit **once** and stalled (session never closed, dog
+      never stood, no second sit) — the stated core loop had never been wired end-to-end.
+      New pure `scripts/sit_loop.gd` (`SitLoop`, IDLE/SITTING state machine → START_SIT /
+      END_SIT intents, TDD, dog-agnostic); `main._advance_loop/_begin_sit/_end_sit` drive
+      idle → sit → idle → sit indefinitely. 96 tests green, verify green, and a runtime
+      probe on the **real licensed Labrador** logged 5 sit cycles over 22s (apex 1.250s
+      each). Closes the last **non-owner-gated** Phase-1 functional gap. See 027 card.
 
 Epic stays in-progress until 024b–024g land and the **P1-10 done-gate** (all P1
 stories, `polish`, independent visual review on the live deploy, TDD coverage) passes.
+**024b (visible Sitt on deploy) and the P1-10 live-deploy review remain gated on 025**
+(the licensed dog ships only locally; the public deploy is still CC0).
 
 ## Context & Motivation
 

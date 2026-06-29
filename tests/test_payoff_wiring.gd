@@ -6,20 +6,6 @@ extends "res://tests/test_case.gd"
 ## tap is DEAD → provably silent; forcing a PERFECT through the production dispatch shows
 ## the wiring carries a success to the player (it lights up for real once 025 ships Sitt).
 
-func _instantiate_main() -> Node:
-	var packed := load("res://scenes/main.tscn") as PackedScene
-	var main := packed.instantiate()
-	# Pin the CC0 dog so this scene-mount test is deterministic whether or not the
-	# gitignored licensed Labrador is present locally. (025)
-	main.dog_path_override = "res://assets/models/dog.glb"
-	var tree := Engine.get_main_loop() as SceneTree
-	tree.root.add_child(main)
-	# The headless runner quits before any process frame, so _ready is deferred —
-	# invoke the real _ready path so we assert the production wiring (see test_bra_button).
-	if not main.is_node_ready():
-		main._ready()
-	return main
-
 func _find_payoff(n: Node) -> PayoffPlayer:
 	if n is PayoffPlayer:
 		return n
@@ -30,7 +16,7 @@ func _find_payoff(n: Node) -> PayoffPlayer:
 	return null
 
 func test_scene_mounts_the_payoff_player() -> void:
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var payoff := _find_payoff(main)
 	assert_true(payoff != null, "the scene must mount the payoff player (P1-6)")
 	main.queue_free()
@@ -38,7 +24,7 @@ func test_scene_mounts_the_payoff_player() -> void:
 func test_a_real_cc0_tap_is_silent() -> void:
 	# The observable acceptance on the deployed CC0 dog: every tap is DEAD, so the real
 	# button press must leave the payoff silent — no false reward (P1-6).
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var payoff := _find_payoff(main)
 	assert_true(payoff != null, "payoff present")
 	main._on_bra_pressed()
@@ -50,7 +36,7 @@ func test_production_dispatch_carries_a_success_to_the_player() -> void:
 	# Force a PERFECT through the SAME dispatch a tap uses (_play_payoff) to prove the
 	# wiring routes a successful mark to the player — the path that lights up live once
 	# 025 ships the sit-capable dog and real taps start scoring PERFECT/OK.
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var payoff := _find_payoff(main)
 	assert_true(payoff != null, "payoff present")
 	main._play_payoff(SitWindow.Tier.PERFECT)

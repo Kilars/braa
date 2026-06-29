@@ -28,11 +28,23 @@ var _director: DogDirector
 ## closed on the CC0 dog (no Sitt) so every tap is DEAD — no penalty (P1-5).
 var _session := SitSession.new()
 
+## The repeating round loop (027, P1-9): drives idle → sit → idle → sit … each frame so
+## the mark never stalls after one sit. Pure state machine; main acts on its Intent.
+var _loop: SitLoop
+## The scoring window of the sit currently open (or null between sits) — the single
+## source the score, the tell, and the loop's sit_end all read, so they never disagree.
+var _window: SitWindow
+
 ## The apex tell (024d): the honest pulse that peaks at the same apex the score uses.
 ## Built only when a real sit opens (sit-capable dog); null on the CC0 dog, so the
 ## marker stays dark — the tell never fires during idle (P1-4).
 var _tell: ApexTell
 var _tell_marker: ApexTellMarker
+
+## The honest timing readout (024g, P1-7): flashes PERFECT / OK / MISS on each tap and
+## fades. Driven from _on_bra_pressed (the tier) + _process (the fade). A DEAD tap shows
+## nothing — so on the CC0 dog (every tap DEAD) it stays blank, matching the silent payoff.
+var _readout: TierReadout
 
 ## The mark payoff (024f, P1-6): voice + UI click on a successful mark, gated off the
 ## scored tier so a MISS/DEAD is silent. The dog's positive reaction runs through the
@@ -45,18 +57,62 @@ var _payoff: PayoffPlayer
 ## the cue by this factor. Kept as a seam here so the damping has one source.
 var _motion_scale := 1.0
 
+## Test seam (024g): force the prefers-reduced-motion read without a browser. -1 = auto
+## (use ReducedMotion.query() — false in headless/desktop), 0 = force not-reduced,
+## 1 = force reduced. Set before _ready. Production leaves it -1 → real query.
+var reduced_motion_override := -1
+
+## Visual-review seam (030/P1-4): set true by _query_force_tell() when the web page URL
+## carries `?bra_force_tell=1`, pinning the apex tell to full intensity every frame so a
+## SINGLE screenshot deterministically proves the gold ring renders. The live tell peaks for
+## only ~0.2s per sit cycle — too brief for a non-deterministic screenshot burst to reliably
+## catch — so this is the visual gate's deterministic hook. Web-only and off by default, so
+## desktop, headless, and normal web play are untouched. Mirrors dog_path_override.
+var _force_tell := false
+
 func _ready() -> void:
+	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_setup_environment()
 	_setup_light()
 	var dog := _load_dog()
 	if dog != null:
 		_start_dog(dog)
 		_frame_camera(dog)
+		_setup_contact_shadow(dog)  # anchor the dog to the ground, not floating (031/P1-1)
 	else:
 		_fallback_camera()
 	_setup_bra_button()
 	_setup_payoff()
+	_force_tell = _query_force_tell()  # deterministic apex-tell pixel proof (030, web-only seam)
 	_notify_web_ready()
+
+## Visual-review seam (030/P1-4): true only when the live web page URL carries
+## `?bra_force_tell=1`. The live tell peaks for ~0.2s per sit cycle — too brief for a
+## non-deterministic screenshot burst to reliably catch — so the capture harness loads the
+## build with this query to PIN the tell on for one deterministic gold-ring screenshot.
+## Web-only (the query lives in window.location), so desktop/headless/normal play never trip
+## it; JavaScriptBridge.eval is a no-op off the web export.
+func _query_force_tell() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_tell=1")
+
+## Resolve prefers-reduced-motion (the test seam wins, else the live query) into the
+## single motion-scale the tell is built from (P1-8). Called first in _ready so the
+## damping is in place before any cue is constructed.
+func _apply_reduced_motion() -> void:
+	var reduced: bool
+	if reduced_motion_override >= 0:
+		reduced = reduced_motion_override == 1
+	else:
+		reduced = ReducedMotion.query()
+	set_motion_scale(ReducedMotion.scale_for(reduced))
+
+## The motion-scale the authored cues (the apex tell) are built with — 1.0 full, < 1.0
+## dampened for reduced motion (never 0). Exposed for the P1-8 wiring test.
+func motion_scale() -> float:
+	return _motion_scale
 
 ## Run the sit clock so a tap is scored at the right seconds-into-the-sit, then drive
 ## the apex tell off that same clock — one source of truth, so the glow peaks exactly
@@ -64,11 +120,47 @@ func _ready() -> void:
 ## dark: the tell never fires during idle (P1-4).
 func _process(delta: float) -> void:
 	_session.advance(delta)
+	_advance_loop(delta)
 	if _tell_marker != null:
-		if _tell != null and _session.is_open():
+		if _force_tell:
+			_tell_marker.set_intensity(1.0)  # deterministic capture seam (030) — web-only
+		elif _tell != null and _session.is_open():
 			_tell_marker.set_intensity(_tell.intensity(_session.elapsed()))
 		else:
 			_tell_marker.set_intensity(0.0)
+	if _readout != null:
+		_readout.advance(delta)  # fade the last tier's flash (024g/P1-7)
+
+## Drive the repeating round loop (027, P1-9): each frame SitLoop decides whether to begin
+## the next sit or stand the dog back to idle. A no-op until _start_dog builds _loop, and a
+## permanent idle on the CC0 dog (has_sit == false) — never a faked sit.
+func _advance_loop(delta: float) -> void:
+	if _loop == null or _director == null:
+		return
+	var sit_end := _window.sit_end if _window != null else 0.0
+	match _loop.tick(delta, _director.has_sit(), _session.elapsed(), sit_end):
+		SitLoop.Intent.START_SIT:
+			_begin_sit()
+		SitLoop.Intent.END_SIT:
+			_end_sit()
+
+## Begin one sit: play it, open the scoring window over its markable span, and build the
+## apex tell from that SAME window so the glow peaks exactly where a tap scores PERFECT
+## (P1-4 honest tell — one source of truth). _process advances the clock; the button reads it.
+func _begin_sit() -> void:
+	_director.play_sit()
+	_window = _director.sit_window()
+	_session.open(_window)
+	_tell = ApexTell.from_window(_window, _motion_scale)
+
+## End the sit: close the session (taps DEAD again, no penalty between sits — P1-5), drop
+## the tell so the marker goes dark, and stand the dog back down to the ambient idle so the
+## loop can come round to the next sit (P1-9).
+func _end_sit() -> void:
+	_session.close()
+	_window = null
+	_tell = null
+	_director.play_idle()
 
 ## Bright, clean backdrop (Pokémon-GO-ish) so the dog reads clearly (P1-1).
 func _setup_environment() -> void:
@@ -95,6 +187,30 @@ func _setup_light() -> void:
 ## edge-to-edge (P1-2 / D12).
 const FRAME_FILL := 0.70
 
+## Portrait layout constants (029). The project pins a 720×1280 logical viewport
+## (stretch=keep), so these are stable everywhere — headless, browser, any device.
+## The BRA button band and the apex-tell marker are deliberately coupled: the marker
+## sits 4 px outside the button on every edge so the pulse *rings* the verb. Expressing
+## the tell offsets in terms of the button's keeps that coupling alive across a resize,
+## instead of two bare literals that can silently drift apart.
+const VIEWPORT_W := 720.0
+const VIEWPORT_H := 1280.0
+## BRA button: anchored across the bottom band, a comfortable thumb margin in (P1-5).
+const BRA_OFFSET_LEFT := 48.0
+const BRA_OFFSET_RIGHT := -48.0
+const BRA_OFFSET_TOP := -280.0
+const BRA_OFFSET_BOTTOM := -88.0
+## Apex-tell marker: 4 px outside the button band so the pulse rings the verb (024d).
+const TELL_RING_MARGIN := 4.0
+const TELL_HALF_WIDTH := 100.0  ## half of the 200px-wide pulse square, centred on the band
+const TELL_OFFSET_TOP := BRA_OFFSET_TOP - TELL_RING_MARGIN
+const TELL_OFFSET_BOTTOM := BRA_OFFSET_BOTTOM + TELL_RING_MARGIN
+## Timing readout: a band across the upper portrait area, clear of dog and button (024g).
+const READOUT_OFFSET_LEFT := 24.0
+const READOUT_OFFSET_RIGHT := -24.0
+const READOUT_OFFSET_TOP := 96.0
+const READOUT_OFFSET_BOTTOM := 220.0
+
 ## Centre the dog in portrait and fit the camera to its actual bounds, so it reads
 ## centred whichever dog ships — the CC0 placeholder or the licensed Labrador, with
 ## no per-model tuning (P1-2 "centred"; D12 / PO-Change-3). DogFraming is pure +
@@ -117,6 +233,49 @@ func _frame_camera(dog: Node) -> void:
 	cam.look_at_from_position(eye, DogFraming.target(box), Vector3.UP)
 	cam.make_current()
 
+## A cheap blob contact shadow under the feet so the dog reads as standing ON something
+## (031/P1-1), not floating against flat blue. A flat unshaded soft-alpha disc laid on the
+## ground at the dog's foot plane and sized to its footprint via the SAME DogBounds the
+## camera frames from — so it's model-agnostic (CC0 + licensed Labrador) and ships unchanged
+## in the encrypted pck (ADR-0006). Chosen over real-time shadow mapping: cheaper (one
+## unshaded quad, no per-frame shadow-map cost — Phase 7 mobile budget), reduced-motion-safe
+## (static), and it needs no separate ground plane to catch a projected shadow.
+func _setup_contact_shadow(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		# No measurable mesh — no honest foot plane to anchor to; skip rather than guess.
+		return
+	var blob := MeshInstance3D.new()
+	blob.name = "ContactShadow"
+	var disc := PlaneMesh.new()  # lies flat in the XZ plane (normal +Y), centred — a ground decal
+	var diameter := ContactShadow.radius(box) * 2.0
+	disc.size = Vector2(diameter, diameter)
+	blob.mesh = disc
+	blob.material_override = _contact_shadow_material()
+	blob.position = ContactShadow.position(box)
+	blob.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # it IS the shadow
+	add_child(blob)
+
+## The blob's material: an unshaded flat-black disc whose alpha is a soft radial falloff
+## (dark at the centre, transparent at the rim) so it reads as a smudge of shadow, not a
+## hard coaster. The falloff is a procedural radial GradientTexture2D (no shader to compile
+## — headless-safe) on an unshaded, double-sided, alpha-blended StandardMaterial3D.
+func _contact_shadow_material() -> StandardMaterial3D:
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0.0, 0.0, 0.0, 0.45))  # centre: soft dark, under the budget
+	grad.set_color(1, Color(0.0, 0.0, 0.0, 0.0))   # rim: fully transparent
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)  # centre of the disc
+	tex.fill_to = Vector2(0.5, 1.0)    # reaches transparent by the rim
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = tex
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED  # visible even if the camera dips below
+	return mat
+
 ## Default camera if the dog can't be measured/loaded — keeps the scene viewable.
 func _fallback_camera() -> void:
 	var cam := Camera3D.new()
@@ -134,41 +293,20 @@ func _viewport_aspect() -> float:
 	# 720×1280 portrait ratio. This used to throw at _ready and the runner hid it. (026)
 	var vp := get_viewport()
 	if vp == null:
-		return 720.0 / 1280.0
+		return VIEWPORT_W / VIEWPORT_H
 	var size := vp.get_visible_rect().size
 	if size.y <= 0.0:
-		return 720.0 / 1280.0
+		return VIEWPORT_W / VIEWPORT_H
 	return size.x / size.y
 
-## The dog's bounds in dog-local space, by accumulating node-LOCAL transforms up to
-## the dog root. Done this way (not via global_transform) because a skinned glTF dog's
-## global transforms only propagate after the first frame — local transforms carry the
-## real placement synchronously at _ready, so framing is correct on the very first frame.
+## The dog's bounds in dog-local space. Delegates to the pure, unit-tested DogBounds:
+## it prefers the skeleton REST-POSE BONE SPAN (the honest standing extent — feet on the
+## floor) over the skinned mesh's get_aabb(), whose authoring frame need not match the
+## rig. The CC0 mesh box happened to match its bones, but the licensed Labrador's mesh
+## box is centred below the floor, so framing off it aimed under the dog and cut the head
+## off (024c regression). Bones fix it model-agnostically, with no per-model tuning.
 func _dog_bounds(dog: Node) -> AABB:
-	var have := false
-	var box := AABB()
-	for vi in _visual_instances(dog):
-		var x := Transform3D.IDENTITY
-		var n: Node = vi
-		while n != null and n != dog.get_parent():
-			if n is Node3D:
-				x = (n as Node3D).transform * x
-			n = n.get_parent()
-		var ab: AABB = x * vi.get_aabb()
-		if not have:
-			box = ab
-			have = true
-		else:
-			box = box.merge(ab)
-	return box
-
-func _visual_instances(n: Node) -> Array[VisualInstance3D]:
-	var out: Array[VisualInstance3D] = []
-	if n is VisualInstance3D:
-		out.append(n)
-	for c in n.get_children():
-		out.append_array(_visual_instances(c))
-	return out
+	return DogBounds.measure(dog)
 
 ## Pick the dog to load: the licensed Labrador (real Sitt) when it's present locally,
 ## else the tracked CC0 placeholder. ResourceLoader.exists() is a presence check that
@@ -197,7 +335,8 @@ func _load_dog() -> Node:
 	var dog := packed.instantiate()
 	dog.name = "Dog"
 	add_child(dog)
-	print("[Bra!] dog loaded: %s" % path)
+	var flattened := CoatOpaque.flatten(dog)  # kill the translucent fur-mask panels (032/P1-1/P1-9)
+	print("[Bra!] dog loaded: %s (%d coat surface(s) forced opaque)" % [path, flattened])
 	return dog
 
 ## Bring the dog to life: loop its ambient idle so it isn't a frozen rest pose
@@ -205,39 +344,29 @@ func _load_dog() -> Node:
 ## build→apex→hold sit (024b); on the CC0 placeholder there is no Sitt clip, so we
 ## log the gap honestly and stay in idle — never a faked sit (see task 024b).
 func _start_dog(dog: Node) -> void:
-	var ap := _find_animation_player(dog)
+	var ap := DogClips.find_animation_player(dog)
 	if ap == null:
 		push_warning("[Bra!] dog has no AnimationPlayer — cannot animate")
 		return
 	_director = DogDirector.new(ap)
 	_director.play_idle()
+	# The repeating round loop (027/P1-9) drives the rest from _process: it waits a calm
+	# beat, plays the sit + opens the scoring window (_begin_sit), holds the seat, then
+	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
+	# one sit. On the CC0 dog (no Sitt) the loop simply parks in idle; no faked sit.
+	_loop = SitLoop.new()
 	if _director.has_sit():
-		# Sit-capable dog (licensed Labrador, 025): play the sit and open the
-		# scoring window over its markable span so the BRA tap scores against the
-		# real apex. _process advances the sit clock; the button reads it.
-		_director.play_sit()
-		var w := _director.sit_window()
-		_session.open(w)
-		# Tell built from the SAME window: it peaks at w.apex (where the score is
-		# PERFECT), dampened by the reduced-motion factor (024g/P1-8).
-		_tell = ApexTell.from_window(w, _motion_scale)
-		print("[Bra!] dog can Sitt — apex at %.3fs, markable %.3f..%.3fs"
-			% [w.apex, w.sit_start, w.sit_end])
+		# Sit-capable dog (licensed Labrador, 025): the loop sits every inter_sit_gap
+		# seconds; each sit's apex (the score's PERFECT instant) is the single source the
+		# tell is built from in _begin_sit. _process advances the sit clock.
+		print("[Bra!] dog can Sitt — looping a sit every %.1fs (real apex from the licensed Labrador)"
+			% _loop.inter_sit_gap)
 	else:
-		# CC0 dev fallback: no sit, so the session stays closed and every BRA tap
-		# is DEAD (does nothing, no penalty — P1-5). The button still works; it
-		# lights up the moment the licensed Sitt ships (024b / ADR-0006 / 025).
+		# CC0 dev fallback: no sit, so the loop parks in idle and every BRA tap is DEAD
+		# (does nothing, no penalty — P1-5). The button still works; it lights up the
+		# moment the licensed Sitt ships (024b / ADR-0006 / 025).
 		print("[Bra!] dog has no Sitt clip (CC0 dev fallback) — idle only; "
 			+ "real Sitt ships with the licensed Labrador, see task 024b / ADR-0006")
-
-func _find_animation_player(n: Node) -> AnimationPlayer:
-	if n is AnimationPlayer:
-		return n
-	for child in n.get_children():
-		var found := _find_animation_player(child)
-		if found != null:
-			return found
-	return null
 
 ## One big, thumb-friendly BRA button anchored across the bottom of the portrait
 ## frame (P1-5) — the single verb. It fires on release (Button's default
@@ -256,14 +385,15 @@ func _setup_bra_button() -> void:
 	bra.anchor_right = 1.0
 	bra.anchor_top = 1.0
 	bra.anchor_bottom = 1.0
-	bra.offset_left = 48.0
-	bra.offset_right = -48.0
-	bra.offset_top = -280.0
-	bra.offset_bottom = -88.0
+	bra.offset_left = BRA_OFFSET_LEFT
+	bra.offset_right = BRA_OFFSET_RIGHT
+	bra.offset_top = BRA_OFFSET_TOP
+	bra.offset_bottom = BRA_OFFSET_BOTTOM
 	bra.focus_mode = Control.FOCUS_NONE  # no keyboard focus ring on a touch target
 	ui.add_child(bra)
 	bra.pressed.connect(_on_bra_pressed)
 	_setup_tell_marker(ui)
+	_setup_readout(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -272,17 +402,39 @@ func _setup_tell_marker(ui: CanvasLayer) -> void:
 	var marker := ApexTellMarker.new()
 	marker.name = "TellMarker"
 	# A 200×200 square centred on the BRA button band (button centre ≈ 184px above
-	# the bottom edge), so the pulse rings the verb the thumb is reaching for.
+	# the bottom edge), so the pulse rings the verb the thumb is reaching for. The
+	# top/bottom offsets are derived from the button band (± TELL_RING_MARGIN), so the
+	# ring follows the verb if the button band ever moves.
 	marker.anchor_left = 0.5
 	marker.anchor_right = 0.5
 	marker.anchor_top = 1.0
 	marker.anchor_bottom = 1.0
-	marker.offset_left = -100.0
-	marker.offset_right = 100.0
-	marker.offset_top = -284.0
-	marker.offset_bottom = -84.0
+	marker.offset_left = -TELL_HALF_WIDTH
+	marker.offset_right = TELL_HALF_WIDTH
+	marker.offset_top = TELL_OFFSET_TOP
+	marker.offset_bottom = TELL_OFFSET_BOTTOM
 	ui.add_child(marker)
 	_tell_marker = marker
+
+## The timing readout (024g/P1-4... P1-7): a big centred word that flashes the scored
+## tier in the upper third — well clear of the dog's centre and the bottom BRA band —
+## then fades. Mouse-transparent so it never eats a tap. Starts blank; driven by
+## _on_bra_pressed (display) + _process (fade).
+func _setup_readout(ui: CanvasLayer) -> void:
+	var readout := TierReadout.new()
+	readout.name = "TierReadout"
+	# A band across the upper portrait area: full width, anchored near the top so the
+	# word sits above the centred dog and never collides with the BRA button below.
+	readout.anchor_left = 0.0
+	readout.anchor_right = 1.0
+	readout.anchor_top = 0.0
+	readout.anchor_bottom = 0.0
+	readout.offset_left = READOUT_OFFSET_LEFT
+	readout.offset_right = READOUT_OFFSET_RIGHT
+	readout.offset_top = READOUT_OFFSET_TOP
+	readout.offset_bottom = READOUT_OFFSET_BOTTOM
+	ui.add_child(readout)
+	_readout = readout
 
 ## The audible payoff player (024f). A plain Node child holding the voice + click
 ## AudioStreamPlayers; it only sounds on a successful mark (the gate lives in
@@ -304,6 +456,8 @@ func _on_bra_pressed() -> void:
 	var tier := _session.tap()
 	marked.emit(tier)
 	_play_payoff(tier)
+	if _readout != null:
+		_readout.display(tier)  # flash PERFECT/OK/MISS now; DEAD shows nothing (024g/P1-7)
 	if SitWindow.is_successful(tier):
 		print("[Bra!] mark: %s" % SitWindow.tier_name(tier))
 	else:

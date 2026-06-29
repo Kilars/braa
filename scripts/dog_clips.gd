@@ -49,6 +49,18 @@ func has_sit() -> bool:
 func has_reaction() -> bool:
 	return reaction != ""
 
+## Depth-first search for the dog's AnimationPlayer inside a loaded glb subtree. The one
+## home for the recursive find that the scene loader (main.gd) and the clip tests share,
+## so a change to how the player is located lives in a single place. Returns null if none.
+static func find_animation_player(n: Node) -> AnimationPlayer:
+	if n is AnimationPlayer:
+		return n
+	for child in n.get_children():
+		var found := find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
 static func _leaf(name: String) -> String:
 	var parts := name.split("|")
 	return parts[parts.size() - 1]

@@ -7,23 +7,9 @@ extends "res://tests/test_case.gd"
 ##      ~0.4 below the dog's true centre (0, 0.928, 0.279) — the dog read high with
 ##      empty space below (the 024b finding). This fails on that old camera.
 
-func _instantiate_main() -> Node:
-	var packed := load("res://scenes/main.tscn") as PackedScene
-	var main := packed.instantiate()
-	# Pin the CC0 dog so this scene-mount test is deterministic whether or not the
-	# gitignored licensed Labrador is present locally (it changes the bounds/centre). (025)
-	main.dog_path_override = "res://assets/models/dog.glb"
-	var tree := Engine.get_main_loop() as SceneTree
-	tree.root.add_child(main)
-	# The headless runner quits before any process frame, so _ready is deferred;
-	# invoke it explicitly to build the production wiring (mirrors test_bra_button).
-	if not main.is_node_ready():
-		main._ready()
-	return main
-
 func test_idle_is_playing_and_loops_seamlessly() -> void:
-	var main := _instantiate_main()
-	var ap := _find_ap(main)
+	var main := instantiate_main()
+	var ap := DogClips.find_animation_player(main)
 	assert_true(ap != null, "the loaded dog must have an AnimationPlayer")
 	if ap != null:
 		var clips := DogClips.resolve(ap.get_animation_list())
@@ -34,11 +20,14 @@ func test_idle_is_playing_and_loops_seamlessly() -> void:
 		assert_true(ap.is_playing(), "the dog is alive: the idle is playing, not frozen")
 	main.queue_free()
 
-# The committed dog's true visual centre (measured headless from the glb). Asserting
-# against this constant — not an AABB recomputed in-test — keeps the guard honest: the
-# at-_ready global AABB reads ~origin (skinned bounds propagate only after a frame), so
-# recomputing here would be both a tautology and wrong.
-const DOG_CENTRE := Vector3(0.0, 0.928, 0.279)
+# The committed dog's true visual centre — now its skeleton REST-POSE BONE-SPAN centre,
+# measured headless from the glb (DogBounds switched from the mesh AABB to the bone span
+# to fix the licensed-dog framing; the CC0 bone span centres at (0, 0.920, 0.037), barely
+# moved in y from the old mesh-box centre 0.928, but its z drops from 0.279 to 0.037).
+# Asserting against this constant — not an AABB recomputed in-test — keeps the guard
+# honest: the at-_ready global AABB reads ~origin (skinned bounds propagate only after a
+# frame), so recomputing here would be both a tautology and wrong.
+const DOG_CENTRE := Vector3(0.0, 0.920, 0.037)
 
 func test_camera_target_is_the_dog_centre() -> void:
 	# main aims the camera at _dog_bounds().get_center() (the scaffold regression aimed at
@@ -49,7 +38,7 @@ func test_camera_target_is_the_dog_centre() -> void:
 	# `!is_inside_tree()` error a pre-add_child look_at would emit). Here we pin the two
 	# deterministic facts: the target the aim is built from is the real dog centre, and
 	# main actually creates a Camera3D. (026)
-	var main := _instantiate_main()
+	var main := instantiate_main()
 	var dog := main.get_node_or_null("Dog")
 	assert_true(dog != null, "the dog must be loaded")
 	if dog != null:
@@ -58,13 +47,4 @@ func test_camera_target_is_the_dog_centre() -> void:
 			"camera target (dog bounds centre) must be the dog centre, got %s" % centre)
 	assert_true(main.get_node_or_null("Camera3D") != null, "main must create a Camera3D")
 	main.queue_free()
-
-func _find_ap(n: Node) -> AnimationPlayer:
-	if n is AnimationPlayer:
-		return n
-	for c in n.get_children():
-		var f := _find_ap(c)
-		if f != null:
-			return f
-	return null
 

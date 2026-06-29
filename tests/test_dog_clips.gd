@@ -70,7 +70,7 @@ func test_committed_dog_exposes_a_real_idle_clip() -> void:
 	if packed == null:
 		return
 	var dog := packed.instantiate()
-	var ap := _find_animation_player(dog)
+	var ap := DogClips.find_animation_player(dog)
 	assert_true(ap != null, "the committed dog must have an AnimationPlayer")
 	if ap != null:
 		var c := DogClips.resolve(ap.get_animation_list())
@@ -98,7 +98,7 @@ func test_licensed_dog_if_present_resolves_a_real_sit() -> void:
 	if packed == null:
 		return
 	var dog := packed.instantiate()
-	var ap := _find_animation_player(dog)
+	var ap := DogClips.find_animation_player(dog)
 	assert_true(ap != null, "the licensed dog must have an AnimationPlayer")
 	if ap != null:
 		var c := DogClips.resolve(ap.get_animation_list())
@@ -106,12 +106,3 @@ func test_licensed_dog_if_present_resolves_a_real_sit() -> void:
 		assert_true(ap.has_animation(c.sit_start), "resolved sit_start must be a real clip on the dog")
 		assert_true(ap.has_animation(c.sit_loop), "resolved sit_loop must be a real clip on the dog")
 	dog.free()
-
-func _find_animation_player(n: Node) -> AnimationPlayer:
-	if n is AnimationPlayer:
-		return n
-	for child in n.get_children():
-		var found := _find_animation_player(child)
-		if found != null:
-			return found
-	return null

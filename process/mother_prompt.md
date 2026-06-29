@@ -44,7 +44,10 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   impl → repeat. Never all-tests-then-all-code.
 - **Visual tasks** → run `polish` + spawn review agents that look at screenshots on a
   phone-portrait viewport. Their findings are blocking.
-- **No git commands** — the user handles git manually.
+- **Git: one caveman commit + push per task** (main agent only, per start-working).
+  Stage the task's code + moved task file + board update together, commit, push to
+  upstream. Never force-push; no checkout/branch/reset/rebase. Unpushed work = task
+  not done.
 - **Reuse one dev server** if you start one.
 - **Never fabricate a screenshot or result.** Verify subagent claims against real
   artifacts (typecheck / test / build / e2e / grep / the actual screenshot).

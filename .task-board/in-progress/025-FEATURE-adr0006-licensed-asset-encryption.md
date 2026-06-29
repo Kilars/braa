@@ -1,12 +1,25 @@
 # FEATURE: 025 — Ship the licensed Labrador as an encrypted .pck (ADR-0006)
 
-**Status**: Backlog — **local wire DONE** (2026-06-28): `main.gd` loads the licensed
-Labrador when it's present (`assets/models/dog_licensed.glb`, gitignored), the dog
-**sits in dev** (boot logs `dog can Sitt — apex at 1.250s`), and the verify gate is
-green at 74 tests. `DogClips` fixed to match Godot's renamed hold loop (`Sitting_1`,
-not `Sitting_loop_1`). **REMAINING (this card's real scope) = the encrypted CI deploy**
-so the live site shows the sit without leaking the license — still **owner-gated** (needs
-the CI secret/key). Until then the deployed dog is still CC0 (idle only).
+**Status**: In Progress — decomposed; the export-side is built, the remainder is
+precisely owner-gated.
+- **local wire DONE** (2026-06-28): `main.gd` loads the licensed Labrador when present
+  (`assets/models/dog_licensed.glb`, gitignored), the dog **sits in dev**
+  (`dog can Sitt — apex at 1.250s`); verify green. `DogClips` matches Godot's renamed
+  hold loop (`Sitting_1`).
+- **025a DONE** (2026-06-28): encrypted `Web Licensed` preset + ADR-0006 gate-sizing
+  spike. **Verified empirically:** official templates *encrypt* a custom-key PCK
+  (`pack_flags` `0x2`→`0x3`) but **cannot decrypt** it (`Cannot open resource pack`),
+  and `GODOT_SCRIPT_ENCRYPTION_KEY` is **export-time only** — useless at runtime. So the
+  from-source custom-template build ADR-0006 calls for is genuinely required, not
+  optional. See `.task-board/done/025a-*.md` + `.docs/tech-decisions.md`.
+
+**REMAINING (owner-gated, cannot be validated here):** (1) secret AES key
+`GODOT_SCRIPT_ENCRYPTION_KEY`; (2) secret licensed `.glb`; (3) a **from-source web/wasm
+template build with the key baked in**; (4) build the licensed bundle as a CI artifact,
+validate on Chrome (PWA install, offline, real Sitt), *then* flip Pages from CC0 to
+licensed. Full runbook: `.docs/tech-decisions.md`. Until done, the deployed dog stays
+CC0 (idle only). **Not attempted blind** — writing an untested from-source template
+build and self-certifying it would be fabrication (see loop anti-pattern in memory).
 **Priority**: High — **unblocks the visible Sitt (024b/P1-3) and all of Phase 1's
 real gameplay on the live deploy.** Without it the deployed dog (CC0 placeholder)
 has no Sitt clip and the live site the father reviews cannot perform the core verb.
