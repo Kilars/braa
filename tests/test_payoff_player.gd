@@ -30,8 +30,13 @@ func test_voice_is_the_real_spoken_asset_when_present() -> void:
 	# never hard-depends on the file. The warm human Maren clip is a later drop-in at the
 	# same path with no code change.
 	const VOICE := "res://assets/audio/bra_tts_placeholder.wav"
-	if not ResourceLoader.exists(VOICE):
-		return  # asset not importable here — fallback path is covered by the other tests
+	# The spoken "Bra!" wav ships committed (named by the open voice FLAG) and verify.sh
+	# imports before testing, so it is always loadable here. Assert that directly instead
+	# of silently returning: a missing/unimportable committed asset is a real regression,
+	# and a zero-assertion early return would trip the 026 guard (test_runner.gd:39-40) as
+	# a misleading "empty test" failure rather than this clear one. (Unlike the licensed
+	# dog, this wav is NOT gitignored, so it is never legitimately absent.)
+	assert_true(ResourceLoader.exists(VOICE), "the committed spoken voice asset is importable")
 	var p := _player()
 	var s := p.voice_stream()
 	assert_eq(s.resource_path, VOICE, "the voice is the real spoken asset, not the synth blip")
