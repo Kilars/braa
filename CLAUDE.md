@@ -45,10 +45,16 @@ ends with `✓ verify gate green`. Treat a failing leg as a hard stop.
   trust a green test count alone — `verify.sh` greps the boot log for red; do the
   same when in doubt. In that harness `_init` `add_child` and audio/anim `.play()`
   don't work — attach lazily, guard `.play()` on `is_inside_tree()`.
-- **Don't fake assets.** No bare primitive geometry (capsule/sphere/cylinder) for
-  the dog, *not even for one frame on load*. Hold hidden until the model is ready,
-  then fade in. The loop has dodged un-generatable assets before; build real or
-  surface that you can't.
+- **Don't fake deliverables — attempt the real thing, or flag it.** General, not just
+  the dog: a placeholder is never "done" — a sine beep is not the "Bra!" voice, a
+  flat-tan fill is not the coat, no bare primitive geometry (capsule/sphere/cylinder)
+  stands in for the dog *even for one frame* (hold hidden until the model loads, then
+  fade in). **Genuinely attempt** the real asset/capability first — offline tools are a
+  `nix shell nixpkgs#<pkg>` away (that's how the espeak "Bra!" got made). If it's truly
+  **owner-gated** (a specific human voice, a license), ship the best honest stand-in
+  **and raise a flag** in `.task-board/FLAGS.md` — never silently self-certify a stub.
+  (Deferring *later-phase* visual polish is fine and phase-gated; stubbing a feature the
+  *current* phase requires is not.)
 - **Dog scripts are dog-agnostic and clip-name-driven.** The deployed CC0 dog only
   idles (no Sitt clip); the real Sitt lives in the licensed Labrador, gated behind
   ADR-0006 encryption. Drive sit logic off clip names — never hardcode a fake sit.

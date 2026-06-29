@@ -46,6 +46,14 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   prebuilt-binary routes first. Only escalate a block that survives multiple real
   attempts. Genuine **owner / legal / asset** gates are real, but name precisely what's
   missing and keep every other part of the work moving around it.
+- **Attempt the real thing; never self-certify a placeholder as done.** A stub that
+  passes the gate is not the feature — a beep ≠ a voice, a flat-tan fill ≠ the coat, a
+  hollow test ≠ a test. Make a genuine attempt at the real asset/capability first
+  (offline tools are a `nix shell nixpkgs#<pkg>` away). If the real thing is truly
+  **owner-gated**, ship the best honest stand-in **and** flag the gap (see the next
+  rule) — don't quietly leave the stub and call the task done. (Deferring *later-phase*
+  polish is fine; stubbing a *current-phase* requirement is not — `cf.` CLAUDE.md "Don't
+  fake deliverables".)
 - **Flag user-only decisions; never block on them.** You are the **orchestrator** — the
   one who decides what reaches the user. When `start-working` (or a subagent's report)
   surfaces something only the user can decide — a product / scope / legal / asset / owner

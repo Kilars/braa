@@ -108,9 +108,13 @@ the code better — tuned to this project, not a generic web-app checklist.
   `is_inside_tree()`, attach lazily.
 - Tests assert observable behavior through public interfaces, not internals.
 
-**Asset integrity** (cf. CLAUDE.md "Don't fake assets"):
+**Asset integrity** (cf. CLAUDE.md "Don't fake deliverables — attempt the real thing, or flag it"):
 - No bare primitive geometry standing in for the dog — not even for one frame. Flag any
   placeholder/faked artifact or self-certified "fix" left as a stub.
+- **Placeholder ≠ done for a current-phase requirement.** Flag a stub that stands in for a
+  real deliverable and was certified done **without a genuine attempt at the real thing AND,
+  if owner-gated, a flag** — e.g. a tone synthesized for the "Bra!" voice. (Deferring
+  *later-phase* visual polish stays fine, per the phase-scope gate below.)
 
 **Code smells**: god functions, deep nesting, long parameter lists, swallowed errors
 (silent `pass` on failure), dead seams with no caller.
