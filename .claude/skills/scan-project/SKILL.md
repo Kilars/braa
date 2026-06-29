@@ -1,6 +1,6 @@
 ---
 name: scan-project
-description: Scans the project to find gaps between specs and implementation, identifies bottlenecks, reviews code quality and readability, checks best practices, and generates 3 prioritized tasks per round via the task-board skill.
+description: Scans the project to find gaps between specs and implementation, identifies bottlenecks, reviews code quality and readability, checks best practices, and generates up to 3 prioritized tasks per round (zero when the current phase is built and only awaiting PO Visual Review) via the task-board skill.
 ---
 
 # Scan Project
@@ -15,7 +15,7 @@ This skill creates task files via the `task-board` skill. It does NOT write code
 1. **Spec vs Implementation gap analysis** — compares the spec in `.docs/specs/` against actual code to find missing or incomplete features
 2. **Code quality & readability review** — finds bottlenecks, code smells, and readability issues
 3. **Best practices audit** — checks for consistent patterns, naming, error handling, test quality
-4. **Task generation** — produces 3 prioritized, actionable tasks per scan round
+4. **Task generation** — produces 0–3 prioritized, actionable tasks per scan round (zero when the current phase is built and only awaiting the PO's Visual Review sign-off)
 
 ## When to Use This Skill
 
@@ -47,7 +47,7 @@ Before any analysis, load ALL context:
 3. **Scan completed tasks**: `.task-board/done/` (learn what's already done)
 4. **Scan existing backlog**: `.task-board/backlog/` + `.task-board/in-progress/` + `.task-board/on-hold/`
 5. **Note available skills**: Check `.claude/skills/` for delegation
-6. **Determine the current phase**: the **current phase** is the lowest-numbered `phaseN.md` whose stories are not yet fully implemented. Extract its stories plus `## North Star`, `## Cross-cutting` (applies to every phase), and `## Non-Goals` (all in `index.md`); keep them in context for Phase 4 eligibility filtering. Per the spec's phasing rule, **nothing past the current phase starts until the current phase is complete** — later `phaseN.md` files and `beyond.md` are out of scope this round.
+6. **Determine the current phase**: read the `## Phase Sign-off` list in `.docs/specs/po-review.md`; the **current phase** is the lowest-numbered `phaseN.md` **not yet signed off** there (list empty / missing ⇒ Phase 1). A phase advances **only when the PO/father has signed it off** in that list — "all stories coded + tests green" is NOT enough (that is exactly what the Visual Review gate, e.g. P1-10, exists to prevent). Extract the current phase's stories plus `## North Star`, `## Cross-cutting` (applies to every phase), and `## Non-Goals` (all in `index.md`); keep them in context for Phase 4 eligibility filtering. Per the spec's phasing rule, **nothing past the current phase starts until it is signed off** — later `phaseN.md` files and `beyond.md` are out of scope this round.
 7. **Compute domain saturation**: Count the last 15 done tasks by domain (visual/rendering, economy, audio, UI, logic, content, etc.). Note any domain with 3+ tasks — it is **saturated** and must be deprioritised in Phase 4 unless it is the only remaining gap in the current phase.
 
 ### Phase 2: Spec vs Implementation Gap Analysis
@@ -115,13 +115,31 @@ the code better — tuned to this project, not a generic web-app checklist.
 **Code smells**: god functions, deep nesting, long parameter lists, swallowed errors
 (silent `pass` on failure), dead seams with no caller.
 
-### Phase 4: Task Generation (3 tasks per round)
+### Phase 4: Task Generation (0–3 tasks per round)
 
-From the gaps and quality issues found, select the **3 most impactful tasks**.
+From the gaps and quality issues found, select up to the **3 most impactful tasks** — but
+only ones that genuinely advance the current phase.
+
+**Before returning zero — the construction-audit gate (orchestrator clearance).** When the
+current phase's stories all appear implemented and there are no open PO directives, do NOT
+hand the father an empty board yet. First run an **adversarial construction audit** of the
+completed phase on the committed tree (subagent, model `sonnet`, cold + adversarial — try
+to *refute* that the work is real and honest, do not set out to confirm it). Re-run the
+Phase 3 **test-honesty** and **asset-integrity** checks as a hard gate, plus: dead seams /
+early-returns that skip the real work, logic wired but never called, `[x]` acceptance
+criteria whose behavior isn't actually present, and done-task claims that don't match the
+diff. **Any finding → emit it as a `BUG-`/`QUALITY-` task, NOT zero.**
+
+Only a genuinely **clean** audit returns **zero tasks** — and that empty backlog *is* the
+orchestrator's construction clearance: the hand-off that makes the loop run the father's PO
+review, which adds the **visual + earlier-phase-regression** clearance and, if all clear,
+**signs the phase off** (advancing to the next phase). Do NOT invent marginal polish, idle
+flourishes, or refactors to hit a quota of three — an honest clean zero is the correct,
+intended outcome.
 
 **Pre-selection filters (apply BEFORE ranking)**:
 
-- **Phase scope gate**: Stories from any phase **later** than the current phase (and the parked `## Beyond the phases` section) are **ineligible** until every story in the current phase is implemented and passes its acceptance criteria. The spec is explicit: "Phase 1 is the whole bet … Nothing past Phase 1 starts until Phase 1 passes its Visual Review and is bug-free." Placeholder art is acceptable in early phases — nail the feel first; visual refinements beyond basic readability wait for later phases.
+- **Phase scope gate**: Stories from any phase **later** than the current phase (and the parked `## Beyond the phases` section) are **ineligible** until the current phase is **signed off** in `po-review.md`'s `## Phase Sign-off` list. Implemented-and-tests-green is NOT the gate — the PO/father's Visual Review sign-off is. The spec is explicit: "Phase 1 is the whole bet … Nothing past Phase 1 starts until Phase 1 passes its Visual Review and is bug-free." Placeholder art is acceptable in early phases — nail the feel first; visual refinements beyond basic readability wait for later phases.
 - **Domain saturation filter**: If a domain was marked saturated in Phase 1 (3+ of the last 15 done tasks), do NOT select another task from it unless it is the only remaining gap in the current phase. Log the reason if overriding.
 - **Anti-polish heuristic**: Pure visual refinements (flourishes, idle animations, coat variations, look-around behaviors) are ineligible when any v1 core gameplay feature or user-facing flow is incomplete.
 
@@ -138,7 +156,7 @@ From the gaps and quality issues found, select the **3 most impactful tasks**.
 - Actionable: Can implement without major unknowns
 - Non-redundant: Not covered by existing task
 
-**For each of the 3 tasks**:
+**For each task you create (0–3)**:
 1. Invoke `task-board` skill with full context
 2. Include: what it addresses (spec gap, quality issue, bottleneck), why it's prioritized now, technical approach hints
 3. Assign sequential number (scan ALL `.task-board/**/*.md` for highest existing number)
@@ -181,7 +199,7 @@ Summary report with:
 - Spec coverage overview (X of Y spec items implemented)
 - Top code quality and readability findings
 - Bottlenecks or best practice violations found
-- 3 tasks created (number, type, title, priority)
+- 0–3 tasks created (number, type, title, priority — zero if the phase only awaits PO sign-off)
 - Recommended implementation order
 - What to focus on in the next scan round
 

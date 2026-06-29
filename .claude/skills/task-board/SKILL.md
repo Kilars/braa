@@ -196,8 +196,8 @@ Use this comprehensive template for all plan files. Fill in ALL sections based o
 
 ### Implementation Steps
 
-Vertical slices, in order (functional tasks test-first per `tdd` — one failing test →
-minimal code → repeat; pure render/asset tasks verify by Visual Review instead):
+Vertical slices, in order (functional tasks test-first per the `tdd` skill; pure
+render/asset tasks verify by Visual Review instead):
 
 1. [First slice — the behavior to test/build, files touched, key change]
 2. [Next slice]

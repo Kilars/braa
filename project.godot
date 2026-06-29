@@ -1,6 +1,6 @@
 ; Bra! — Godot 4 project (v2 stack: ADR-0001 Godot 4, ADR-0003 GDScript,
 ; ADR-0004 PWA web export, ADR-0005 repo layout). Scaffold only — Phase 1
-; gameplay (sit / mark / score, specs2.md) is built in later TDD tasks.
+; gameplay (sit / mark / score, .docs/specs/) is built in later TDD tasks.
 ;
 ; Engine config format version 5 (Godot 4.6.x).
 
@@ -16,7 +16,7 @@ config/icon=""
 
 [display]
 
-; Mobile portrait is the only target (specs2: mobile-only, phone-portrait).
+; Mobile portrait is the only target (.docs/specs/: mobile-only, phone-portrait).
 window/size/viewport_width=720
 window/size/viewport_height=1280
 window/handheld/orientation="portrait"

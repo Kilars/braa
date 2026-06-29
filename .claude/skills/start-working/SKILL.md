@@ -64,12 +64,24 @@ Subagents MUST use built-in tools instead of bash equivalents.
 | `grep`, `rg` | **Grep** tool |
 
 ### 7. FUNCTIONAL CODE IS TEST-FIRST (TDD)
-All **functional / game-logic** code MUST be written test-first using the
-**`tdd`** skill (red-green-refactor, vertical slices). See
-[`.claude/skills/tdd/SKILL.md`](../tdd/SKILL.md).
-- One failing test -> minimal code to pass -> repeat. **No horizontal slicing.**
+All **functional / game-logic** code MUST be written test-first per the **`tdd`** skill
+([`.claude/skills/tdd/SKILL.md`](../tdd/SKILL.md)) — that skill is the **single source of
+truth** for the red-green-refactor mechanics; don't re-derive them here.
 - Pure rendering / 3D / asset glue is exempt (covered by Visual Review).
 - A functional task that ships without tests is **INCOMPLETE**.
+
+### 8. INTERACTIVE VS AUTONOMOUS — FLAG, DON'T BLOCK
+This skill runs two ways: **interactively** (a user invoked it) and **autonomously** (the
+headless build loop drives it, no user present). Several Workflow steps below say "ask the
+user" — that means:
+- **Interactive:** ask the user directly and wait.
+- **Autonomous:** **NEVER stop to wait.** Make the best-supported assumption, record it in
+  the task file's Context/Progress, and keep going. If the open question is genuinely
+  **user-only** — a product / scope / legal / asset / owner decision, or an ambiguity whose
+  answers lead to materially different outcomes (not a technical fork you can reason out) —
+  AND you (the orchestrator) judge it material, **raise a flag** in `.task-board/FLAGS.md`
+  per its protocol, then continue. Flags are **async and non-blocking** — they never halt
+  the loop. (The flag file rides the per-task `git add -A` commit, so the user sees it.)
 
 ---
 
@@ -87,7 +99,8 @@ Use when the user says:
 
 Read `.task-board/PLANNING-BOARD.md` to see what's next.
 
-**If PLANNING-BOARD is empty**: Ask if the user wants to populate it from the backlog.
+**If PLANNING-BOARD is empty**: interactive → ask if the user wants to populate it from the
+backlog; autonomous → populate it from the backlog (top priorities) and continue (Rule 8).
 
 ### Step 2: Select Top Priority
 
@@ -102,7 +115,9 @@ Pick the **first numbered item** from the planning board (unless blocked).
 
 Move the task file from `.task-board/backlog/` to `.task-board/in-progress/`.
 
-**Important**: Limit in-progress to **1 task**. If in-progress already has tasks, ask the user.
+**Important**: Limit in-progress to **1 task**. If in-progress already has tasks: interactive
+→ ask the user; autonomous → finish and move that stray task first, or flag it per Rule 8 if
+it looks abandoned, then proceed.
 
 ### Step 4: Read the Task File
 
@@ -114,11 +129,12 @@ Understand the full task:
 
 ### Step 5: Clarify Uncertainties
 
-**STOP and ask the user if**:
-- The task is ambiguous
-- Multiple approaches are possible
-- Dependencies are unclear
-- Scope seems too large
+If the task is ambiguous, has multiple viable approaches, unclear dependencies, or seems too
+large:
+- **Interactive:** STOP and ask the user.
+- **Autonomous:** do not stop — proceed on the best-supported assumption (recorded in the
+  task file), and if it's a genuinely user-only decision you judge material, raise a flag in
+  `.task-board/FLAGS.md` (Rule 8). Then continue.
 
 ### Step 6: Assess Complexity
 
@@ -271,10 +287,14 @@ Summarize: files touched · acceptance-criteria status · gate result
 ## Handling Edge Cases
 
 ### If PLANNING-BOARD is Empty
-Ask the user to populate it or offer to add top backlog items.
+Interactive: ask the user to populate it / offer to add top backlog items. Autonomous:
+populate it from the backlog and continue — no prompt (Rule 8).
 
 ### If Top Priority is Blocked
-Identify the blocker, check if the blocker task exists, and ask the user.
+Identify the blocker and check whether a blocker task exists. Interactive: ask the user.
+Autonomous: park the blocked task in `.task-board/on-hold/`, keep every other task moving,
+and — if clearing the block needs a user / owner decision — raise a flag in
+`.task-board/FLAGS.md` (Rule 8). Never let one blocked task stall the loop.
 
 ### If Task is Too Large
 Break into sub-tasks (e.g., 003a, 003b), create new files, update PLANNING-BOARD.md.

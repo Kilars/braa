@@ -1,11 +1,17 @@
-name: Build licensed (encrypted) Web bundle
+name: Deploy licensed (encrypted) Web build to GitHub Pages
 
-# ADR-0006 / task 025 — the owner-gated remainder of the encrypted licensed deploy.
+# ADR-0006 / task 025 — the LIVE deploy. The encrypted licensed Labrador IS the public
+# site now; the old CC0 deploy.yml was removed so it can no longer clobber this on push.
 #
-# WHAT: builds the licensed Labrador into an ENCRYPTED Godot Web/PWA bundle and proves
-# it actually decrypts + runs in a real browser, then uploads it as a CI ARTIFACT for
-# owner review. It does NOT publish to GitHub Pages unless you explicitly dispatch with
-# publish=true — so the public CC0 site (deploy.yml) stays live until you flip it.
+# WHAT: on every push to main, builds the licensed Labrador into an ENCRYPTED Godot
+# Web/PWA bundle, proves it actually decrypts + runs in a real browser (and is the
+# LICENSED dog, not CC0), then PUBLISHES it to GitHub Pages. Every gate is fail-closed
+# (set -e): if decryption, the encryption assert, or the browser boot fails, the publish
+# step is never reached and the live site is left untouched (stale, not broken).
+#
+# It still no-ops cleanly if the key secret or the encrypted glb is missing (forks /
+# pre-setup): the guard sets built=false, every real step is skipped, nothing publishes
+# and the live site is left as-is. A manual run is also available via workflow_dispatch.
 #
 # WHY a whole from-source template build: the official Godot web templates are compiled
 # with the DEFAULT (empty) encryption key. They can ENCRYPT a custom-key .pck at export
@@ -42,21 +48,17 @@ name: Build licensed (encrypted) Web bundle
 # validated on a dev laptop without the key. The in-job browser boot check is the proof.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      publish:
-        description: "After validation, PUBLISH to GitHub Pages (replaces the live CC0 site). Leave false to only build the artifact."
-        type: boolean
-        default: false
 
-# pages/id-token only used when publish=true; harmless otherwise.
+# Pages deploy needs these; contents:read for checkout.
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Share the single Pages concurrency group with deploy.yml so a licensed publish and a
-# CC0 deploy never race each other.
+# One live deploy at a time; don't cancel an in-flight publish.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -91,7 +93,7 @@ jobs:
             echo "has=true" >> "$GITHUB_OUTPUT"
           else
             echo "has=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::need GODOT_SCRIPT_ENCRYPTION_KEY secret AND a committed assets/models/dog_licensed.glb.enc — skipping licensed build (expected on forks / before setup)."
+            echo "::warning::need GODOT_SCRIPT_ENCRYPTION_KEY secret AND a committed assets/models/dog_licensed.glb.enc — skipping licensed build, the live Pages site will NOT be updated (expected on forks / before setup)."
           fi
 
       # FAIL FAST: decrypt before the ~45-min template build, so a wrong key / bad blob
@@ -284,17 +286,17 @@ jobs:
           path: build/web-licensed
           retention-days: 14
 
-      # Only stage for Pages when explicitly publishing. Validation above has already
-      # passed (set -e), so a broken bundle can never reach this step.
+      # Stage the validated bundle for Pages. Validation above has already passed
+      # (set -e), so a broken bundle can never reach this step.
       - name: Stage bundle for GitHub Pages
-        if: steps.guard.outputs.has == 'true' && inputs.publish
+        if: steps.guard.outputs.has == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web-licensed
 
   publish:
     needs: build-licensed
-    if: ${{ inputs.publish && needs.build-licensed.outputs.built == 'true' }}
+    if: ${{ needs.build-licensed.outputs.built == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

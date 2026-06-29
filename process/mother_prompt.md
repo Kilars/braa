@@ -6,11 +6,17 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
 
 ## Iteration
 
-1. **Read the board** — `.task-board/{backlog,in-progress,done}`.
+1. **Read the board** — `.task-board/{backlog,in-progress,done}`, plus `.task-board/FLAGS.md`
+   for any open flags (so you don't re-raise one, and can apply a flag the user has since
+   resolved).
 2. **Replenish if empty** — if `backlog/` has no task files (ignore `.gitkeep`), run
-   `scan-project` to generate 3 tasks. It finds gaps between `specs2.md` (including
-   the **Product Owner Review** notes the PO/father pass appends there) and the
-   implementation. Otherwise skip the scan.
+   `scan-project`. It finds gaps between the spec (the phase files under `.docs/specs/` plus
+   the **Product Owner Review** notes in `.docs/specs/po-review.md`) and the implementation,
+   and emits **up to 3** tasks. Before it may return **zero** (the empty-board hand-off to
+   the father), it must pass its **adversarial construction audit** of the completed phase —
+   a clean zero is the orchestrator's construction clearance; any audit finding (dead seams,
+   hollow tests, faked assets, claim≠diff) comes back as a task instead. Otherwise skip the
+   scan.
 3. **Work** — run `start-working` on the backlog; move each task file
    `backlog → in-progress → done` as you go.
 4. **Gate** — before exit, run the full verify gate and confirm green:
@@ -26,9 +32,9 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
 
 ## Rules
 
-- **The spec is READ-ONLY for you.** Never create, edit, or restructure `specs2.md`
-  — not to mark things done, add scope, or "fix" it. Only the **PO/father** review pass
-  writes to specs; you read it and build to it. If it looks wrong or conflicts with a
+- **The spec is READ-ONLY for you.** Never create, edit, or restructure the spec under
+  `.docs/specs/` — not to mark things done, add scope, or "fix" it. Only the **PO/father**
+  review pass writes to specs (and only to `.docs/specs/po-review.md`); you read it and build to it. If it looks wrong or conflicts with a
   task, record the discrepancy in the task file and build to the spec as written.
   Implementation notes go in the task file; a durable technical *decision* becomes an
   ADR in `adr/` (the source of truth). Do NOT create `.docs/tech-decisions.md` — it was a
@@ -40,14 +46,24 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   prebuilt-binary routes first. Only escalate a block that survives multiple real
   attempts. Genuine **owner / legal / asset** gates are real, but name precisely what's
   missing and keep every other part of the work moving around it.
-- **Functional code is test-first (TDD)** via `tdd` — vertical slices, one test → minimal
-  impl → repeat. Never all-tests-then-all-code.
+- **Flag user-only decisions; never block on them.** You are the **orchestrator** — the
+  one who decides what reaches the user. When `start-working` (or a subagent's report)
+  surfaces something only the user can decide — a product / scope / legal / asset / owner
+  call, or a materially ambiguous choice you can't reason out — and you agree it's
+  material, append a flag to `.task-board/FLAGS.md` per its protocol, then keep building on
+  your best assumption (recorded in the task file). Technical forks you can resolve don't
+  get flagged. Flags are async and non-blocking; a genuine hard block also parks its task
+  in `on-hold/` while other work proceeds. **Subagents never write `FLAGS.md` — only you
+  do**, and only with the orchestrator's concurrence.
+- **Functional code is test-first** per the `tdd` skill (the single source of truth for the
+  red-green-refactor mechanics — don't re-derive them here); pure render / 3D / asset glue
+  is exempt (Visual Review instead).
 - **Visual tasks** → run `polish` + spawn review agents that look at screenshots on a
   phone-portrait viewport. Their findings are blocking.
-- **Git: one caveman commit + push per task** (main agent only, per start-working).
-  Stage the task's code + moved task file + board update together, commit, push to
-  upstream. Never force-push; no checkout/branch/reset/rebase. Unpushed work = task
-  not done.
+- **Git — main agent commits + pushes once per completed task; subagents never touch git.**
+  Follow `start-working`'s git policy exactly (Rule 2 + Step 9b + Caveman Commit Format) —
+  that skill is the **single source of truth** for git; don't restate or re-derive it here.
+  Unpushed work = task not done.
 - **Reuse one dev server** if you start one.
 - **Never fabricate a screenshot or result.** Verify subagent claims against real
   artifacts (typecheck / test / build / e2e / grep / the actual screenshot).

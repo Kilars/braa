@@ -3,9 +3,10 @@
 # clean context; state survives on disk via the task board. Two roles alternate:
 #
 #   MOTHER (mother_prompt.md) — the dev loop. Reads the board, scans for work,
-#     builds tasks test-first, runs the gate. Treats specs2.md as read-only.
+#     builds tasks test-first, runs the gate. Treats .docs/specs/ as read-only.
 #   FATHER (father_prompt.md) — the Product Owner. Runs and play-tests the actual
-#     game, is critical, and its ONLY output is PO notes appended to specs.md.
+#     game, is critical, and its ONLY output is PO notes appended to
+#     .docs/specs/po-review.md.
 #     The mother's scan-project then turns those notes into tasks.
 #
 # The father runs every FATHER_EVERY iterations OR whenever an iteration creates
@@ -143,7 +144,10 @@ watch_claude() {  # $1 = pid
 
 backlog_count() { find .task-board/backlog    -maxdepth 1 -name '*.md' 2>/dev/null | wc -l; }
 inprog_count()  { find .task-board/in-progress -maxdepth 1 -name '*.md' 2>/dev/null | wc -l; }
-spec_hash()     { sha1sum specs2.md 2>/dev/null | cut -d' ' -f1; }
+# Hash the whole spec tree so the father pass is detected as "wrote something" by a
+# changed digest. The PO only edits .docs/specs/po-review.md, but hashing the dir is
+# robust to any spec change.
+spec_hash()     { find .docs/specs -type f -name '*.md' 2>/dev/null | sort | xargs sha1sum 2>/dev/null | sha1sum | cut -d' ' -f1; }
 # v2 (Godot): the father (PO play-test) reviews the deployed Web/PWA build — the live
 # Pages site, or a local `build/web` export served over http. "Reviewable" = the Godot
 # project exists; until project.godot is scaffolded the PO has nothing to play, so it's
@@ -322,7 +326,7 @@ for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
   # --- Father: PO review on schedule or when the dev side is starved ---------
   # "No new work created" = scan ran on an empty board and still left it empty.
   # Either way the father play-tests the real game and writes PO notes into
-  # specs.md; the next mother iteration's scan-project turns them into tasks.
+  # .docs/specs/po-review.md; the next mother iteration's scan-project turns them into tasks.
   board_empty=$(( $(backlog_count) == 0 && $(inprog_count) == 0 ? 1 : 0 ))
   no_work_created=$(( start_empty == 1 && board_empty == 1 ? 1 : 0 ))
   (( since_father++ ))

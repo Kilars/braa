@@ -4,9 +4,11 @@
 tap **BRA** the instant it sits, get a payoff that lands on the beat. This is the
 **v2** build tree; the spec is the source of truth, code is built up from it.
 
-- **Spec:** [specs2.md](specs2.md) — user stories, phased. **Phase 1 is the whole bet**:
-  one good-looking dog, one Sitt, one perfect mark. Nothing past Phase 1 starts
-  until Phase 1 passes visual review and is bug-free.
+- **Spec:** [.docs/specs/](.docs/specs/) — user stories, phased. One file per phase
+  (`phase1.md` … `phase7.md`), `index.md` for the shared frame (North Star, Cross-cutting,
+  Non-Goals + a phase index), and `po-review.md` for the PO play-test log. **Phase 1 is
+  the whole bet**: one good-looking dog, one Sitt, one perfect mark. Nothing past Phase 1
+  starts until Phase 1 passes visual review and is bug-free.
 - **Decisions:** [adr/](adr/) (0001–0006) — ADRs are the source of truth for tech
   choices. There is no `tech-decisions.md`.
 
@@ -58,5 +60,12 @@ ends with `✓ verify gate green`. Treat a failing leg as a hard stop.
 ## Deploy
 
 Constant push → CI exports Godot Web/PWA → GitHub Pages → reviewed on the live
-site. `deploy.yml` ships the CC0 build (deploy gated on a successful export).
-`deploy-licensed.yml` is the owner-gated encrypted-licensed-dog pipeline (ADR-0006).
+site. `deploy-licensed.yml` is the **only** deploy now: every push to `main` builds
+the **encrypted licensed Labrador** (ADR-0006), proves it decrypts + boots + can Sitt
+in a real browser, then publishes to Pages — all gates fail-closed (a failed gate
+leaves the live site stale, never broken). Needs the `GODOT_SCRIPT_ENCRYPTION_KEY`
+secret + the committed `assets/models/dog_licensed.glb.enc`; without them the job
+no-ops and Pages is left unchanged. The old CC0 `deploy.yml` was removed (it republished
+on every push and would clobber the licensed site). The CC0 dog asset + the "Web" preset
+stay — the local `verify.sh` gate and the editor still use them, since the licensed dog
+needs the encryption key/from-source template that only CI has.

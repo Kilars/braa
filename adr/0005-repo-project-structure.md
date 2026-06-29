@@ -18,7 +18,9 @@ that a separate repo is likely.
   reference** (git history).
 - **Design docs live with the code.** Move `specs2.md`, `content-catalog.md`, and the
   `adr/` folder into the new repo as the single source of truth. (Until migrated,
-  they remain on the `braa` PR branch.)
+  they remain on the `braa` PR branch.) **Update (2026-06-29):** the spec was later
+  split one file per phase under `.docs/specs/` (`phaseN.md` + `index.md` for the shared
+  frame + `po-review.md` for the PO play-test log); `adr/` stays at the repo root.
 - **Public repo, deployed to GitHub Pages.** CI (GitHub Actions) exports the Godot
   **Web** build and publishes it to Pages. Two consequences fall out:
   - **Single-threaded export is required** (ADR-0001/0004): Pages can't set the
@@ -39,7 +41,8 @@ that a separate repo is likely.
     models/              # CC0 placeholder committed; licensed .glb gitignored
     audio/               # marker voice / SFX
   addons/                # plugins if any
-  docs/  (specs2, content-catalog, adr/)
+  adr/                   # ADRs — source of truth for tech decisions (repo root)
+  .docs/specs/           # phased spec: phaseN.md + index.md + po-review.md
   export_presets.cfg     # Web (PWA) preset, ADR-0004
   ```
 - **Asset/licensing in VCS:** `.gitignore` the licensed model and any baked

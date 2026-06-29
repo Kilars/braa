@@ -1,7 +1,7 @@
 # Planning Board — Bra! v2
 
-Source of truth: [`specs2.md`](../specs2.md) (phased user stories) and the ADRs in
-[`adr/`](../adr/).
+Source of truth: [`.docs/specs/`](../.docs/specs/) (phased user stories — one file per
+phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
@@ -63,7 +63,7 @@ gate green for real at 73 tests.
 
 ## Current phase
 
-**Phase 1 — the perfect single mark** (specs2.md §Phase 1). The logic is largely built and
+**Phase 1 — the perfect single mark** (`.docs/specs/phase1.md`). The logic is largely built and
 correct; the phase is gated on a sit-capable dog (025) and an honest gate (026).
 
 ## Before restarting the autonomous loop — DO THESE FIRST
