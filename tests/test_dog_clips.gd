@@ -62,6 +62,28 @@ func test_cc0_has_no_positive_reaction_clip() -> void:
 	assert_false(c.has_reaction(), "the CC0 dog has no positive-reaction clip")
 	assert_eq(c.reaction, "", "no reaction clip resolved on the CC0 dog (Jump is not a reaction)")
 
+func test_reaction_prefers_a_joyful_bounce_over_a_lone_bark() -> void:
+	# 034 / P1-6: on the licensed pack the only reaction-vocab leaf used to be `Bark`, so a
+	# successful mark fired a lone bark (no read of joy). A joyful in-place hop must outrank
+	# it. Uses the REAL licensed leaf names (Step 0): `Jump_Place_IP` is the complete in-place
+	# bounce; `Bark` is the standing bark. The hop must win.
+	var names := ["Arm_Labrador|Idle_1", "Arm_Labrador|Bark",
+		"Arm_Labrador|Jump_Place_IP", "Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_1"]
+	var c := DogClips.resolve(PackedStringArray(names))
+	assert_eq(c.reaction, "Arm_Labrador|Jump_Place_IP", "the joyful hop outranks the lone Bark")
+	assert_ne(c.reaction, "Arm_Labrador|Bark", "a successful mark is no longer a lone bark")
+	assert_true(c.has_reaction(), "the licensed dog still has a reaction")
+
+func test_cc0_generic_jump_is_never_a_reaction() -> void:
+	# 034 / P1-6: the joyful terms ("jump_place"/"jumpair") must stay specific enough that the
+	# CC0 placeholder's bare `Jump` is NOT mistaken for a celebration (else the 024f asset gate
+	# breaks and the idle-only dog fakes a hop). A list whose only jump-ish leaf is a bare
+	# `Jump` must resolve no reaction.
+	var names := ["AnimalArmature|Idle", "AnimalArmature|Walk", "AnimalArmature|Jump"]
+	var c := DogClips.resolve(PackedStringArray(names))
+	assert_eq(c.reaction, "", "a bare generic Jump is not a joyful reaction")
+	assert_false(c.has_reaction(), "the idle-only dog still can't react (asset gate holds)")
+
 func test_committed_dog_exposes_a_real_idle_clip() -> void:
 	# Binds to the REAL committed asset (mirrors test_smoke): after --import the dog
 	# must yield an AnimationPlayer whose resolved idle is an actual clip on it.
@@ -105,4 +127,9 @@ func test_licensed_dog_if_present_resolves_a_real_sit() -> void:
 		assert_true(c.has_sit(), "the licensed Labrador must resolve a real Sitt (start + hold loop)")
 		assert_true(ap.has_animation(c.sit_start), "resolved sit_start must be a real clip on the dog")
 		assert_true(ap.has_animation(c.sit_loop), "resolved sit_loop must be a real clip on the dog")
+		# 034 / P1-6: the joyful reaction must resolve to the real in-place hop on the asset
+		# (Step 0 confirmed `Jump_Place_IP` exists), NOT the lone Bark.
+		assert_true(c.has_reaction(), "the licensed Labrador must resolve a positive reaction")
+		assert_eq(c.reaction, "Arm_Labrador|Jump_Place_IP", "reaction is the joyful in-place hop, not Bark")
+		assert_true(ap.has_animation(c.reaction), "resolved reaction must be a real clip on the dog")
 	dog.free()

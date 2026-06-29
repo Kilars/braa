@@ -14,12 +14,17 @@ var sit_loop: String   ## fully-seated hold loop. "" if none
 var sit_end: String    ## stand-back-up clip. "" if none
 var reaction: String   ## positive reaction on a mark (024f, P1-6); "" if the dog has none
 
-## Leaf substrings that name a POSITIVE reaction, in priority order. Deliberately
-## reaction-specific — no generic locomotion ("jump", "walk", "run") — so the CC0
-## placeholder, which ships only those, resolves no reaction and stays idle rather
-## than faking a celebration (the 024f asset gate). The licensed Labrador's authored
-## reaction drops in under whichever of these its clip set carries (confirmed at 025).
-const REACTION_VOCAB := ["wag", "happy", "excit", "greet", "celebrat", "perk", "bark"]
+## Leaf substrings that name a POSITIVE reaction, in priority order. A joyful in-place
+## bounce reads as celebration at phone size, so the licensed pack's hop clips rank ahead
+## of a bare Bark (P1-6, task 034 — a lone bark on an already-open mouth didn't read as
+## joy). Terms stay reaction-SPECIFIC — "jump_place" matches the licensed `Jump_Place_IP`
+## (a complete root-stripped in-place hop) and "jumpair" its airborne variants, but NEVER
+## a bare "jump"/"walk"/"run" — so the CC0 placeholder, which ships only generic
+## locomotion, resolves no reaction and stays idle rather than faking a celebration (the
+## 024f asset gate still holds). Verified against the real `dog_licensed.glb` clip list.
+const REACTION_VOCAB := [
+	"jump_place", "jumpair", "wag", "happy", "excit", "greet", "celebrat", "perk", "bark",
+]
 
 func _init() -> void:
 	idle = ""

@@ -11,8 +11,16 @@ extends RefCounted
 var clips: DogClips
 var _ap: AnimationPlayer
 
+## Crossfade between clips so pose changes ease instead of snapping. P1-6/034 needs the
+## joyful hop to blend cleanly out of the seated pose and back again (no pose pop); a short
+## uniform blend is the standard Godot idiom and also softens the idle↔sit transitions
+## without touching the apex (which is timing-driven, not blend-driven). Visual Review gates.
+const BLEND_TIME := 0.2
+
 func _init(animation_player: AnimationPlayer) -> void:
 	_ap = animation_player
+	if _ap != null:
+		_ap.playback_default_blend_time = BLEND_TIME
 	var names := _ap.get_animation_list() if _ap != null else PackedStringArray()
 	clips = DogClips.resolve(names)
 

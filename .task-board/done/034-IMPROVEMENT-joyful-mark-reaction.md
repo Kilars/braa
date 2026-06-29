@@ -1,7 +1,25 @@
 # IMPROVEMENT: 034 — The mark reads as joy, not a lone bark (P1-6)
 
-**Status**: Backlog
+**Status**: Done (2026-06-29)
 **Created**: 2026-06-29
+
+## Step 0 findings — REAL licensed clip names (probed 2026-06-29, `dog_licensed.glb`, 113 clips)
+
+Headless dump of `AnimationPlayer.get_animation_list()` on the on-disk licensed glb.
+The task's *expected* names were close but not exact — corrected here:
+
+- **No bare `Jump_Place`.** The in-place full hop is **`Arm_Labrador|Jump_Place_IP`**
+  (`_IP` = root-motion stripped → the dog stays centered, ideal for a phone-framed
+  bounce). `JumpStart_Place` / `JumpLand_Place` are decomposed pieces, not full hops.
+- **`Arm_Labrador|JumpAir_low`** exists (also `JumpAir_low_F`, `JumpAir_high`, …) but
+  these are only the *airborne fragment* of a decomposed jump — not a complete grounded
+  hop, so they make a weaker reaction than `Jump_Place_IP`.
+- Reaction chosen: **`Jump_Place_IP`** (complete in-place hop, grounded start+end).
+- Vocab literals used: `"jump_place"` (matches `Jump_Place_IP` and nothing else),
+  `"jumpair"` (fallback for the airborne variants). Verified neither matches the CC0
+  `Jump` leaf (`"jump"` contains neither substring) → the 024f asset gate still holds.
+- Blend (Step 2): `DogDirector` sets `playback_default_blend_time` so seat→hop and
+  hop→rest crossfade instead of snapping (decision recorded; visual review is the gate).
 **Priority**: High — open **PO directive** (Improvements) blocking the Phase-1
 Visual-Review sign-off (P1-10). Only-remaining-gap override applies (visual domain
 saturated, but this is one of just two open Phase-1 PO findings).
@@ -108,17 +126,47 @@ Run `polish`, then spawn review agents on the **running local licensed web expor
 size, **blended cleanly from the seat with no snap/pop**, and nothing must fire on a
 MISS / dead tap. Findings are blocking. Save the proof frame under `.screenshots/`.
 
+## Results (2026-06-29)
+
+**Resolver (TDD red→green):** `scripts/dog_clips.gd` `REACTION_VOCAB` now leads with
+`"jump_place", "jumpair"` ahead of `"bark"`. On the real licensed glb the reaction
+resolves to `Arm_Labrador|Jump_Place_IP` (the complete in-place hop), not `Bark`.
+New tests (red first, then green): `test_reaction_prefers_a_joyful_bounce_over_a_lone_bark`,
+`test_cc0_generic_jump_is_never_a_reaction`; the `if present` licensed-asset test now
+asserts `reaction == Jump_Place_IP` against the on-disk asset. 114 tests, 0 failures.
+
+**Blend (Step 2):** `scripts/dog_director.gd` sets `playback_default_blend_time = 0.2`
+in `_init` so seat→hop and hop→rest crossfade (no pose pop). Render glue — visual-gated.
+
+**Visual gate — PASS (own pixel read + independent review agent agree).** Added a
+web-only deterministic capture seam `?bra_autotap=1` (mirrors the 030 `force_tell` / 033
+`force_tier` seams): fires ONE real PERFECT mark as the clock enters the PERFECT band each
+sit, through the real `_on_bra_pressed`, and bumps `window.__bra_reaction_n` so the capture
+syncs to the hop. `tools/web_capture_reaction.mjs` drives the LOCAL licensed Web bundle
+(the local "Web" pck bundles + prefers `dog_licensed.glb`) in headless Chromium and bursts
+15 frames → `.screenshots/034-reaction-NN.png`. Sequence: standing idle (00) → PERFECT mark
++ rise/anticipation (01, gold "PERFECT" readout, legible) → crouch (02) → **airborne joyful
+bounce (05)** → settle to seat (08) → clean return to idle (14). No snap/pop, no coat
+translucency, no broken limbs; dog stays centered (in-place `_IP`) and grounded (contact
+shadow holds). `tools/capture_reaction.{gd,tscn}` is the native analog (like `capture_apex`)
+for GL-capable machines; native GL is unavailable in this headless loop env, so the web
+path is the in-env gate.
+
+**MISS/DEAD silent:** unchanged gate — `MarkPayoff.reacts()` keys off a successful tier
+only; covered by `test_mark_payoff` / `test_payoff_wiring` (no new regression).
+
 ## Acceptance Criteria
 
-- [ ] Step 0 done: the **actual** joyful leaf name(s) on `assets/models/dog_licensed.glb`
-      are probed and recorded (not guessed); the vocab uses those literals.
-- [ ] Failing tests written first per `tdd`: (a) joyful clip preferred over `Bark`;
-      (b) CC0 generic `Jump` resolves no reaction (`reaction == ""`).
-- [ ] `REACTION_VOCAB` ranks the licensed joyful bounce ahead of `bark`, with terms
-      specific enough that the CC0 `Jump` is still not matched.
-- [ ] Reaction blends cleanly from the seated pose (no snap), then returns to the loop.
-- [ ] Audio/reaction gate intact: fires on a successful mark only; silent on MISS /
-      dead tap; PERFECT brighter than OK.
-- [ ] Visual Review on the running 390×844 licensed export confirms a joyful,
-      pop-free reaction — with a captured proof frame in `.screenshots/`.
-- [ ] `nix develop -c bash verify.sh` green (import → boot → test → export).
+- [x] Step 0 done: actual joyful leaf names probed (no bare `Jump_Place`; it's
+      `Jump_Place_IP`; `JumpAir_low` is only the airborne fragment) and recorded above;
+      vocab uses `"jump_place"`/`"jumpair"` literals.
+- [x] Failing tests written first per `tdd`: (a) joyful clip preferred over `Bark`;
+      (b) CC0 generic `Jump` resolves no reaction (`reaction == ""`). Confirmed red, then green.
+- [x] `REACTION_VOCAB` ranks the licensed joyful bounce ahead of `bark`; `"jump_place"`/
+      `"jumpair"` don't match the CC0 `Jump` leaf (`"jump"`), so the 024f asset gate holds.
+- [x] Reaction blends cleanly from the seated pose (0.2s crossfade), then returns to the loop.
+- [x] Audio/reaction gate intact: fires on a successful mark only; silent on MISS / dead
+      tap (existing payoff gate/tests); PERFECT (gold) brighter than OK (green) — captured.
+- [x] Visual Review on the running 390×844 licensed export confirms a joyful, pop-free
+      reaction — proof frames in `.screenshots/034-reaction-NN.png`.
+- [x] `nix develop -c bash verify.sh` green (import → boot → test → export).

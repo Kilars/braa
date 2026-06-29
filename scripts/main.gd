@@ -78,6 +78,15 @@ var _force_tell := false
 ## and off by default, so desktop, headless, and normal web play are untouched.
 var _force_tier := -1
 
+## Visual-review seam (034/P1-6): set by _query_autotap() from the web URL `?bra_autotap=1`.
+## When on, the game fires ONE PERFECT mark at each sit's apex (the same instant a player
+## scores PERFECT) so the dog's joyful reaction plays deterministically for a capture burst —
+## the live reaction is too brief and tap-timing-dependent to catch reliably otherwise. The
+## mark runs through the real wiring (_on_bra_pressed), so it's the genuine reaction, not a
+## stub. Web-only and off by default; desktop, headless, and normal web play are untouched.
+var _autotap := false
+var _autotapped := false  ## one auto-mark per sit; reset when the sit ends
+
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_setup_environment()
@@ -93,6 +102,7 @@ func _ready() -> void:
 	_setup_payoff()
 	_force_tell = _query_force_tell()  # deterministic apex-tell pixel proof (030, web-only seam)
 	_force_tier = _query_force_tier()  # deterministic readout-contrast pixel proof (033, web-only)
+	_autotap = _query_autotap()        # deterministic reaction-capture mark (034, web-only)
 	_notify_web_ready()
 
 ## Visual-review seam (030/P1-4): true only when the live web page URL carries
@@ -126,6 +136,15 @@ func _query_force_tier() -> int:
 		return SitWindow.Tier.OK
 	return -1
 
+## Visual-review seam (034/P1-6): true only when the live web URL carries `?bra_autotap=1`.
+## Lets the reaction-capture harness pin a deterministic PERFECT mark at each apex so the
+## dog's joyful hop plays for a screenshot burst. Web-only (off desktop/headless/normal play).
+func _query_autotap() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
+
 ## Resolve prefers-reduced-motion (the test seam wins, else the live query) into the
 ## single motion-scale the tell is built from (P1-8). Called first in _ready so the
 ## damping is in place before any cue is constructed.
@@ -149,6 +168,13 @@ func motion_scale() -> float:
 func _process(delta: float) -> void:
 	_session.advance(delta)
 	_advance_loop(delta)
+	# Reaction-capture seam (034, web-only): once per sit, auto-fire a PERFECT mark the
+	# instant the clock reaches the apex, so the joyful hop plays deterministically for the
+	# capture burst. Goes through the real _on_bra_pressed — genuine reaction, not a stub.
+	if _autotap and not _autotapped and _window != null and _session.is_open() \
+			and _session.elapsed() >= _window.apex - _window.perfect_radius:
+		_autotapped = true
+		_on_bra_pressed()  # fire as the clock enters the PERFECT band so the capture scores PERFECT
 	if _tell_marker != null:
 		if _force_tell:
 			_tell_marker.set_intensity(1.0)  # deterministic capture seam (030) — web-only
@@ -190,6 +216,7 @@ func _end_sit() -> void:
 	_session.close()
 	_window = null
 	_tell = null
+	_autotapped = false  # arm the next sit's capture mark (034 seam)
 	_director.play_idle()
 
 ## Bright, clean backdrop (Pokémon-GO-ish) so the dog reads clearly (P1-1).
@@ -504,6 +531,11 @@ func _play_payoff(tier: SitWindow.Tier) -> void:
 		_payoff.play(payoff)
 	if payoff.reacts() and _director != null:
 		_director.play_reaction()
+		# Web-only capture/e2e signal: a counter the reaction-capture harness watches so it
+		# can sync its screenshot burst to the exact frame the hop starts (034). No-op
+		# off the web export; harmless in normal play.
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.__bra_reaction_n = (window.__bra_reaction_n||0)+1;", true)
 
 ## Deterministic readiness signal for the PWA splash / e2e, mirroring the
 ## old web shell's window.__appReady. No-op off the web export.
