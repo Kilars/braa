@@ -31,8 +31,20 @@ context with disk as the only shared memory.
 
 ```bash
 cd /home/larsski/Code/braa && ./process/loop.sh        # unbounded; stops only on the
-                                                        # budget cap or a hard failure
+                                                        # budget cap, a hard failure, or you
 ```
+
+### Stopping it cleanly
+
+Run it in the **foreground** of a terminal and press **`q`** to stop. The loop kills the
+in-flight `claude` together with its **whole subagent/tool subtree** (godot, chromium,
+`verify.sh`, …) and then exits — no orphaned processes left running. **Ctrl-C** (SIGINT)
+and **SIGTERM** do the same thing.
+
+Each `claude` invocation runs in its own session (`setsid`), so a single process-group
+signal tears the entire tree down at once (a `pgrep` tree-walk sweeps up any stragglers).
+A *backgrounded* run (`./process/loop.sh &`) can't read `q`, and bash makes background
+scripts ignore SIGINT — stop a detached run with `kill -TERM <pid>` instead.
 
 What's wired for v2:
 
