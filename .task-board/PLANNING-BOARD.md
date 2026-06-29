@@ -23,10 +23,19 @@ regression test. Its **pixel sign-off remains a PO action** on the deployed buil
 - **038 — DONE (2026-06-30).** Tier readout band lifted ~40 px (TOP 96→56, BOTTOM 220→180);
   forced-tier capture shows PERFECT/OK/MISS in clear sky above the dog's crown, not clipped
   (`.screenshots/038-readout-clear-sky.png`). Verify green.
-- **039 — SPIKE — coat seams + stray sliver root-cause** (P1-1/P1-9). Symmetric chest seams +
-  flank arcs + a hard-edged sliver between the front legs on the licensed Labrador; cause
-  unknown (texture/UV vs normal-map vs `CoatOpaque` vs stray geometry) → research, then route
-  to a `040` build task or an informed flag.
+- **039 — DONE (2026-06-30, SPIKE).** Root cause found: a **licensed-asset UV/tangent seam** at
+  the body centreline (mirrored UV, gap 0.90 → MikkTSpace tangents diverge → normal map bends
+  shading opposite ways; the "sliver" is this seam from below). Not stray geometry, not
+  transparency, `CoatOpaque` can't hide it. Routed → **informed flag raised** (owner re-export of
+  `dog_licensed.glb` with baked tangents) + **040 drafted** (cheap in-engine partial mitigation).
+  Evidence: `.screenshots/039-spike-*`.
+
+**Next up:**
+
+- **040 — BUG — albedo mipmap + normal import fix** (backlog). `mipmaps/generate=false` (albedo)
+  + `compress/normal_map=1` (normal) — import-file-only; *reduces* the hairline seam, does not
+  fix the owner-gated tangent band (see FLAGS). Magnified before/after Visual Review vs the 039
+  baseline.
 
 **Already landed this round:**
 

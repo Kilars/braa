@@ -39,6 +39,31 @@ Entry format:
 
 ## Open
 
+### FLAG 2026-06-30 — Coat seam + belly "sliver" is a licensed-asset UV/tangent seam (owner re-export)
+- **Source:** task **039** (SPIKE — root-cause of the PO's P1-1/P1-9 "residual coat seams +
+  stray sliver" improvement). Findings in `.task-board/done/039-…`; evidence under
+  `.screenshots/039-spike-*` (`-bellyseam.png` is the clearest).
+- **Decision needed (owner):** re-export the licensed Labrador (`assets/models/dog_licensed.glb`)
+  with **per-vertex tangents baked** (Blender → glTF, "Export Tangents" on) **and/or re-bake the
+  normal map** so tangent-space values match across the body symmetry seam. That is the only
+  thing that removes the **hard belly-centreline shading band** (the "sliver") and the symmetric
+  flank arcs.
+- **Why it's user-only:** the spike proved this is **not** stray geometry and **not** a
+  transparency gap (the mesh is 1 surface / 1 material; `CoatOpaque.flatten` neither causes nor
+  can hide it; no sky shows through). It is a **shading seam baked into the asset's UV layout**:
+  both body halves mirror onto one 2048² atlas with a UV gap up to **0.90** at the centreline, so
+  Godot's import-time MikkTSpace tangents diverge ~90° across the seam and the normal map bends
+  shading in opposite directions on each side. The GLB ships **no TANGENT attribute**, so the
+  only in-engine alternative — dropping the normal map — would strip all coat detail (fails
+  P1-1). Fixing the tangents requires editing the asset, which is owner-gated.
+- **Assumption made to keep going:** the loop drafted the one cheap **in-engine partial
+  mitigation** as task **040** (backlog) — `mipmaps/generate=false` on the albedo (kills the
+  mipmap-bleed hairline contribution) + `compress/normal_map=1` on the normal map (correct GPU
+  normal decode). 040 is honestly scoped: it *reduces* the faint hairline but explicitly does
+  **not** claim to fix the owner-gated tangent band. The loop will build 040 next; the full fix
+  waits on the owner re-export above. This is a P1-1/P1-9 *polish* gap, not a core-loop blocker —
+  it does not change the P1-10 sign-off being the gate.
+
 ### FLAG 2026-06-29 — Phase-1 deploy reflectance + live P1-10 visual sign-off (owner/PO gates)
 > **Corrected 2026-06-30** — the earlier "buildable work is DONE / construction-clearance"
 > framing was **premature**: the PO's 2026-06-29 re-play of the live build (`po-review.md`)
