@@ -41,7 +41,7 @@ RETRY_BASE=30          # backoff seconds; grows 30 -> 60 -> 120 across retries
 SESSION_RETRY="${SESSION_RETRY:-1}"            # 1 = treat usage-limit / overload / auth-expiry as transient and retry forever
 SESSION_BACKOFF="${SESSION_BACKOFF:-300}"      # wait between session retries when no reset time is known (s)
 SESSION_MAX_WAIT="${SESSION_MAX_WAIT:-21600}"  # cap on a single session wait (s, 6h) — guards a bogus reset timestamp
-ITER_TIMEOUT="${ITER_TIMEOUT:-1800}"    # hard wall-clock cap per claude invocation (s) — kills a runaway iteration
+ITER_TIMEOUT="${ITER_TIMEOUT:-7200}"    # wall-clock cap per claude invocation (s, 2h) — HANG-GUARD ONLY. Money/turns are capped separately (MAX_BUDGET_USD/iter + MAX_TURNS), and usage-limit reset is handled by fast-fail + session-retry, independent of this. So this only kills a truly stuck iter; 1800s (30m) was too tight for heavy visual-diagnosis iters and caused 3-strike give-ups.
 MAX_BUDGET_USD="${MAX_BUDGET_USD:-15}"  # hard per-invocation API spend cap (claude --max-budget-usd)
 TOTAL_BUDGET_USD="${TOTAL_BUDGET_USD:-75}"  # cumulative spend cap across the whole run — stop the loop once exceeded
 TOTAL_SPENT=0                           # running sum of per-iteration cost (accumulated in report_run)
