@@ -39,6 +39,23 @@ Entry format:
 
 ## Open
 
+### FLAG 2026-06-29 — Phase-1 buildable work is DONE; only owner/PO gates remain (construction clearance)
+- **Source:** empty-backlog construction-audit gate (scan-project) after landing 034 + 035.
+- **Decision needed:** Drive the **P1-10 Visual-Review sign-off** on the live build — and first
+  confirm the **live site actually reflects the completed Phase-1 work**. `deploy-licensed.yml`
+  auto-runs on every push to `main` (034/035 pushed), but it **no-ops unless** the
+  `GODOT_SCRIPT_ENCRYPTION_KEY` secret and committed `assets/models/dog_licensed.glb.enc` are in
+  place (ADR-0006 / task 025). If the deploy is no-opping, the public site still ships the CC0
+  idle-only dog (no Sitt / reaction / payoff), so the PO would be reviewing a stale build.
+- **Why it's user-only:** the loop can't see CI secrets or the live Pages site, can't run the
+  PO play-test (a human visual judgement on the phone), and can't acquire/dispatch the owner's
+  encryption key. Every remaining Phase-1 gate is an owner or PO action.
+- **Assumption made to keep going:** treated the empty board as the construction clearance —
+  all buildable Phase-1 directives (030–035) are landed, pushed, and pass a clean adversarial
+  construction audit + green `verify.sh`. The loop now stands down on Phase-1 building and waits
+  for the PO sign-off (it will NOT start Phase 2 until P1-10 is signed off in `po-review.md`).
+  Still pending alongside this: the on-device audio listen and the warm human voice (below).
+
 ### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated
 - **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
 - **Decision needed:** Supply a real, warm, **human "Bra!"** recording (the "Maren" delivery) to

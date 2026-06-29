@@ -6,6 +6,32 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase-1 buildable work COMPLETE, construction-audit CLEAN (2026-06-29)
+
+Every buildable Phase-1 PO directive is now landed and pushed:
+
+- **Bugfixes:** 030 apex tell renders · 031 contact shadow · 032 opaque coat — all done + pixel-verified.
+- **Improvements:** 033 tier-readout contrast · **034 joyful hop reaction** (vocab leads
+  `jump_place`/`jumpair` over `bark`; 0.2 s blend; verified via `web_capture_reaction.mjs`,
+  proof in `.screenshots/034-reaction-*`).
+- **Voice:** **035** payoff voice is now a genuinely spoken `bra_tts_placeholder.wav`
+  (espeak-ng), blip only as absent-asset fallback; gate intact (silent on MISS/DEAD,
+  PERFECT louder than OK).
+
+**Construction audit (empty-board clearance gate) — CLEAN.** Cold/adversarial re-check of
+030–035 on the committed tree: all fixes real and reachable (32's `CoatOpaque.flatten` is
+actually called at `main.gd:395`, not the old dead-early-return fake); 115 tests, **0 hollow**
+(zero-assertion) tests; audio `.play()` guarded; no `_init add_child`; no faked assets; no
+dead seams. `verify.sh` green (import · boot · test · export).
+
+**Backlog is intentionally EMPTY → this is the construction clearance hand-off to the PO.**
+The loop has done everything buildable on Phase 1. What remains is **owner/PO-gated only**
+(see `FLAGS.md`): the **P1-10 visual sign-off** on the live licensed deploy; confirming the
+**ADR-0006 encrypted licensed deploy** is live so the PO can review the complete build (task
+025; `deploy-licensed.yml` auto-runs on push but no-ops without the key secret + encrypted
+glb); an **on-device audio listen**; and the warm **human Maren "Bra!"** recording. Nothing
+past Phase 1 starts until P1-10 is signed off in `po-review.md`.
+
 ## Status — trust-nothing reconcile (2026-06-28)
 
 `main` was reset to a clean single Godot root commit (Babylon gone). A source-level,
