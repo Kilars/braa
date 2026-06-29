@@ -56,13 +56,25 @@ Entry format:
   shading in opposite directions on each side. The GLB ships **no TANGENT attribute**, so the
   only in-engine alternative — dropping the normal map — would strip all coat detail (fails
   P1-1). Fixing the tangents requires editing the asset, which is owner-gated.
-- **Assumption made to keep going:** the loop drafted the one cheap **in-engine partial
-  mitigation** as task **040** (backlog) — `mipmaps/generate=false` on the albedo (kills the
-  mipmap-bleed hairline contribution) + `compress/normal_map=1` on the normal map (correct GPU
-  normal decode). 040 is honestly scoped: it *reduces* the faint hairline but explicitly does
-  **not** claim to fix the owner-gated tangent band. The loop will build 040 next; the full fix
-  waits on the owner re-export above. This is a P1-1/P1-9 *polish* gap, not a core-loop blocker —
-  it does not change the P1-10 sign-off being the gate.
+- **Assumption made to keep going:** the loop drafted a cheap **in-engine partial mitigation**
+  as task **040**, but on picking it up **2026-06-30 found its premise was false** — so 040 is
+  **parked on-hold (owner-gated)**, not built. Why: the `.import` files it would edit
+  (`dog_licensed_Labrador_{Albedo,Normal}.png.import`) are **gitignored** (broad
+  `dog_licensed*` glob) → never committed → **absent in CI**, and the licensed deploy runs
+  `godot --headless --import` on a fresh checkout that **regenerates them from defaults** (the
+  textures are *extracted from the GLB* at import; empirically confirmed). So those edits are a
+  **no-op on the deployed build**, and are unverifiable locally (the `verify.sh` export uses the
+  CC0 dog). The mipmap half is also partly redundant — `process/fix_alpha_border=true` is
+  **already set** (Godot's built-in zero-alpha-edge mipmap fix) and disabling mipmaps would
+  trade a faint band for coat **shimmer**. Project-wide `[importer_defaults]` and un-ignoring
+  the `.import` files were both considered and rejected (blunt / clobbered-by-extraction /
+  unvalidatable against the fail-closed licensed-deploy contract). **The single robust fix is
+  the owner re-export** — and while re-exporting, please ALSO: author/tag the **normal map**
+  correctly, and **pad the albedo UV-island edges** so mipmap bleed is mooted at the source.
+  That one action fixes everything 040 chased, at the source. This remains a P1-1/P1-9 *polish*
+  gap, not a core-loop blocker — it does not change the P1-10 sign-off being the gate.
+  (FYI: licensed-asset *import settings* are entirely uncommitted today — CI uses Godot
+  defaults — so the only deterministic place to control them is the re-export itself.)
 
 ### FLAG 2026-06-29 — Phase-1 deploy reflectance + live P1-10 visual sign-off (owner/PO gates)
 > **Corrected 2026-06-30** — the earlier "buildable work is DONE / construction-clearance"
