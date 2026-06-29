@@ -36,7 +36,7 @@ the task is verified and moved to `done/` (see Step 9b). Nothing else touches gi
 Each task MUST be executed using the **Agent tool** with a subagent:
 - **Default model: `haiku`** — fast and efficient for most tasks
 - **Use `sonnet` only for**: Complex business logic, architectural decisions, intricate logic
-- **ALWAYS include project context** (`specs2.md` + the `adr/` ADRs) in subagent prompts
+- **ALWAYS include project context** (the spec in `.docs/specs/` + the `adr/` ADRs) in subagent prompts
 
 ### 4. TASKS ARE DONE IN ORDER
 Tasks are numbered for dependency reasons. Execute them **sequentially, in order**:
@@ -47,7 +47,7 @@ Tasks are numbered for dependency reasons. Execute them **sequentially, in order
 ### 5. VERIFY BEFORE MARKING COMPLETE
 Every task MUST be verified before marking complete via the **Godot gate**:
 `nix develop -c bash verify.sh` (import → boot `main.tscn` → headless GDScript
-tests → Web/PWA export, fail-closed). The spec is `specs2.md`; technical
+tests → Web/PWA export, fail-closed). The spec lives in `.docs/specs/`; technical
 conventions (engine, stack, asset pipeline) live in the ADRs under `adr/`.
 
 **Tasks where the verify gate is not green are INCOMPLETE.**
@@ -134,7 +134,7 @@ Agent tool:
   subagent_type: "general-purpose"
   model: "haiku"
   description: "Write failing tests for <task>"
-  prompt: <see Test-Writer Prompt Template below>
+  prompt: <shared preamble + Test-Writer block — see Subagent Prompt Templates below>
 ```
 Wait for completion. Confirm tests exist and fail before proceeding.
 
@@ -144,7 +144,7 @@ Agent tool:
   subagent_type: "general-purpose"
   model: "haiku" (default) or "sonnet" (complex logic)
   description: "Implement <task> to pass tests"
-  prompt: <see Implementation Prompt Template below>
+  prompt: <shared preamble + Implementation block — see Subagent Prompt Templates below>
 ```
 
 For **rendering / 3D / asset tasks** (TDD-exempt): skip Step 7a, run only Step 7b.
@@ -155,7 +155,7 @@ After subagents return, verify:
 1. All acceptance criteria checked off in the task file
 2. Project builds successfully
 3. Tests pass — and functional code was written test-first (TDD), not after
-4. Code follows project conventions (see `specs2.md` + the `adr/` ADRs)
+4. Code follows project conventions (see `.docs/specs/` + the `adr/` ADRs)
 
 ### Step 9: Complete and Move to Done
 
@@ -212,93 +212,59 @@ Rules:
 
 ---
 
-## Test-Writer Prompt Template
+## Subagent Prompt Templates
+
+Both subagents get the **shared preamble** first, then their role block. Paste the
+preamble verbatim at the top of the prompt, then append the matching role block.
+
+### Shared preamble (paste into both)
 
 ```
-You are the TEST-WRITER for the task:
-.task-board/in-progress/{TASK-FILE}.md
-
-Read the task file FIRST. Your ONLY job is to write failing tests — no implementation.
-
 PROJECT CONTEXT:
-- Read specs2.md for the full specification (phased user stories)
+- Read the spec in .docs/specs/ for the full specification (phased user stories)
 - Read the adr/ ADRs for technical conventions (engine, stack, asset pipeline)
-- Read .claude/skills/tdd/SKILL.md for TDD rules
 
 CRITICAL RESTRICTIONS:
-1. NEVER use git commands
-2. Use Read tool (NOT cat/head/tail)
-3. Use Write tool (NOT echo/cat heredoc)
-4. Use Edit tool (NOT sed/awk)
-5. Use Glob tool (NOT find/ls for search)
-6. Use Grep tool (NOT grep/rg bash commands)
-7. DO NOT write any implementation code — tests only
-8. Tests must be RED (failing) when you finish
+1. NEVER use git commands.
+2. Use built-in tools, never bash for file ops: Read (not cat/head/tail), Write
+   (not echo/heredoc), Edit (not sed/awk), Glob (not find/ls), Grep (not grep/rg).
+```
+
+### Test-Writer block (Haiku) — append to the preamble
+
+```
+You are the TEST-WRITER for: .task-board/in-progress/{TASK-FILE}.md
+Read the task file FIRST, plus .claude/skills/tdd/SKILL.md for TDD rules.
+Your ONLY job is to write failing tests — no implementation code; they must be
+RED (failing) when you finish.
 
 YOUR TASK:
 - Read the task's acceptance criteria and Technical Approach
-- Write one test file (or extend the relevant test file) with failing tests
-  covering all the behaviors listed in the task
-- Follow vertical-slice order: first behavior first, last behavior last
-- Test through public interfaces only — no testing internals
-- Run the Godot gate (`nix develop -c bash verify.sh`) to confirm the new tests
-  exist and FAIL (red) — the test leg runs the headless GDScript runner
+- Write/extend ONE test file with failing tests covering every behavior listed
+- Vertical-slice order (first behavior first); test public interfaces only
+- Run the gate (`nix develop -c bash verify.sh`) to confirm the new tests FAIL (red)
 
-Provide a summary of:
-- Test file created/modified
-- Number of failing tests written and what each covers
-- The test-runner output showing red failures (short excerpt only)
+Summarize: test file touched · number of failing tests + what each covers ·
+the red test-runner excerpt (short).
 ```
 
----
-
-## Implementation Prompt Template
+### Implementation block (Haiku/Sonnet) — append to the preamble
 
 ```
-You are the IMPLEMENTATION agent for the task:
-.task-board/in-progress/{TASK-FILE}.md
-
-Failing tests are already written. Your job is to make them pass with minimal code.
-
-PROJECT CONTEXT:
-- Read specs2.md for the full specification (phased user stories)
-- Read the adr/ ADRs for technical conventions (engine, stack, asset pipeline)
-
-CRITICAL RESTRICTIONS:
-1. NEVER use git commands
-2. Use Read tool (NOT cat/head/tail)
-3. Use Write tool (NOT echo/cat heredoc)
-4. Use Edit tool (NOT sed/awk)
-5. Use Glob tool (NOT find/ls for search)
-6. Use Grep tool (NOT grep/rg bash commands)
-7. CHECK OFF acceptance criteria as you complete them (change [ ] to [x])
-8. Write ONLY enough code to pass the current failing tests — no speculation
+You are the IMPLEMENTATION agent for: .task-board/in-progress/{TASK-FILE}.md
+Failing tests already exist. Make them pass with minimal code.
+- CHECK OFF acceptance criteria as you go (change [ ] to [x])
+- Write ONLY enough code to pass the current failing tests — no speculation
 
 YOUR TASK:
-- Read the task file and existing test file
 - Make each failing test pass, one at a time (vertical slices)
-- After all tests pass, look for refactor opportunities (but keep tests green)
+- After green, look for refactor opportunities (keep tests green)
+- VERIFY with the gate `nix develop -c bash verify.sh` (import → boot → tests →
+  Web/PWA export, fail-closed); report the final `verify gate green` line only.
 
-VERIFY: run the Godot gate `nix develop -c bash verify.sh` (import → boot →
-GDScript tests → Web/PWA export, fail-closed). DO NOT paste full logs — report
-the final `verify gate green` line (and the failing leg's detail if any).
-
-Provide a summary of:
-- Files created/modified
-- All acceptance criteria status (checked off in task file)
-- The verify gate result (`verify gate green`, or which leg failed)
-- Any issues encountered
+Summarize: files touched · acceptance-criteria status · gate result
+(`verify gate green` or failing leg) · issues hit.
 ```
-
----
-
-## Model Selection
-
-| Role | Model | Examples |
-|------|-------|---------|
-| **Test-writer** | `haiku` | Always — writing failing tests is a focused, well-scoped task |
-| **Implementation (standard)** | `haiku` | Simple classes, interfaces, basic implementations, file operations |
-| **Implementation (complex)** | `sonnet` | Complex business logic, multi-file architectural decisions, intricate parsing |
 
 ---
 
@@ -315,13 +281,6 @@ Break into sub-tasks (e.g., 003a, 003b), create new files, update PLANNING-BOARD
 
 ### If the Verify Gate Fails After Implementation
 Fix the issues before marking complete. Re-run `nix develop -c bash verify.sh`.
-
-### Verification command
-Use the Godot gate: `nix develop -c bash verify.sh` — four fail-closed legs in
-order (import resources → boot `main.tscn` headless → headless GDScript test
-runner → Web/PWA export + bundle-exists). Success ends with `verify gate green`;
-any failing leg aborts (`set -e`) and prints that leg's output. Report only the
-final line plus any failing-leg detail — don't paste full logs.
 
 ---
 
@@ -349,7 +308,7 @@ final line plus any failing-leg detail — don't paste full logs.
 ## See Also
 
 - [`.task-board/PLANNING-BOARD.md`](../../../.task-board/PLANNING-BOARD.md) — Current priorities
-- [`specs2.md`](../../../specs2.md) — Full project specification (phased user stories)
+- [`.docs/specs/`](../../../.docs/specs/) — Full project specification (phased user stories)
 - [`adr/`](../../../adr/) — Technical decisions (engine, stack, asset pipeline)
-- [`.claude/skills/task-board/skill.md`](../task-board/skill.md) — Planning skill
+- [`.claude/skills/task-board/SKILL.md`](../task-board/SKILL.md) — Planning skill
 - [`.claude/skills/scan-project/SKILL.md`](../scan-project/SKILL.md) — Project scanning skill

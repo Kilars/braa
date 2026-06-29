@@ -12,7 +12,7 @@ This skill creates task files via the `task-board` skill. It does NOT write code
 
 ## What This Skill Does
 
-1. **Spec vs Implementation gap analysis** — compares `specs2.md` against actual code to find missing or incomplete features
+1. **Spec vs Implementation gap analysis** — compares the spec in `.docs/specs/` against actual code to find missing or incomplete features
 2. **Code quality & readability review** — finds bottlenecks, code smells, and readability issues
 3. **Best practices audit** — checks for consistent patterns, naming, error handling, test quality
 4. **Task generation** — produces 3 prioritized, actionable tasks per scan round
@@ -40,17 +40,19 @@ This skill creates task files via the `task-board` skill. It does NOT write code
 
 Before any analysis, load ALL context:
 
-1. **Read specification**: `specs2.md` completely
+1. **Read specification**: the spec in `.docs/specs/` — `index.md` (the shared frame:
+   North Star, Cross-cutting, Non-Goals + a phase index), the relevant `phaseN.md`, and
+   `po-review.md` (the PO's buildable directives)
 2. **Read technical conventions**: the ADRs in `adr/`
 3. **Scan completed tasks**: `.task-board/done/` (learn what's already done)
 4. **Scan existing backlog**: `.task-board/backlog/` + `.task-board/in-progress/` + `.task-board/on-hold/`
 5. **Note available skills**: Check `.claude/skills/` for delegation
-6. **Determine the current phase**: `specs2.md` is a **phased user-story spec** (`## Phase 1 — MVP` … `## Phase 7`, plus `## North Star`, `## Cross-cutting`, `## Beyond the phases`, `## Non-Goals`). The **current phase** is the lowest-numbered `## Phase N` whose stories are not yet fully implemented. Extract the current phase's stories plus `## North Star`, `## Cross-cutting` (applies to every phase), and `## Non-Goals`. Keep these in context for Phase 4 eligibility filtering. Per the spec's phasing rule, **nothing past the current phase starts until the current phase is complete** — so all later `## Phase N` and the `## Beyond the phases` section are out of scope this round.
+6. **Determine the current phase**: the **current phase** is the lowest-numbered `phaseN.md` whose stories are not yet fully implemented. Extract its stories plus `## North Star`, `## Cross-cutting` (applies to every phase), and `## Non-Goals` (all in `index.md`); keep them in context for Phase 4 eligibility filtering. Per the spec's phasing rule, **nothing past the current phase starts until the current phase is complete** — later `phaseN.md` files and `beyond.md` are out of scope this round.
 7. **Compute domain saturation**: Count the last 15 done tasks by domain (visual/rendering, economy, audio, UI, logic, content, etc.). Note any domain with 3+ tasks — it is **saturated** and must be deprioritised in Phase 4 unless it is the only remaining gap in the current phase.
 
 ### Phase 2: Spec vs Implementation Gap Analysis
 
-**Goal**: Produce a comprehensive gap report by comparing `specs2.md` against the actual codebase.
+**Goal**: Produce a comprehensive gap report by comparing the spec in `.docs/specs/` against the actual codebase.
 
 Use a **subagent** (Agent tool, model: `sonnet`) to perform this analysis. The subagent should:
 
@@ -58,7 +60,7 @@ Use a **subagent** (Agent tool, model: `sonnet`) to perform this analysis. The s
    - **If there is no runnable app yet** (no `project.godot`, or `verify.sh`'s gate doesn't pass: import → boot `main.tscn` → headless GDScript tests → Web/PWA export): the **P0 is project scaffolding** — a bootable Godot project plus the headless verify gate, so later iterations can build, gate, and (eventually) be play-tested. This overrides all other findings.
    - **If the app runs**: answer "Can a player experience the **current phase's** core loop end-to-end in the running app (for Phase 1: offer → apex tell → tap BRA → score/learn → payout)?" If NO, identify the specific broken step and flag it as **P0** — it overrides all other findings in Phase 4.
 
-1. **Read `specs2.md`** end-to-end and extract every specified feature, interface, model, behavior, and non-functional requirement into a checklist.
+1. **Read the spec** end-to-end — the current phase's `.docs/specs/phaseN.md`, plus `.docs/specs/index.md` (cross-cutting + Non-Goals) and `.docs/specs/po-review.md` (PO directives) — and extract every specified feature, interface, model, behavior, and non-functional requirement into a checklist.
 
 2. **Scan all source code** — list every source file, read key files, and map what exists:
    - Classes, modules, components, functions
@@ -83,43 +85,35 @@ Use a **subagent** (Agent tool, model: `sonnet`) to perform this analysis. The s
 
 ### Phase 3: Code Quality, Readability & Best Practices Review
 
-**Goal**: Evaluate existing code for quality, readability, and adherence to best practices. Find opportunities to make the code better.
+**Goal**: Evaluate the GDScript for quality and readability. Find opportunities to make
+the code better — tuned to this project, not a generic web-app checklist.
 
-**Readability & Style**:
-- Descriptive names — no abbreviations, consistent casing
-- Small, focused, single-purpose methods/functions
-- Self-documenting code — reads like prose, comments only for "why"
-- Consistent style — one way of doing things throughout the project
+**GDScript readability & style**:
+- Descriptive names, consistent casing; small single-purpose functions
+- Self-documenting code — comments only for "why", not "what"
+- Magic numbers homed in named constants, not scattered literals (cf. task 029)
 
-**Architecture & Design**:
-- SOLID principles — single responsibility, interface segregation, dependency inversion
-- Clear separation of concerns between layers
-- Appropriate use of abstractions — not too many, not too few
-- Dependency management — no circular dependencies, clean import structure
+**Structure (the project's pattern)**:
+- Pure logic lives in its own class and is unit-testable; `main.gd` stays thin scene/node
+  glue. Flag fat logic baked into `main.gd` that should be extracted to a pure class.
+- **Dog logic is dog-agnostic & clip-name-driven** — never hardcode a fake sit or a clip
+  index. Flag any sit/anim logic that assumes a specific model instead of resolving by
+  clip name (cf. `DogClips.resolve`, ADR-0006 / CC0-vs-licensed split).
+- No duplicated logic (cf. task 028's shared test-mount + finder consolidation).
 
-**Bottlenecks & Performance**:
-- N+1 queries or unnecessary repeated operations
-- Missing caching where beneficial
-- Inefficient algorithms or data structures
-- Resource leaks (unclosed connections, streams, etc.)
+**Test honesty (this harness has bitten before)**:
+- The headless runner hides runtime `SCRIPT ERROR`s as hollow green — a `test_*` that ends
+  with **zero assertions** must fail (cf. task 026). Flag hollow/assertion-free tests.
+- `.play()` and `_init` `add_child` don't work headless — guard `.play()` on
+  `is_inside_tree()`, attach lazily.
+- Tests assert observable behavior through public interfaces, not internals.
 
-**Error Handling & Robustness**:
-- Graceful handling of edge cases
-- Meaningful error messages
-- No swallowed exceptions or silent failures
+**Asset integrity** (cf. CLAUDE.md "Don't fake assets"):
+- No bare primitive geometry standing in for the dog — not even for one frame. Flag any
+  placeholder/faked artifact or self-certified "fix" left as a stub.
 
-**Test Quality**:
-- Clear structure (Arrange-Act-Assert or equivalent)
-- Descriptive test names
-- Focused assertions — one concern per test
-- Coverage of edge cases and error paths
-
-**Code Smells**:
-- Magic strings/numbers
-- God classes or functions doing too much
-- Long parameter lists
-- Deep nesting
-- Duplicated logic that should be extracted
+**Code smells**: god functions, deep nesting, long parameter lists, swallowed errors
+(silent `pass` on failure), dead seams with no caller.
 
 ### Phase 4: Task Generation (3 tasks per round)
 

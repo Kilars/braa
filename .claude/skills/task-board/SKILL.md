@@ -39,14 +39,15 @@ This skill provides specialized workflows for creating and managing implementati
 
 ### Phase 1: Initial Understanding (Gather Context)
 
-1. **Listen carefully**: Read the user's request completely
-2. **Ask clarifying questions** to understand scope:
-   - What problem are you trying to solve?
-   - What does success look like?
-   - Are there any constraints or preferences?
-   - What's the priority level?
-3. **Identify plan type**: Feature, refactor, exploration, or epic
-4. **Assess complexity**: Simple (1-2 days), Medium (3-5 days), or Complex (1+ weeks)
+1. **Read the request completely** (the user's, or — when invoked by `scan-project`
+   in the autonomous loop — the gap/PO directive driving the task).
+2. **Resolve scope**: problem being solved, what success looks like, constraints,
+   priority. **Interactive:** ask the user. **Autonomous (no user):** do NOT block on
+   questions — make the best-supported assumption and record it in the task file's
+   Context section so the implementer can see it.
+3. **Identify plan type**: Feature, bug, refactor, quality, exploration, or epic
+4. **Assess size**: one focused session is the target (cf. `scan-project`'s "well-scoped"
+   bar). Bigger than that → split into `NNNa`/`NNNb` sub-tasks.
 
 ### Phase 2: Codebase Research (Deep Exploration)
 
@@ -63,7 +64,7 @@ This skill provides specialized workflows for creating and managing implementati
    - Check for existing patterns and conventions
 
 3. **Understand architecture**:
-   - Read `specs2.md` for the project specification (phased user stories)
+   - Read the spec in `.docs/specs/` for the project specification (phased user stories)
    - Read the `adr/` ADRs for technical conventions (engine, stack, asset pipeline)
    - Map the relevant layers and components
 
@@ -84,10 +85,8 @@ This skill provides specialized workflows for creating and managing implementati
    - What patterns to follow? (existing patterns in the codebase)
    - Interface design and dependency approach
 
-2. **Break down into phases**:
-   - Phase 1: Core functionality
-   - Phase 2: Testing
-   - Phase 3: Polish and edge cases
+2. **Order the work** (functional tasks are test-first per `tdd` — vertical slices,
+   not a "write tests / then code / then polish" split).
 
 3. **Plan implementation steps**:
    - List specific files to create or modify
@@ -105,14 +104,15 @@ Create a comprehensive plan file in `.task-board/backlog/` with:
 ### Phase 5: Validation (Confirm Completeness)
 
 Before finishing, verify:
-- [ ] User's request is fully understood
-- [ ] All clarifying questions answered
+- [ ] Scope is understood (or, headless, assumptions recorded in the task file)
 - [ ] Technical approach is clear and feasible
 - [ ] Specific file locations and paths included
+- [ ] Before/After examples for every code change
+- [ ] Acceptance criteria are concrete checkboxes at the **bottom** of the file
+- [ ] Functional tasks are test-first (reference `tdd`); pure render/asset tasks
+      get a Visual Review criterion instead
 - [ ] Dependencies and risks identified
-- [ ] Priority and effort estimate set
-- [ ] Plan file created in `backlog/` folder
-- [ ] User informed that plan is ready for implementation
+- [ ] Plan file created in `backlog/` with a non-reused `NNN`
 
 ## File Naming Convention
 
@@ -161,7 +161,7 @@ Use this comprehensive template for all plan files. Fill in ALL sections based o
 **Created**: [YYYY-MM-DD]
 **Priority**: [High/Medium/Low]
 **Labels**: [relevant labels]
-**Estimated Effort**: [Simple/Medium/Complex]
+**Size**: [one focused session — if bigger, split into NNNa/NNNb]
 
 ## Context & Motivation
 
@@ -196,16 +196,12 @@ Use this comprehensive template for all plan files. Fill in ALL sections based o
 
 ### Implementation Steps
 
-1. **[Phase 1: Core Implementation]**
-   - Files to create: [specific paths]
-   - Files to modify: [specific paths]
-   - Key changes: [what needs to be done]
+Vertical slices, in order (functional tasks test-first per `tdd` — one failing test →
+minimal code → repeat; pure render/asset tasks verify by Visual Review instead):
 
-2. **[Phase 2: Testing & Verification]**
-   - How to verify the implementation works
-
-3. **[Phase 3: Polish]**
-   - Edge cases, error handling
+1. [First slice — the behavior to test/build, files touched, key change]
+2. [Next slice]
+3. [Verify: `nix develop -c bash verify.sh` green; edge cases / error paths]
 
 ### Risks & Considerations
 
@@ -250,31 +246,19 @@ Show concrete code comparisons to clarify the intended changes.
 
 ## Handoff to Implementation
 
-After creating a plan file, inform the user:
+This skill only writes the plan into `backlog/`. The implementation side
+(`start-working`, or the autonomous loop) then:
 
-```
-Plan documented: .task-board/backlog/[PLAN-NAME].md
+1. Adds it to `PLANNING-BOARD.md` if it's a priority (max 3–5 items)
+2. Moves the file `backlog/ → in-progress/` when work starts
+3. Builds it per the plan (functional = test-first), updating the Progress Log
+4. Moves it to `done/` and removes it from `PLANNING-BOARD.md` when complete
 
-Next steps:
-1. Review the plan to ensure accuracy and completeness
-2. Add to PLANNING-BOARD.md if this is a top priority (max 3-5 items)
-3. When ready to implement, move file to .task-board/in-progress/
-4. Implement the feature following the plan
-5. Move to .task-board/done/ when complete
-```
-
-## Integration with Workflow
-
-This skill creates plans in `backlog/` folder. The implementation workflow then:
-1. Adds plan to PLANNING-BOARD.md if it's a priority (max 3-5 items)
-2. Moves file to `in-progress/` when starting work
-3. Adds detailed implementation breakdown
-4. Updates progress log during work
-5. Moves to `done/` when complete
-6. Updates PLANNING-BOARD.md to remove completed item
+When invoked interactively, tell the user the plan path and that it's ready. In the
+autonomous loop there's no user to notify — just leave the file consistent on disk.
 
 ## See Also
 
 - [`.task-board/PLANNING-BOARD.md`](../../../.task-board/PLANNING-BOARD.md) — Current priorities
-- [`specs2.md`](../../../specs2.md) — Full project specification (phased user stories)
+- [`.docs/specs/`](../../../.docs/specs/) — Full project specification (phased user stories)
 - [`adr/`](../../../adr/) — Technical decisions (engine, stack, asset pipeline)
