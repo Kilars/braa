@@ -29,9 +29,15 @@ static func scale_for(reduced: bool) -> float:
 static func query() -> bool:
 	if not OS.has_feature("web"):
 		return false
-	# matchMedia returns a MediaQueryList; .matches is the live boolean. eval returns it
-	# straight back through JavaScriptBridge as a bool.
+	# matchMedia returns a MediaQueryList; .matches is the live boolean. Eval a STRING
+	# sentinel ("1"/"0"), NOT the bare boolean: JavaScriptBridge marshals string results
+	# reliably (cf. main._query_force_tell, which reads window.location.search as a String),
+	# but a bare JS-boolean result comes back as a null Variant on the Web export — which,
+	# fed through scale_for(), silently collapsed the motion scale to 0 and made the apex
+	# tell permanently invisible in live play (the carried-over P1-4 blocker). The ternary
+	# keeps the result a plain "1"/"0" even when matchMedia is absent, so the read can never
+	# yield null again.
 	var matched: Variant = JavaScriptBridge.eval(
-		"window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches",
+		"(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? '1' : '0'",
 		true)
-	return matched == true
+	return matched == "1"

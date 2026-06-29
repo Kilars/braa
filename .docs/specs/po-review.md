@@ -20,90 +20,83 @@ _(none yet — current phase is Phase 1)_
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-06-28
+### PO Review — 2026-06-29
 
-Drove the **real Godot Web/PWA build** (local export of the licensed Labrador, served
-over http) in a headless browser at 390×844, reading the live console for scored tiers
-and analysing ~220 captured frames pixel-by-pixel. **Phase 1 is NOT done — it has open
-visual defects, the most serious being that the apex tell never renders. Do not advance
-to Phase 2; reopen Phase-1 work below.**
+Re-drove the **real Godot Web/PWA build** (local export of the licensed Labrador —
+`build/web`; console confirms `res://assets/models/dog_licensed.glb`, "dog can Sitt",
+looping every 1.2 s) in a headless browser at 390×844. Captured the idle pose, a free-run
+burst across several full sit cycles, apex-synced frames (the live PERFECT path via
+`?bra_autotap=1`), forced-tell / forced-tier reference frames, and 10 real BRA taps —
+reading the live console throughout. **Phase 1 is still NOT done: the apex tell — the
+core "now" cue (P1-4) — renders only under the `?bra_force_tell=1` capture seam and is
+invisible in actual play. Do not advance to Phase 2.**
 
-> Pruned the prior `2026-06-27` note: it described the **deprecated Babylon build**, not
-> this one — it cited a CSS `--apex` variable and certified Phase-2 features (Ligg chip
-> row, learned bar, IndexedDB persistence, pause/▶) that **do not exist** in the current
-> Godot `main.gd`. None of Phase 2 is built; Phase 1 is the whole current scope.
+Most of the 2026-06-28 defects are genuinely fixed and are pruned from this log (see
+"what holds up"). The apex tell is the one carried-over blocker — with a sharper
+diagnosis now: it is a **live-path** failure, not a draw or curve failure.
 
 **What holds up (re-verified live, keep it):**
-- **Scoring is honest end to end.** 60 real BRA taps scored PERFECT / OK / MISS / DEAD;
-  the bands match spec (PERFECT apex±80 ms, OK apex±200 ms), and a tap with no window
-  open does nothing (P1-5/P1-7 logic). Console tiers never contradicted the readout.
-- **The dog reads & the sit is legible.** Centered Labrador on a clean bright backdrop;
-  the sit builds as one continuous fold to a clearly seated apex; head-top swings ~272 px
-  between stand and seat, so the build→apex is readable on the dog (P1-1/P1-3).
-- **The loop repeats** idle → sit → idle indefinitely with no console errors and no
-  degradation across many cycles (P1-9).
+- **Scoring honest end to end (P1-5/P1-7).** Autotap scored PERFECT; 10 blind manual taps
+  scored only MISS / DEAD and did nothing — no penalty, no payoff. Console tiers never
+  contradicted the readout.
+- **Contact shadow grounds the dog (P1-1 — was a blocker, fixed).** A soft dark disc sits
+  under the feet in every pose; the dog no longer floats.
+- **Coat is opaque (P1-1/P1-9 — was a blocker, fixed).** Magnified, no sky shows through
+  the chest/belly/flanks at any pose — the see-through panels are gone. (Faint hairline
+  seams remain — see Improvements.)
+- **Readout contrast fixed (P1-7 — was an improvement).** MISS / OK / PERFECT each carry a
+  dark outline and pop against the bright sky; PERFECT is the brightest. All three legible
+  at 390×844.
+- **Reaction reads as joy (P1-6 — was an improvement).** A successful mark fires a clear
+  happy hop (front paws up, ears flying), blended cleanly from the seat — not a lone bark.
+- **The dog reads, the sit is legible, it stays centered, and the loop repeats**
+  idle → sit → apex → reaction → idle with no console errors (P1-1/P1-2/P1-3/P1-9).
 
 #### Bugfixes
 
-- **The apex tell never renders (P1-4 — blocker).** Across ~220 frames spanning many
-  full sit cycles (apexes confirmed by the 272 px head-swing *and* by live PERFECT/OK
-  scores), the warm-gold halo+ring (`ApexTellMarker`) **never appears** on or around the
-  BRA marker: zero gold on the ring's left/right/bottom arcs in any frame, zero saturated
-  gold anywhere near the marker. The same detector readily flags the dog's own tan paws,
-  so the absence is real, not a capture gap. *Why it's wrong:* P1-4 is the core "now"
-  cue — without it timing is a blind guess, not a readable skill, and the marker stays a
-  dead gray slab through every apex. The unit tests pass (the `ApexTell` curve and
-  `set_intensity` are correct) — this is a tests-green / pixels-wrong gap, exactly what
-  the Visual Review gate exists to catch. *Good looks like:* on the running 390×844 web
-  build a soft warm pulse is **clearly visible** ringing the BRA marker, building to a
-  peak exactly at the seated apex and dark in idle — proven by a captured apex frame
-  showing the gold ring. Suspects to check on the real canvas: `self_modulate` vs
-  `modulate` on a custom `_draw`, the marker drawing *under* the opaque `Button`
-  (z-order), or the marker rect not getting a size. Fix must be confirmed in pixels.
-
-- **The dog floats — no contact shadow (P1-1).** In every pose (idle, build, seat,
-  stand) the paws end against flat blue with nothing beneath, and the front paws dangle
-  over the top of the BRA button. The `DirectionalLight3D` is created with shadows off
-  and there is no blob/decal. *Why it's wrong:* P1-1 explicitly requires the dog
-  "anchored by a contact shadow (not floating)"; floating breaks the grounded read and
-  the Pokémon-GO look. *Good looks like:* a soft contact shadow under the feet (cheap
-  blob decal or a ground plane catching the sun), present at idle and tracking the sit,
-  so the dog clearly sits/stands *on* something.
-
-- **Translucent "shell" artifacts on the dog body (P1-1 / P1-9).** Magnified, the
-  Labrador shows semi-transparent ghost panels — a vertical see-through strip down the
-  chest/belly and curved translucent surfaces across both flanks/haunches — present in
-  every pose, idle and seated. They are geometric and consistent (not render noise),
-  i.e. a model/material issue: a coat/fur shell (or duplicated mesh) importing as
-  alpha-blended/two-sided instead of opaque. *Why it's wrong:* P1-1 wants a clean
-  real-dog silhouette and P1-9 "no bugs"; the see-through flaps make the dog look broken.
-  *Good looks like:* a solid, opaque coat with no see-through panels at any pose — set
-  the offending surface(s) to opaque / cull backfaces (or drop the duplicate shell) in
-  the import, confirmed by a magnified capture.
+- **The apex tell still never renders in live play (P1-4 — blocker, carried over).** With
+  the `?bra_force_tell=1` seam the warm-gold halo+ring renders boldly on the BRA marker
+  (saturated-gold detector: **1647 gold px, 6/6 frames**). In **normal play it never
+  appears**: a free-run 90-frame burst across multiple full sit cycles scored **0 gold px
+  in 0/90 frames** with the same detector, and the seated **apex** frame captured the
+  instant a live PERFECT mark fired (`?bra_autotap=1`, which drives the real live-intensity
+  path) shows a plain grey BRA slab — no ring. *Why it's wrong:* P1-4 is the core "now"
+  cue; without it timing is a blind guess, not a readable skill — this is the same
+  2026-06-28 blocker, still open. The forced-only pixel-proof (`web_capture_apex.mjs` with
+  `BRA_FORCE=1`) passed and **masked** it: the gate exercised the seam, not gameplay.
+  *Suspect (sharper now):* the draw and the curve are both proven good — the forced
+  `set_intensity(1.0)` draws fine, `ApexTell.intensity()` returns ~0.65→1.0 near the apex,
+  and autotap confirms the clock reaches the band. The fault is in the **live application**
+  at `main.gd:181-184` (the `elif _tell != null and _session.is_open()` branch) — the
+  live-intensity `set_intensity()` never reaches the marker as a visible value. *Good looks
+  like:* on the running 390×844 build, **with no seam**, a soft warm pulse is clearly
+  visible ringing the BRA marker, building to a peak at the seated apex and dark in idle.
+  **The binding proof must be a live capture** — a free-run burst with max gold > 0, or a
+  `?bra_autotap=1` apex frame showing the ring — **not** the `bra_force_tell` seam, which
+  must no longer be accepted as the gate.
 
 #### Improvements
 
-- **Tier readout is too low-contrast to read (P1-7).** The PERFECT/OK/MISS word flashes
-  at full opacity in the upper third, but OK (pale green) and especially MISS (light
-  grey, `0.72`) sit at almost the same luminance as the bright-blue sky and are barely
-  legible — "MISS" nearly disappears. It's a contrast problem, not opacity (captured
-  well within the 0.6 s hold). *Good looks like:* a dark outline / drop-shadow (or
-  higher-contrast fills) so every tier pops against the bright backdrop, PERFECT still
-  the brightest — each word crisply readable at 390×844.
+- **Residual coat seams + a stray geometry sliver (P1-1 / P1-9).** Magnified, the now-opaque
+  coat still shows faint symmetric hairline seams down the chest and curved arcs across both
+  flanks, plus a small hard-edged sliver dangling between the front legs (clearest in idle).
+  Subtle at native phone size, but they break the clean real-dog silhouette up close. *Good
+  looks like:* smooth opaque coat with no hard-edged seams or stray dangling geometry at any
+  pose, confirmed by a magnified capture.
 
-- **The "positive reaction" is a lone Bark and doesn't read as celebration (P1-6).**
-  The licensed pack's only clip matching the reaction vocab is `Bark` (no
-  wag/happy/excited/perk clip exists in the Labrador set), so a successful mark fires a
-  single bark on a dog whose mouth is already open in idle — I could read no clear,
-  joyful reaction in the post-mark frames; the dog just continued its stand/sit loop.
-  Playing a (standing) Bark over the seated pose also risks a pose pop. *Good looks
-  like:* a reaction that reads as joy at phone size — e.g. a small happy bounce/hop
-  (the pack has `Jump_Place`/`JumpAir_low`) or a clear perk-up, blended cleanly from the
-  seat with no snap, PERFECT brighter than OK — confirmed in a capture.
+- **The apex ring buries the "BRA" word at peak (P1-4 polish).** In the forced-tell
+  reference the gold ring is centered tightly over the button and partially occludes the
+  "BRA" text. When the live tell is fixed, size/position the ring to frame the marker
+  without hiding the word.
 
-*Scope note: audio can't be heard in the headless harness, so the "Bra!" voice/SFX is
-judged only as wired + gated (silent on MISS / dead tap) — worth an on-device listen
-before final sign-off.*
+- **Tier readout lands on the dog's head, not clear sky (P1-7 polish).** The PERFECT/OK/MISS
+  word flashes low enough to overlap the dog's ears/crown. It's legible (the dark outline
+  carries it), but it would read cleaner pulled up into clear sky above the dog.
+
+*Scope note: audio can't be heard in the headless harness, so the spoken "Bra!" voice/SFX
+(task 035 espeak placeholder — wired + gated: console confirms silence on MISS/DEAD, payoff
+only on a successful mark) is judged only as wired. It needs an on-device listen, and the
+warm human Maren voice remains owner-gated (`.task-board/FLAGS.md`), before final sign-off.*
 
 ---
 

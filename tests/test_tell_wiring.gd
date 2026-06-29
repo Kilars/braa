@@ -118,6 +118,88 @@ func test_force_tell_seam_pins_the_cue_on() -> void:
 		assert_true(is_equal_approx(marker.self_modulate.a, 1.0), "forced tell is at full intensity")
 	main.queue_free()
 
+## A dog whose pack has idle + a real Sitt (build + hold) so has_sit() is true. Fresh
+## Animation.new() clips default to 1.0 s, so the apex (Sitting_start end) lands at 1.0 s
+## and the OK ramp spans [0.8, 1.2]. In-tree so play() has a valid context.
+func _sit_capable_ap() -> AnimationPlayer:
+	var ap := AnimationPlayer.new()
+	var lib := AnimationLibrary.new()
+	for name in ["Idle", "Sitting_start", "Sitting_loop_1"]:
+		lib.add_animation(name, Animation.new())
+	ap.add_animation_library("", lib)
+	(Engine.get_main_loop() as SceneTree).root.add_child(ap)
+	return ap
+
+func test_live_tell_lights_up_at_the_apex_on_a_sit_capable_dog() -> void:
+	# The reopened P1-4 blocker (PO 2026-06-28 / 2026-06-29): the apex tell renders under
+	# the ?bra_force_tell seam but was INVISIBLE in real play. The CC0-only wiring tests
+	# above can't catch it — the placeholder never sits, so the live branch
+	# (main.gd `_tell.intensity(_session.elapsed())`) is never exercised headless and a
+	# live-path regression read as hollow green. This drives a REAL sit through _process
+	# on a sit-capable dog and proves the marker actually pulses at the seated apex — the
+	# headless guard for "the live tell renders," not just the forced seam.
+	var main := instantiate_main()
+	var marker := _find_marker(main)
+	assert_true(marker != null, "marker present")
+	if marker == null:
+		main.queue_free()
+		return
+	# Swap in a sit-capable director + a fresh loop so the production _process path runs a
+	# real sit (the mounted CC0 dog is idle-only). The tell math is driven by the session
+	# clock and clip lengths, both of which work headless even though the GPU/anim doesn't.
+	main._director = DogDirector.new(_sit_capable_ap())
+	main._director.play_idle()
+	main._loop = SitLoop.new()
+	assert_true(main._director.has_sit(), "the injected dog can sit (live path is reachable)")
+	assert_false(main._force_tell, "no capture seam — this is the genuine live path")
+	# Drive ~4 s of frames: idle gap (1.2 s) → sit (apex at 1.0 s into it) → stand. Track the
+	# brightest frame and when it happened, and confirm the tell stays dark before the sit.
+	var dt := 1.0 / 60.0
+	var max_i := 0.0
+	var peak_elapsed := -1.0
+	var lit_during_idle := false
+	for i in 240:
+		main._process(dt)
+		if not main._session.is_open() and marker.is_showing():
+			lit_during_idle = true
+		if marker.intensity > max_i:
+			max_i = marker.intensity
+			peak_elapsed = main._session.elapsed()
+	assert_true(max_i > 0.0,
+		"the LIVE apex tell must light up during a real sit, not only under ?bra_force_tell (got max %.3f)" % max_i)
+	assert_true(max_i >= 0.5,
+		"the live tell must build to a clear peak at the apex, not a faint flicker (got %.3f)" % max_i)
+	assert_false(lit_during_idle, "the tell stays dark whenever no sit is open (P1-4 dormant-at-rest)")
+	assert_true(absf(peak_elapsed - 1.0) <= 0.2,
+		"the peak lands at the seated apex (~1.0 s into the sit), where a tap scores PERFECT (got %.3f s)" % peak_elapsed)
+	main.queue_free()
+
+func test_motion_scale_never_zeros_out_the_tell() -> void:
+	# Regression for the live-play P1-4 blocker (PO 2026-06-29): on the Web export
+	# ReducedMotion.query()'s bare-JS-boolean `JavaScriptBridge.eval` marshalled back as
+	# null, so scale_for(null) collapsed to 0.0 and set_motion_scale(0.0) built EVERY apex
+	# tell with damping 0 — a permanently invisible cue. Headless never caught it: off-web
+	# query() short-circuits to false → scale 1.0. The contract is (0, 1] ("dampened, not
+	# removed", P1-8) — a zero / negative / non-finite scale must NOT blank the cue. This
+	# drives main.set_motion_scale directly so a future regression that lets the scale reach
+	# 0 (the exact shape of this bug) reads red headless instead of only on the live site.
+	var main := instantiate_main()
+	main.set_motion_scale(0.0)
+	assert_true(main.motion_scale() > 0.0,
+		"a zero motion scale must not blank the apex tell — (0,1] contract (got %.3f)" % main.motion_scale())
+	main.set_motion_scale(-1.0)
+	assert_true(main.motion_scale() > 0.0, "a negative motion scale must not blank the cue")
+	main.set_motion_scale(NAN)
+	assert_true(main.motion_scale() > 0.0 and is_finite(main.motion_scale()),
+		"a non-finite motion scale must not blank the cue")
+	# Valid values still pass through untouched, so the fix doesn't break real damping.
+	main.set_motion_scale(1.0)
+	assert_true(is_equal_approx(main.motion_scale(), 1.0), "full motion passes through unchanged")
+	main.set_motion_scale(ReducedMotion.DAMPED)
+	assert_true(is_equal_approx(main.motion_scale(), ReducedMotion.DAMPED),
+		"a real reduced-motion factor passes through unchanged (still pulses, just softer)")
+	main.queue_free()
+
 func test_tell_marker_draws_on_top_of_the_bra_button() -> void:
 	# 030 z-order guard. The marker must stay a LATER sibling than the BRA button on the UI
 	# layer so it composites ON TOP of the button's opaque themed stylebox — a reorder would

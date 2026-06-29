@@ -503,7 +503,17 @@ func _setup_payoff() -> void:
 
 ## Reduced-motion hook (P1-8): 024g calls this with the prefers-reduced-motion factor
 ## before the sit opens; the tell is then built dampened (never removed) by it.
+##
+## The factor is contractually in (0, 1] — reduced motion *dampens* the apex tell, it
+## never *removes* it (ReducedMotion.DAMPED, ApexTell.damping). A zero or non-finite
+## scale would blank the cue entirely: that is exactly the live-play P1-4 regression
+## where a null `prefers-reduced-motion` read (a bare-boolean JavaScriptBridge.eval
+## marshalled back as null on the Web export) collapsed scale_for() to 0.0 and the apex
+## tell went permanently invisible in real play. Treat any such bad value as full motion
+## so the cue can never silently disappear, whatever upstream feeds in.
 func set_motion_scale(scale: float) -> void:
+	if not is_finite(scale) or scale <= 0.0:
+		scale = 1.0
 	_motion_scale = clampf(scale, 0.0, 1.0)
 
 ## The mark: score the tap at the current seconds-into-the-sit, announce the tier, and
