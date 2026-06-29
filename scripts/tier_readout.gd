@@ -30,6 +30,11 @@ const COLOR_PERFECT := Color(1.0, 0.86, 0.30)
 const COLOR_OK := Color(0.55, 0.85, 0.55)
 const COLOR_MISS := Color(0.72, 0.72, 0.74)
 
+## A dark stroke so every tier reads against the bright Pokémon-GO sky (P1-7).
+## Both the colour AND the size override are required for Godot to draw the outline.
+const OUTLINE_COLOR := Color(0.07, 0.07, 0.10, 1.0)  # near-black
+const OUTLINE_SIZE := 12                              # px, at font_size 88
+
 var _age := 0.0       ## seconds since the current tier was displayed
 var _active := false  ## a tier is showing (or fading); false once fully faded / cleared
 
@@ -40,6 +45,8 @@ func _init() -> void:
 	horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	add_theme_font_size_override("font_size", 88)
+	add_theme_color_override("font_outline_color", OUTLINE_COLOR)
+	add_theme_constant_override("outline_size", OUTLINE_SIZE)
 	self_modulate.a = 0.0  # start blank — nothing tapped yet
 
 ## The on-screen word for a scored tier — empty for DEAD (a dead tap shows nothing,

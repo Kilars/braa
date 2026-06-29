@@ -70,6 +70,14 @@ var reduced_motion_override := -1
 ## desktop, headless, and normal web play are untouched. Mirrors dog_path_override.
 var _force_tell := false
 
+## Visual-review seam (033/P1-7): set by _query_force_tier() from the web URL
+## `?bra_force_tier=miss|ok|perfect`, pinning the timing readout to that tier every frame
+## so a SINGLE screenshot deterministically proves the word reads against the bright sky
+## (the live readout flashes only ~0.6s per tap — too brief and tap-timing-dependent for a
+## reliable burst, and MISS in particular is hard to provoke on demand). -1 = off. Web-only
+## and off by default, so desktop, headless, and normal web play are untouched.
+var _force_tier := -1
+
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_setup_environment()
@@ -84,6 +92,7 @@ func _ready() -> void:
 	_setup_bra_button()
 	_setup_payoff()
 	_force_tell = _query_force_tell()  # deterministic apex-tell pixel proof (030, web-only seam)
+	_force_tier = _query_force_tier()  # deterministic readout-contrast pixel proof (033, web-only)
 	_notify_web_ready()
 
 ## Visual-review seam (030/P1-4): true only when the live web page URL carries
@@ -97,6 +106,25 @@ func _query_force_tell() -> bool:
 		return false
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_tell=1")
+
+## Visual-review seam (033/P1-7): read `?bra_force_tier=miss|ok|perfect` off the live web
+## URL into a SitWindow.Tier to pin the readout for one deterministic legibility screenshot.
+## Returns -1 (off) on desktop/headless/normal play or an unrecognised value, so the readout
+## behaves exactly as in play everywhere except a deliberately-flagged capture URL.
+func _query_force_tier() -> int:
+	if not OS.has_feature("web"):
+		return -1
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) != TYPE_STRING:
+		return -1
+	var s := (search as String).to_lower()
+	if s.contains("bra_force_tier=perfect"):
+		return SitWindow.Tier.PERFECT
+	if s.contains("bra_force_tier=miss"):
+		return SitWindow.Tier.MISS
+	if s.contains("bra_force_tier=ok"):
+		return SitWindow.Tier.OK
+	return -1
 
 ## Resolve prefers-reduced-motion (the test seam wins, else the live query) into the
 ## single motion-scale the tell is built from (P1-8). Called first in _ready so the
@@ -129,6 +157,8 @@ func _process(delta: float) -> void:
 		else:
 			_tell_marker.set_intensity(0.0)
 	if _readout != null:
+		if _force_tier >= 0:
+			_readout.display(_force_tier as SitWindow.Tier)  # pin tier for capture (033) — web-only
 		_readout.advance(delta)  # fade the last tier's flash (024g/P1-7)
 
 ## Drive the repeating round loop (027, P1-9): each frame SitLoop decides whether to begin

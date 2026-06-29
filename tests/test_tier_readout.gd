@@ -57,3 +57,35 @@ func test_readout_holds_before_it_starts_fading() -> void:
 	assert_true(is_equal_approx(r.self_modulate.a, 1.0),
 		"still fully opaque during the initial hold")
 	r.free()
+
+func test_readout_has_dark_outline_color() -> void:
+	# The outline is a dark stroke so every tier pops against the bright Pokémon-GO sky
+	# (P1-7). The color override is required for Godot to render the outline.
+	var r := TierReadout.new()
+	assert_true(r.has_theme_color_override("font_outline_color"),
+		"TierReadout has a font_outline_color override")
+	var outline_color := r.get_theme_color("font_outline_color")
+	assert_eq(outline_color, TierReadout.OUTLINE_COLOR,
+		"outline color equals TierReadout.OUTLINE_COLOR")
+	r.free()
+
+func test_readout_has_outline_size_at_least_8() -> void:
+	# The outline size constant override is required (along with the color) for the
+	# stroke to render. Size must be >= 8 px at font_size 88 to be legible.
+	var r := TierReadout.new()
+	var outline_size := r.get_theme_constant("outline_size")
+	assert_true(outline_size >= 8,
+		"outline_size is at least 8 (actual: %s)" % outline_size)
+	r.free()
+
+func test_emphasis_invariant_perfect_brightest() -> void:
+	# The readout's emphasis (via brightness/value) must agree with the reward gate:
+	# PERFECT brightest, OK in the middle, MISS dimmest. This locks the invariant
+	# so a later contrast tweak can't silently break the emphasis-tracks-reward rule.
+	var perfect_v := TierReadout.COLOR_PERFECT.v
+	var ok_v := TierReadout.COLOR_OK.v
+	var miss_v := TierReadout.COLOR_MISS.v
+	assert_true(perfect_v >= ok_v,
+		"COLOR_PERFECT.v (%.2f) >= COLOR_OK.v (%.2f)" % [perfect_v, ok_v])
+	assert_true(ok_v >= miss_v,
+		"COLOR_OK.v (%.2f) >= COLOR_MISS.v (%.2f)" % [ok_v, miss_v])
