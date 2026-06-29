@@ -54,7 +54,15 @@ ends with `✓ verify gate green`. Treat a failing leg as a hard stop.
   **owner-gated** (a specific human voice, a license), ship the best honest stand-in
   **and raise a flag** in `.task-board/FLAGS.md` — never silently self-certify a stub.
   (Deferring *later-phase* visual polish is fine and phase-gated; stubbing a feature the
-  *current* phase requires is not.)
+  *current* phase requires is not.) When the real thing needs research first
+  (feasibility / how is unknown), **spike it** — a timeboxed `SPIKE-` task — before you
+  flag (see `process/mother_prompt.md`).
+- **Placeholder check at "done" (the canonical list).** Before any task is done, grep its
+  diff (added lines in `scripts/` + `assets/`) for
+  `placeholder|stub|dummy|fake|mock|TODO|FIXME|temporary|stand-in|hack|XXX|for now|… later`.
+  A hit means **not done** unless allowlisted: test doubles in `tests/`, docs/specs/board
+  meta-text, or a stand-in an **open flag/task names** (e.g. `bra_tts_placeholder.wav` ←
+  the human-voice flag). Soft orchestrator judgement, **not** a `verify.sh` leg.
 - **Dog scripts are dog-agnostic and clip-name-driven.** The deployed CC0 dog only
   idles (no Sitt clip); the real Sitt lives in the licensed Labrador, gated behind
   ADR-0006 encryption. Drive sit logic off clip names — never hardcode a fake sit.

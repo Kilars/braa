@@ -111,9 +111,12 @@ the code better — tuned to this project, not a generic web-app checklist.
 **Asset integrity** (cf. CLAUDE.md "Don't fake deliverables — attempt the real thing, or flag it"):
 - No bare primitive geometry standing in for the dog — not even for one frame. Flag any
   placeholder/faked artifact or self-certified "fix" left as a stub.
-- **Placeholder ≠ done for a current-phase requirement.** Flag a stub that stands in for a
-  real deliverable and was certified done **without a genuine attempt at the real thing AND,
-  if owner-gated, a flag** — e.g. a tone synthesized for the "Bra!" voice. (Deferring
+- **Placeholder ≠ done for a current-phase requirement.** Re-run the **placeholder check**
+  (CLAUDE.md "Placeholder check at done"): grep the phase's shipped `scripts/` + `assets/`
+  for `placeholder|stub|dummy|fake|mock|TODO|FIXME|temporary|stand-in|hack|XXX|for now|… later`.
+  Flag any **un-allowlisted** hit — a stub certified done without a genuine attempt and, if
+  owner-gated, a flag (e.g. a tone synthesized for the "Bra!" voice). Allowlist: test doubles
+  in `tests/`, docs/specs/board meta-text, and a stand-in an open flag/task names. (Deferring
   *later-phase* visual polish stays fine, per the phase-scope gate below.)
 
 **Code smells**: god functions, deep nesting, long parameter lists, swallowed errors
@@ -123,6 +126,10 @@ the code better — tuned to this project, not a generic web-app checklist.
 
 From the gaps and quality issues found, select up to the **3 most impactful tasks** — but
 only ones that genuinely advance the current phase.
+
+A gap whose **solution is unknown** (it needs research, not just building — feasibility or
+approach is unclear) → emit a **`SPIKE-`** task, not a guess and not a premature "can't do it"
+flag. The spike's findings then route to a real build task or an informed flag.
 
 **Before returning zero — the construction-audit gate (orchestrator clearance).** When the
 current phase's stories all appear implemented and there are no open PO directives, do NOT

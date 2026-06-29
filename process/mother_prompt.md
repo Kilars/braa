@@ -54,6 +54,13 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   rule) — don't quietly leave the stub and call the task done. (Deferring *later-phase*
   polish is fine; stubbing a *current-phase* requirement is not — `cf.` CLAUDE.md "Don't
   fake deliverables".)
+- **Spike before you flag (research-class unknowns).** When the blocker is "is this even
+  possible / how?" — not a transient failure (retry) and not a pure product call (flag) —
+  the first handling is a timeboxed **`SPIKE-`** task: one research subagent pass that
+  finds solutions. Route its findings to a **build task** if one is found, or to an
+  *informed* **flag** (carrying the findings) if it's genuinely owner-gated. Spikes are
+  research only — no shippable product code, no TDD; the deliverable is findings + routing.
+  A premature "can't do it" flag with no spike is the same anti-pattern as a premature block.
 - **Flag user-only decisions; never block on them.** You are the **orchestrator** — the
   one who decides what reaches the user. When `start-working` (or a subagent's report)
   surfaces something only the user can decide — a product / scope / legal / asset / owner
@@ -75,3 +82,7 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
 - **Reuse one dev server** if you start one.
 - **Never fabricate a screenshot or result.** Verify subagent claims against real
   artifacts (typecheck / test / build / e2e / grep / the actual screenshot).
+- **Run the placeholder check at done.** Before a task moves to `done/`, grep its diff for
+  the placeholder/stub list (CLAUDE.md "Placeholder check at done"); an un-allowlisted hit
+  means it is **not done** — fix it, or, if it's owner-gated, it should have gone
+  spike → flag, not shipped as a self-certified stub.

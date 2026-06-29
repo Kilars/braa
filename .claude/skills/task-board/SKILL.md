@@ -145,7 +145,10 @@ Use numbered, descriptive, kebab-case names with type prefix:
 - `DESIGN-` — Design/styling work
 - `DOCS-` — Documentation
 - `EPIC-` — Major multi-phase features
-- `EXPLORE-` — Research/investigation
+- `EXPLORE-` — Research/investigation (open-ended)
+- `SPIKE-` — Timeboxed research (one subagent pass) to resolve a feasibility/how-unknown
+  **before** building or flagging. Deliverable = findings + routing (a build task or an
+  informed flag), **no product code**. Tighter + outcome-routed vs open-ended `EXPLORE-`.
 - `CLEANUP-` — Code cleanup
 - `A11Y-` — Accessibility improvements
 - `QUALITY-` — Code quality improvements

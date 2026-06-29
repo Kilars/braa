@@ -165,6 +165,14 @@ Agent tool:
 
 For **rendering / 3D / asset tasks** (TDD-exempt): skip Step 7a, run only Step 7b.
 
+For **`SPIKE-` tasks** (research, TDD-exempt): skip Step 7a. Run a **single timeboxed
+research subagent (one pass)** that investigates feasibility / approach and writes
+**findings + a recommendation** into the task file. A spike ships **no product code** — its
+outcome is either a new **build task** in `backlog/` or an **informed flag** in
+`.task-board/FLAGS.md` (with the findings attached). Record the findings + routing, then move
+the spike to `done/`. (Spikes are the first handling of a research-class unknown — they come
+*before* a "can't do it" flag; see `process/mother_prompt.md`.)
+
 ### Step 8: Verify Completion
 
 After subagents return, verify:
@@ -172,6 +180,9 @@ After subagents return, verify:
 2. Project builds successfully
 3. Tests pass — and functional code was written test-first (TDD), not after
 4. Code follows project conventions (see `.docs/specs/` + the `adr/` ADRs)
+5. **Placeholder check** — grep the task's diff for the placeholder/stub list (CLAUDE.md
+   "Placeholder check at done"); an un-allowlisted hit means the task is **not done** (fix
+   it, or — if owner-gated — it should have gone spike → flag, not shipped as a stub)
 
 ### Step 9: Complete and Move to Done
 
