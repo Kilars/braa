@@ -37,34 +37,37 @@ the coat re-export. Do not advance to Phase 2.
 
 **The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 90-frame burst
 across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
-at the seated apex — **max 3377 gold px, gold on 4/90 frames** (~80 ms sampling; a brief
-~0.2 s tell), and **dark in idle** (per-frame: long runs of 0, spiking 2465 / 225 / 2454 /
-3377 at the apexes, min 0). The seated apex frame reads cleanly: clear centered Labrador,
-gold ring framing the marker, "BRA" fully legible inside it, paws grounded by a soft contact
-shadow (`.screenshots/po-0630b-apex.png`); the darkest frame is a plain **standing** idle
-(legs extended, head up) with the button band dark and no ring (`.screenshots/po-0630b-idle.png`).
+at the seated apex — **max 3371 gold px, gold on 9/90 frames** (~80 ms sampling; a brief
+tell repeating each ~1.2 s cycle), and **dark in idle** (per-frame: long runs of 0, then
+clean spikes 364 / 2134 / 2097 / 2794 / 3371 / 3368 / 2136 / 2575 / 2735 at successive
+apexes, min 0). The seated apex frame reads cleanly: clear centered Labrador, gold ring
+framing the marker, "BRA" fully legible inside it, paws grounded by a soft contact shadow
+(`.screenshots/po-0630c-apex.png`); the darkest frame is a plain **standing** idle (front legs
+extended, head up/forward) with the button band dark and no ring (`.screenshots/po-0630c-idle.png`).
 This is the honest live "now" cue, not a forced seam.
 
 **What holds up (re-verified live this pass on my own captures, keep it):**
 - **The BRA tap really scores and pays off (P1-5 / P1-6).** Real Playwright pointer clicks
   on the live canvas at the **corrected** BRA centre (195,670 at 390×844), no seam: a blind
   155 ms cadence across sit cycles **landed 7 successful marks and fired the dog reaction**
-  (`window.__bra_reaction_n` climbed 0 → 7). Blind taps that miss the window simply do
-  nothing — no false payoff. **Two harness notes, neither a game defect:** (a) clicks aimed
-  low at the button band's bottom edge (y≈745) register 0 marks — the active hit area is the
-  ring/word centre, ~y670 — so any tap-harness must aim centre; (b) an *apex-synced* harness
-  (poll for the gold ring, then tap) overshoots the deliberately brief ~0.2 s tell because the
-  headless screenshot→decode→click pipeline (~150–300 ms) lands as the window closes. The
-  blind-cadence marks prove the scoring window is genuinely real and hittable; a human reading
-  the ring has no such pipeline latency. Harness artifact, **not** a misaligned tell.
+  (`window.__bra_reaction_n` climbed 0 → 7), and the post-tap frame shows the dog mid-reaction
+  (`.screenshots/po-0630c-aftertap.png`). Blind taps that miss the window simply do nothing — no false
+  payoff. **Two harness notes, neither a game defect:** (a) clicks aimed low at the button
+  band's bottom edge (y≈745 — still hard-coded in `tools/po_live_playtest.mjs:75`) register 0
+  marks; the active hit area is the ring/word centre, ~y670, so any tap-harness must aim
+  centre — fix that committed line; (b) an *apex-synced* harness (poll for the gold ring, then
+  tap) overshoots the deliberately brief tell because the headless screenshot→decode→click
+  pipeline (~150–300 ms) lands as the window closes. The blind-cadence marks prove the scoring
+  window is genuinely real and hittable; a human reading the ring has no such pipeline latency.
+  Harness artifact, **not** a misaligned tell.
 - **Apex ring frames "BRA", doesn't bury it (P1-4 polish).** The gold ring rings the marker
-  and the "BRA" word stays fully legible inside it (`.screenshots/po-0630b-apex.png`).
+  and the "BRA" word stays fully legible inside it (`.screenshots/po-0630c-apex.png`).
 - **The dog reads, idle ≠ sit, it stays centered, opaque coat, contact shadow, and the loop
   repeats with NO console errors (P1-1/P1-2/P1-3/P1-9).** The darkest-frame capture is an
-  unmistakable **standing idle** (four legs extended, head up) clearly distinct from the
-  seated apex; clear Labrador silhouette grounded by a soft shadow disc, no see-through panels,
-  no primitive-blob flash, no T-pose, no drift. The console captured **zero** SCRIPT ERROR /
-  page error across boot + play + 80 real taps.
+  unmistakable **standing idle** (front legs extended, head up/forward) clearly distinct from
+  the seated apex; clear Labrador silhouette grounded by a soft shadow disc, no see-through
+  panels, no primitive-blob flash, no T-pose, no drift. The console captured **zero** SCRIPT
+  ERROR / page error across boot + play + 90 real taps.
 - **Live deployed Pages site serves the licensed Sitt build (P1-10 visual gate — stays
   CLEARED).** Driving the **live site itself** (not a local export) at 390×844, all of the
   above holds on the actual shipped build — the live-pixel confirmation the P1-10 gate names.
@@ -75,11 +78,10 @@ This is the honest live "now" cue, not a forced seam.
 #### Improvements (still open — owner-gated, not loop-buildable)
 
 - **Coat UV/tangent seam down the chest/belly (P1-1 / P1-9).** Re-confirmed live this pass on
-  my **own magnified capture**: a 3× crop of the chest in the idle frame
-  (`.screenshots/po-0630b-chest3x.png`) shows a faint vertical shading band down the
-  body-symmetry centerline of the chest plus symmetric flank folds — subtle at native phone
-  size but a real shading artifact, not real fur, and **unchanged** from the prior capture (no
-  regression, no improvement). (What the 2026-06-29 note called a stray "sliver" *is* this
+  my **own magnified capture**: a 3× crop of the chest/belly (`.screenshots/po-0630c-chest3x.png`)
+  shows a clear vertical shading band down the body-symmetry centerline plus symmetric flank
+  folds — subtle at native phone size but unmistakable when magnified, a real shading artifact,
+  not real fur, and **unchanged** from the prior capture (no regression, no improvement). (What the 2026-06-29 note called a stray "sliver" *is* this
   centerline band — the 039 spike confirmed it is **not** stray geometry and **not** a
   transparency gap.) Root-caused to the **licensed asset's mirrored-UV / missing-tangent
   layout**; it is **owner-gated** — needs a re-export with baked tangents / a re-baked normal

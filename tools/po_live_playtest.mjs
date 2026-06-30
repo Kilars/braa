@@ -72,7 +72,7 @@ try {
 	const r0 = await page.evaluate("(window.__bra_reaction_n||0)");
 	const taps = 90;
 	for (let i = 0; i < taps; i++) {
-		await page.mouse.click(195, 745);      // BRA button centre at 390x844 portrait
+		await page.mouse.click(195, 670);      // BRA ring/word centre (band y564-756, centre ~660) at 390x844 — NOT the bottom edge
 		await page.waitForTimeout(170);        // ~3 taps per 1.2s sit loop, walks the window
 	}
 	await page.waitForTimeout(400);
