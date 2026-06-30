@@ -1,6 +1,7 @@
 # BUG: 040 — Fix mipmap bleed + normal-map import hint on licensed Labrador textures (P1-1 / P1-9)
 
-**Status**: ON-HOLD (owner-gated) — REROUTED 2026-06-30, premise was false
+**Status**: CLOSED 2026-06-30 (moot) — parent coat-seam flag RESOLVED by PO (accepted as-is,
+WONTFIX-cosmetic); this mitigation's premise was already proven a no-op. Archived, not built.
 **Created**: 2026-06-30
 **Type**: BUG (in-engine partial mitigation — import-file changes only, no scripts touched)
 **Priority**: Medium — reduces "hairline seam" contribution from mipmap bleed and

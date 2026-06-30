@@ -39,43 +39,6 @@ Entry format:
 
 ## Open
 
-### FLAG 2026-06-30 — Coat seam + belly "sliver" is a licensed-asset UV/tangent seam (owner re-export)
-- **Source:** task **039** (SPIKE — root-cause of the PO's P1-1/P1-9 "residual coat seams +
-  stray sliver" improvement). Findings in `.task-board/done/039-…`; evidence under
-  `.screenshots/039-spike-*` (`-bellyseam.png` is the clearest).
-- **Decision needed (owner):** re-export the licensed Labrador (`assets/models/dog_licensed.glb`)
-  with **per-vertex tangents baked** (Blender → glTF, "Export Tangents" on) **and/or re-bake the
-  normal map** so tangent-space values match across the body symmetry seam. That is the only
-  thing that removes the **hard belly-centreline shading band** (the "sliver") and the symmetric
-  flank arcs.
-- **Why it's user-only:** the spike proved this is **not** stray geometry and **not** a
-  transparency gap (the mesh is 1 surface / 1 material; `CoatOpaque.flatten` neither causes nor
-  can hide it; no sky shows through). It is a **shading seam baked into the asset's UV layout**:
-  both body halves mirror onto one 2048² atlas with a UV gap up to **0.90** at the centreline, so
-  Godot's import-time MikkTSpace tangents diverge ~90° across the seam and the normal map bends
-  shading in opposite directions on each side. The GLB ships **no TANGENT attribute**, so the
-  only in-engine alternative — dropping the normal map — would strip all coat detail (fails
-  P1-1). Fixing the tangents requires editing the asset, which is owner-gated.
-- **Assumption made to keep going:** the loop drafted a cheap **in-engine partial mitigation**
-  as task **040**, but on picking it up **2026-06-30 found its premise was false** — so 040 is
-  **parked on-hold (owner-gated)**, not built. Why: the `.import` files it would edit
-  (`dog_licensed_Labrador_{Albedo,Normal}.png.import`) are **gitignored** (broad
-  `dog_licensed*` glob) → never committed → **absent in CI**, and the licensed deploy runs
-  `godot --headless --import` on a fresh checkout that **regenerates them from defaults** (the
-  textures are *extracted from the GLB* at import; empirically confirmed). So those edits are a
-  **no-op on the deployed build**, and are unverifiable locally (the `verify.sh` export uses the
-  CC0 dog). The mipmap half is also partly redundant — `process/fix_alpha_border=true` is
-  **already set** (Godot's built-in zero-alpha-edge mipmap fix) and disabling mipmaps would
-  trade a faint band for coat **shimmer**. Project-wide `[importer_defaults]` and un-ignoring
-  the `.import` files were both considered and rejected (blunt / clobbered-by-extraction /
-  unvalidatable against the fail-closed licensed-deploy contract). **The single robust fix is
-  the owner re-export** — and while re-exporting, please ALSO: author/tag the **normal map**
-  correctly, and **pad the albedo UV-island edges** so mipmap bleed is mooted at the source.
-  That one action fixes everything 040 chased, at the source. This remains a P1-1/P1-9 *polish*
-  gap, not a core-loop blocker — it does not change the P1-10 sign-off being the gate.
-  (FYI: licensed-asset *import settings* are entirely uncommitted today — CI uses Godot
-  defaults — so the only deterministic place to control them is the re-export itself.)
-
 ### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated  ·  **busted 2026-06-30 (BUST-043) — scope narrowed**
 - **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
   De-gated by **BUST-043** (2026-06-30) — this flag was raised *whole* with **no spike**, the
@@ -96,6 +59,22 @@ Entry format:
   recording with no code change.
 
 ## Resolved
+
+### FLAG 2026-06-30 — Coat seam + belly "sliver" (licensed-asset UV/tangent seam) — RESOLVED 2026-06-30 (PO accepted as-is)
+- **Outcome:** the owner (larssski) reviewed the **live deployed build** and judged the coat
+  **fine at native phone size** — the seam is sub-perceptible in real play, only visible under
+  magnification (as the 039 spike found). Accepted **as-is (WONTFIX — cosmetic)**; **no owner
+  re-export is required** for Phase 1. This closes the last non-voice owner gate.
+- **Root cause kept on record (for any future re-export):** a UV/tangent seam baked into
+  `dog_licensed.glb` — both body halves mirror onto one 2048² UV atlas (gap ~0.90 at the
+  centreline); the GLB ships **no TANGENT attribute**, so Godot's import-time MikkTSpace tangents
+  diverge ~90° across the seam and the normal map shades the two sides oppositely. **Not**
+  geometry, **not** transparency; can't be fixed in-engine without dropping the normal map (which
+  strips coat detail). **If the asset is ever re-exported for other reasons**, bake per-vertex
+  tangents, tag the normal map, and pad the albedo UV-island edges to remove it at the source.
+  Until/unless that happens, the seam ships and is accepted.
+- **Task 040** (the in-engine mitigation) is **moot** — premise already proven a no-op (gitignored
+  `.import` files regenerated from defaults in CI); archived alongside this resolution.
 
 ### FLAG 2026-06-29 — Phase-1 deploy reflectance + live P1-10 visual sign-off (owner/PO gates) — RESOLVED 2026-06-30
 - **Outcome:** the PO's **2026-06-30** review pass (`.docs/specs/po-review.md`) drove the **live

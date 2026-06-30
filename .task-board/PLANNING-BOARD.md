@@ -10,16 +10,18 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 
 **Phase 1 is complete as best as possible after human review.** The owner (larssski) played the
 live deployed build at 390×844 and signed P1-10 off in `po-review.md` (Phase Sign-off list). All
-P1-0…P1-9 stories pass, logic is test-first, verify is green. The two remaining gaps are
-**owner-gated polish, accepted as honest stand-ins**, not core-loop defects, and stay tracked as
-open flags for the owner to close on their own schedule:
+P1-0…P1-9 stories pass, logic is test-first, verify is green. One owner gate remains, tracked as
+an open flag:
 
 - the warm **human** Maren "Bra!" recording (the genuinely-spoken espeak stand-in ships under the
-  same cue id — drop-in, no code change), and
-- the coat **UV/tangent re-export** of `dog_licensed.glb` (a hairline shading seam; in-engine
-  mitigation proven a no-op, so the source re-export is the only real fix).
+  same cue id — drop-in, no code change; **busted to a warm Piper neural voice** via BUST-043 →
+  task 044, so only the literal human voice is still owner-gated).
 
-Neither blocks the mark. **Phase 2 (`phase2.md`) is now the current phase** — the loop may begin
+The coat **UV/tangent seam** flag is **CLOSED** — the PO reviewed the live build and accepted the
+coat as-is at native phone size (WONTFIX-cosmetic, 2026-06-30); no re-export needed (root cause
+kept on record in `FLAGS.md` for any future re-export). Task 040 archived as moot.
+
+Neither remaining item blocks the mark. **Phase 2 (`phase2.md`) is now the current phase** — the loop may begin
 planning/building it under the same Phase-1 quality bar.
 
 **Process change — "flag bust" (so the loop de-gates its own flags instead of spinning).** A flag
