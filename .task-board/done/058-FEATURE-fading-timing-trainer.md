@@ -130,16 +130,23 @@ uses (`ApexTellMarker.SIZE` / `TELL_HALF_WIDTH`).
   a real sit opens the trainer and drives the marker; a **feint opens no window so the ring stays
   dark** (rides the same `SitWindow` as the tell/score); a **mastered** trick's ring opacity is 0.
 - [x] **Placeholder check** clean — drawn in-engine, no stub/fake/primitive (allowlist: tests + board meta).
-- [x] **Visual Review — local render proof PASS** (phone-portrait 390×844, real Web GL build via
-  `?bra_force_trainer=1`): the forced approach ring **renders as a bold cyan ring framing the "BRA"
-  button**, visually distinct from the gold apex tell (`.screenshots/058-trainer-ring.png`, 4937
-  cyan px in the lower band, `tools/web_capture_trainer.mjs`). This is the binding render proof that
-  guards the 030/036-class failure (the apex tell once read green in tests yet was invisible in live
-  pixels). The **behavioral sweep** — ring *shrinking* through a real sit, *fading* as the bar fills,
-  *gone* at mastery, *dark* during feints — is comprehensively unit + wiring tested (above) and
-  rides the **PO's deployed-build sign-off** pass, since it needs the **licensed sit-capable dog**
-  (CI-only locally — the local "Web" preset bundles the CC0 idle dog) and multiple progress states.
-  Mirrors how po-review.md scopes the P2-4 erosion live-pixel catch to the same sign-off pass.
+- [x] **Visual Review — PASS (live, on the licensed sit-capable dog the local bundle prefers).**
+  Two proofs on the real Web GL build (SwiftShader Chromium, 390×844):
+  - **Forced render** (`?bra_force_trainer=1`, `tools/web_capture_trainer.mjs`,
+    `.screenshots/058-trainer-ring.png`, 4937 cyan px): the ring composites over the BRA button as a
+    bold cyan ring — guards the 030/036 tests-green/pixels-blank trap.
+  - **Live behavioral burst** (no force seam, no autotap → brand-new bar = teach 1,
+    `tools/web_capture_trainer_live.mjs`): across 48 free-run frames the ring rendered in 11 and was
+    **dark in 37** (between sits / during feints). The cyan-count spread (≈5376 → ≈2910 → <150) **is
+    the shrink** — `.screenshots/058-live-41-cy5376.png` shows the ring **expanded at sit-start**
+    (dog rising), `.screenshots/058-live-13-cy2910.png` shows it **contracted and landed tightly on
+    the BRA word with the dog fully SEATED, concentric just inside the gold apex tell ring**. So on a
+    new trick the cyan ring **shrinks onto the button and lands exactly at the apex** (where the gold
+    "now" tell peaks), is **visually distinct** from that gold tell, and is **dark between sits /
+    during feints** — all in live pixels, driven by a REAL sit, not the force seam.
+  - *Left to the PO deployed sign-off (diminishing returns to capture locally):* the explicit
+    fade-as-the-bar-fills and gone-at-mastery sweep across multiple progress states — both unit +
+    wiring tested (`teach_strength` law + `test_trainer_is_gone_at_mastery`).
 - [x] `nix develop -c bash verify.sh` green (import · boot · test · export).
 
 ## Results
@@ -149,14 +156,21 @@ uses (`ApexTellMarker.SIZE` / `TELL_HALF_WIDTH`).
 - `scripts/trainer_ring_marker.gd` — dumb Control renderer (86 LOC). `_init` sets `mouse_filter = IGNORE`, starts dark. `set_opacity(v)` + `set_radius_scale(v)` drive `self_modulate.a` + `queue_redraw()`. `is_showing()` predicate. `_draw()` renders one bold cyan/blue outlined ring (no halo, 14px width — visually distinct from the gold apex tell). Static `ring_radius(unit, radius_scale)` for unit-testable geometry.
 - `scripts/main.gd` — wired in parallel to the tell: `_trainer`/`_trainer_marker`/`_force_trainer` fields; `_setup_trainer_marker(ui)` added after `_setup_tell_marker`; `_begin_sit()` builds `_trainer = TrainerRing.from_window(...)` alongside `_tell`; `_end_sit()` clears `_trainer = null`; `_process()` drives both markers; `_query_force_trainer()` reads the STRING sentinel `?bra_force_trainer=1` (same web gotcha guard as the tell).
 
-- `tools/web_capture_trainer.mjs` — Visual-review capture: boots the real Web GL build (SwiftShader
+- `tools/web_capture_trainer.mjs` — forced render capture: boots the real Web GL build (SwiftShader
   Chromium, 390×844) with `?bra_force_trainer=1`, scores the lower band for the ring's cyan, fails
   closed if it doesn't render. Mirrors `web_capture_readout.mjs`.
+- `tools/web_capture_trainer_live.mjs` — live behavioral burst: free-runs the bundle (no force, no
+  autotap → brand-new bar), bursts frames, scores each for the ring's cyan, saves the lit frames so
+  the shrink (high→low cyan) and dark-between-sits are visible. Proves the LIVE drive path, not just
+  the seam.
 
 **Test count:** 218 tests, 0 failures (up from 190 after task 050 — exactly the +28 new trainer
 tests, confirmed running not skipped; orchestrator re-ran the gate independently).
 **Verify gate:** green — import · boot · test · export all passed. No SCRIPT ERROR or Parse Error in logs.
-**Visual Review (local render proof):** PASS — `.screenshots/058-trainer-ring.png` shows a bold cyan
-approach ring framing the BRA word, distinct from the gold tell (4937 cyan px). Orchestrator eyeballed
-the frame. The live behavioral sweep (shrink/fade-with-bar/gone-at-mastery/dark-on-feint) is unit-locked
-and rides the PO deployed sign-off (licensed sit-capable dog is CI-only locally).
+**Visual Review:** PASS in **live** pixels on the **licensed sit-capable dog** (the local Web bundle
+bundles + prefers `dog_licensed.glb` — see [[phase2-active-and-local-licensed-capture]]; NOT CC0).
+Forced frame proves the ring renders; a 48-frame free-run burst proves it **shrinks through a real
+sit and lands on the BRA word at the apex** (`.screenshots/058-live-13` seated dog, ring landed
+concentric just inside the gold tell), is **distinct from the gold tell**, and is **dark between
+sits / during feints** (37/48 frames dark). Orchestrator eyeballed frames 41 (expanded) + 13
+(landed). Explicit fade-with-bar / gone-at-mastery rides the PO deployed sign-off (unit-locked).

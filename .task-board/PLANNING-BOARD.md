@@ -26,9 +26,11 @@ hand-off to the father / PO sign-off pass**.
   `?bra_force_trainer=1` capture seam, web-marshal-safe STRING sentinel). **218 tests / 0 failures**
   (+28 new, confirmed running); verify gate green; placeholder-clean. **Local render proof PASS**
   (`.screenshots/058-trainer-ring.png`, 4937 cyan px) — the cyan ring composites over the BRA button
-  on the real Web GL path (guards the 030/036 tests-green/pixels-blank failure). The live behavioral
-  sweep (shrink/fade/feint-dark) is unit-locked and rides the PO deployed sign-off (licensed
-  sit-capable dog is CI-only locally).
+  on the real Web GL path (guards the 030/036 tests-green/pixels-blank failure). **Live behavioral
+  proof too** (the local Web bundle prefers the licensed sit-capable dog): a free-run burst caught the
+  cyan ring **shrinking through a real sit and landing on the BRA word at the apex** with the dog
+  fully seated, concentric just inside the gold tell, and **dark between sits / feints**
+  (`.screenshots/058-live-*`). Explicit fade-with-bar / gone-at-mastery (unit-locked) rides the PO pass.
 
 **What now awaits the PO sign-off pass (no buildable construction left):** the live-pixel review of
 P2-9 on the deployed build **and** the P2-4 erosion / confused-beat live-pixel catch the PO flagged
