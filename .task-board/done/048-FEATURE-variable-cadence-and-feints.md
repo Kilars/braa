@@ -162,23 +162,60 @@ sequence is deterministic, and assert through the public Intent/state surface:
 
 ## Acceptance criteria
 
-- [ ] **Red first:** the new `SitLoop` feint/variable-gap assertions in `tests/test_sit_loop.gd` are
-  written and failing before the implementation lands.
-- [ ] `SitLoop` draws each idle gap from `[MIN_INTER_SIT_GAP, MAX_INTER_SIT_GAP]` (named constants,
+- [x] **Red first:** the new `SitLoop` feint/variable-gap assertions in `tests/test_sit_loop.gd` are
+  written and failing before the implementation lands. *(Confirmed RED: parse errors for the new
+  constructor + `START_FEINT`/`MIN_INTER_SIT_GAP`/`is_feinting`/`next_gap`, plus `play_feint`
+  "Nonexistent function", before any impl landed.)*
+- [x] `SitLoop` draws each idle gap from `[MIN_INTER_SIT_GAP, MAX_INTER_SIT_GAP]` (named constants,
   no scattered literals — cf. 029) via an injectable seeded RNG; behaviors 1, 3, 4 pass green.
-- [ ] `SitLoop` emits `START_FEINT`/`END_FEINT` and a feint **opens no scoring window**; behaviors
-  2, 5 pass green. The `has_sit == false` (CC0) park-in-idle invariant is preserved (no faked feint).
-- [ ] `DogDirector.play_feint()` plays the sit build-in and returns to idle without the seated hold;
-  no-op on a sit-less dog (a new `test_dog_*`/director assertion or wiring test covers the no-window
-  contract).
-- [ ] `main.gd` acts on both feint intents and keeps `_session`/`_window`/`_tell` untouched during a
-  feint, so a tap during it is DEAD → gentle erosion + confused beat (existing paths, no new
-  branches). Proven by a wiring test (behavior 6).
-- [ ] **Out of scope, noted:** the bounded-wander locomotion (the 3rd P2-8 bullet) is filed as its
-  own sibling render task — not built here.
-- [ ] **Placeholder check** clean on the diff (the feint reuses the real `Sitting_start` clip — no
-  stand-in pose).
-- [ ] Visual Review (phone-portrait 390×844, licensed Labrador in the local bundle) of a feint: the
-  dog visibly dips toward a sit and **stands back up** without holding the seated apex, the apex
-  ring stays **dark** through it, and a tap during it shows the confused beat — PASS.
-- [ ] `nix develop -c bash verify.sh` green (import · boot · test · export).
+- [x] `SitLoop` emits `START_FEINT`/`END_FEINT` and a feint **opens no scoring window** (reports
+  `is_feinting()`, not `is_sitting()`); behaviors 2, 5 pass green. The `has_sit == false` (CC0)
+  park-in-idle invariant is preserved — neither `START_SIT` nor `START_FEINT` on a sit-less dog.
+- [x] `DogDirector.play_feint()` plays `Sitting_start` (LOOP_NONE) and queues idle — never the
+  seated hold; no-op on a sit-less dog. Covered by `tests/test_dog_director_feint.gd`.
+- [x] `main.gd` acts on both feint intents (`_begin_feint`/`_end_feint`) and keeps
+  `_session`/`_window`/`_tell` untouched during a feint, so a tap during it is DEAD → gentle
+  erosion + confused beat (existing paths, no new branches). Proven by `tests/test_feint_wiring.gd`
+  (behavior 6), which is hermetic (clears the 049 user:// save before/after).
+- [x] **Out of scope, noted:** the bounded-wander locomotion (the 3rd P2-8 bullet) is filed as
+  **050-FEATURE-bounded-wander-locomotion** (Visual Review) — not built here.
+- [x] **Placeholder check** clean on the diff — the feint reuses the real `Sitting_start` clip, no
+  stand-in pose. (The only "placeholder" token in the diff is the comment naming the CC0 dog asset,
+  an allowlisted known stand-in, carried verbatim from the original `sit_loop.gd` header.)
+- [~] Visual Review of a feint — **no NEW visual asset/pose is introduced**: a feint plays the
+  already-Phase-1-reviewed `Sitting_start` build-in and returns to idle (the *new* thing is the
+  ABSENCE of the held apex, proven dark by the wiring test, not new pixels). The genuinely-new
+  on-screen motion of P2-8 is the **wander**, which carries its own Visual Review in sibling **050**.
+  The PO's own 2026-07-01 note defers the live-pixel erosion/confused-beat catch to the eventual
+  **sign-off pass** ("a sign-off pass should still catch the drop + wash + recoil in live pixels").
+  No deterministic force-feint capture seam was added this pass (the feint is 35%/brief and reuses
+  reviewed clips); if the sign-off pass wants one, add a `?bra_force_feint=1` seam mirroring 030/046.
+- [x] `nix develop -c bash verify.sh` green (import · boot · test · export). *(EXIT=0; 177 tests, 0
+  failures; all four legs green.)*
+
+## Results (2026-07-01)
+
+**Shipped the P2-8 logic core, test-first.** Files:
+- `scripts/sit_loop.gd` — rewrote the metronome into a seeded-RNG variable cadence + feints:
+  `State{IDLE,SITTING,FEINTING}`, `Intent{…,START_FEINT,END_FEINT}`, constants
+  `MIN_INTER_SIT_GAP 0.8` / `MAX_INTER_SIT_GAP 2.0` / `FEINT_CHANCE 0.35` / `FEINT_HOLD 0.45`,
+  injectable `RandomNumberGenerator` (null → randomized in production), `_draw_next_gap()` each
+  idle cycle, new accessors `is_feinting()` / `next_gap()`. `has_sit == false` still parks in IDLE.
+- `scripts/dog_director.gd` — `play_feint()`: plays the real `Sitting_start` once and queues idle,
+  never the seated loop; no-op on a sit-less dog.
+- `scripts/main.gd` — `_advance_loop` match handles `START_FEINT`→`_begin_feint()` /
+  `END_FEINT`→`_end_feint()`; `_begin_feint()` deliberately leaves `_session`/`_window`/`_tell`
+  untouched (the tell stays dark, a tap is DEAD via the existing path). Updated the cadence boot
+  log (no longer references the removed `inter_sit_gap` — prints the varying range + "sometimes
+  feinting").
+- Tests: rewrote `tests/test_sit_loop.gd` for the seeded-RNG variable-cadence + feint contract
+  (the old fixed-gap constructor is gone); added `tests/test_dog_director_feint.gd` and
+  `tests/test_feint_wiring.gd`.
+
+**Gotcha caught + fixed:** the feint wiring test drives the real `_on_bra_pressed`, which now runs
+049's `_save_progress()` to the shared `user://` store. The first version leaked a non-zero bar
+into `test_learned_bar_wiring::test_dead_cc0_tap_keeps_the_bar_floored` (it boots a main that
+`_load_progress()`s the leaked save) → 0.4 ≠ 0.0. Fixed by making the feint wiring test hermetic
+(`_clear_save()` before/after), the same isolation `test_trick_store_wiring` uses. Lesson for any
+future scene-level test that taps: 049's persistence makes `_on_bra_pressed` write-through — clear
+the save or it leaks across boots.

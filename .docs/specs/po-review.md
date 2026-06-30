@@ -28,101 +28,95 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-06-30
+### PO Review — 2026-07-01
 
-Independent re-verification pass on my **own** fresh captures (this pass: ~10:10).
-Drove the **LIVE deployed Pages site itself** (https://kilars.github.io/braa/) at 390×844
-in headless Chromium (SwiftShader == the deployed GL Compatibility renderer) and re-ran
-every Phase-1 acceptance check on the running build myself — boot log, a no-seam apex-tell
-burst, **real BRA taps** at the button centre, and idle/apex/post-tap frames. The live boot
-log still reports the licensed build — `dog loaded: res://assets/models/dog_licensed.glb
-(1 coat surface(s) forced opaque)` and `dog can Sitt — looping a sit every 1.2s (real apex
-from the licensed Labrador)` — and the full loop runs there: idle → build → clear seated
-apex → apex tell → mark → loop. **Every claim from the prior pass still holds** on my own
-fresh capture; nothing newly broke and nothing was newly fixed to prune. Phase 1 is **not**
-signed off: the only remaining gaps are owner-gated — the spoken-voice on-device listen and
-the coat re-export. Do not advance to Phase 2.
+First **Phase-2** play-test pass. Drove the **LIVE deployed Pages site**
+(https://kilars.github.io/braa/) at 390×844 in headless Chromium (SwiftShader == the deployed
+GL Compatibility renderer). Boot log confirms the licensed Sitt build is live: `dog loaded:
+res://assets/models/dog_licensed.glb (1 coat surface(s) forced opaque)` and `dog can Sitt`.
+Exercised the garden, the learned bar (fill → mastery via `?bra_autotap=1`), the anti-mash
+lock (`?bra_force_lock=1`), and persistence (fill, then a plain reload on the same origin).
+**Zero** SCRIPT ERROR / pageerror across every run.
 
-**The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 90-frame burst
-across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
-at the seated apex — **gold on 2/90 frames this run, max 3223 gold px, min 0** (per-frame:
-long runs of 0, then two clean spikes of 3223 and 2334 px). How many frames land on the
-brief apex flash — and at what point in its fade — is **strobe-sampling phase-luck, not a
-dimmer tell**: prior same-day bursts caught 7/90 (3372 px) and 1/90 (251 px); the tell is a
-brief flash repeating each ~1.2 s cycle and the harness samples at ~80 ms, so how many frames
-land on it is sampling luck. The dedicated apex
-frame — the **brightest of the 90** — shows the **full** warm-gold ring framing the marker
-with "BRA" fully legible inside it, a clear centered Labrador, paws grounded by a soft
-contact shadow (`.screenshots/po-live-apex.png`); a continuous human eye reads the ring with
-none of this strobe loss. The darkest frame is a plain **standing** idle (front legs
-extended, head up/forward) with the button band dark and no ring
-(`.screenshots/po-live-idle.png`). This is the honest live "now" cue, not a forced seam.
+**Phase 2 is roughly half-built — NOT signed off.** Four stories are built and verified good
+(keep): **P2-4** learned bar, **P2-5** persistence, **P2-7** anti-mash, **P2-10** garden.
+Five stories are missing or stationary: **P2-1** trick selector, **P2-2** distinct trick
+animations, **P2-3** per-trick polish, **P2-8** the living dog, **P2-9** fading timing
+trainer. Directives below. Do not sign Phase 2 off.
 
-**What holds up (re-verified live this pass on my own captures, keep it):**
-- **The BRA tap really scores and pays off (P1-5 / P1-6).** Real Playwright pointer clicks
-  on the live canvas at the BRA centre (195,670 at 390×844), no seam: a blind 170 ms cadence
-  across sit cycles **landed 8 successful marks and fired the dog reaction**
-  (`window.__bra_reaction_n` climbed 0 → 8), and the post-tap frame shows the dog mid-reaction
-  — perked up, leaning forward, open happy mouth (`.screenshots/po-live-aftertap.png`). Blind
-  taps that miss the window simply do nothing — no false payoff. **Harness note, not a game
-  defect:** the active hit area is the ring/word centre (~y670 at 390×844), not the button
-  band's bottom edge; a blind cadence walking the window is what proves the scoring window is
-  genuinely real and hittable, and a human reading the ring has none of the headless
-  screenshot→decode→click pipeline latency that an apex-synced harness would.
-- **Apex ring frames "BRA", doesn't bury it (P1-4 polish).** The gold ring rings the marker
-  and the "BRA" word stays fully legible inside it (`.screenshots/po-live-apex.png`).
-- **The dog reads, idle ≠ sit, it stays centered, opaque coat, contact shadow, and the loop
-  repeats with NO console errors (P1-1/P1-2/P1-3/P1-9).** The darkest-frame capture is an
-  unmistakable **standing idle** (front legs extended, head up/forward) clearly distinct from
-  the seated apex; clear Labrador silhouette grounded by a soft shadow disc, no see-through
-  panels, no primitive-blob flash, no T-pose, no drift. The console captured **zero** SCRIPT
-  ERROR / page error across boot + play + 90 real taps.
-- **Live deployed Pages site serves the licensed Sitt build (P1-10 visual gate — stays
-  CLEARED).** Driving the **live site itself** (not a local export) at 390×844, all of the
-  above holds on the actual shipped build — the live-pixel confirmation the P1-10 gate names.
-  (P1-7 tier readout and P1-8 reduced-motion were confirmed on prior live passes — readout
-  legible in clear sky above the crown; reduced-motion dampened-not-removed, apex still
-  readable by pose — and are unchanged this pass.)
+**What holds up (verified live this pass, keep it):**
+- **P2-10 — the garden.** A real look-down Pokémon-GO view: a sky band across the top ~25% of
+  the frame with a visible sun, green grass below, the Labrador centred and grounded by a soft
+  contact shadow **on** the grass, and the **"BRA"** verb floating over the lower grass with
+  **no** opaque control band (`.screenshots/po2-garden-idle.png`). Replaces the old flat
+  blue void. Good.
+- **P2-4 — the learned bar fills and masters.** A thin meter in the top sky fills **green**
+  with each PERFECT (`po2-bar-1-t4000.png` ≈ 20% after one mark; `po2-bar-4-t16000.png` ≈ 60%
+  after three) and latches a **full gold** bar at mastery (`po2-mastery.png` — full gold bar,
+  dog caught mid-Sitt). PERFECT clearly nets forward. Good.
+- **P2-5 — leave and come back.** Filled the bar to ~60% green under autotap, then reloaded
+  the **plain** site on the same origin; the bar restored to ~60% green from the local save
+  (`po2-persist-reload.png`). Per-trick progress survives a reload (X-7 offline, `user://`
+  IndexedDB, no backend). Good.
+- **P2-7 — anti-mash freeze.** `?bra_force_lock=1` pins the BRA word visibly **dimmed**
+  (`po2-lock.png`) vs. the bright idle "BRA" (`po2-garden-idle.png`) — a clear static dim,
+  legible without motion (X-5). The fixed-350 ms re-arm behaviour is unit-tested. Good.
+- *Not yet pixel-verified this pass (for the eventual sign-off pass):* the P2-4
+  **erosion / confused-beat** path — a MISS/DEAD dropping the bar, the brief red setback wash,
+  and the dog's confused recoil. `?bra_autotap=1` only fires PERFECT, and the wash/wobble are
+  ~0.45 s flashes a strobe-sampled burst can miss; the mechanic is unit-tested, but a sign-off
+  pass should still catch the drop + wash + recoil in live pixels.
 
-#### Improvements (still open — owner-gated, not loop-buildable)
+#### Bugfixes
 
-- **Coat UV/tangent seam down the chest/belly (P1-1 / P1-9).** Re-confirmed live this pass on
-  my **own** apex/idle/post-tap captures: a clear vertical shading band runs down the
-  body-symmetry centerline of the chest/belly (visible in all three live frames, e.g.
-  `.screenshots/po-live-apex.png` and `.screenshots/po-live-idle.png`) plus symmetric flank
-  folds — subtle at native phone size but **unmistakable at 3× magnification** (my own fresh
-  apex chest crop this pass, `.screenshots/po-live-chest3x.png`: a hard vertical centerline
-  band plus symmetric curved flank folds), a real shading artifact, not real fur, and
-  **unchanged** from the prior capture (no regression, no improvement). (What the 2026-06-29
-  note called a stray "sliver" *is* this centerline band — the 039 spike confirmed it is
-  **not** stray geometry and **not** a transparency gap.) Root-caused to the **licensed
-  asset's mirrored-UV / missing-tangent layout**; it is **owner-gated** — needs a re-export
-  with baked tangents / a re-baked normal map (`.task-board/FLAGS.md`, 2026-06-30). Task 040's
-  in-engine mitigation was correctly found to be a deploy no-op and rerouted, so **there is no
-  new loop task here**. *Good looks like:* smooth opaque coat with no hard centerline band or
-  flank folds at any pose, confirmed by a magnified capture.
+- (none) — the build ran clean: idle → sit → mark → loop, mastery, and persistence all worked
+  with **zero** console errors across every run this pass.
 
-#### Sign-off is blocked only on owner/PO actions (no buildable Phase-1 code remains)
+#### Improvements (buildable now)
 
-With P1-4 fixed, the two readout/ring improvements verified, and the **live deployed site now
-confirmed serving the licensed Sitt build** (the 3rd blocker, cleared above), the visual core
-loop is fully there on the real shipped build. Phase 1 is **not** signed off only because two
-acceptance items remain that can be cleared solely off-loop:
+- **P2-8 — the dog has no life and the cadence is a fixed metronome.** Across a 45 s run the
+  dog never left dead-centre and trick offers came on a constant rhythm — one markable sit
+  roughly every ~6–7 s, the idle gap a fixed 1.2 s (`scripts/sit_loop.gd`
+  `DEFAULT_INTER_SIT_GAP`). *Why it falls short:* P2-8 wants a dog that **wanders** the bounded
+  grass patch (turning back at the edges, camera fixed), offers tricks on a **varying** gap so
+  there is no metronome to game, and sometimes **feints** (starts a sit then aborts — only a
+  completed Sitt has a markable apex). None of that is present today: the dog is stationary,
+  the gap is constant, and there are no feints. *Good looks like:* the dog roams and turns at
+  the patch edges, the gap between offers varies, and a feint/ambient moment opens no scoring
+  window — tapping it is a wrong-moment tap that erodes the bar (→ P2-4). (Task 048 is already
+  queued for variable cadence + feints; the wander rides the garden, P2-10.)
+- **P2-9 — no fading timing trainer.** With an empty bar (a brand-new trick) the player gets
+  no "now" teaching cue beyond the brief apex ring already at the button. *Why it falls short:*
+  P2-9 wants a bold approach cue — a ring that **shrinks onto the BRA button and lands exactly
+  at the apex** ("tap when it lands") — shown while the trick is new, **fading as the learned
+  bar fills** and **gone at mastery**, and riding the same `SitWindow` so it stays dark during
+  feints/ambient. Not present. *Good looks like:* a shrinking approach-ring that lands on the
+  apex for a new trick and visibly fades to nothing by the time the bar is full.
+- **Garden sun reads as a flat egg-shaped blob (minor, Phase-7-leaning).** In the SwiftShader
+  capture the sun is a hard-edged, slightly vertical-ellipse yellow disc with no halo
+  (`po2-garden-idle.png`); the explicit sphere renders in all GL paths, and the procedural
+  sky-sun glow may add a halo on real-device GL. *Why it's minor:* P2-10 explicitly defers
+  richer environment art to Phase 7, so this does **not** block Phase 2 — flagging it so the
+  Phase-7 pass tightens the sun to a crisp, haloed disc.
 
-1. **Spoken "Bra!" listen (P1-6).** Audio can't be heard in the headless harness. The
-   espeak stand-in is wired and gated (silence on MISS/DEAD, payoff only on a successful
-   mark), but the subjective "warm, Maren-style" delivery and "PERFECT brighter than OK"
-   need an **on-device listen**, and the warm **human** Maren voice stays **owner-gated**
-   (`.task-board/FLAGS.md`).
-2. **Coat re-export (P1-1/P1-9)** — the seam above; owner-gated. (Still visible up close on
-   the live build — a faint vertical centerline band + symmetric flank folds — though subtle
-   at native phone size.)
+#### Changes / scope (owner-gated — the trick roster can't grow without it)
 
-The live site is now confirmed serving the licensed build, so that gate is no longer
-outstanding. When the owner supplies the warm human voice (and an on-device listen confirms
-the delivery + "PERFECT brighter than OK") and the coat re-export lands, a PO pass can sign
-Phase 1 off. Until then the build loop has **no remaining buildable Phase-1 task** — do not
-invent one, and do not start Phase 2.
+- **P2-1 / P2-2 / P2-3 need additional trick animation clips — owner-gated.** The whole point
+  of Phase 2 is *more tricks at the Sitt standard*, but the licensed Labrador ships only the
+  Sitt (+ idle + reaction) clips, so there is **no second trick** to select, perform, or
+  polish — the game boots straight into the single-Sitt garden with no selector. *Why it's
+  blocked:* a distinct, clean Ligg / Legg deg / Gi labb / Rull / Snurr animation is a
+  licensed-asset deliverable, and the loop must **not** fake a sit or reuse one generic pose
+  (CLAUDE.md). *What "good" needs:* the owner supplies the additional trick clips in the
+  licensed asset; then the selector (P2-1), each trick's own distinct apex animation (P2-2),
+  and its own Visual Review (P2-3) become buildable. Until then the only buildable Phase-2 work
+  is **P2-8** and **P2-9** above — do **not** build a one-entry selector or fake a second
+  trick. (Keep/raise the owner flag in `.task-board/FLAGS.md`.)
+
+**Sign-off status:** Phase 2 stays open. Build **P2-8** and **P2-9**; the trick-roster stories
+(P2-1/P2-2/P2-3) wait on owner-supplied animation clips. Do not sign Phase 2 off until all ten
+stories pass, each new trick clears its own Visual Review (P2-3), and a pass catches the P2-4
+erosion / confused-beat in live pixels.
 
 ---
 

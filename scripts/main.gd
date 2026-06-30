@@ -259,6 +259,10 @@ func _advance_loop(delta: float) -> void:
 			_begin_sit()
 		SitLoop.Intent.END_SIT:
 			_end_sit()
+		SitLoop.Intent.START_FEINT:
+			_begin_feint()  # play the dip; do NOT open _session/_window/_tell (P2-8)
+		SitLoop.Intent.END_FEINT:
+			_end_feint()     # stand back to the ambient idle
 
 ## Begin one sit: play it, open the scoring window over its markable span, and build the
 ## apex tell from that SAME window so the glow peaks exactly where a tap scores PERFECT
@@ -277,6 +281,19 @@ func _end_sit() -> void:
 	_window = null
 	_tell = null
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
+	_director.play_idle()
+
+## Begin a feint (048, P2-8): the dog visibly dips toward a sit and aborts. CRUCIALLY this
+## leaves _session/_window/_tell UNTOUCHED — no scoring window opens for a feint, so the apex
+## tell stays dark (P1-4 honest, the same path P2-9 will fade) and a tap during the dip flows
+## through the existing _on_bra_pressed → _session.tap() → DEAD → gentle erosion + confused
+## beat, with ZERO new downstream branches. Only the dog's animation differs from idle.
+func _begin_feint() -> void:
+	_director.play_feint()
+
+## End a feint (048, P2-8): the dip is over; stand back to the ambient idle so the loop comes
+## round to the next offer. The session was never opened, so there is nothing to close here.
+func _end_feint() -> void:
 	_director.play_idle()
 
 ## Garden backdrop (P2-10): a ProceduralSkyMaterial sky gradient with a clean readable sun
@@ -632,11 +649,12 @@ func _start_dog(dog: Node) -> void:
 	# one sit. On the CC0 dog (no Sitt) the loop simply parks in idle; no faked sit.
 	_loop = SitLoop.new()
 	if _director.has_sit():
-		# Sit-capable dog (licensed Labrador, 025): the loop sits every inter_sit_gap
-		# seconds; each sit's apex (the score's PERFECT instant) is the single source the
-		# tell is built from in _begin_sit. _process advances the sit clock.
-		print("[Bra!] dog can Sitt — looping a sit every %.1fs (real apex from the licensed Labrador)"
-			% _loop.inter_sit_gap)
+		# Sit-capable dog (licensed Labrador, 025): the loop offers a sit on a VARYING gap
+		# (P2-8, no metronome) and sometimes feints; each real sit's apex (the score's PERFECT
+		# instant) is the single source the tell is built from in _begin_sit. _process advances
+		# the sit clock.
+		print("[Bra!] dog can Sitt — varying the offer cadence %.1f–%.1fs, sometimes feinting (real apex from the licensed Labrador)"
+			% [SitLoop.MIN_INTER_SIT_GAP, SitLoop.MAX_INTER_SIT_GAP])
 	else:
 		# CC0 dev fallback: no sit, so the loop parks in idle and every BRA tap is DEAD
 		# (does nothing, no penalty — P1-5). The button still works; it lights up the

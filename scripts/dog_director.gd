@@ -50,6 +50,20 @@ func play_sit() -> void:
 	_ap.play(clips.sit_start)
 	_ap.queue(clips.sit_loop)
 
+## Begin a sit then ABORT it (048, P2-8 feint): play the real `Sitting_start` build-in and
+## fall STRAIGHT back to idle, WITHOUT queueing the seated loop — so the dip never reaches a
+## held apex. No scoring window opens for a feint (main keeps the session closed), so a tap
+## during it is DEAD → gentle erosion (P2-4). Honest reuse of the licensed build-in clip, no
+## new asset and no faked pose. A no-op on a dog that can't sit (the CC0 placeholder) — it has
+## no build-in to play, so it can never feint (never a faked dip; the 024b asset gate holds).
+func play_feint() -> void:
+	if _ap == null or not has_sit():
+		return
+	_set_loop(clips.sit_start, Animation.LOOP_NONE)  # the dip plays once, never loops a hold
+	_ap.play(clips.sit_start)
+	if clips.idle != "":
+		_ap.queue(clips.idle)  # stand straight back up — never reach the seated hold
+
 ## The scoring window for this dog's sit: apex = end of `Sitting_start` (single
 ## source of truth). Returns null when the dog can't sit.
 func sit_window() -> SitWindow:
