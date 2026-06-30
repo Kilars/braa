@@ -137,3 +137,42 @@ Per `.claude/skills/tdd/SKILL.md` — red first. Assert through the public surfa
   network — works offline. (Note in the task results.)
 - [ ] **Placeholder check** clean on the diff.
 - [ ] `nix develop -c bash verify.sh` green (import · boot · test · export).
+
+## Results (done 2026-07-01)
+
+Built exactly to the spec — pure save/load split from disk I/O, wired into `main.gd`'s existing
+progress path. TDD red→green: the three new test files parse-failed red (unknown `TrickStore`
+class / `to_dict`/`restore` methods on typed vars), then went green after implementation.
+
+- **`scripts/trick_store.gd`** (new, `class_name TrickStore extends RefCounted`): static pure
+  `encode`/`decode` codec + instance `save`/`load` to `user://braa_save.json`. `SAVE_PATH`,
+  `SCHEMA_VERSION` named constants. Corrupt / empty / non-dictionary / wrong-version / missing
+  all degrade to `{}` — clean zero state, never a crash.
+- **`scripts/trick_progress.gd`**: added `to_dict()` / `restore()` (the model owns its shape so
+  the store stays dumb about the mastery latch + floor). `restore` clamps `value` into
+  `[FLOOR, MASTERY]` and re-latches `mastered`, so the safe checkpoint survives a reload.
+- **`scripts/main.gd`**: `_store := TrickStore.new()` + named `TRICK_ID_SITT`; `_load_progress()`
+  runs early in `_ready` (BEFORE `_setup_learned_bar`, so a returning player's filled/mastered
+  bar shows immediately); `_save_progress()` appended to `_apply_progress` (persists after every
+  change). Keyed per trick from day one — the P2-1 selector drops more tricks into the same map.
+- **Tests:** `tests/test_trick_store.gd` (codec round-trip, corrupt/empty/missing/wrong-version
+  → clean zero, unknown-id ignored, real `user://` disk round-trip, named constants),
+  `tests/test_trick_store_wiring.gd` (fresh-boot-empty; a real BRA tap persists and a fresh boot
+  restores into both `_progress` AND the visible `LearnedBar.value`; mastery checkpoint survives
+  a reload), and 3 added cases in `tests/test_trick_progress.gd` (to_dict/restore round-trip,
+  mastery re-latch, clamp/default garbage). Persistence tests are **hermetic** — they clear the
+  shared `user://braa_save.json` before AND after, leaving `user://` clean for the boot/export
+  legs and every scene-mount test (no cross-test pollution).
+- **X-7 honored:** save is local (`user://`, IndexedDB-backed on web) — no backend, no account,
+  no network; fully offline. Pause/resume already needed no forcing timer; the resumed state now
+  carries the saved progress. (A dedicated pause-screen UI stays later/secondary, not built —
+  noted per spec.)
+- **Gotcha for the loop:** a new `class_name` global isn't registered until an **import pass**;
+  running `test_runner.gd` alone left `TrickStore` unknown → `main.gd` parse-failed → a cascade of
+  ~28 false scene-mount failures. `nix develop -c godot --headless --import` (the verify gate's
+  first leg) registers it; after that the suite is green. So trust the full `verify.sh`, not a
+  bare test-runner invocation, when a new `class_name` lands.
+
+**Acceptance:** all criteria met. `nix develop -c bash verify.sh` → `✓ verify gate green`
+(import · boot · test · export); 169 tests, 0 failures. Placeholder check clean (the lone
+"later" hit is a forward-reference design comment mirroring the existing 045 prose, not a stub).

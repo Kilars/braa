@@ -111,6 +111,14 @@ var _force_lock := false
 var _progress := TrickProgress.new()
 var _learned_bar: LearnedBar
 
+## Per-trick learned-progress persistence (049, P2-5 "leave and come back" / X-7 offline). The
+## save store loads on boot into _progress (so a returning player sees their filled / mastered
+## bar immediately) and is written after every progress change. Keyed per trick from day one
+## by the named id below — today exactly one trick, Sitt; the selector (P2-1) drops more into
+## the same map later. Local user:// (IndexedDB on web): no backend, no account, no network.
+var _store := TrickStore.new()
+const TRICK_ID_SITT := "sitt"
+
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
 ## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
@@ -121,6 +129,7 @@ var _confused_age := -1.0
 
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
+	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_setup_environment()
 	_setup_light()
 	var dog := _load_dog()
@@ -802,6 +811,22 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		_play_mastery_beat()
 	elif not SitWindow.is_successful(tier):
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
+	_save_progress()  # persist after every change so the bar survives a reload (049/P2-5)
+
+## Load saved per-trick progress on boot (049/P2-5). Restores the current trick's saved entry
+## into _progress so _setup_learned_bar shows the returning player's filled / mastered bar
+## immediately. First run (or a corrupt / wrong-version save) restores nothing → clean zero
+## (TrickStore degrades to {}). An unknown trick id in the save is simply never looked up.
+func _load_progress() -> void:
+	var saved := _store.load()
+	var entry: Variant = saved.get(TRICK_ID_SITT, {})
+	if typeof(entry) == TYPE_DICTIONARY:
+		_progress.restore(entry)
+
+## Persist the current trick's progress (049/P2-5). One JSON map keyed per trick (today just
+## Sitt) to user:// — IndexedDB on web, no backend / account / network (X-7 offline).
+func _save_progress() -> void:
+	_store.save({TRICK_ID_SITT: _progress.to_dict()})
 
 ## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
 ## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog

@@ -53,3 +53,17 @@ func apply(tier: int) -> float:
 ## pre-tap value was below MASTERY means this tap is the one that crossed.
 func just_mastered(applied_delta: float) -> bool:
 	return mastered and applied_delta > 0.0 and (value - applied_delta) < MASTERY
+
+## Persistence (049, P2-5): the model owns its own serializable shape so the save store
+## (TrickStore) stays dumb about the rules (mastery latch, floor). to_dict() + restore() are
+## a pair — restore(to_dict()) is the identity.
+func to_dict() -> Dictionary:
+	return {"value": value, "mastered": mastered}
+
+## Restore from a saved entry (049, P2-5). Clamps value into [FLOOR, MASTERY] and re-latches
+## mastery so a returning player's SAFE CHECKPOINT survives a reload: once `mastered` is set,
+## apply()'s floor keeps re-practice from dropping below MASTERY. Missing / out-of-range /
+## garbage keys default to a clean clamped zero so a partial save never crashes.
+func restore(d: Dictionary) -> void:
+	value = clampf(float(d.get("value", 0.0)), FLOOR, MASTERY)
+	mastered = bool(d.get("mastered", false))

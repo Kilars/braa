@@ -108,3 +108,36 @@ func test_value_stays_in_unit_range() -> void:
 	for t in seq:
 		p.apply(t)
 		assert_true(p.value >= 0.0 and p.value <= 1.0, "value always within [0, 1]")
+
+# --- Persistence shape (049, P2-5): the model owns its own (de)serialization so the store
+# stays dumb about the rules (mastery latch, floor). to_dict()/restore() round-trip it. ---
+
+func test_to_dict_restore_round_trips_value() -> void:
+	var p := TrickProgress.new()
+	p.apply(SitWindow.Tier.PERFECT)  # value ~0.20
+	var d := p.to_dict()
+	var q := TrickProgress.new()
+	q.restore(d)
+	assert_eq(q.value, p.value, "restore() rebuilds the same learned value")
+	assert_eq(q.mastered, p.mastered, "restore() rebuilds the mastered flag")
+
+func test_restore_relatches_mastery_safe_checkpoint() -> void:
+	# A saved {value:1.0, mastered:true} must restore the SAFE CHECKPOINT: re-practice still
+	# can't drop a mastered trick below MASTERY (the apply() floor logic keys off `mastered`).
+	var p := TrickProgress.new()
+	p.restore({"value": 1.0, "mastered": true})
+	assert_eq(p.value, 1.0, "a saved full trick restores full")
+	assert_true(p.mastered, "a saved mastered flag re-latches on restore")
+	p.apply(SitWindow.Tier.MISS)
+	assert_eq(p.value, 1.0, "after restore, mastery still floors re-practice at MASTERY (safe checkpoint survives reload)")
+
+func test_restore_clamps_and_defaults_garbage() -> void:
+	# A partial / out-of-range / missing-key save degrades to a clean clamped state, never a crash.
+	var p := TrickProgress.new()
+	p.restore({"value": 5.0})  # out of range, no mastered key
+	assert_eq(p.value, 1.0, "an over-range saved value clamps to MASTERY")
+	assert_false(p.mastered, "a missing mastered key defaults to false")
+	var q := TrickProgress.new()
+	q.restore({})  # empty entry
+	assert_eq(q.value, 0.0, "an empty saved entry restores a clean zero")
+	assert_false(q.mastered, "an empty saved entry is not mastered")
