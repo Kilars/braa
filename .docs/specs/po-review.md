@@ -22,35 +22,38 @@ _(none yet — current phase is Phase 1)_
 
 ### PO Review — 2026-06-30
 
-Independent re-verification pass on my **own** fresh captures. Drove the **LIVE deployed
-Pages site itself** (https://kilars.github.io/braa/) at 390×844 in headless Chromium
-(SwiftShader == the deployed GL Compatibility renderer) and re-ran every Phase-1 acceptance
-check on the running build myself — boot log, a no-seam apex-tell burst, **real BRA taps**
-at the button centre, and idle/apex/post-tap frames. The live boot log still reports the
-licensed build — `dog loaded: res://assets/models/dog_licensed.glb (1 coat surface(s)
-forced opaque)` and `dog can Sitt — looping a sit every 1.2s (real apex from the licensed
-Labrador)` — and the full loop runs there: idle → build → clear seated apex → apex tell →
-mark → loop. **Every claim from the prior pass still holds** on my own fresh capture;
-nothing newly broke and nothing was newly fixed to prune. Phase 1 is **not** signed off:
-the only remaining gaps are owner-gated — the spoken-voice on-device listen and the coat
-re-export. Do not advance to Phase 2.
+Independent re-verification pass on my **own** fresh captures (this pass: ~09:55).
+Drove the **LIVE deployed Pages site itself** (https://kilars.github.io/braa/) at 390×844
+in headless Chromium (SwiftShader == the deployed GL Compatibility renderer) and re-ran
+every Phase-1 acceptance check on the running build myself — boot log, a no-seam apex-tell
+burst, **real BRA taps** at the button centre, and idle/apex/post-tap frames. The live boot
+log still reports the licensed build — `dog loaded: res://assets/models/dog_licensed.glb
+(1 coat surface(s) forced opaque)` and `dog can Sitt — looping a sit every 1.2s (real apex
+from the licensed Labrador)` — and the full loop runs there: idle → build → clear seated
+apex → apex tell → mark → loop. **Every claim from the prior pass still holds** on my own
+fresh capture; nothing newly broke and nothing was newly fixed to prune. Phase 1 is **not**
+signed off: the only remaining gaps are owner-gated — the spoken-voice on-device listen and
+the coat re-export. Do not advance to Phase 2.
 
 **The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 90-frame burst
 across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
-at the seated apex — **max 3372 gold px, gold on 7/90 frames** (~80 ms sampling; a brief
-tell repeating each ~1.2 s cycle), and **dark in idle** (per-frame: long runs of 0, then
-clean spikes up to 3372 at successive apexes, min 0).
-The seated apex frame reads cleanly: clear centered Labrador, gold ring framing the marker,
-"BRA" fully legible inside it, paws grounded by a soft contact shadow
-(`.screenshots/po-live-apex.png`); the darkest frame is a plain **standing** idle (front legs
+at the seated apex — **gold on 1/90 frames this run, max 251 gold px, min 0** (per-frame:
+long runs of 0, then a single clean spike). The lower frame-count vs. an earlier same-day
+burst (which caught 3372 px on 7/90) is a **strobe-sampling artifact, not a dimmer tell**:
+the tell is a brief flash repeating each ~1.2 s cycle and the harness samples at ~80 ms, so
+how many frames land on it (and at what point in its fade) is phase-luck. The dedicated apex
+frame — the **brightest of the 90** — shows the **full** warm-gold ring framing the marker
+with "BRA" fully legible inside it, a clear centered Labrador, paws grounded by a soft
+contact shadow (`.screenshots/po-live-apex.png`); a continuous human eye reads the ring with
+none of this strobe loss. The darkest frame is a plain **standing** idle (front legs
 extended, head up/forward) with the button band dark and no ring
 (`.screenshots/po-live-idle.png`). This is the honest live "now" cue, not a forced seam.
 
 **What holds up (re-verified live this pass on my own captures, keep it):**
 - **The BRA tap really scores and pays off (P1-5 / P1-6).** Real Playwright pointer clicks
   on the live canvas at the BRA centre (195,670 at 390×844), no seam: a blind 170 ms cadence
-  across sit cycles **landed 6 successful marks and fired the dog reaction**
-  (`window.__bra_reaction_n` climbed 0 → 6), and the post-tap frame shows the dog mid-reaction
+  across sit cycles **landed 7 successful marks and fired the dog reaction**
+  (`window.__bra_reaction_n` climbed 0 → 7), and the post-tap frame shows the dog mid-reaction
   — perked up, leaning forward, open happy mouth (`.screenshots/po-live-aftertap.png`). Blind
   taps that miss the window simply do nothing — no false payoff. **Harness note, not a game
   defect:** the active hit area is the ring/word centre (~y670 at 390×844), not the button
