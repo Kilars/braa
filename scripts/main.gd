@@ -49,6 +49,20 @@ var _window: SitWindow
 var _tell: ApexTell
 var _tell_marker: ApexTellMarker
 
+## The approach-cue trainer ring (058, P2-9): shrinks onto the BRA button and lands at
+## the apex, fading as the learned bar fills and gone at mastery. Parallel to the tell:
+## built only when a real sit opens (never during feints), null on the CC0 dog.
+var _trainer: TrainerRing
+var _trainer_marker: TrainerRingMarker
+
+## Visual-review seam (058/P2-9): set by _query_force_trainer() from the web URL
+## `?bra_force_trainer=1`. When on, the ring is pinned to a mid-approach radius at full
+## teach every frame so a SINGLE screenshot deterministically proves the approach ring
+## renders (the live ring sweeps in ~0.2s per sit — too brief for a non-deterministic
+## burst to reliably catch, the same reason 030 added ?bra_force_tell=1). Web-only and
+## off by default, so desktop, headless, and normal web play are untouched.
+var _force_trainer := false
+
 ## The honest timing readout (024g, P1-7): flashes PERFECT / OK / MISS on each tap and
 ## fades. Driven from _on_bra_pressed (the tier) + _process (the fade). A DEAD tap shows
 ## nothing — so on the CC0 dog (every tap DEAD) it stays blank, matching the silent payoff.
@@ -161,10 +175,11 @@ func _ready() -> void:
 		_fallback_camera()
 	_setup_bra_button()
 	_setup_payoff()
-	_force_tell = _query_force_tell()  # deterministic apex-tell pixel proof (030, web-only seam)
-	_force_tier = _query_force_tier()  # deterministic readout-contrast pixel proof (033, web-only)
-	_autotap = _query_autotap()        # deterministic reaction-capture mark (034, web-only)
-	_force_lock = _query_force_lock()  # deterministic anti-mash lock pixel proof (046, web-only)
+	_force_tell = _query_force_tell()        # deterministic apex-tell pixel proof (030, web-only seam)
+	_force_tier = _query_force_tier()        # deterministic readout-contrast pixel proof (033, web-only)
+	_autotap = _query_autotap()              # deterministic reaction-capture mark (034, web-only)
+	_force_lock = _query_force_lock()        # deterministic anti-mash lock pixel proof (046, web-only)
+	_force_trainer = _query_force_trainer()  # deterministic approach-ring pixel proof (058, web-only)
 	_notify_web_ready()
 
 ## Visual-review seam (030/P1-4): true only when the live web page URL carries
@@ -218,6 +233,18 @@ func _query_force_lock() -> bool:
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_lock=1")
 
+## Visual-review seam (058/P2-9): true only when the live web URL carries `?bra_force_trainer=1`.
+## Pins the approach ring to a mid-approach radius at full opacity every frame so a SINGLE
+## screenshot deterministically proves the ring renders (the live ring sweeps in ~0.2s per sit
+## cycle — too brief for a non-deterministic burst to reliably catch, the same problem 030
+## solved for the apex tell). Web-only (off desktop/headless/normal play); reads a STRING
+## sentinel, never a bare bool, to dodge the Web-export null-Variant marshalling gotcha (036).
+func _query_force_trainer() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_trainer=1")
+
 ## Resolve prefers-reduced-motion (the test seam wins, else the live query) into the
 ## single motion-scale the tell is built from (P1-8). Called first in _ready so the
 ## damping is in place before any cue is constructed.
@@ -257,6 +284,17 @@ func _process(delta: float) -> void:
 			_tell_marker.set_intensity(_tell.intensity(_session.elapsed()))
 		else:
 			_tell_marker.set_intensity(0.0)
+	if _trainer_marker != null:
+		if _force_trainer:
+			# Pin to mid-approach radius at full opacity for deterministic screenshot (058).
+			_trainer_marker.set_radius_scale(0.5)
+			_trainer_marker.set_opacity(1.0)
+		elif _trainer != null and _session.is_open():
+			var el := _session.elapsed()
+			_trainer_marker.set_radius_scale(_trainer.radius_scale(el))
+			_trainer_marker.set_opacity(_trainer.opacity(el))
+		else:
+			_trainer_marker.set_opacity(0.0)
 	if _readout != null:
 		if _force_tier >= 0:
 			_readout.display(_force_tier as SitWindow.Tier)  # pin tier for capture (033) — web-only
@@ -292,6 +330,9 @@ func _begin_sit() -> void:
 	_window = _director.sit_window()
 	_session.open(_window)
 	_tell = ApexTell.from_window(_window, _motion_scale)
+	# Build the approach-cue ring from the SAME window (single source of truth) — its teach
+	# strength reflects the CURRENT learned level so each sit's ring fades with the bar (058).
+	_trainer = TrainerRing.from_window(_window, TrainerRing.teach_strength(_progress.value, _progress.mastered))
 
 ## End the sit: close the session (taps DEAD again, no penalty between sits — P1-5), drop
 ## the tell so the marker goes dark, and stand the dog back down to the ambient idle so the
@@ -300,6 +341,7 @@ func _end_sit() -> void:
 	_session.close()
 	_window = null
 	_tell = null
+	_trainer = null  # drop the approach ring — marker goes dark next _process frame (058)
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
 	_director.play_idle()
 	_resume_wander()  # come back round to roaming the patch (050)
@@ -734,6 +776,7 @@ func _setup_bra_button() -> void:
 	bra.pressed.connect(_on_bra_pressed)
 	_bra_button = bra  # _process reflects the anti-mash lock onto it (046/P2-7)
 	_setup_tell_marker(ui)
+	_setup_trainer_marker(ui)
 	_setup_readout(ui)
 	_setup_learned_bar(ui)
 
@@ -756,6 +799,28 @@ func _setup_tell_marker(ui: CanvasLayer) -> void:
 	marker.offset_bottom = TELL_OFFSET_BOTTOM
 	ui.add_child(marker)
 	_tell_marker = marker
+
+## The approach-cue trainer ring (058/P2-9), centred over the BRA button — same anchor
+## math as the tell marker so both rings are concentric on the verb. Added AFTER the tell
+## marker so it composites on top (later sibling = drawn last). Mouse-transparent so it
+## passes every touch straight through to the button (P1-5, via TrainerRingMarker._init).
+## Starts dark; _process drives it from the trainer ring during a real sit only.
+func _setup_trainer_marker(ui: CanvasLayer) -> void:
+	var marker := TrainerRingMarker.new()
+	marker.name = "TrainerRingMarker"
+	# Same 320×320 square centred on the BRA button band as the tell marker (TELL_HALF_WIDTH /
+	# TELL_OFFSET_TOP / TELL_OFFSET_BOTTOM) — the two rings are concentric; visual review
+	# decides whether the tell or trainer reads better on top.
+	marker.anchor_left = 0.5
+	marker.anchor_right = 0.5
+	marker.anchor_top = 1.0
+	marker.anchor_bottom = 1.0
+	marker.offset_left = -TELL_HALF_WIDTH
+	marker.offset_right = TELL_HALF_WIDTH
+	marker.offset_top = TELL_OFFSET_TOP
+	marker.offset_bottom = TELL_OFFSET_BOTTOM
+	ui.add_child(marker)
+	_trainer_marker = marker
 
 ## The timing readout (024g/P1-4... P1-7): a big centred word that flashes the scored
 ## tier in the upper third — well clear of the dog's centre and the bottom BRA band —

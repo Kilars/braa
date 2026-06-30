@@ -6,6 +6,44 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 2 OPEN; all buildable stories DONE (058/P2-9 landed) — awaiting PO sign-off — 2026-07-01
+
+Phase 1 **signed off**; **Phase 2 (`phase2.md`) is the current phase** per `po-review.md`'s Phase
+Sign-off gate. This iteration ran `scan-project` on an **empty backlog**, found the one remaining
+non-owner-gated story (**P2-9**, the fading timing trainer), emitted it as **058**, and **built it**
+in the same iteration. With 048 + 050 (P2-8) and 049 (P2-5) already landed, **every non-owner-gated
+Phase-2 story is now built**: P2-4 (045), P2-5 (049), P2-7 (046), P2-8 (048+050), P2-9 (058), P2-10
+(047). The board is now empty with **no un-busted open flags** → the next iteration is a true **idle
+hand-off to the father / PO sign-off pass**.
+
+- **058 — FEATURE — A timing trainer that fades (P2-9). DONE 2026-07-01.** A bold cyan approach ring
+  that **shrinks onto the BRA button and lands exactly at the apex**, shown while a trick is new,
+  **fading as the learned bar fills** and **gone at mastery**, riding the **same `SitWindow`** so it
+  stays dark during feints/ambient. Hybrid like P1-4: pure **`TrainerRing`** envelope (TDD —
+  lands-at-apex + fade-with-progress + dark-off-window, single-source-of-truth `from_window`) +
+  **`TrainerRingMarker`** dumb renderer (cyan, distinct from the gold tell) + `main.gd` glue
+  (`_begin_sit` builds it from current learned level; feint never builds it → ring dark;
+  `?bra_force_trainer=1` capture seam, web-marshal-safe STRING sentinel). **218 tests / 0 failures**
+  (+28 new, confirmed running); verify gate green; placeholder-clean. **Local render proof PASS**
+  (`.screenshots/058-trainer-ring.png`, 4937 cyan px) — the cyan ring composites over the BRA button
+  on the real Web GL path (guards the 030/036 tests-green/pixels-blank failure). The live behavioral
+  sweep (shrink/fade/feint-dark) is unit-locked and rides the PO deployed sign-off (licensed
+  sit-capable dog is CI-only locally).
+
+**What now awaits the PO sign-off pass (no buildable construction left):** the live-pixel review of
+P2-9 on the deployed build **and** the P2-4 erosion / confused-beat live-pixel catch the PO flagged
+for the eventual sign-off — both on the deployed licensed build, both PO/father actions. Per the
+phasing rule, nothing past Phase 2 starts until Phase 2 is signed off in `po-review.md`.
+
+**Still gated (NOT buildable):** P2-1 / **P2-2** / P2-3 (trick selector + distinct trick
+animations + per-trick polish) stay **owner-gated** — the licensed Labrador pack ships only
+`Sitting_*` (no Ligg / Legg deg clip), so there is no second trick to select, perform, or polish. A
+one-entry selector or a faked second trick is forbidden (CLAUDE.md); entry point is a `SPIKE-` to
+inventory the pack, then an owner/asset flag. The warm **human** Maren "Bra!" recording remains the
+only other open owner gate (narrowed flag; warm Piper neural stand-in ships under the cue id, 044).
+
+---
+
 ## Status — Phase 2 OPEN; 045/046/047 done, backlog replenished with 048/049 (2026-06-30)
 
 Phase 1 is **signed off** (section below); **Phase 2 (`phase2.md`) is the current phase** per
