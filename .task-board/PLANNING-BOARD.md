@@ -6,6 +6,22 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 1 SIGNED OFF by the owner; Phase 2 is now current (2026-06-30)
+
+**Phase 1 is complete as best as possible after human review.** The owner (larssski) played the
+live deployed build at 390×844 and signed P1-10 off in `po-review.md` (Phase Sign-off list). All
+P1-0…P1-9 stories pass, logic is test-first, verify is green. The two remaining gaps are
+**owner-gated polish, accepted as honest stand-ins**, not core-loop defects, and stay tracked as
+open flags for the owner to close on their own schedule:
+
+- the warm **human** Maren "Bra!" recording (the genuinely-spoken espeak stand-in ships under the
+  same cue id — drop-in, no code change), and
+- the coat **UV/tangent re-export** of `dog_licensed.glb` (a hairline shading seam; in-engine
+  mitigation proven a no-op, so the source re-export is the only real fix).
+
+Neither blocks the mark. **Phase 2 (`phase2.md`) is now the current phase** — the loop may begin
+planning/building it under the same Phase-1 quality bar.
+
 ## Status — Phase-1 PO re-play REOPENED work; loop building the remaining improvements (2026-06-30)
 
 The 2026-06-29 "buildable work COMPLETE / construction clearance" framing was **premature**:

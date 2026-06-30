@@ -7,7 +7,15 @@
 > advanced just because its code compiles and tests are green; it advances only when it
 > appears below. (List empty ⇒ current phase is Phase 1.)
 
-_(none yet — current phase is Phase 1)_
+- **Phase 1 — SIGNED OFF 2026-06-30 (owner, larssski).** Played the live deployed build
+  (https://kilars.github.io/braa/) at 390×844: licensed Labrador loads (no primitive flash),
+  centered + shadow-grounded, idle → sit → clear seated apex → honest apex tell → BRA tap →
+  joyful reaction → loop, all P1 stories (P1-0…P1-9) pass, logic is test-first, verify green.
+  Accepted **as complete as best as possible**: the two residual gaps are owner-gated polish,
+  not core-loop defects, and ship with honest stand-ins — the genuinely-spoken espeak "Bra!"
+  (warm human Maren recording drops in under the same cue id, no code change) and the coat
+  UV/tangent seam (a licensed-asset re-export, tracked as an open flag). Both remain open
+  flags for the owner to close later; neither blocks the core mark. **Phase 2 is now current.**
 
 ---
 
