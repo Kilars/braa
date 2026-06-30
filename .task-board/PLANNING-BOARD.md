@@ -6,15 +6,20 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase 2 OPEN; 045/046/047 done, backlog empty (2026-06-30)
+## Status — Phase 2 OPEN; 045/046/047 done, backlog replenished with 048/049 (2026-06-30)
 
 Phase 1 is **signed off** (section below); **Phase 2 (`phase2.md`) is the current phase** per
-`po-review.md`'s Phase Sign-off gate. This iteration (1) archived the six signed-off Phase-1
-tasks (024, 025 from `in-progress/`; 024b/d/e/f from `on-hold/`) to `done/`, then (2) ran
-`scan-project` against `phase2.md` + the Phase-2 Forward PO Directives to replenish the empty
-backlog. **Everything below the Phase-1 sign-off section is historical Phase-1 working notes —
-superseded by this section and the live `.task-board/` dirs (in-progress + on-hold are now
-empty).**
+`po-review.md`'s Phase Sign-off gate. This iteration ran `scan-project` against `phase2.md` + the
+Phase-2 Forward PO Directives on an **empty backlog** (045/046/047 all done; the one Open flag is
+already `busted`, so no `BUST-` task). The construction-audit/idle hand-off does **not** apply —
+Phase 2 has clear remaining buildable gaps, so the scan replenished the backlog with the next two
+well-scoped, **non-visual, TDD-able** slices (the visual/rendering domain is **saturated** — ~7 of
+the last ~15 done tasks — so pure-visual work is deprioritized): **048** (P2-8 logic core —
+variable cadence + feints, the keystone, now unblocked by 047's garden) and **049** (P2-5
+persistence, completing the 045 learned-bar story). Board-only this iteration (the proven
+"056" rhythm: one scan fills the backlog, each task then builds in its own focused iteration).
+**Everything below the Phase-1 sign-off section is historical Phase-1 working notes — superseded by
+this section and the live `.task-board/` dirs (in-progress + on-hold are empty).**
 
 **Phase-2 progress:**
 
@@ -54,18 +59,34 @@ empty).**
 
 **Phase-2 backlog (priority order — all buildable, none owner-gated):**
 
-- *(empty — 045 / 046 / 047 all done this cycle. Next replenish via `scan-project` against
-  `phase2.md`. Candidate next: P2-5 IndexedDB persistence, P2-8 wander + feints on the 047 ground,
-  P2-9 fading trainer.)*
+- **048 — FEATURE — Variable cadence + feints (P2-8 logic core).** The keystone of "read the dog,
+  not a beat," now unblocked by 047's garden ground. Pure TDD extension of `SitLoop`: each idle gap
+  drawn from `[MIN, MAX]` (injectable seeded RNG → deterministic tests) instead of the fixed 1.2 s
+  metronome, plus a **feint** intent — the dog dips toward a sit then aborts, opening **no** scoring
+  window, so a tap during it is DEAD → the gentle erosion 045 already wired ("a feint/ambient
+  moment, P2-8"). `DogDirector.play_feint()` reuses the real `Sitting_start` clip (no stand-in pose);
+  main keeps `_session`/`_window`/`_tell` closed through a feint (apex tell stays dark — the path
+  P2-9 will fade). **Scope = the two logic bullets; the bounded-wander locomotion (3rd P2-8 bullet)
+  is a deferred sibling render task.**
+- **049 — FEATURE — Persist per-trick learned progress (P2-5 / X-7).** Completes the 045 story: a
+  bar you fill toward mastery must survive a reload. New `TrickStore` (pure `encode`/`decode` split
+  from `user://` disk I/O so the round-trip is unit-testable headless; corrupt/empty/missing/wrong-
+  version → clean zero state, no crash) + `TrickProgress.to_dict()`/`restore()` (mastery's safe
+  checkpoint re-latches on load) + main load-on-boot / save-on-change. Local only (`user://` /
+  IndexedDB on web), no backend — satisfies X-7. Independent of 048.
 
 **Deferred / gated this round (NOT emitted):**
 - **P2-2 (distinct trick animations — Ligg, Legg deg, …) is ASSET-GATED.** The licensed Labrador
   pack ships only `Sitting_*` — no lie-down clip (see the `tests/test_dog_clips.gd` clip list).
   Entry point when wanted: a `SPIKE-` to inventory the real pack's clips, then likely an
   owner/asset flag for the missing trick animations. Not a build task today.
-- **P2-5 (IndexedDB persistence)** follows 045 (needs a learned value to persist). **P2-8
-  (wander + feints)** rides 047 (ground) + 045 (feint taps erode). **P2-9 (fading trainer)** rides
-  045 + `SitWindow`. **P2-1 (selector)** waits for a 2nd real trick (i.e. P2-2 ungated).
+- **P2-8 wander locomotion** (the bounded-patch roam + turn-at-edges, 3rd P2-8 bullet) is 3D render
+  glue on the 047 ground — deferred to its own Visual-Review sibling task so 048 stays a clean
+  headless-testable logic slice (and the **visual domain is saturated** this window). Next round.
+- **P2-9 (fading trainer)** rides 045 + `SitWindow` **and** 048's feints ("dark during feints") — so
+  it follows 048. It is render-heavy (the approach ring) → defer past the saturation window too.
+- **P2-1 (selector)** waits for a 2nd real trick (i.e. P2-2 ungated) — a one-option selector is
+  premature.
 
 **Open owner gate (unchanged, non-blocking):** the warm **human** Maren "Bra!" recording —
 narrowed flag in `FLAGS.md`; the warm Piper neural stand-in ships under the cue id (044).
