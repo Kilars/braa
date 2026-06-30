@@ -37,9 +37,9 @@ re-export. Do not advance to Phase 2.
 
 **The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 90-frame burst
 across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
-at the seated apex — **max 3380 gold px, gold on 3/90 frames** (~80 ms sampling; a brief
+at the seated apex — **max 3372 gold px, gold on 7/90 frames** (~80 ms sampling; a brief
 tell repeating each ~1.2 s cycle), and **dark in idle** (per-frame: long runs of 0, then
-clean spikes 40 / 2601 / 3380 at successive apexes, min 0).
+clean spikes up to 3372 at successive apexes, min 0).
 The seated apex frame reads cleanly: clear centered Labrador, gold ring framing the marker,
 "BRA" fully legible inside it, paws grounded by a soft contact shadow
 (`.screenshots/po-live-apex.png`); the darkest frame is a plain **standing** idle (front legs
@@ -49,8 +49,8 @@ extended, head up/forward) with the button band dark and no ring
 **What holds up (re-verified live this pass on my own captures, keep it):**
 - **The BRA tap really scores and pays off (P1-5 / P1-6).** Real Playwright pointer clicks
   on the live canvas at the BRA centre (195,670 at 390×844), no seam: a blind 170 ms cadence
-  across sit cycles **landed 7 successful marks and fired the dog reaction**
-  (`window.__bra_reaction_n` climbed 0 → 7), and the post-tap frame shows the dog mid-reaction
+  across sit cycles **landed 6 successful marks and fired the dog reaction**
+  (`window.__bra_reaction_n` climbed 0 → 6), and the post-tap frame shows the dog mid-reaction
   — perked up, leaning forward, open happy mouth (`.screenshots/po-live-aftertap.png`). Blind
   taps that miss the window simply do nothing — no false payoff. **Harness note, not a game
   defect:** the active hit area is the ring/word centre (~y670 at 390×844), not the button
