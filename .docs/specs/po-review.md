@@ -22,14 +22,17 @@ _(none yet — current phase is Phase 1)_
 
 ### PO Review — 2026-06-30
 
-Re-drove the **real Godot Web/PWA build** — a local export carrying the **licensed
-Labrador** (`build/web`, rebuilt 01:29; the full sit loop runs live — the dog idles,
-builds into a clear seated apex, marks score, and it loops) — in headless Chromium at
-390×844. Captured a **no-seam** free-run apex burst, a `?bra_autotap=1` live PERFECT mark
-(reaction + readout), the forced-tier readout reference, a reduced-motion burst, and a
-magnified coat crop. **The carried-over P1-4 blocker is RESOLVED.** Phase 1 is **not**
-signed off this pass — the only gaps left are owner-gated (the spoken-voice listen + the
-coat re-export) plus a live-deployed-site visual check. Do not advance to Phase 2.
+Drove the **real Godot Web/PWA build** at 390×844 in headless Chromium — a local licensed
+export earlier, and **this pass the LIVE deployed Pages site itself** (https://kilars.github.io/braa/).
+The live site's own boot log confirms it now serves the licensed build —
+`dog loaded: res://assets/models/dog_licensed.glb (1 coat surface(s) forced opaque)` and
+`dog can Sitt — looping a sit every 1.2s (real apex from the licensed Labrador)` — and the
+full sit loop runs live there: the dog idles, builds into a clear seated apex, the apex
+tell fires, score marks, and it loops. **The carried-over P1-4 blocker is RESOLVED**, and
+the prior pass's third gap — a **live-deployed-site visual check** — is now **cleared**
+(see *What holds up*). Phase 1 is **not** signed off this pass: the only gaps left are
+owner-gated — the spoken-voice on-device listen and the coat re-export. Do not advance to
+Phase 2.
 
 **The blocker is gone (P1-4 — proven live, no seam):** a free-run 90-frame burst across
 several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring at the
@@ -56,6 +59,17 @@ now reads in actual play — timing is a readable skill again, not a blind guess
 - **The dog reads, the sit is legible, it stays centered, opaque coat, contact shadow, and
   the loop repeats with no console errors (P1-1/P1-2/P1-3/P1-9).** Clear Labrador silhouette,
   grounded by the shadow disc, no see-through panels, no primitive-blob flash.
+- **Live deployed Pages site serves the licensed Sitt build (P1-10 visual gate — was the 3rd
+  sign-off blocker, now CLEARED).** Driving the **live site itself** (not a local export) at
+  390×844, the boot log reports the licensed Labrador with a real Sitt looping every 1.2s; the
+  dog sits legibly, stays centered, and is grounded by the shadow disc every cycle (idle →
+  build → seated apex → loop), and the **apex tell fires live on the deployed build** — a
+  warm-gold ring framing "BRA" at the seated apex (live burst: **max 678 gold px, gold on
+  3/60 frames** sampled at 500 ms over 30 s, consistent with a brief ~0.2 s tell; dark in
+  idle). No console errors beyond benign GL `ReadPixels` perf notes, no T-pose / blob flash /
+  drift / clipping. The visual core of P1-1/2/3/4/5/9 holds on the actual live site — this is
+  the live-pixel confirmation the prior pass demanded, taken on the deployed build the P1-10
+  gate names.
 
 #### Improvements (still open — owner-gated, not loop-buildable)
 
@@ -73,24 +87,25 @@ now reads in actual play — timing is a readable skill again, not a blind guess
 
 #### Sign-off is blocked only on owner/PO actions (no buildable Phase-1 code remains)
 
-With P1-4 fixed and the two readout/ring improvements verified, the visual core loop is
-there. Phase 1 is **not** signed off only because three acceptance items can be cleared
-solely off-loop:
+With P1-4 fixed, the two readout/ring improvements verified, and the **live deployed site now
+confirmed serving the licensed Sitt build** (the 3rd blocker, cleared above), the visual core
+loop is fully there on the real shipped build. Phase 1 is **not** signed off only because two
+acceptance items remain that can be cleared solely off-loop:
 
 1. **Spoken "Bra!" listen (P1-6).** Audio can't be heard in the headless harness. The
    espeak stand-in is wired and gated (silence on MISS/DEAD, payoff only on a successful
    mark), but the subjective "warm, Maren-style" delivery and "PERFECT brighter than OK"
    need an **on-device listen**, and the warm **human** Maren voice stays **owner-gated**
    (`.task-board/FLAGS.md`).
-2. **Coat re-export (P1-1/P1-9)** — the seam above; owner-gated.
-3. **Live deployed-site visual check (P1-10).** This pass reviewed a **local** licensed
-   export; the deployed Pages site no-ops to the CC0 idle-only dog unless the encryption
-   secret + committed `.glb.enc` are in place (`deploy-licensed.yml`, ADR-0006). The P1-10
-   sign-off must be taken on the **live site actually serving the licensed Sitt build**.
+2. **Coat re-export (P1-1/P1-9)** — the seam above; owner-gated. (Still visible up close on
+   the live build — a faint vertical centerline band + symmetric flank arcs — though subtle
+   at native phone size.)
 
-When the owner supplies the human voice + coat re-export and confirms the live site serves
-the licensed build, a PO pass can sign Phase 1 off. Until then the build loop has **no
-remaining buildable Phase-1 task** — do not invent one, and do not start Phase 2.
+The live site is now confirmed serving the licensed build, so that gate is no longer
+outstanding. When the owner supplies the warm human voice (and an on-device listen confirms
+the delivery + "PERFECT brighter than OK") and the coat re-export lands, a PO pass can sign
+Phase 1 off. Until then the build loop has **no remaining buildable Phase-1 task** — do not
+invent one, and do not start Phase 2.
 
 ---
 
