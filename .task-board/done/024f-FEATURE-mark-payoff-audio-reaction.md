@@ -82,3 +82,6 @@ The real Maren voice is the owner-gated drop-in under the stable cue id. The aud
 review of "the reaction beat landing on the tap" is only observable once **025/ADR-0006**
 ships the sit-capable Labrador (real PERFECT/OK taps + a reaction clip); it belongs to
 the **P1-10 done-gate** (father review of the live Sitt). No fabricated audio/screenshot.
+
+---
+**RESOLVED — Phase 1 SIGNED OFF 2026-06-30 (owner, larssski).** All Phase-1 stories pass on the live deployed licensed build (`po-review.md` Phase Sign-off; PLANNING-BOARD.md). The 025 licensed-dog dependency that parked the 024* sub-tasks is shipped and live; sit / apex / honest tell / BRA scoring / joyful payoff all confirmed in live pixels. Closed with the Phase-1 sign-off. — iteration 056 (board hygiene)

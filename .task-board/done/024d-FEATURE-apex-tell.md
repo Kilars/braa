@@ -69,3 +69,6 @@ the live build (it can only ever show its dormant state there). The apex pulse i
 moment **025/ADR-0006** ships the sit-capable Labrador — identical gating to 024e's
 scoring taps, which shipped the same way. The one P1-4 criterion observable on CC0
 ("dark during idle") IS verified on the live build above.
+
+---
+**RESOLVED — Phase 1 SIGNED OFF 2026-06-30 (owner, larssski).** All Phase-1 stories pass on the live deployed licensed build (`po-review.md` Phase Sign-off; PLANNING-BOARD.md). The 025 licensed-dog dependency that parked the 024* sub-tasks is shipped and live; sit / apex / honest tell / BRA scoring / joyful payoff all confirmed in live pixels. Closed with the Phase-1 sign-off. — iteration 056 (board hygiene)

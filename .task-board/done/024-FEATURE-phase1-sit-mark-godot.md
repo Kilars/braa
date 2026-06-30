@@ -123,3 +123,6 @@ Review and is bug-free (phasing rule).
   TDD loop. Until then, exercise scenes headless via `--quit-after`.
 - Decompose into per-story cards (idle, sit+apex, tell, BRA+scoring, payoff, readout)
   when picked up — don't build it as one monolith.
+
+---
+**RESOLVED — Phase 1 SIGNED OFF 2026-06-30 (owner, larssski).** All Phase-1 stories pass on the live deployed licensed build (`po-review.md` Phase Sign-off; PLANNING-BOARD.md). The 025 licensed-dog dependency that parked the 024* sub-tasks is shipped and live; sit / apex / honest tell / BRA scoring / joyful payoff all confirmed in live pixels. Closed with the Phase-1 sign-off. — iteration 056 (board hygiene)

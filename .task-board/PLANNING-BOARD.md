@@ -6,6 +6,43 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 2 OPEN; backlog replenished (2026-06-30, iteration 056)
+
+Phase 1 is **signed off** (section below); **Phase 2 (`phase2.md`) is the current phase** per
+`po-review.md`'s Phase Sign-off gate. This iteration (1) archived the six signed-off Phase-1
+tasks (024, 025 from `in-progress/`; 024b/d/e/f from `on-hold/`) to `done/`, then (2) ran
+`scan-project` against `phase2.md` + the Phase-2 Forward PO Directives to replenish the empty
+backlog. **Everything below the Phase-1 sign-off section is historical Phase-1 working notes —
+superseded by this section and the live `.task-board/` dirs (in-progress + on-hold are now
+empty).**
+
+**Phase-2 backlog (priority order — all buildable, none owner-gated):**
+
+- **045 — FEATURE — Learned bar + mastery (P2-4).** *P0 for the phase — the spine.* Pure
+  `TrickProgress` model (TDD) + on-screen learned bar + erosion on bad taps + mastery safe
+  checkpoint + procedural confused/mastery beats. PERFECT fills > OK; MISS/DEAD erode; good play
+  always nets forward; floors at 0; 100% latches mastery. Keyed per trick (one trick — Sitt — for
+  now). The trick selector (P2-1), persistence (P2-5), and fading trainer (P2-9) all hang off it.
+- **046 — FEATURE — Anti-mash BRA freeze (P2-7).** Independent of 045. Pure `TapGate` (TDD): a
+  fixed ~350 ms lock after every tap; swallowed taps don't reset/extend it; the button visibly
+  locks then restores, legible under reduced motion. Also delivers the secondary P2-6.
+- **047 — FEATURE — The functional garden (P2-10).** Render / Visual Review. Look-down
+  Pokémon-GO view — sky + a visible sun, grass ground, horizon split; the dog stands on the
+  grass; BRA floats over the grass (no opaque band). Foundation for the wandering dog (P2-8). GL
+  Compatibility-only; no Phase-7 art polish smuggled in.
+
+**Deferred / gated this round (NOT emitted):**
+- **P2-2 (distinct trick animations — Ligg, Legg deg, …) is ASSET-GATED.** The licensed Labrador
+  pack ships only `Sitting_*` — no lie-down clip (see the `tests/test_dog_clips.gd` clip list).
+  Entry point when wanted: a `SPIKE-` to inventory the real pack's clips, then likely an
+  owner/asset flag for the missing trick animations. Not a build task today.
+- **P2-5 (IndexedDB persistence)** follows 045 (needs a learned value to persist). **P2-8
+  (wander + feints)** rides 047 (ground) + 045 (feint taps erode). **P2-9 (fading trainer)** rides
+  045 + `SitWindow`. **P2-1 (selector)** waits for a 2nd real trick (i.e. P2-2 ungated).
+
+**Open owner gate (unchanged, non-blocking):** the warm **human** Maren "Bra!" recording —
+narrowed flag in `FLAGS.md`; the warm Piper neural stand-in ships under the cue id (044).
+
 ## Status — Phase 1 SIGNED OFF by the owner; Phase 2 is now current (2026-06-30)
 
 **Phase 1 is complete as best as possible after human review.** The owner (larssski) played the

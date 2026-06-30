@@ -68,3 +68,6 @@ approach (and that the licensed glb may be injected via CI secret) with the owne
 
 - Unblocks **024b** (visible Sitt on deploy) and, by extension, the visible parts of
   024c–024g and the **P1-10 done-gate** (father visual review of the live Sitt).
+
+---
+**RESOLVED — Phase 1 SIGNED OFF 2026-06-30 (owner, larssski).** All Phase-1 stories pass on the live deployed licensed build (`po-review.md` Phase Sign-off; PLANNING-BOARD.md). The 025 licensed-dog dependency that parked the 024* sub-tasks is shipped and live; sit / apex / honest tell / BRA scoring / joyful payoff all confirmed in live pixels. Closed with the Phase-1 sign-off. — iteration 056 (board hygiene)

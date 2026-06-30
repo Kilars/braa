@@ -73,3 +73,6 @@ PERFECT/OK/MISS path can't be *shown on the live deploy* yet. It is fully
 muted-slate theme — a brighter, higher-contrast CTA would read more Pokémon-GO
 (fold into 024f). The dog-sits-high framing + missing contact shadow are the known
 P1-1 gaps from 024b.
+
+---
+**RESOLVED — Phase 1 SIGNED OFF 2026-06-30 (owner, larssski).** All Phase-1 stories pass on the live deployed licensed build (`po-review.md` Phase Sign-off; PLANNING-BOARD.md). The 025 licensed-dog dependency that parked the 024* sub-tasks is shipped and live; sit / apex / honest tell / BRA scoring / joyful payoff all confirmed in live pixels. Closed with the Phase-1 sign-off. — iteration 056 (board hygiene)
