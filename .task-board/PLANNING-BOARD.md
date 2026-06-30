@@ -16,13 +16,19 @@ backlog. **Everything below the Phase-1 sign-off section is historical Phase-1 w
 superseded by this section and the live `.task-board/` dirs (in-progress + on-hold are now
 empty).**
 
+**Phase-2 progress:**
+
+- **045 — FEATURE — Learned bar + mastery (P2-4). DONE 2026-06-30 (iteration 056).** The spine
+  of the phase. Pure `TrickProgress` (TDD: PERFECT +0.20 > OK +0.08; MISS −0.10 / DEAD −0.05
+  erode; net-forward; floors at 0; 100% latches mastery as a safe checkpoint) + `LearnedBar` UI
+  (green→gold, reads by length, red setback wash) + main wiring (mastery beat reuses the real
+  joyful clip; procedural confused recoil restored to rest, no drift). 142 tests green; verify
+  green. **Live-proven on the licensed build** (`.screenshots/045-learnbar-{00,04,12}.png`):
+  empty → ~45% green → full gold + reaction. Keyed per trick (Sitt only today). Erosion *feel* +
+  confused-beat live visibility ride the deployed-PO Visual Review (no local MISS/DEAD seam).
+
 **Phase-2 backlog (priority order — all buildable, none owner-gated):**
 
-- **045 — FEATURE — Learned bar + mastery (P2-4).** *P0 for the phase — the spine.* Pure
-  `TrickProgress` model (TDD) + on-screen learned bar + erosion on bad taps + mastery safe
-  checkpoint + procedural confused/mastery beats. PERFECT fills > OK; MISS/DEAD erode; good play
-  always nets forward; floors at 0; 100% latches mastery. Keyed per trick (one trick — Sitt — for
-  now). The trick selector (P2-1), persistence (P2-5), and fading trainer (P2-9) all hang off it.
 - **046 — FEATURE — Anti-mash BRA freeze (P2-7).** Independent of 045. Pure `TapGate` (TDD): a
   fixed ~350 ms lock after every tap; swallowed taps don't reset/extend it; the button visibly
   locks then restores, legible under reduced motion. Also delivers the secondary P2-6.

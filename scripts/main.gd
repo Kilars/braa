@@ -87,6 +87,21 @@ var _force_tier := -1
 var _autotap := false
 var _autotapped := false  ## one auto-mark per sit; reset when the sit ends
 
+## Learned-progress model + on-screen bar (045, P2-4 "feel the dog learning"). Sitt is the
+## only trick today (the licensed pack ships no other trick clip), so main holds a single
+## TrickProgress; the selector (P2-1) and persistence (P2-5) make it per-trick later. A
+## well-timed BRA fills the bar; a mistimed / wrong-moment tap erodes it.
+var _progress := TrickProgress.new()
+var _learned_bar: LearnedBar
+
+## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
+## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
+## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
+## confused animation, so synthesising one would be a stub. `_confused_age < 0` = inactive.
+var _dog: Node3D
+var _dog_rest: Transform3D
+var _confused_age := -1.0
+
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_setup_environment()
@@ -186,6 +201,9 @@ func _process(delta: float) -> void:
 		if _force_tier >= 0:
 			_readout.display(_force_tier as SitWindow.Tier)  # pin tier for capture (033) — web-only
 		_readout.advance(delta)  # fade the last tier's flash (024g/P1-7)
+	if _learned_bar != null:
+		_learned_bar.advance(delta)  # fade the setback wash (045/P2-4)
+	_drive_confused(delta)
 
 ## Drive the repeating round loop (027, P1-9): each frame SitLoop decides whether to begin
 ## the next sit or stand the dog back to idle. A no-op until _start_dog builds _loop, and a
@@ -272,6 +290,17 @@ const READOUT_OFFSET_RIGHT := -24.0
 ## ~40 px (band height unchanged) while keeping a comfortable top margin off the letterbox.
 const READOUT_OFFSET_TOP := 56.0
 const READOUT_OFFSET_BOTTOM := 180.0
+## Learned bar (045, P2-4): a thin persistent meter pinned at the readout's proven-safe top
+## edge (038), in the clear sky above the dog. Full width inset like the button; the transient
+## readout word flashes below it. Reads by FILL LENGTH so it's legible under reduced motion.
+const LEARNED_BAR_OFFSET_TOP := READOUT_OFFSET_TOP
+const LEARNED_BAR_HEIGHT := 16.0
+const LEARNED_BAR_MARGIN_X := 48.0
+## Confused-beat shape (045): a short damped yaw wobble on a bad tap, scaled by the reduced-
+## motion factor so it dampens (never a hard snap) when motion is reduced (X-5).
+const CONFUSED_DURATION := 0.45
+const CONFUSED_WOBBLES := 2.0
+const CONFUSED_AMPLITUDE := 0.12  ## radians (~7°) at full motion
 
 ## Centre the dog in portrait and fit the camera to its actual bounds, so it reads
 ## centred whichever dog ships — the CC0 placeholder or the licensed Labrador, with
@@ -412,6 +441,12 @@ func _start_dog(dog: Node) -> void:
 		return
 	_director = DogDirector.new(ap)
 	_director.play_idle()
+	# Hold the dog's rest transform so the procedural confused beat (045) can recoil and
+	# restore EXACTLY to it — the AnimationPlayer animates the skeleton, not this root node,
+	# so a brief transform nudge here never fights the idle/sit clips.
+	if dog is Node3D:
+		_dog = dog
+		_dog_rest = _dog.transform
 	# The repeating round loop (027/P1-9) drives the rest from _process: it waits a calm
 	# beat, plays the sit + opens the scoring window (_begin_sit), holds the seat, then
 	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
@@ -456,6 +491,7 @@ func _setup_bra_button() -> void:
 	bra.pressed.connect(_on_bra_pressed)
 	_setup_tell_marker(ui)
 	_setup_readout(ui)
+	_setup_learned_bar(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -497,6 +533,24 @@ func _setup_readout(ui: CanvasLayer) -> void:
 	ui.add_child(readout)
 	_readout = readout
 
+## The learned bar (045/P2-4): a thin meter across the top safe edge that fills as Sitt is
+## learned and drops on a bad tap. Mouse-transparent so it never eats a tap. Starts at the
+## model's current value; driven by _on_bra_pressed (fill/drop) + _process (setback fade).
+func _setup_learned_bar(ui: CanvasLayer) -> void:
+	var bar := LearnedBar.new()
+	bar.name = "LearnedBar"
+	bar.anchor_left = 0.0
+	bar.anchor_right = 1.0
+	bar.anchor_top = 0.0
+	bar.anchor_bottom = 0.0
+	bar.offset_left = LEARNED_BAR_MARGIN_X
+	bar.offset_right = -LEARNED_BAR_MARGIN_X
+	bar.offset_top = LEARNED_BAR_OFFSET_TOP
+	bar.offset_bottom = LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT
+	ui.add_child(bar)
+	_learned_bar = bar
+	_learned_bar.set_value(_progress.value, _progress.mastered)
+
 ## The audible payoff player (024f). A plain Node child holding the voice + click
 ## AudioStreamPlayers; it only sounds on a successful mark (the gate lives in
 ## MarkPayoff). Mounted once; reused for every tap.
@@ -529,10 +583,59 @@ func _on_bra_pressed() -> void:
 	_play_payoff(tier)
 	if _readout != null:
 		_readout.display(tier)  # flash PERFECT/OK/MISS now; DEAD shows nothing (024g/P1-7)
+	_apply_progress(tier)  # fill / erode the learned bar + the felt feedback (045/P2-4)
 	if SitWindow.is_successful(tier):
 		print("[Bra!] mark: %s" % SitWindow.tier_name(tier))
 	else:
 		print("[Bra!] tap: %s (no mark)" % SitWindow.tier_name(tier))
+
+## Feed the scored tier into the learned-progress model (045, P2-4) and drive the feel:
+## a good mark fills the bar (and, on the tap that hits 100%, fires the celebratory beat —
+## the existing joyful reaction); a bad tap erodes the bar (a brief red setback wash) and the
+## dog reads confused (the procedural recoil). The model decides; main only reflects it.
+func _apply_progress(tier: SitWindow.Tier) -> void:
+	var delta := _progress.apply(tier)
+	if _learned_bar != null:
+		_learned_bar.set_value(_progress.value, _progress.mastered)
+		if delta < 0.0:
+			_learned_bar.pulse_setback()
+	if _progress.just_mastered(delta):
+		_play_mastery_beat()
+	elif not SitWindow.is_successful(tier):
+		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
+
+## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
+## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog
+## with no reaction clip (the CC0 placeholder) — never a faked celebration.
+func _play_mastery_beat() -> void:
+	if _director != null:
+		_director.play_reaction()
+
+## Begin the procedural confused beat (045/P2-4): the mirror of the joyful mark. _process
+## drives a brief damped recoil from here and restores the dog to its rest transform. Scaled
+## by reduced motion. No-op if the dog isn't a Node3D we can nudge.
+func _play_confused_beat() -> void:
+	if _dog != null:
+		_confused_age = 0.0
+
+## Step the procedural confused beat (045/P2-4): a damped yaw wobble that settles back to the
+## dog's rest transform within CONFUSED_DURATION, then goes inactive. The AnimationPlayer
+## drives the skeleton (not this root node), so the nudge never fights a clip and is always
+## restored EXACTLY to rest — no drift, no framing regression. Dampened by the reduced-motion
+## factor so it eases rather than snaps when motion is reduced (X-5).
+func _drive_confused(delta: float) -> void:
+	if _dog == null or _confused_age < 0.0:
+		return
+	_confused_age += delta
+	if _confused_age >= CONFUSED_DURATION:
+		_dog.transform = _dog_rest  # settle exactly back — no drift
+		_confused_age = -1.0
+		return
+	var t := _confused_age / CONFUSED_DURATION
+	var damp := 1.0 - t  # the wobble decays to nothing as it settles
+	var angle := sin(t * TAU * CONFUSED_WOBBLES) * CONFUSED_AMPLITUDE * damp * _motion_scale
+	_dog.transform = _dog_rest
+	_dog.rotate_object_local(Vector3.UP, angle)
 
 ## Dispatch the reward for a scored tier (024f, P1-6): the voice + click through the
 ## PayoffPlayer and the dog's positive reaction through the director. MarkPayoff is the

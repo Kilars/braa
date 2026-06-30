@@ -171,16 +171,50 @@ observable behavior through `TrickProgress`'s public surface (no internals):
 `_on_bra_pressed` gets a thin wiring test in the spirit of `tests/test_payoff_wiring.gd` if it
 can assert observably without a live tree; otherwise it's covered by the Visual Review.)
 
+## Results (landed 2026-06-30, iteration 056)
+
+**Shipped, TDD-first:**
+- `scripts/trick_progress.gd` — the pure learned-progress model. PERFECT +0.20, OK +0.08,
+  MISS −0.10, DEAD −0.05 (all homed constants); net-forward invariant (PERFECT > both
+  erosions); floors at 0, caps + latches `mastered` at 1.0; mastery is a safe checkpoint
+  (erosion floor rises to MASTERY once mastered); `just_mastered(delta)` is one-shot.
+- `scripts/learned_bar.gd` — the on-screen meter (`LearnedBar extends Control`). Reads by
+  FILL LENGTH (reduced-motion-safe), green while learning → gold at mastery, with a brief
+  red **setback wash** on erosion. Dumb renderer driven by main, render-free-testable.
+- `scripts/main.gd` wiring — `_progress` + `_learned_bar` mounted in the UI layer at the
+  readout's proven-safe top edge; `_apply_progress(tier)` in `_on_bra_pressed` fills/erodes
+  the bar, fires the **mastery beat** (reuses the real joyful reaction clip — no faked clip)
+  on the crossing tap, and the **confused beat** on a bad tap; `_drive_confused` runs a damped
+  yaw recoil restored EXACTLY to the dog's rest transform (no drift).
+
+**Tests (TDD red→green, 142 total, 0 failures, no SCRIPT ERRORs):** `test_trick_progress.gd`
+(11 — the 9 behaviors + bounds + re-practiceable), `test_learned_bar.gd` (5 — clamp, mastered
+state, setback wash fires+fades), `test_learned_bar_wiring.gd` (3 — scene mounts the bar; a
+DEAD CC0 tap floors at 0; the confused beat restores the dog to rest).
+
+**Live visual proof (real licensed Labrador, local Web build, `?bra_autotap=1`, 390×844
+SwiftShader == the deployed GL Compatibility renderer):** `.screenshots/045-learnbar-{00,04,12}.png`
+— frame 00 empty track → frame 04 ~45% **green** (learning) → frame 12 **full gold (mastered)**
+with the joyful reaction + a gold "PERFECT" readout. Fill→mastery + the mastery beat work on the
+actual shipped asset; the bar sits clear of the dog and doesn't break the Phase-1 layout.
+
+**Deferred to the deployed-PO Visual Review** (no local seam drives a scored MISS/DEAD through
+the model): the *feel* of erosion + the **confused beat's live visibility on the skinned dog**
+(the procedural root-node yaw may be overwritten if a clip animates the root — if so the PO
+notes it and it routes to a fix; the bar's red setback wash is the guaranteed-visible felt cue
+either way). A literal *confused clip* (true mirror of the joyful hop) is **asset-gated** like
+the P2-2 trick clips — out of scope here, never faked.
+
 ## Acceptance criteria
 
-- [ ] **Red first:** `tests/test_trick_progress.gd` written and failing before `trick_progress.gd` exists.
-- [ ] `scripts/trick_progress.gd` implements the model; all 9 behaviors above pass (green).
-- [ ] PERFECT fills more than OK; MISS and DEAD erode; DEAD erodes ≤ MISS; all tuning in named constants (no scattered literals).
-- [ ] Net-forward holds: a PERFECT after a bad tap nets strictly forward; bar floors at 0, caps at 1.0.
-- [ ] 100% latches `mastered`; mastery is a safe checkpoint (re-practice can't drop a mastered trick); mastered trick stays re-practiceable (taps still score + pay off).
-- [ ] Model is keyed/instantiable per trick (ready for P2-1 selector + P2-5 persistence), wired for the Sitt trick in `main.gd:_on_bra_pressed`.
-- [ ] On-screen learned bar fills on good taps and **visibly drops** on erosion; legible under reduced motion (reads by length, not only motion); clear of the dog's crown + readout band (no clipping, cf. 038).
-- [ ] Bad tap triggers a brief **procedural** confused beat on the dog (no faked clip); 100% triggers a one-shot celebratory beat. Both honest no-ops if unavailable headless.
-- [ ] **Placeholder check** clean on the diff (no stub/placeholder/fake left un-allowlisted).
-- [ ] Visual Review (phone-portrait 390×844) of the bar fill/drop + confused/mastery beats — findings blocking.
-- [ ] `nix develop -c bash verify.sh` green (import · boot · test · export).
+- [x] **Red first:** `tests/test_trick_progress.gd` written and failing before `trick_progress.gd` exists.
+- [x] `scripts/trick_progress.gd` implements the model; all 9 behaviors above pass (green).
+- [x] PERFECT fills more than OK; MISS and DEAD erode; DEAD erodes ≤ MISS; all tuning in named constants (no scattered literals).
+- [x] Net-forward holds: a PERFECT after a bad tap nets strictly forward; bar floors at 0, caps at 1.0.
+- [x] 100% latches `mastered`; mastery is a safe checkpoint (re-practice can't drop a mastered trick); mastered trick stays re-practiceable (taps still score + pay off).
+- [x] Model is keyed/instantiable per trick (ready for P2-1 selector + P2-5 persistence), wired for the Sitt trick in `main.gd:_on_bra_pressed`.
+- [x] On-screen learned bar fills on good taps (green→gold) and **visibly drops** on erosion (red wash + length drop); legible under reduced motion (reads by length); clear of the dog + readout band — proven live (`.screenshots/045-learnbar-*`).
+- [x] Bad tap triggers a brief **procedural** confused beat on the dog (no faked clip) + the bar setback; 100% triggers a one-shot celebratory beat (the real joyful clip). Honest no-ops where unavailable. *(Live visibility of the dog recoil → deployed-PO Visual Review; a confused clip is asset-gated.)*
+- [x] **Placeholder check** clean on the diff (only honest explanatory comments — "NOT a faked clip" / "would be a stub" — no deliverable stubs).
+- [~] Visual Review (phone-portrait 390×844): the **fill→mastery** path is proven live on the licensed build (`.screenshots/045-learnbar-*`); the **erosion/confused feel** rides the deployed-PO play-test (no local MISS/DEAD seam) — per the Phase-1 split.
+- [x] `nix develop -c bash verify.sh` green (import · boot · test · export).
