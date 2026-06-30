@@ -27,11 +27,20 @@ empty).**
   empty → ~45% green → full gold + reaction. Keyed per trick (Sitt only today). Erosion *feel* +
   confused-beat live visibility ride the deployed-PO Visual Review (no local MISS/DEAD seam).
 
+- **046 — FEATURE — Anti-mash BRA freeze (P2-7). DONE 2026-06-30.** Pure `TapGate` (TDD,
+  RefCounted): a fixed `LOCK_S = 0.35` re-arm window; only an accepted tap calls `lock()`, so
+  swallowed taps can neither reset nor extend it (masher-proof by construction). Wired into
+  `main.gd`: `_on_bra_pressed` returns early when not armed (not scored, learned bar untouched)
+  and `lock()`s on the accepted tap; `_process` ticks the gate and dims+disables the BRA button
+  while locked (`BRA_LOCKED_ALPHA = 0.4`, restored at full when armed) — a STATIC dim, so it
+  reads under reduced motion (X-5). 13 new tests (7 unit + 6 wiring); **155 tests green**; verify
+  green. Visual-proven on the real licensed build via `?bra_force_lock=1` seam +
+  `tools/web_capture_lock.mjs`: near-white "BRA" glyphs 1327→0 when locked, identical in
+  normal/reduced motion (`.screenshots/046-lock-*`). Delivers the secondary **P2-6** for free
+  (spam taps simply never register — input hygiene, not penalty).
+
 **Phase-2 backlog (priority order — all buildable, none owner-gated):**
 
-- **046 — FEATURE — Anti-mash BRA freeze (P2-7).** Independent of 045. Pure `TapGate` (TDD): a
-  fixed ~350 ms lock after every tap; swallowed taps don't reset/extend it; the button visibly
-  locks then restores, legible under reduced motion. Also delivers the secondary P2-6.
 - **047 — FEATURE — The functional garden (P2-10).** Render / Visual Review. Look-down
   Pokémon-GO view — sky + a visible sun, grass ground, horizon split; the dog stands on the
   grass; BRA floats over the grass (no opaque band). Foundation for the wandering dog (P2-8). GL

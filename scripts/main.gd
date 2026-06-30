@@ -28,6 +28,14 @@ var _director: DogDirector
 ## closed on the CC0 dog (no Sitt) so every tap is DEAD — no penalty (P1-5).
 var _session := SitSession.new()
 
+## Anti-mash freeze for the BRA button (046, P2-7 "one tap, then a beat"). After an ACCEPTED
+## tap the gate locks for a fixed ~350 ms, swallowing taps until it re-arms — _on_bra_pressed
+## gates on it and _process ticks it + reflects the locked state onto the button. Pure +
+## tickable (scripts/tap_gate.gd); makes mashing never a strategy, input hygiene not penalty.
+var _tap_gate := TapGate.new()
+## The BRA button, kept so _process can dim + disable it while the gate is locked (046).
+var _bra_button: Button
+
 ## The repeating round loop (027, P1-9): drives idle → sit → idle → sit … each frame so
 ## the mark never stalls after one sit. Pure state machine; main acts on its Intent.
 var _loop: SitLoop
@@ -87,6 +95,15 @@ var _force_tier := -1
 var _autotap := false
 var _autotapped := false  ## one auto-mark per sit; reset when the sit ends
 
+## Visual-review seam (046/P2-7): set by _query_force_lock() from the web URL `?bra_force_lock=1`.
+## When on, the BRA button is PINNED to its locked (dimmed + disabled) state every frame so a
+## SINGLE screenshot deterministically proves the lock reads. The real lock lasts only ~350 ms
+## per tap — shorter than a headless screenshot's latency — so a non-deterministic burst can't
+## reliably catch it (the lock's behaviour/timing is proven in-engine by test_tap_gate_wiring;
+## this seam proves the locked pixels are legible). Web-only and off by default; desktop,
+## headless, and normal web play are untouched.
+var _force_lock := false
+
 ## Learned-progress model + on-screen bar (045, P2-4 "feel the dog learning"). Sitt is the
 ## only trick today (the licensed pack ships no other trick clip), so main holds a single
 ## TrickProgress; the selector (P2-1) and persistence (P2-5) make it per-trick later. A
@@ -118,6 +135,7 @@ func _ready() -> void:
 	_force_tell = _query_force_tell()  # deterministic apex-tell pixel proof (030, web-only seam)
 	_force_tier = _query_force_tier()  # deterministic readout-contrast pixel proof (033, web-only)
 	_autotap = _query_autotap()        # deterministic reaction-capture mark (034, web-only)
+	_force_lock = _query_force_lock()  # deterministic anti-mash lock pixel proof (046, web-only)
 	_notify_web_ready()
 
 ## Visual-review seam (030/P1-4): true only when the live web page URL carries
@@ -160,6 +178,17 @@ func _query_autotap() -> bool:
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
 
+## Visual-review seam (046/P2-7): true only when the live web URL carries `?bra_force_lock=1`.
+## Pins the BRA button locked so the anti-mash dim renders for one deterministic screenshot (the
+## live lock is ~350 ms — briefer than a headless screenshot's latency). Web-only (off
+## desktop/headless/normal play); reads a STRING sentinel, never a bare bool, to dodge the
+## Web-export null-Variant marshalling that bit the apex tell (036).
+func _query_force_lock() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_lock=1")
+
 ## Resolve prefers-reduced-motion (the test seam wins, else the live query) into the
 ## single motion-scale the tell is built from (P1-8). Called first in _ready so the
 ## damping is in place before any cue is constructed.
@@ -182,6 +211,8 @@ func motion_scale() -> float:
 ## dark: the tell never fires during idle (P1-4).
 func _process(delta: float) -> void:
 	_session.advance(delta)
+	_tap_gate.tick(delta)        # advance the anti-mash freeze (046/P2-7)
+	_update_bra_lock_visual()    # reflect armed/locked onto the BRA button
 	_advance_loop(delta)
 	# Reaction-capture seam (034, web-only): once per sit, auto-fire a PERFECT mark the
 	# instant the clock reaches the apex, so the joyful hop plays deterministically for the
@@ -275,6 +306,10 @@ const BRA_OFFSET_LEFT := 48.0
 const BRA_OFFSET_RIGHT := -48.0
 const BRA_OFFSET_TOP := -280.0
 const BRA_OFFSET_BOTTOM := -88.0
+
+## The BRA button's alpha while the anti-mash gate is locked (046/P2-7): a clear, STATIC dim so
+## the lock reads without motion (X-5); restored to 1.0 the instant the gate re-arms.
+const BRA_LOCKED_ALPHA := 0.4
 ## Apex-tell marker: centred on the button so the pulse rings the verb (024d, 037).
 const TELL_HALF_WIDTH := ApexTellMarker.SIZE * 0.5  ## 160 — half the pulse square (037)
 ## Button-band centre above the bottom edge (anchor_*=1.0 space): keep the ring concentric
@@ -489,6 +524,7 @@ func _setup_bra_button() -> void:
 	bra.focus_mode = Control.FOCUS_NONE  # no keyboard focus ring on a touch target
 	ui.add_child(bra)
 	bra.pressed.connect(_on_bra_pressed)
+	_bra_button = bra  # _process reflects the anti-mash lock onto it (046/P2-7)
 	_setup_tell_marker(ui)
 	_setup_readout(ui)
 	_setup_learned_bar(ui)
@@ -551,6 +587,18 @@ func _setup_learned_bar(ui: CanvasLayer) -> void:
 	_learned_bar = bar
 	_learned_bar.set_value(_progress.value, _progress.mastered)
 
+## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
+## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are
+## STATIC states (not animations), so the lock reads under reduced motion (X-5). Disabling also
+## blocks the press signal during the lock — belt-and-suspenders with the is_armed() guard in
+## _on_bra_pressed, which still covers the autotap / direct-call paths. Called each frame.
+func _update_bra_lock_visual() -> void:
+	if _bra_button == null:
+		return
+	var armed := _tap_gate.is_armed() and not _force_lock  # _force_lock pins locked for capture (046)
+	_bra_button.disabled = not armed
+	_bra_button.modulate = Color(1.0, 1.0, 1.0, 1.0 if armed else BRA_LOCKED_ALPHA)
+
 ## The audible payoff player (024f). A plain Node child holding the voice + click
 ## AudioStreamPlayers; it only sounds on a successful mark (the gate lives in
 ## MarkPayoff). Mounted once; reused for every tap.
@@ -578,6 +626,9 @@ func set_motion_scale(scale: float) -> void:
 ## land the payoff. A DEAD/MISS tap is silent and provokes no reaction (no penalty,
 ## P1-5/P1-6); the readout (024g) also consumes `marked`. Logs every tap for the boot gate.
 func _on_bra_pressed() -> void:
+	if not _tap_gate.is_armed():
+		return  # swallowed during the fixed lock — not scored, the gate's clock untouched (046/P2-7)
+	_tap_gate.lock()  # the fixed re-arm window starts on the ACCEPTED tap only — mashing can't extend it
 	var tier := _session.tap()
 	marked.emit(tier)
 	_play_payoff(tier)

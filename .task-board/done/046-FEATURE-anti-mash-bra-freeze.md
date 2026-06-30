@@ -1,7 +1,8 @@
 # FEATURE: 046 — One tap, then a beat (anti-mash BRA freeze) (P2-7)
 
-**Status**: Backlog
+**Status**: Done
 **Created**: 2026-06-30
+**Completed**: 2026-06-30
 **Type**: FEATURE (input-hygiene logic — **test-first / TDD**; the locked/restored button state
 gets a Visual Review)
 **Priority**: High — self-contained, independent of 045, and it's the input-hygiene floor that
@@ -130,11 +131,44 @@ public surface:
 
 ## Acceptance criteria
 
-- [ ] **Red first:** `tests/test_tap_gate.gd` written and failing before `tap_gate.gd` exists.
-- [ ] `scripts/tap_gate.gd` implements the gate; behaviors 1–5 pass (green); `LOCK_S` is a named constant (~0.35 s).
-- [ ] After **every** accepted tap (any tier, dead included) BRA locks for the fixed window and re-arms automatically.
-- [ ] Taps during the lock are **swallowed** — not scored, `marked` not emitted, learned bar (045) untouched — and do **not** reset or extend the lock (fixed window, masher-proof).
-- [ ] Button **visibly** reads locked then restored; state legible under reduced motion (reads statically, not only via motion).
-- [ ] **Placeholder check** clean on the diff.
-- [ ] Visual Review (phone-portrait 390×844) of the lock→restore button state, including under reduced motion — findings blocking.
-- [ ] `nix develop -c bash verify.sh` green (import · boot · test · export).
+- [x] **Red first:** `tests/test_tap_gate.gd` written and failing before `tap_gate.gd` exists (confirmed red: "Identifier `TapGate` not declared").
+- [x] `scripts/tap_gate.gd` implements the gate; behaviors 1–5 pass (green); `LOCK_S` is a named constant (0.35 s).
+- [x] After **every** accepted tap (any tier, dead included) BRA locks for the fixed window and re-arms automatically (`_on_bra_pressed` gates on `is_armed()` + `lock()`; `_process` ticks the gate).
+- [x] Taps during the lock are **swallowed** — not scored, `marked` not emitted, learned bar (045) untouched — and do **not** reset or extend the lock (fixed window, masher-proof). Proven by `test_tap_gate_wiring.gd` (`marked` fires once across 3 mashed presses; re-arms on schedule despite tapping every frame).
+- [x] Button **visibly** reads locked then restored; state legible under reduced motion (static dim, not motion). Wiring test asserts `disabled` + `modulate.a < 1` while locked, restored after the window; visual capture confirms the pixels (below).
+- [x] **Placeholder check** clean on the diff.
+- [x] Visual Review (phone-portrait 390×844) of the lock→restore button state, including under reduced motion — PASS (below).
+- [x] `nix develop -c bash verify.sh` green (import · boot · test · export).
+
+## Results (2026-06-30)
+
+**Built:**
+- `scripts/tap_gate.gd` — pure `TapGate` (RefCounted): fixed `LOCK_S = 0.35` re-arm window.
+  `is_armed()` (pure query), `lock()` (only an accepted tap calls it), `tick(delta)`
+  (auto-re-arms, clamped ≥ 0), `lock_fraction()` (1→0 for UI). Masher-proof by construction:
+  swallowed taps never call `lock()`, so the window is fixed, not a hold-open debounce.
+- `scripts/main.gd` — `_tap_gate` member; `_on_bra_pressed` returns early when not armed
+  (swallowed, score session/learned-bar untouched) and `lock()`s on the accepted tap;
+  `_process` ticks the gate and `_update_bra_lock_visual()` reflects it onto the BRA button
+  (disabled + dim to `BRA_LOCKED_ALPHA = 0.4`, restored at full when armed). Static states →
+  reduced-motion-safe (X-5). Disabling also blocks the press signal during the lock
+  (belt-and-suspenders with the guard, which still covers the autotap / direct-call paths).
+- `_force_lock` web-only visual-review seam (`?bra_force_lock=1`, mirrors `?bra_force_tell`):
+  pins the locked look for one deterministic screenshot, since the real ~350 ms lock is briefer
+  than a headless screenshot's ~700 ms latency. Reads a STRING sentinel (dodges the 036
+  null-Variant marshalling). Behaviour/timing of the *real* lock is proven in-engine, not via
+  the seam.
+
+**Tests:** TDD red→green. `tests/test_tap_gate.gd` (7 unit, pin the fixed-window math),
+`tests/test_tap_gate_wiring.gd` (6 scene-level: first tap accepted+locks, mash swallowed,
+mashing can't extend the window, re-arm then accept again, button dim→restore, force-lock pin).
+Full suite **155 tests, 0 failures**; verify gate green (import · boot · test · export).
+
+**Visual Review (390×844, real licensed Labrador in the local bundle):**
+`tools/web_capture_lock.mjs` → `.screenshots/046-lock-{normal,reduced}-{armed,locked}.png`.
+Near-white "BRA" glyph count drops **1327 → 0** when locked, identical in normal and reduced
+motion. By eye: armed = bold white "BRA" on a solid dark panel; locked = panel + word fade to a
+ghosted, clearly-inactive state that still reads as the button (not vanished). PASS.
+
+**Note:** P2-6 ("mashing should lose") is delivered as a side effect — spam taps during the lock
+simply never register (input hygiene, not penalty), exactly as the spec frames it.
