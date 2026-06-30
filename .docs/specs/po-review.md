@@ -37,9 +37,9 @@ to Phase 2.
 
 **The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 90-frame burst
 across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
-at the seated apex — **max 3187 gold px, gold on 3/90 frames** (~80 ms sampling; a brief
-~0.2 s tell), and **dark in idle** (per-frame: long runs of 0, spiking 156 / 3187 / 2352 at
-the apexes, min 0). The seated apex frame reads cleanly: clear Labrador, gold ring framing
+at the seated apex — **max 3370 gold px, gold on 5/90 frames** (~80 ms sampling; a brief
+~0.2 s tell), and **dark in idle** (per-frame: long runs of 0, spiking 359 / 3370 / 2132 /
+2393 / 1796 at the apexes, min 0). The seated apex frame reads cleanly: clear Labrador, gold ring framing
 the marker, "BRA" fully legible inside it (`.screenshots/po-live-apex.png`); the darkest
 frame is a plain standing idle with the button band dark, no ring
 (`.screenshots/po-live-idle.png`). This is the honest live "now" cue, not a forced seam.
