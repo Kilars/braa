@@ -76,19 +76,24 @@ Entry format:
   (FYI: licensed-asset *import settings* are entirely uncommitted today — CI uses Godot
   defaults — so the only deterministic place to control them is the re-export itself.)
 
-### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated
+### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated  ·  **busted 2026-06-30 (BUST-043) — scope narrowed**
 - **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
-- **Decision needed:** Supply a real, warm, **human "Bra!"** recording (the "Maren" delivery) to
-  drop in under the stable voice cue id — and later the Phase-5 praise words (*dyktig, flink,
-  super, kjempebra*), each as its own voiced line.
-- **Why it's user-only:** a specific person's warm voice is an asset the loop cannot synthesize
-  or acquire — there is no technical fork to reason out. (X-7 keeps the game offline, so a
-  cloud-voice substitute is out too.)
-- **Assumption made to keep going:** the abstract sine-tone "blip" was not an honest attempt at
-  a spoken word. Replaced it with a *genuinely spoken* one — an offline `espeak-ng` Norwegian
-  **"Bra!"** (`assets/audio/bra_tts_placeholder.wav`), wired under the same cue id (task **035**).
-  It is robotic and a clear placeholder; your recording replaces the file with **no code change**.
-  Until then the spoken stand-in ships instead of a tone.
+  De-gated by **BUST-043** (2026-06-30) — this flag was raised *whole* with **no spike**, the
+  anti-pattern `mother_prompt.md` names; the flag bust found most of it was buildable.
+- **Narrowed decision needed (owner-only now):** supply a real, warm, **human "Bra!"** recording
+  (the "Maren" delivery) — or any short Maren sample to clone from — to drop in under the stable
+  voice cue id; and later the Phase-5 praise words (*dyktig, flink, super, kjempebra*), each its
+  own voiced line. **Only the literal human voice remains owner-gated.**
+- **What the bust de-gated (no longer owner-gated):** a *warm, near-human* synthetic stand-in is
+  buildable **offline with no owner action** — local **neural** TTS (**Piper**, `nb_NO`) replaces
+  the robotic espeak clip under the same cue id, no code change. Routed to build task **044**.
+  **Correction of the original reasoning:** X-7 is a *runtime*-offline constraint; **baking a
+  voice file at authoring time does not violate it** (the game still plays a static `.wav`). The
+  old "X-7 … so a cloud-voice substitute is out too" was wrong — it conflated runtime with
+  authoring, which is exactly why the whole capability got flagged instead of spiked.
+- **Assumption while building:** the genuinely-spoken espeak `assets/audio/bra_tts_placeholder.wav`
+  (task 035) ships until 044's Piper voice lands; **both** are drop-in replaced by your human
+  recording with no code change.
 
 ## Resolved
 

@@ -22,6 +22,16 @@ open flags for the owner to close on their own schedule:
 Neither blocks the mark. **Phase 2 (`phase2.md`) is now the current phase** — the loop may begin
 planning/building it under the same Phase-1 quality bar.
 
+**Process change — "flag bust" (so the loop de-gates its own flags instead of spinning).** A flag
+is a *hypothesis* that something needs the owner, not a verdict. New rule in `mother_prompt.md`:
+when the board is otherwise idle, the loop **busts** the oldest un-busted open flag (a `BUST-`
+task — adversarial, refute-not-confirm: "does any slice build *without* the owner?"), routes the
+buildable slice to a build task, and **narrows** the flag to the true residual. This replaces the
+idle re-verification spinning seen in commits 043–055. First application: **BUST-043** busted the
+voice flag (which had been raised *whole, with no spike* — the named anti-pattern) → selected
+**Piper** local-neural TTS → build task **044** (warm `nb_NO` "Bra!", no code change, owner-free);
+flag narrowed to only the literal human Maren recording.
+
 ## Status — Phase-1 PO re-play REOPENED work; loop building the remaining improvements (2026-06-30)
 
 The 2026-06-29 "buildable work COMPLETE / construction clearance" framing was **premature**:

@@ -16,7 +16,12 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
    the father), it must pass its **adversarial construction audit** of the completed phase —
    a clean zero is the orchestrator's construction clearance; any audit finding (dead seams,
    hollow tests, faked assets, claim≠diff) comes back as a task instead. Otherwise skip the
-   scan.
+   scan. **A clean zero is not automatically idle:** before handing an empty board to the
+   father, scan `FLAGS.md` *Open* for any flag **not** stamped `busted` — if one exists, emit
+   a **`BUST-`** *flag-bust* task for the oldest (does any slice of that gate build **without**
+   the owner? — see the flag-bust rule below) instead of falling into a redundant
+   re-verification pass. Only an empty board with **no un-busted open flags** is a true idle
+   hand-off.
 3. **Work** — run `start-working` on the backlog; move each task file
    `backlog → in-progress → done` as you go.
 4. **Gate** — before exit, run the full verify gate and confirm green:
@@ -61,6 +66,21 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   *informed* **flag** (carrying the findings) if it's genuinely owner-gated. Spikes are
   research only — no shippable product code, no TDD; the deliverable is findings + routing.
   A premature "can't do it" flag with no spike is the same anti-pattern as a premature block.
+- **Flag bust open flags (the spike's after-the-fact twin).** A flag is a **hypothesis** that
+  something needs the owner — **not a verdict.** A forward-looking spike asks "how do I build
+  this?"; a **flag bust** looks *backward* at an already-raised flag and asks, adversarially
+  (refute-not-confirm — the sibling of the construction audit's cold stance), "is this gate
+  *real*, or broader than it needs to be — does any slice build **without** the owner?" It is
+  the first thing to reach for when the board is otherwise idle (Iteration step 2): bust a
+  flag instead of spinning on redundant re-verification. Mechanics: a timeboxed **`BUST-`**
+  task, research only (no product code, no TDD) — find the buildable slice, **route it to a
+  build task**, then **narrow** the flag to the true owner-gated residual and stamp it
+  `busted <date>`. A busted flag is **not** re-busted absent new information (new tooling, a
+  supplied asset/sample, a resolved dependency), so the loop converges instead of spinning.
+  *Worked example:* the espeak "Bra!" was flagged whole as owner-gated with **no** spike (the
+  anti-pattern above); a later flag bust found a warm **local neural** voice (Piper — offline,
+  no owner action) is buildable, routed it to a build task, and narrowed the flag to only the
+  literal **human** recording.
 - **Flag user-only decisions; never block on them.** You are the **orchestrator** — the
   one who decides what reaches the user. When `start-working` (or a subagent's report)
   surfaces something only the user can decide — a product / scope / legal / asset / owner
