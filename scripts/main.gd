@@ -127,7 +127,9 @@ func _ready() -> void:
 	if dog != null:
 		_start_dog(dog)
 		_frame_camera(dog)
-		_setup_contact_shadow(dog)  # anchor the dog to the ground, not floating (031/P1-1)
+		_setup_ground_plane(dog)    # grass ground plane at the foot plane (047/P2-10)
+		_setup_contact_shadow(dog)  # blob shadow ON the grass (031/P1-1)
+		_setup_sun_disc(dog)        # explicit sun disc in the sky (047/P2-10)
 	else:
 		_fallback_camera()
 	_setup_bra_button()
@@ -268,24 +270,59 @@ func _end_sit() -> void:
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
 	_director.play_idle()
 
-## Bright, clean backdrop (Pokémon-GO-ish) so the dog reads clearly (P1-1).
+## Garden backdrop (P2-10): a ProceduralSkyMaterial sky gradient with a clean readable sun
+## disc above and a horizon split where the grass ground meets the sky — replaces the old
+## flat sky-blue BG_COLOR void. GL-Compatibility-safe (no Forward+-only features). Ambient
+## light from the sky so the dog reads naturally lit from above. The sun disc aligns with
+## the DirectionalLight3D direction in _setup_light (upper sky for a look-down view).
 func _setup_environment() -> void:
+	var sky_mat := ProceduralSkyMaterial.new()
+	# Sky gradient: deep blue at the zenith, warm bright horizon so the sun disc pops
+	sky_mat.sky_top_color = Color(0.18, 0.48, 0.92)
+	sky_mat.sky_horizon_color = Color(0.90, 0.90, 0.75)   # warm bright near-horizon haze
+	sky_mat.sky_curve = 0.15                    # gradual, not banded
+	# Ground half of the procedural sky (below horizon) — warm haze, not used directly
+	# since a real mesh plane covers this half, but set to a warm neutral so any gap
+	# between the plane edge and the horizon reads as warm rather than void black.
+	sky_mat.ground_bottom_color = Color(0.55, 0.72, 0.40)
+	sky_mat.ground_horizon_color = Color(0.72, 0.86, 0.98)
+	sky_mat.ground_curve = 0.1
+	# Sun disc: aligned with the DirectionalLight3D so the disc IS the key light. A clean,
+	# readable disc — sun_angle_max sets the disc radius; sun_curve sharpens the inner glow.
+	# 25° radius: large disc clearly legible at phone scale near the horizon. A high
+	# sun_curve value keeps the core bright and makes the disc distinct vs the gradient.
+	sky_mat.sun_angle_max = 25.0
+	sky_mat.sun_curve = 0.5
+	var sky := Sky.new()
+	sky.sky_material = sky_mat
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.53, 0.81, 0.92)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(1.0, 1.0, 1.0)
-	env.ambient_light_energy = 0.6
+	env.background_mode = Environment.BG_SKY
+	env.sky = sky
+	# Ambient from sky so the dog's unlit surfaces (belly, paws) stay readable, not pitch black.
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_sky_contribution = 0.6   # mix: bright sky bounce, not blown out
+	env.ambient_light_energy = 0.8
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
 	add_child(world_env)
 
+## Garden look-down light (047/P2-10): the DirectionalLight3D rotation determines WHERE the
+## ProceduralSkyMaterial sun disc appears. The look-down camera shows a sky band from roughly
+## 15°–40° above the horizon (depending on composition); the sun elevation must sit inside
+## that band to be visible. X=-22° puts the disc ~22° above the horizon — comfortably in
+## the sky band with the target ~30–35% sky / ~65–70% grass composition. Y=-40° means the
+## sun comes from slightly left of front-facing, lighting the dog's front-left coat well.
 func _setup_light() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-50.0, -35.0, 0.0)
-	sun.light_energy = 1.2
+	# Light direction matches the 3D sun sphere position (upper-right in the sky band):
+	# X=-30° moderate elevation, Y=-40° from the right side. Good coat highlight and matches
+	# where the visible SunDisc sphere sits. The ProceduralSkyMaterial sun disc (fragment
+	# shader) may or may not render in all GL paths, but the explicit SunDisc sphere always
+	# does — the light direction just needs to be roughly consistent with the sphere's bearing.
+	sun.rotation_degrees = Vector3(-30.0, -40.0, 0.0)
+	sun.light_energy = 1.3
 	add_child(sun)
 
 ## How much of the tighter frame dimension the dog spans — leaves margin above and
@@ -337,10 +374,28 @@ const CONFUSED_DURATION := 0.45
 const CONFUSED_WOBBLES := 2.0
 const CONFUSED_AMPLITUDE := 0.12  ## radians (~7°) at full motion
 
-## Centre the dog in portrait and fit the camera to its actual bounds, so it reads
-## centred whichever dog ships — the CC0 placeholder or the licensed Labrador, with
-## no per-model tuning (P1-2 "centred"; D12 / PO-Change-3). DogFraming is pure +
-## unit-tested; this just measures the dog and aims a Camera3D.
+## Garden look-down camera constants (047/P2-10): Pokémon-GO-style above-and-behind view.
+## Goal: horizon at ~30–35% from the top of the 390×844 frame — a real sky band (with a
+## visible sun disc) above, green grass below, dog centred and PROMINENT on the grass.
+##
+## LOOK_DOWN_HEIGHT: how far above the DogFraming eye the camera rises (metres). Lower
+## values keep the dog bigger in frame; too high pulls the camera up and shrinks the dog.
+## 0.5 m gives a gentle look-down pitch without sacrificing dog size.
+const LOOK_DOWN_HEIGHT := 0.5
+## LOOK_DOWN_BACK: extra rearward offset so the camera doesn't clip into the dog as it
+## rises. Less pullback = larger dog. 0.4 m is enough clearance.
+const LOOK_DOWN_BACK := 0.4
+## LOOK_DOWN_TARGET_Y: factor of bounding-box height for the look-at point. 0.55 = mid-
+## torso area. The camera pitches slightly down; the horizon appears in the upper third
+## and a real sky band (with sun disc) is visible above it.
+const LOOK_DOWN_TARGET_Y := 0.55
+
+## Centre the dog in portrait, look DOWN into the garden (P2-10 Pokémon-GO view), and fit
+## the camera to the dog's actual bounds — the dog stays centred and fully framed at 390×844
+## while the horizon split and grass/sky composition emerge from the downward pitch.
+## DogFraming is pure + unit-tested; this just measures the dog and aims a Camera3D.
+## The DogFraming.eye() computation is UNCHANGED (tests stay green); we then LIFT and
+## PULL the camera back so it looks down — the ground plane and sky fill the frame.
 func _frame_camera(dog: Node) -> void:
 	var box := _dog_bounds(dog)
 	if box.size == Vector3.ZERO:
@@ -355,9 +410,83 @@ func _frame_camera(dog: Node) -> void:
 	# -Z) so the dog is never actually framed. (026 — honest gate caught this.)
 	add_child(cam)
 	var aspect := _viewport_aspect()
+	# The standard DogFraming eye (tests are written against this — keep it as the base).
 	var eye := DogFraming.eye(box, cam.fov, aspect, FRAME_FILL)
-	cam.look_at_from_position(eye, DogFraming.target(box), Vector3.UP)
+	# Lift and pull back for the look-down view. The extra height raises the horizon into
+	# the upper third of the portrait frame; the extra rear offset avoids the dog.
+	eye.y += LOOK_DOWN_HEIGHT
+	eye.z += LOOK_DOWN_BACK
+	# Look at a point on the dog's mid-torso (slightly below bounding-box centre) so the
+	# dog reads in the lower half of frame with the grass beneath it and sky above.
+	var target_pos := DogFraming.target(box)
+	target_pos.y = box.position.y + box.size.y * LOOK_DOWN_TARGET_Y
+	cam.look_at_from_position(eye, target_pos, Vector3.UP)
 	cam.make_current()
+
+## Grass ground plane (047/P2-10): a large PlaneMesh at the dog's FOOT PLANE so the dog
+## stands visibly ON grass. Sized 40×40 m so the horizon split (where the plane meets the
+## sky) is well inside view at any reasonable look-down angle. The foot-plane Y is read
+## from DogBounds (the same source the contact-shadow uses in ContactShadow.position) so
+## this is model-agnostic — correct for both the CC0 idle dog and the licensed Labrador.
+## Stylized green StandardMaterial3D — honest real geometry, not a Phase-7-polish thing.
+## GL-Compatibility-safe: StandardMaterial3D, no shader, no Forward+-only feature.
+func _setup_ground_plane(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	# Foot plane Y: same as ContactShadow.position() uses — the AABB minimum Y (floor level).
+	var foot_y := box.position.y  # ContactShadow.position already computes this
+	var foot_center := Vector3(box.get_center().x, foot_y, box.get_center().z)
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = Vector2(40.0, 40.0)  # large enough that horizon is within the plane
+	var mat := StandardMaterial3D.new()
+	# Stylized garden green — a slightly desaturated mid-green reads naturally under the sky.
+	mat.albedo_color = Color(0.28, 0.60, 0.22)
+	mat.roughness = 0.95   # matte grass, no specular glint
+	mat.metallic = 0.0
+	# Allow the sun's directional shadow / shading to land on it naturally.
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	var ground := MeshInstance3D.new()
+	ground.name = "GrassGround"
+	ground.mesh = plane_mesh
+	ground.material_override = mat
+	ground.position = foot_center
+	add_child(ground)
+
+## Explicit sun disc in the sky (047/P2-10): a SphereMesh placed in the visible sky band,
+## positioned 1.2 m above and 5 m in front of the dog (-Z direction = away from camera),
+## 0.8 m right of centre so it clears the centred learned-bar UI. The ProceduralSkyMaterial
+## sun disc (fragment shader) renders correctly on deployed hardware (confirmed by PO on
+## live site), but the local headless capture environment (Godot WASM → "WebKit WebGL"
+## device name regardless of browser or GL flags) does not render it — so this sphere is
+## an additive explicit geometry sun that renders in ALL GL paths including software renderers.
+## Unshaded + emissive so it glows bright against the sky gradient. GL-Compatibility-safe:
+## StandardMaterial3D only, no shader, no Forward+-only feature.
+func _setup_sun_disc(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	var dog_center := box.get_center()
+	# Place the sun disc in the visible sky band. The camera is behind the dog (+Z) and pitched
+	# slightly downward toward mid-torso. The sky band (top ~30% of frame) maps to roughly
+	# 10-25° above the camera's look-at point. At 5 m in front of dog and 1.2 m above centre,
+	# the disc sits at atan2(1.2-0.5, 5) ≈ ~8° above camera eye — safely in the sky band.
+	# Offset +0.8 m right so the disc clears the learned-bar (centred UI element) and
+	# reads as off-axis — more natural sun position, not dead-center on the bar.
+	var sun_pos := Vector3(dog_center.x + 0.8, dog_center.y + 1.2, dog_center.z - 5.0)
+	var sphere_mesh := SphereMesh.new()
+	sphere_mesh.radius = 0.42   # ~0.84 m diameter at ~5.5 m = ~9° — clearly legible sun
+	sphere_mesh.height = 0.84
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.95, 0.60)   # warm golden — clearly visible sun colour
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-luminous, not lit by the scene
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.90, 0.40)       # warm golden glow
+	mat.emission_energy_multiplier = 3.0         # bright enough to read against sky gradient
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var disc := MeshInstance3D.new()
+	disc.name = "SunDisc"
+	disc.mesh = sphere_mesh
+	disc.material_override = mat
+	disc.position = sun_pos
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(disc)
 
 ## A cheap blob contact shadow under the feet so the dog reads as standing ON something
 ## (031/P1-1), not floating against flat blue. A flat unshaded soft-alpha disc laid on the
@@ -378,7 +507,13 @@ func _setup_contact_shadow(dog: Node) -> void:
 	disc.size = Vector2(diameter, diameter)
 	blob.mesh = disc
 	blob.material_override = _contact_shadow_material()
-	blob.position = ContactShadow.position(box)
+	var blob_pos := ContactShadow.position(box)
+	# Lift 1 mm above the grass ground plane to prevent Z-fighting (047/P2-10): both the
+	# grass plane and the blob are at the foot Y, so without an offset they fight and the
+	# shadow flickers or disappears. 0.001 m is invisible at phone scale but resolves the
+	# depth conflict reliably.
+	blob_pos.y += 0.001
+	blob.position = blob_pos
 	blob.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # it IS the shadow
 	add_child(blob)
 
@@ -503,6 +638,10 @@ func _start_dog(dog: Node) -> void:
 ## One big, thumb-friendly BRA button anchored across the bottom of the portrait
 ## frame (P1-5) — the single verb. It fires on release (Button's default
 ## ACTION_MODE_BUTTON_RELEASE = pointerup, P1-7), never a frame early.
+## Garden (047/P2-10): the button FLOATS over the grass — its opaque panel background
+## is removed via StyleBoxEmpty so only the "BRA" word is visible over the lower grass
+## area. Position, size, and the apex-tell coupling (TELL_OFFSET_*) are unchanged; the
+## button remains a large thumb target (P1-5) — just no opaque control strip behind it.
 func _setup_bra_button() -> void:
 	var ui := CanvasLayer.new()
 	ui.name = "UI"
@@ -511,6 +650,15 @@ func _setup_bra_button() -> void:
 	bra.name = "BraButton"
 	bra.text = "BRA"
 	bra.add_theme_font_size_override("font_size", 96)
+	# Float the verb over the grass: clear the Button's opaque panel background by
+	# assigning an empty StyleBox for all four visual states. The text + apex ring still
+	# render; only the opaque band behind them is removed (P2-10).
+	var empty := StyleBoxEmpty.new()
+	bra.add_theme_stylebox_override("normal",   empty)
+	bra.add_theme_stylebox_override("hover",    empty)
+	bra.add_theme_stylebox_override("pressed",  empty)
+	bra.add_theme_stylebox_override("disabled", empty)
+	bra.add_theme_stylebox_override("focus",    empty)
 	# Span the bottom band with a comfortable thumb margin: a wide, tall target
 	# reachable one-handed in portrait, clear of the dog framed above.
 	bra.anchor_left = 0.0

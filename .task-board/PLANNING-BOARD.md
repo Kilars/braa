@@ -6,7 +6,7 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase 2 OPEN; backlog replenished (2026-06-30, iteration 056)
+## Status — Phase 2 OPEN; 045/046/047 done, backlog empty (2026-06-30)
 
 Phase 1 is **signed off** (section below); **Phase 2 (`phase2.md`) is the current phase** per
 `po-review.md`'s Phase Sign-off gate. This iteration (1) archived the six signed-off Phase-1
@@ -39,12 +39,24 @@ empty).**
   normal/reduced motion (`.screenshots/046-lock-*`). Delivers the secondary **P2-6** for free
   (spam taps simply never register — input hygiene, not penalty).
 
+- **047 — FEATURE — The functional garden (P2-10). DONE 2026-06-30.** Render / Visual Review
+  (no TDD; the `DogFraming`/`DogBounds` framing tests stay green). Replaced the flat sky-blue void
+  with a look-down garden: `ProceduralSkyMaterial` sky gradient + a visible sun (an explicit
+  emissive `SphereMesh` in the sky band — the procedural sun-disc *shader* doesn't render in the
+  local headless GL path, only on the deployed real-GPU site, so an honest 3D sun guarantees it
+  reads everywhere) + a 40×40 m grass `PlaneMesh` at the foot plane + a downward-pitched camera
+  (horizon in the top ~25-30%, grass below). BRA floats over the grass (`StyleBoxEmpty`, no opaque
+  band); contact shadow reads on the grass (+1 mm anti-Z-fight). **Two visual-review passes:**
+  pass 1 REJECTED (no visible sun; dog shrank to a tiny figure — a P1-1/P1-2 framing regression),
+  pass 2 fixed it (camera lift/back 1.4/1.5 → 0.5/0.4, explicit sun) and PASSED on real
+  licensed-dog pixels (`.screenshots/047-garden-{rest,tell}.png`). 155 tests green; verify green.
+  Foundation for the wandering dog (P2-8).
+
 **Phase-2 backlog (priority order — all buildable, none owner-gated):**
 
-- **047 — FEATURE — The functional garden (P2-10).** Render / Visual Review. Look-down
-  Pokémon-GO view — sky + a visible sun, grass ground, horizon split; the dog stands on the
-  grass; BRA floats over the grass (no opaque band). Foundation for the wandering dog (P2-8). GL
-  Compatibility-only; no Phase-7 art polish smuggled in.
+- *(empty — 045 / 046 / 047 all done this cycle. Next replenish via `scan-project` against
+  `phase2.md`. Candidate next: P2-5 IndexedDB persistence, P2-8 wander + feints on the 047 ground,
+  P2-9 fading trainer.)*
 
 **Deferred / gated this round (NOT emitted):**
 - **P2-2 (distinct trick animations — Ligg, Legg deg, …) is ASSET-GATED.** The licensed Labrador
