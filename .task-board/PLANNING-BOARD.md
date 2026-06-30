@@ -13,9 +13,10 @@ live deployed build at 390×844 and signed P1-10 off in `po-review.md` (Phase Si
 P1-0…P1-9 stories pass, logic is test-first, verify is green. One owner gate remains, tracked as
 an open flag:
 
-- the warm **human** Maren "Bra!" recording (the genuinely-spoken espeak stand-in ships under the
-  same cue id — drop-in, no code change; **busted to a warm Piper neural voice** via BUST-043 →
-  task 044, so only the literal human voice is still owner-gated).
+- the warm **human** Maren "Bra!" recording. The stand-in shipping under the cue id is now the
+  **warm Piper local-neural voice** (`no_NO-talesyntese-medium`) — **task 044 LANDED 2026-06-30**,
+  replacing the robotic espeak clip, no code change. Only the literal human Maren recording stays
+  owner-gated (narrowed flag in `FLAGS.md`); it drops in at the same path with no code change.
 
 The coat **UV/tangent seam** flag is **CLOSED** — the PO reviewed the live build and accepted the
 coat as-is at native phone size (WONTFIX-cosmetic, 2026-06-30); no re-export needed (root cause
@@ -192,6 +193,12 @@ seam + the binding pixel-verify on a 390×844 Web export).
 > remaining Phase-1 work (033/034 + the P1-10 review) is all locally verifiable.
 
 ## Done (verified)
+- **044** — FEATURE (from BUST-043, P1-6): warm **Piper local-neural** "Bra!" replaces the
+  robotic espeak clip at `assets/audio/bra_tts_placeholder.wav` (voice `no_NO-talesyntese-medium`,
+  rhasspy/piper-voices). Same path → **zero GDScript change**; peak-matched to the espeak headroom
+  (−5 dBFS) so only timbre changes, not loudness. 123/123 tests green incl.
+  `test_voice_is_the_real_spoken_asset_when_present`; verify gate green. Provenance pinned in the
+  task file. Only the literal human Maren recording stays owner-gated (narrowed flag).
 - **033** — IMPROVEMENT (PO directive P1-7): tier readout too low-contrast. Added a dark
   outline (`font_outline_color` near-black + `outline_size` 12 px) to `TierReadout._init` so
   PERFECT/OK/**MISS** pop against the bright sky; tier fills unchanged so PERFECT stays

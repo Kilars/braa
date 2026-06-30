@@ -54,9 +54,11 @@ Entry format:
   voice file at authoring time does not violate it** (the game still plays a static `.wav`). The
   old "X-7 … so a cloud-voice substitute is out too" was wrong — it conflated runtime with
   authoring, which is exactly why the whole capability got flagged instead of spiked.
-- **Assumption while building:** the genuinely-spoken espeak `assets/audio/bra_tts_placeholder.wav`
-  (task 035) ships until 044's Piper voice lands; **both** are drop-in replaced by your human
-  recording with no code change.
+- **Assumption while building:** the warm **Piper local-neural** Norwegian "Bra!" now ships at
+  `assets/audio/bra_tts_placeholder.wav` (task **044 landed 2026-06-30**, voice
+  `no_NO-talesyntese-medium`), replacing the robotic espeak stand-in (task 035) under the same
+  cue id with no code change. The Piper clip is drop-in replaced by your human Maren recording,
+  also with no code change.
 
 ## Resolved
 

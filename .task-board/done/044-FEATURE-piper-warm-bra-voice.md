@@ -56,9 +56,50 @@ an **asset swap at the same path**, no GDScript change, and the existing
 
 ## Acceptance Criteria
 
-- [ ] `assets/audio/bra_tts_placeholder.wav` is a Piper `nb_NO` neural "Bra!", mono/16-bit/22050 Hz.
-- [ ] No GDScript change; `test_voice_is_the_real_spoken_asset_when_present` still green.
-- [ ] Gate intact: silent on MISS/dead; PERFECT louder + slightly higher than OK.
-- [ ] `verify.sh` green; `.wav` + regenerated `.import` committed.
-- [ ] Exact Piper invocation + voice id recorded in Results (provenance).
-- [ ] Narrowed human-voice flag left open (this task does not close it).
+- [x] `assets/audio/bra_tts_placeholder.wav` is a Piper neural "Bra!", mono/16-bit/22050 Hz.
+- [x] No GDScript change; `test_voice_is_the_real_spoken_asset_when_present` still green.
+- [x] Gate intact: silent on MISS/dead; PERFECT louder + slightly higher than OK.
+- [x] `verify.sh` green; `.wav` committed (`.import` sidecar byte-identical — see Results).
+- [x] Exact Piper invocation + voice id recorded in Results (provenance).
+- [x] Narrowed human-voice flag left open (this task does not close it).
+
+## Results (2026-06-30)
+
+**What shipped:** the espeak-ng robotic clip at `assets/audio/bra_tts_placeholder.wav` is
+replaced by a **Piper local-neural** "Bra!" — warm, single-speaker Norwegian Bokmål. Same
+path, same cue id → **zero GDScript change** (`payoff_player.gd:27` `VOICE_ASSET` unchanged),
+123/123 tests green incl. `test_voice_is_the_real_spoken_asset_when_present`, verify gate green
+(import · boot · test · export).
+
+**Voice model:** `no_NO-talesyntese-medium` (the Norwegian Bokmål voices live under `no_NO`,
+NOT `nb_NO`) from **rhasspy/piper-voices** (HuggingFace), file
+`no/no_NO/talesyntese/medium/no_NO-talesyntese-medium.onnx` (+ `.onnx.json`). Config:
+`sample_rate 22050` (== `PayoffPlayer.MIX_RATE`, no resample), `num_speakers 1`, dataset
+`talesyntese` (Norwegian NST corpus). Authoring-time download only — **X-7-safe** (runtime
+still plays a static `.wav`, never hits the network).
+
+**Provenance (pinned, mirrors task 035's espeak line):**
+```sh
+# 1. fetch the voice model (HuggingFace, ~63 MB onnx)
+curl -fsSL -o no_NO-talesyntese-medium.onnx{,.json} \
+  https://huggingface.co/rhasspy/piper-voices/resolve/main/no/no_NO/talesyntese/medium/no_NO-talesyntese-medium.onnx{,.json}
+# 2. synth (Piper 1.4.2 emits 16-bit mono 22050 Hz natively)
+nix shell nixpkgs#piper-tts -c sh -c \
+  'echo "Bra!" | piper -m no_NO-talesyntese-medium.onnx --length-scale 1.3 --sentence-silence 0.0 -f bra_ls1.3.wav'
+# 3. post (stdlib `wave`, no extra deps): trim silence (keep 20 ms pre-roll, 60 ms tail),
+#    5 ms fade-in + 15 ms fade-out (declick), peak-normalize to -5 dBFS to MATCH the espeak
+#    headroom (so the swap changes timbre, not loudness; avoids clipping under the layered click).
+```
+Final clip: **0.479 s, mono 16-bit 22050 Hz, peak -5.0 dBFS (RMS 3857), 21172 bytes.** The old
+espeak clip (0.827 s, peak -5.1 dBFS, RMS 2073) is recoverable from git history (parent of this
+commit); the Piper clip is audibly warmer/fuller at the same headroom (an on-device listen still
+rides the human-voice flag).
+
+**`.import` note:** the sidecar is **byte-identical** after re-import — its
+`.godot/imported/…sample` filename hashes the import *params* (`compress/mode=2`, etc.), not the
+source bytes. The regenerated `.sample` lives under gitignored `.godot/` and CI reproduces it via
+`godot --import` from the committed `.wav` + unchanged `.import` (the export verify leg confirms
+the new bytes ride the Web export). So there is nothing new to commit for `.import`.
+
+**Flag:** the narrowed human-voice flag stays **open** — this closes *robotic → warm-neural*,
+not *synthetic → human Maren*. FLAGS.md "Assumption" updated to note 044's Piper voice has landed.
