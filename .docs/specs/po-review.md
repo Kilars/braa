@@ -22,68 +22,69 @@ _(none yet — current phase is Phase 1)_
 
 ### PO Review — 2026-06-30
 
-Drove the **real Godot Web/PWA build** at 390×844 in headless Chromium — a local licensed
-export earlier, and **this pass the LIVE deployed Pages site itself** (https://kilars.github.io/braa/).
-The live site's own boot log confirms it now serves the licensed build —
+Re-verification pass. Drove the **LIVE deployed Pages site itself** (https://kilars.github.io/braa/)
+at 390×844 in headless Chromium (SwiftShader == the deployed GL Compatibility renderer),
+and independently re-ran every Phase-1 acceptance check on the running build — boot log,
+a no-seam apex-tell burst, **real BRA taps**, the timing readout, and a magnified coat
+capture. The live boot log still reports the licensed build —
 `dog loaded: res://assets/models/dog_licensed.glb (1 coat surface(s) forced opaque)` and
 `dog can Sitt — looping a sit every 1.2s (real apex from the licensed Labrador)` — and the
-full sit loop runs live there: the dog idles, builds into a clear seated apex, the apex
-tell fires, score marks, and it loops. **The carried-over P1-4 blocker is RESOLVED**, and
-the prior pass's third gap — a **live-deployed-site visual check** — is now **cleared**
-(see *What holds up*). Phase 1 is **not** signed off this pass: the only gaps left are
-owner-gated — the spoken-voice on-device listen and the coat re-export. Do not advance to
-Phase 2.
+full loop runs there: idle → build → clear seated apex → apex tell → mark → loop. **Every
+claim from the prior pass still holds** on my own fresh capture; nothing newly broke and
+nothing was newly fixed to prune. Phase 1 is **not** signed off: the only remaining gaps
+are owner-gated — the spoken-voice on-device listen and the coat re-export. Do not advance
+to Phase 2.
 
-**The blocker is gone (P1-4 — proven live, no seam):** a free-run 90-frame burst across
-several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring at the
-seated apex — **max 2621 gold px, 4/90 frames**, the pulse building and tapering across the
-button band (2621 → 2145 → 374 → 120) like a soft "now" pulse, and dark in idle
-(`.screenshots/po-live-apex-burst.png`). This is the binding live proof the prior pass
-demanded (a no-seam burst with max gold > 0), **not** the forced seam. The core "now" cue
-now reads in actual play — timing is a readable skill again, not a blind guess.
+**The blocker stays gone (P1-4 — proven live again, no seam):** a free-run 50-frame burst
+across several sit cycles, with **no `?bra_force_tell` seam**, shows the warm-gold apex ring
+at the seated apex — **max 3082 gold px, gold on 4/50 frames** (~560 ms sampling; a brief
+~0.2 s tell), and **dark in idle** (per-frame: long runs of 0, spiking 2281 / 2363 / 2912 /
+3082 at the apexes). The seated apex frame reads cleanly: clear Labrador, gold ring framing
+the marker, "BRA" fully legible inside it (`.screenshots/po2-live-apex.png`); idle frame has
+the button band dark, no ring (`.screenshots/po2-live-idle.png`). This is the honest live
+"now" cue, not a forced seam.
 
-**What holds up (re-verified live this pass, keep it):**
-- **Apex ring frames "BRA", doesn't bury it (P1-4 polish — was an improvement, fixed).**
-  In the live apex frame the gold ring rings the marker and the "BRA" word stays fully
-  legible inside it (`.screenshots/po-live-apex-burst.png`).
-- **Tier readout sits in clear sky above the crown (P1-7 polish — was an improvement, fixed).**
-  Forced PERFECT/OK/MISS each flash high above the dog's head, well clear of the ears
-  (`.screenshots/033-readout-perfect.png`); the prior ear/crown overlap is gone.
-- **Reduced motion dampens the tell, never removes it (P1-8).** With `prefers-reduced-motion`
-  the apex ring is faint but present (**max 127 gold px** vs 2621 normal) and the seated
-  apex stays fully readable by pose (`.screenshots/po-reduced-apex.png`).
-- **Reaction reads as joy (P1-6).** A live PERFECT mark fires a clear happy hop — front paws
-  up, head high, ears flying (`.screenshots/po-reaction-06.png`).
-- **Readout contrast (P1-7).** All three tiers carry a dark outline and pop against the sky
-  (outline px: miss 32019 / ok 29892 / perfect 30667).
+**What holds up (re-verified live this pass on my own captures, keep it):**
+- **The BRA tap really scores and pays off (P1-5 / P1-6).** I clicked the live BRA button
+  70 times across sit cycles (real Playwright pointer events on the canvas, no seam); **7 of
+  them landed a successful mark and fired the dog reaction** (`window.__bra_reaction_n` went
+  0 → 7). Post-tap frames catch the dog's open-mouth perk-up reaction
+  (`.screenshots/po2-live-aftertaps.png`). Blind taps with no window open simply do nothing —
+  no false payoff.
+- **Apex ring frames "BRA", doesn't bury it (P1-4 polish).** The gold ring rings the marker
+  and the "BRA" word stays fully legible inside it (`.screenshots/po2-live-apex.png`).
+- **Tier readout sits in clear sky above the crown, legible, dark-outlined (P1-7).** Pinned
+  PERFECT flashes bold gold and MISS flashes grey, each high above the dog's head well clear
+  of the ears, with a dark outline that pops against the sky
+  (`.screenshots/po2-readout-perfect.png`, `.screenshots/po2-readout-miss.png`); no ear/crown
+  overlap. The readout is driven off the same `_on_bra_pressed` tap path as the reaction that
+  I confirmed firing, so it flashes on real marks too.
+- **Reaction reads as positive (P1-6, visual half).** Real marks visibly perk the dog up —
+  head high, mouth open (`.screenshots/po2-live-aftertaps.png`).
 - **The dog reads, the sit is legible, it stays centered, opaque coat, contact shadow, and
-  the loop repeats with no console errors (P1-1/P1-2/P1-3/P1-9).** Clear Labrador silhouette,
-  grounded by the shadow disc, no see-through panels, no primitive-blob flash.
-- **Live deployed Pages site serves the licensed Sitt build (P1-10 visual gate — was the 3rd
-  sign-off blocker, now CLEARED).** Driving the **live site itself** (not a local export) at
-  390×844, the boot log reports the licensed Labrador with a real Sitt looping every 1.2s; the
-  dog sits legibly, stays centered, and is grounded by the shadow disc every cycle (idle →
-  build → seated apex → loop), and the **apex tell fires live on the deployed build** — a
-  warm-gold ring framing "BRA" at the seated apex (live burst: **max 678 gold px, gold on
-  3/60 frames** sampled at 500 ms over 30 s, consistent with a brief ~0.2 s tell; dark in
-  idle). No console errors beyond benign GL `ReadPixels` perf notes, no T-pose / blob flash /
-  drift / clipping. The visual core of P1-1/2/3/4/5/9 holds on the actual live site — this is
-  the live-pixel confirmation the prior pass demanded, taken on the deployed build the P1-10
-  gate names.
+  the loop repeats with NO console errors (P1-1/P1-2/P1-3/P1-9).** Clear Labrador silhouette,
+  grounded by the shadow disc, no see-through panels, no primitive-blob flash, no T-pose, no
+  drift. The console captured **zero** SCRIPT ERROR / page error across boot + ~50 s of play.
+- **Live deployed Pages site serves the licensed Sitt build (P1-10 visual gate — stays
+  CLEARED).** Driving the **live site itself** (not a local export) at 390×844, all of the
+  above holds on the actual shipped build — the live-pixel confirmation the P1-10 gate names.
+  (P1-8 reduced-motion was confirmed dampened-not-removed on a prior live pass — max 127 gold
+  px vs normal, apex still readable by pose — and is unchanged this pass.)
 
 #### Improvements (still open — owner-gated, not loop-buildable)
 
-- **Coat UV/tangent seam down the chest/belly (P1-1 / P1-9).** Magnified, the opaque coat
-  shows a hard vertical shading band down the body-symmetry centerline plus symmetric flank
-  arcs (`.screenshots/po-coat-magnified.png`) — subtle at native phone size but a real
-  shading artifact, not real fur, up close. (What the 2026-06-29 note called a stray "sliver"
-  *is* this centerline band — the 039 spike confirmed it is **not** stray geometry and **not**
-  a transparency gap.) Root-caused to the **licensed asset's mirrored-UV / missing-tangent
-  layout**; it is **owner-gated** — needs a re-export with baked tangents / a re-baked normal
-  map (`.task-board/FLAGS.md`, 2026-06-30). Task 040's in-engine mitigation was correctly
-  found to be a deploy no-op and rerouted, so **there is no new loop task here**. *Good looks
-  like:* smooth opaque coat with no hard centerline band or flank arcs at any pose, confirmed
-  by a magnified capture.
+- **Coat UV/tangent seam down the chest/belly (P1-1 / P1-9).** Re-confirmed live this pass:
+  magnifying the seated apex's chest (`.screenshots/po2-coat-magnified.png`) shows a hard
+  vertical shading band down the body-symmetry centerline plus symmetric flank arcs — subtle
+  at native phone size but a real shading artifact, not real fur, up close, and **unchanged**
+  from the prior capture (no regression, no improvement). (What the 2026-06-29 note called a
+  stray "sliver" *is* this centerline band — the 039 spike confirmed it is **not** stray
+  geometry and **not** a transparency gap.) Root-caused to the **licensed asset's mirrored-UV
+  / missing-tangent layout**; it is **owner-gated** — needs a re-export with baked tangents /
+  a re-baked normal map (`.task-board/FLAGS.md`, 2026-06-30). Task 040's in-engine mitigation
+  was correctly found to be a deploy no-op and rerouted, so **there is no new loop task here**.
+  *Good looks like:* smooth opaque coat with no hard centerline band or flank arcs at any pose,
+  confirmed by a magnified capture.
 
 #### Sign-off is blocked only on owner/PO actions (no buildable Phase-1 code remains)
 
