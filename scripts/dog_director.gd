@@ -33,6 +33,11 @@ func has_sit() -> bool:
 func has_reaction() -> bool:
 	return clips.has_reaction()
 
+## Whether this dog has a walk clip for the ambient wander (050, P2-8). False → play_walk no-ops
+## and main leaves the dog put (never a faked gait). Both shipped dogs carry one.
+func has_walk() -> bool:
+	return clips.has_walk()
+
 ## Loop the ambient idle so the dog reads as alive at rest (P1-2). No-op if the
 ## dog exposes no idle clip.
 func play_idle() -> void:
@@ -40,6 +45,16 @@ func play_idle() -> void:
 		return
 	_set_loop(clips.idle, Animation.LOOP_LINEAR)
 	_ap.play(clips.idle)
+
+## Loop the walk clip so the legs step while main glides the dog ROOT across the grass patch
+## (050, P2-8 ambient wander). The clip is in-place (licensed `Walk_F_IP`) so it animates only the
+## gait, never the root — main owns the translation. A no-op on a dog with no walk clip (never a
+## faked gait); main then leaves the dog put.
+func play_walk() -> void:
+	if _ap == null or not has_walk():
+		return
+	_set_loop(clips.walk, Animation.LOOP_LINEAR)
+	_ap.play(clips.walk)
 
 ## Play the build-into-the-sit, then hold the seated loop (P1-3). Requires a
 ## sit-capable dog; a no-op (stays idle) otherwise — never a faked sit.

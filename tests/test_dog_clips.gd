@@ -84,6 +84,29 @@ func test_cc0_generic_jump_is_never_a_reaction() -> void:
 	assert_eq(c.reaction, "", "a bare generic Jump is not a joyful reaction")
 	assert_false(c.has_reaction(), "the idle-only dog still can't react (asset gate holds)")
 
+func test_walk_resolves_the_locomotion_clip() -> void:
+	# 050 / P2-8 locomotion: the ambient wander rides a REAL walk clip (no faked gait). The
+	# licensed Labrador ships `Walk_F_IP` — an IN-PLACE walk (root motion stripped), exactly
+	# what we want since main drives the root translation itself and the clip just moves the legs.
+	var c := DogClips.resolve(PackedStringArray(LAB))
+	assert_eq(c.walk, "Arm_Labrador|Walk_F_IP", "the in-place walk clip resolves for locomotion")
+	assert_true(c.has_walk(), "the Labrador can amble (has a walk clip)")
+
+func test_cc0_also_has_a_walk_clip() -> void:
+	# The CC0 fallback ships a plain `Walk` too, so the local verify/export build can still show
+	# the dog roaming (the licensed dog isn't in public CI).
+	var c := DogClips.resolve(PackedStringArray(CC0))
+	assert_eq(c.walk, "AnimalArmature|Walk", "the CC0 dog's plain Walk resolves")
+	assert_true(c.has_walk(), "even the CC0 fallback can amble")
+
+func test_a_dog_with_no_walk_clip_cannot_amble() -> void:
+	# Honest gate (mirrors has_sit / has_reaction): a dog with no walk clip resolves none, so
+	# main skips the wander rather than faking a glide-while-standing (CLAUDE.md "no faked gait").
+	var c := DogClips.resolve(PackedStringArray(
+		["Arm|Idle_1", "Arm|Sitting_start", "Arm|Sitting_1"]))
+	assert_eq(c.walk, "", "no walk clip resolves to nothing")
+	assert_false(c.has_walk(), "a dog with no walk clip can't amble (skip, never fake)")
+
 func test_committed_dog_exposes_a_real_idle_clip() -> void:
 	# Binds to the REAL committed asset (mirrors test_smoke): after --import the dog
 	# must yield an AnimationPlayer whose resolved idle is an actual clip on it.

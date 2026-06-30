@@ -149,19 +149,29 @@ func test_live_tell_lights_up_at_the_apex_on_a_sit_capable_dog() -> void:
 	# clock and clip lengths, both of which work headless even though the GPU/anim doesn't.
 	main._director = DogDirector.new(_sit_capable_ap())
 	main._director.play_idle()
-	main._loop = SitLoop.new()
 	assert_true(main._director.has_sit(), "the injected dog can sit (live path is reachable)")
 	assert_false(main._force_tell, "no capture seam — this is the genuine live path")
-	# Drive ~4 s of frames: idle gap (1.2 s) → sit (apex at 1.0 s into it) → stand. Track the
-	# brightest frame and when it happened, and confirm the tell stays dark before the sit.
+	# 048 made SitLoop's cadence VARIABLE and 35% of offers FEINTS (no markable window), so
+	# relying on the random production loop to open a *real* sit inside the frame budget is flaky
+	# (it sometimes only feints). Detach the loop and open the sit through the SAME production path
+	# its START_SIT takes — _begin_sit opens the session + window and builds the tell — so the
+	# genuine live branch (main.gd _process → _tell.intensity(_session.elapsed())) is still
+	# exercised, deterministically, with only the RNG removed.
+	main._loop = null
 	var dt := 1.0 / 60.0
+	# First, idle frames with NO sit open: the live tell must stay dark (P1-4 dormant-at-rest).
+	var lit_during_idle := false
+	for i in 30:
+		main._process(dt)
+		if marker.is_showing():
+			lit_during_idle = true
+	assert_false(lit_during_idle, "the tell stays dark whenever no sit is open (P1-4 dormant-at-rest)")
+	# Now open a real sit and drive it: the marker must build to a clear peak at the seated apex.
+	main._begin_sit()
 	var max_i := 0.0
 	var peak_elapsed := -1.0
-	var lit_during_idle := false
 	for i in 240:
 		main._process(dt)
-		if not main._session.is_open() and marker.is_showing():
-			lit_during_idle = true
 		if marker.intensity > max_i:
 			max_i = marker.intensity
 			peak_elapsed = main._session.elapsed()
@@ -169,7 +179,6 @@ func test_live_tell_lights_up_at_the_apex_on_a_sit_capable_dog() -> void:
 		"the LIVE apex tell must light up during a real sit, not only under ?bra_force_tell (got max %.3f)" % max_i)
 	assert_true(max_i >= 0.5,
 		"the live tell must build to a clear peak at the apex, not a faint flicker (got %.3f)" % max_i)
-	assert_false(lit_during_idle, "the tell stays dark whenever no sit is open (P1-4 dormant-at-rest)")
 	assert_true(absf(peak_elapsed - 1.0) <= 0.2,
 		"the peak lands at the seated apex (~1.0 s into the sit), where a tap scores PERFECT (got %.3f s)" % peak_elapsed)
 	main.queue_free()

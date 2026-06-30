@@ -127,6 +127,24 @@ var _dog: Node3D
 var _dog_rest: Transform3D
 var _confused_age := -1.0
 
+## The bounded-patch ambient wander (050, P2-8 locomotion): between offers the dog ambles a
+## small disc on the grass (turning back at the edges), so it reads as a dog with a mind of its
+## own rather than parked dead-centre (the PO's P2-8 note). The math lives in the pure WanderField;
+## main glides the dog ROOT from it each frame and plays the real walk clip while it's stepping.
+## Built only on a dog that carries a walk clip (never a faked gait); null otherwise.
+var _wander: WanderField
+## False while a sit/feint is in progress so locomotion PAUSES and the dip/seat reads clearly
+## (composes with 048 — the dog settles for the offer, then resumes roaming).
+var _wander_active := true
+## Whether the walk clip is currently driving (vs idle), so play_walk/play_idle only fire on a
+## change instead of restarting the clip every frame.
+var _ambling := false
+## The contact-shadow blob (031) kept so it can TRACK the wandering dog — the dog must stay
+## grounded by its shadow as it roams (050). `_shadow_rest` is the blob's boot position; the
+## wander offset is added to its XZ each frame. Null when no shadow was mounted.
+var _contact_shadow: MeshInstance3D
+var _shadow_rest: Vector3
+
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
@@ -245,7 +263,8 @@ func _process(delta: float) -> void:
 		_readout.advance(delta)  # fade the last tier's flash (024g/P1-7)
 	if _learned_bar != null:
 		_learned_bar.advance(delta)  # fade the setback wash (045/P2-4)
-	_drive_confused(delta)
+	_drive_wander(delta)   # roam the patch + place the dog at its wander spot (050/P2-8)
+	_drive_confused(delta) # layer the bad-tap wobble on top of the wander base (045)
 
 ## Drive the repeating round loop (027, P1-9): each frame SitLoop decides whether to begin
 ## the next sit or stand the dog back to idle. A no-op until _start_dog builds _loop, and a
@@ -268,6 +287,7 @@ func _advance_loop(delta: float) -> void:
 ## apex tell from that SAME window so the glow peaks exactly where a tap scores PERFECT
 ## (P1-4 honest tell — one source of truth). _process advances the clock; the button reads it.
 func _begin_sit() -> void:
+	_pause_wander()  # settle the roam so the seat reads (050, P2-8 — composes with 048)
 	_director.play_sit()
 	_window = _director.sit_window()
 	_session.open(_window)
@@ -282,6 +302,7 @@ func _end_sit() -> void:
 	_tell = null
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
 	_director.play_idle()
+	_resume_wander()  # come back round to roaming the patch (050)
 
 ## Begin a feint (048, P2-8): the dog visibly dips toward a sit and aborts. CRUCIALLY this
 ## leaves _session/_window/_tell UNTOUCHED — no scoring window opens for a feint, so the apex
@@ -289,12 +310,14 @@ func _end_sit() -> void:
 ## through the existing _on_bra_pressed → _session.tap() → DEAD → gentle erosion + confused
 ## beat, with ZERO new downstream branches. Only the dog's animation differs from idle.
 func _begin_feint() -> void:
+	_pause_wander()  # settle so the dip reads as a deliberate fake-sit, not a stride (050)
 	_director.play_feint()
 
 ## End a feint (048, P2-8): the dip is over; stand back to the ambient idle so the loop comes
 ## round to the next offer. The session was never opened, so there is nothing to close here.
 func _end_feint() -> void:
 	_director.play_idle()
+	_resume_wander()  # back to roaming the patch (050)
 
 ## Garden backdrop (P2-10): a ProceduralSkyMaterial sky gradient with a clean readable sun
 ## disc above and a horizon split where the grass ground meets the sky — replaces the old
@@ -542,6 +565,9 @@ func _setup_contact_shadow(dog: Node) -> void:
 	blob.position = blob_pos
 	blob.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # it IS the shadow
 	add_child(blob)
+	# Keep the blob + its boot position so the wander can track it under the roaming dog (050).
+	_contact_shadow = blob
+	_shadow_rest = blob_pos
 
 ## The blob's material: an unshaded flat-black disc whose alpha is a soft radial falloff
 ## (dark at the centre, transparent at the rim) so it reads as a smudge of shadow, not a
@@ -637,12 +663,19 @@ func _start_dog(dog: Node) -> void:
 		return
 	_director = DogDirector.new(ap)
 	_director.play_idle()
-	# Hold the dog's rest transform so the procedural confused beat (045) can recoil and
-	# restore EXACTLY to it — the AnimationPlayer animates the skeleton, not this root node,
-	# so a brief transform nudge here never fights the idle/sit clips.
+	# Hold the dog's rest transform so the procedural confused beat (045) and the ambient
+	# wander (050) can drive the root and restore EXACTLY to it — the AnimationPlayer animates
+	# the skeleton, not this root node, so a transform nudge here never fights the idle/sit clips.
 	if dog is Node3D:
 		_dog = dog
 		_dog_rest = _dog.transform
+	# The ambient wander (050, P2-8): on a dog that can actually walk, build the bounded-patch
+	# roam so it ambles the grass between offers instead of standing dead-centre. Gated on a real
+	# walk clip — a dog with none stays put rather than gliding a standing pose (never a faked
+	# gait). Production seeds a random RNG; the patch math is unit-tested via the seeded WanderField.
+	if _dog != null and _director.has_walk():
+		_wander = WanderField.new()
+		print("[Bra!] dog ambles a bounded patch between offers (P2-8 wander, clip '%s')" % _director.clips.walk)
 	# The repeating round loop (027/P1-9) drives the rest from _process: it waits a calm
 	# beat, plays the sit + opens the scoring window (_begin_sit), holds the seat, then
 	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
@@ -869,15 +902,75 @@ func _drive_confused(delta: float) -> void:
 	if _dog == null or _confused_age < 0.0:
 		return
 	_confused_age += delta
+	# Recoil/settle around the dog's CURRENT base transform — its wander spot if it's roaming
+	# (050), else its rest — so the wobble composes with the wander instead of snapping the dog
+	# back to origin mid-roam.
+	var base := _dog_base_transform()
 	if _confused_age >= CONFUSED_DURATION:
-		_dog.transform = _dog_rest  # settle exactly back — no drift
+		_dog.transform = base  # settle exactly back — no drift
 		_confused_age = -1.0
 		return
 	var t := _confused_age / CONFUSED_DURATION
 	var damp := 1.0 - t  # the wobble decays to nothing as it settles
 	var angle := sin(t * TAU * CONFUSED_WOBBLES) * CONFUSED_AMPLITUDE * damp * _motion_scale
-	_dog.transform = _dog_rest
+	_dog.transform = base
 	_dog.rotate_object_local(Vector3.UP, angle)
+
+## Drive the ambient wander (050, P2-8): while active (between offers), advance the bounded-patch
+## roam and switch the dog between its walk clip (ambling) and idle (paused at a target) — only on
+## a change, so the clip isn't restarted every frame. Each frame it places the dog ROOT at its
+## wander spot (frozen while a sit/feint pauses the roam) and slides the contact shadow to match,
+## UNLESS the confused beat is mid-recoil — that frame _drive_confused owns the transform and
+## composes its wobble off the same wander base. A no-op on a dog with no walk clip (no _wander).
+func _drive_wander(delta: float) -> void:
+	if _wander == null or _dog == null:
+		return
+	if _wander_active:
+		_wander.advance(delta)
+		if _wander.is_moving() and not _ambling:
+			_director.play_walk()   # step the legs while the root glides
+			_ambling = true
+		elif not _wander.is_moving() and _ambling:
+			_director.play_idle()   # paused at a target — stand and look around
+			_ambling = false
+	if _confused_age < 0.0:
+		_dog.transform = _wander_base()
+	_track_contact_shadow()
+
+## Pause the wander for an offer (sit/feint): freeze the roam so the dip/seat reads, and clear the
+## ambling flag so the walk clip is re-selected when roaming resumes (050, composes with 048).
+func _pause_wander() -> void:
+	_wander_active = false
+	_ambling = false
+
+## Resume the wander after an offer ends (050). play_idle has already been issued by the caller,
+## so leave _ambling false — the next moving frame re-selects the walk clip.
+func _resume_wander() -> void:
+	_wander_active = true
+
+## The dog's base transform this frame: its wander spot (offset + heading on the grass plane) when
+## roaming (050), else its boot rest. The confused beat layers its wobble on top of this.
+func _dog_base_transform() -> Transform3D:
+	if _wander != null:
+		return _wander_base()
+	return _dog_rest
+
+## Build the wander transform from the pure WanderField: translate the rest spot by the XZ offset
+## (keep the rest Y so the feet stay on the grass) and yaw the rest basis to the travel heading so
+## the dog faces where it's walking (reads as roaming, not sliding).
+func _wander_base() -> Transform3D:
+	var off := _wander.position()
+	var basis := _dog_rest.basis.rotated(Vector3.UP, _wander.heading())
+	return Transform3D(basis, _dog_rest.origin + Vector3(off.x, 0.0, off.y))
+
+## Slide the contact-shadow blob to stay under the wandering dog (050) — its XZ tracks the wander
+## offset; its Y (the grass foot plane, with the Z-fight lift) is untouched so the dog stays
+## grounded as it roams. A no-op if no shadow was mounted.
+func _track_contact_shadow() -> void:
+	if _contact_shadow == null or _wander == null:
+		return
+	var off := _wander.position()
+	_contact_shadow.position = _shadow_rest + Vector3(off.x, 0.0, off.y)
 
 ## Dispatch the reward for a scored tier (024f, P1-6): the voice + click through the
 ## PayoffPlayer and the dog's positive reaction through the director. MarkPayoff is the

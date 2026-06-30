@@ -30,18 +30,25 @@ func test_dead_cc0_tap_keeps_the_bar_floored() -> void:
 	assert_false(main._progress.mastered, "a wrong-moment tap never masters the trick")
 	main.queue_free()
 
-func test_confused_beat_restores_the_dog_to_rest() -> void:
-	# A bad tap fires the procedural confused recoil; once it settles, the dog must be back
-	# at EXACTLY its rest transform — the property that makes the nudge safe (no drift, no
-	# centring regression). Skipped only if the CC0 root isn't a Node3D we can nudge.
+func test_confused_beat_leaves_no_drift() -> void:
+	# A bad tap fires the procedural confused recoil; once it settles, the dog must be back at
+	# EXACTLY the transform it recoiled FROM — the property that makes the nudge safe (no drift,
+	# no centring regression). Since 050 the dog also WANDERS, so the recoil composes off its
+	# current wander spot rather than boot rest; pause the roam to freeze that base, then prove
+	# the wobble leaves no residual drift off it. Skipped only if the root isn't a Node3D.
 	var main := instantiate_main()
 	if main._dog == null:
 		assert_true(true, "no Node3D dog root to nudge — confused beat is a safe no-op")
 		main.queue_free()
 		return
+	for i in 30:
+		main._process(0.1)  # let the dog amble off-centre so a non-trivial base is exercised
+	main._pause_wander()    # freeze the roam so the recoil base is stable for the assertion
+	main._process(0.0)      # place the dog on its (now frozen) wander base
+	var base: Transform3D = main._dog.transform
 	main._on_bra_pressed()  # DEAD → confused beat begins
 	for i in 6:
 		main._process(0.1)  # 0.6s > CONFUSED_DURATION → fully settled
-	assert_true(main._dog.transform.is_equal_approx(main._dog_rest),
-		"the confused beat settles the dog back to its rest transform — no drift")
+	assert_true(main._dog.transform.is_equal_approx(base),
+		"the confused beat settles the dog back to its wander base — no drift (045 ∘ 050)")
 	main.queue_free()

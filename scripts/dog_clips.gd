@@ -13,6 +13,7 @@ var sit_start: String  ## build-into-the-sit clip; the apex is its end. "" if no
 var sit_loop: String   ## fully-seated hold loop. "" if none
 var sit_end: String    ## stand-back-up clip. "" if none
 var reaction: String   ## positive reaction on a mark (024f, P1-6); "" if the dog has none
+var walk: String       ## locomotion clip for the ambient wander (050, P2-8); "" if the dog has none
 
 ## Leaf substrings that name a POSITIVE reaction, in priority order. A joyful in-place
 ## bounce reads as celebration at phone size, so the licensed pack's hop clips rank ahead
@@ -32,6 +33,7 @@ func _init() -> void:
 	sit_loop = ""
 	sit_end = ""
 	reaction = ""
+	walk = ""
 
 static func resolve(names: PackedStringArray) -> DogClips:
 	var c := DogClips.new()
@@ -40,6 +42,7 @@ static func resolve(names: PackedStringArray) -> DogClips:
 	c.sit_loop = _pick_sit_loop(names)
 	c.sit_end = _pick(names, "sitting", "end")
 	c.reaction = _pick_reaction(names)
+	c.walk = _pick_walk(names)
 	return c
 
 ## True when this dog can actually perform a sit (build + hold both present). The
@@ -53,6 +56,13 @@ func has_sit() -> bool:
 ## never fakes a celebration; the real reaction ships with the licensed Labrador (025).
 func has_reaction() -> bool:
 	return reaction != ""
+
+## True when this dog has a walk clip for the ambient wander (050, P2-8). When false, main skips
+## the wander rather than gliding a standing dog — never a faked gait (CLAUDE.md). Both shipped
+## dogs carry one: the CC0 `Walk` and the licensed `Walk_F_IP` (an in-place walk, root motion
+## stripped — exactly right since main drives the root translation itself).
+func has_walk() -> bool:
+	return walk != ""
 
 ## Depth-first search for the dog's AnimationPlayer inside a loaded glb subtree. The one
 ## home for the recursive find that the scene loader (main.gd) and the clip tests share,
@@ -111,4 +121,13 @@ static func _pick_reaction(names: PackedStringArray) -> String:
 		for n in names:
 			if _leaf(n).to_lower().contains(term):
 				return n
+	return ""
+
+## The locomotion clip for the ambient wander (050, P2-8): the first leaf containing "walk".
+## Matches both the CC0 `Walk` and the licensed in-place `Walk_F_IP`. "" when the dog ships no
+## walk clip — main then skips the wander rather than faking a gait.
+static func _pick_walk(names: PackedStringArray) -> String:
+	for n in names:
+		if _leaf(n).to_lower().contains("walk"):
+			return n
 	return ""

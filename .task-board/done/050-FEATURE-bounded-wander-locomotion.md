@@ -55,3 +55,41 @@ in place and stay FIXED — only the dog root translates within a bounded patch 
   as *roaming* the garden and turning at the edges, stays centred-ish and fully framed, grounded by
   its contact shadow on the grass — PASS.
 - [ ] `nix develop -c bash verify.sh` green (import · boot · test · export).
+
+## Results (2026-07-01)
+
+**Done — verify gate green (import · boot · test · export), 190 tests / 0 failures.**
+
+What shipped:
+- **`scripts/wander_field.gd`** — the PURE bounded-patch wander (TDD, `tests/test_wander_field.gd`):
+  amble→pause→amble inside a disc, sqrt-area target sampling (always in range), `clamp_to_patch`
+  edge turn-back, heading faces travel, seeded-RNG determinism. Five unit tests cover the three
+  acceptance bullets (target in range · edge turn · never leaves the patch) plus heading + the
+  amble/pause rhythm.
+- **`scripts/dog_clips.gd`** — resolves a real `walk` clip + `has_walk()` (licensed `Walk_F_IP`
+  in-place, CC0 `Walk`); honest gate when none. Tests in `test_dog_clips.gd`.
+- **`scripts/dog_director.gd`** — `play_walk()` loops the gait (no-op without a walk clip);
+  `tests/test_dog_director_walk.gd`.
+- **`scripts/main.gd`** — glues it on: builds the wander only on a walk-capable dog, drives the
+  dog ROOT from it each frame while idle, plays walk while stepping / idle while paused, PAUSES
+  the roam during a sit/feint (composes with 048) and resumes after, slides the contact shadow to
+  track the dog, and composes the confused beat (045) off the wander base instead of boot rest.
+  `tests/test_wander_wiring.gd` pins the composition contract.
+
+Honest-asset note: rides the **real** licensed `Walk_F_IP` clip (in-place, root motion stripped —
+main owns the translation) — no faked gait, no primitive, no glide-while-standing.
+
+Visual Review (PASS): captured 10 phone-portrait (390×844) frames off the local Web bundle (which
+carries the licensed Labrador) at radius 0.32. The dog roams to distinct spots, turns to face its
+heading (reads as roaming, not sliding), shows a real walk gait and a real sit, stays fully framed
+and centred-ish, and is grounded by its contact shadow every frame; the camera/sun/UI stay fixed.
+**Tuning:** a first pass at radius 0.55 walked the dog's head off the right edge — dropped to 0.32,
+which keeps it fully framed at its widest while still reading clearly as a roam.
+
+Incidental fix (NOT this task's scope, but it blocked the gate): `test_tell_wiring.gd`'s
+`test_live_tell_…` was a **latent flake 048 introduced** — it drove a *random* `SitLoop.new()`, and
+with 048's variable cadence + 35% feints a real sit didn't always open in the frame budget
+(reproduced 2/4 fail across runs). Made it deterministic by opening the sit through the same
+production `_begin_sit()` path with the random loop detached; every assertion preserved; now 5/5
+green. `test_learned_bar_wiring`'s confused-beat test updated to assert no-drift off the **wander
+base** (the dog now legitimately wanders off boot rest).
