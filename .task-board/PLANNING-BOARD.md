@@ -160,6 +160,16 @@ voice flag (which had been raised *whole, with no spike* — the named anti-patt
 **Piper** local-neural TTS → build task **044** (warm `nb_NO` "Bra!", no code change, owner-free);
 flag narrowed to only the literal human Maren recording.
 
+**Process change — "work-ahead" (so a blocked phase never idle-spins again).** The idle ladder is
+now: current-phase buildable work → flag-bust → **work-ahead**. When the current phase is
+*exhausted* (built + green + construction-audit clean **and** every flag busted-or-owner-gated →
+blocked purely on owner/human), the loop builds the **next** phase's stories **provisionally**
+(`work-ahead`-labelled) instead of re-verifying. Guardrails: never counts as sign-off (PO-only),
+ships **dormant** so it can't disturb the current-phase play-test, **preempted** by any
+current-phase work, and never built on top of the blocked item. Wired through `index.md` (spec
+carve-out), `mother_prompt.md`, `scan-project`, and `father_prompt.md`. The father still runs on
+its `FATHER_EVERY` cadence, so sign-off is never starved.
+
 ## Status — Phase-1 PO re-play REOPENED work; loop building the remaining improvements (2026-06-30)
 
 The 2026-06-29 "buildable work COMPLETE / construction clearance" framing was **premature**:

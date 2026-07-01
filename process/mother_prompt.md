@@ -81,6 +81,25 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   anti-pattern above); a later flag bust found a warm **local neural** voice (Piper — offline,
   no owner action) is buildable, routed it to a build task, and narrowed the flag to only the
   literal **human** recording.
+- **Work ahead when the current phase is exhausted (never idle-spin).** The idle ladder, in
+  strict order: **(1)** buildable work in the **current** phase — including bugs — always comes
+  first; **(2)** else, **flag-bust** an un-busted open flag; **(3)** else, if the current phase
+  is **exhausted** — all its stories coded + tests green, the construction audit clean, **and**
+  every open flag either busted or genuinely owner-gated, so it is blocked **purely** on owner
+  assets + the human PO sign-off — **work ahead**: build the **next unbuilt phase's** buildable
+  stories instead of re-verifying a finished build (this is why the loop no longer spins on a
+  blocked phase the way Phase 1 did). Work-ahead is **provisional and subordinate**, with four
+  hard guardrails: (a) it **never** writes the `## Phase Sign-off` list — sign-off stays
+  **PO-only**, and the current phase stays "current" until the PO signs it; (b) it must stay
+  **dormant in the live build** (gated / not wired into the default current-phase experience) so
+  the father's current-phase play-test is unaffected; (c) any reappearance of current-phase work
+  — a PO reopen, a new or un-busted flag, a regression — **preempts** it immediately; (d) it must
+  **not** build on top of the exact blocked item (if the voice is the block, don't build
+  next-phase work that depends on the voice). Mark every such task with a **`work-ahead`** label
+  so it reads as provisional and can be re-ordered once its phase actually becomes current. Only
+  a board with no current-phase work, no un-busted flag, **and** no buildable work-ahead is a
+  true idle hand-off. (The father still runs on its own cadence — `FATHER_EVERY` — so working
+  ahead never starves the PO sign-off that actually advances the phase.)
 - **Flag user-only decisions; never block on them.** You are the **orchestrator** — the
   one who decides what reaches the user. When `start-working` (or a subagent's report)
   surfaces something only the user can decide — a product / scope / legal / asset / owner

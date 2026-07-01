@@ -1,6 +1,6 @@
 ---
 name: scan-project
-description: Scans the project to find gaps between specs and implementation, identifies bottlenecks, reviews code quality and readability, checks best practices, and generates up to 3 prioritized tasks per round (zero when the current phase is built and only awaiting PO Visual Review) via the task-board skill.
+description: Scans the project to find gaps between specs and implementation, identifies bottlenecks, reviews code quality and readability, checks best practices, and generates up to 3 prioritized tasks per round (when the current phase is built, it flag-busts open flags, then builds the next phase provisionally as `work-ahead`; returns zero only when current-phase, flags, and reachable work-ahead are all dry and it only awaits PO Visual Review) via the task-board skill.
 ---
 
 # Scan Project
@@ -15,7 +15,7 @@ This skill creates task files via the `task-board` skill. It does NOT write code
 1. **Spec vs Implementation gap analysis** — compares the spec in `.docs/specs/` against actual code to find missing or incomplete features
 2. **Code quality & readability review** — finds bottlenecks, code smells, and readability issues
 3. **Best practices audit** — checks for consistent patterns, naming, error handling, test quality
-4. **Task generation** — produces 0–3 prioritized, actionable tasks per scan round (zero when the current phase is built and only awaiting the PO's Visual Review sign-off)
+4. **Task generation** — produces 0–3 prioritized, actionable tasks per scan round (when the current phase is built: flag-bust, then provisional `work-ahead` on the next phase; zero **only** when current-phase work, open flags, and reachable work-ahead are all dry and it merely awaits the PO's Visual Review sign-off)
 
 ## When to Use This Skill
 
@@ -141,16 +141,29 @@ early-returns that skip the real work, logic wired but never called, `[x]` accep
 criteria whose behavior isn't actually present, and done-task claims that don't match the
 diff. **Any finding → emit it as a `BUG-`/`QUALITY-` task, NOT zero.**
 
-Only a genuinely **clean** audit returns **zero tasks** — and that empty backlog *is* the
-orchestrator's construction clearance: the hand-off that makes the loop run the father's PO
-review, which adds the **visual + earlier-phase-regression** clearance and, if all clear,
-**signs the phase off** (advancing to the next phase). Do NOT invent marginal polish, idle
-flourishes, or refactors to hit a quota of three — an honest clean zero is the correct,
-intended outcome.
+A **clean** audit means the current phase has no buildable work **of its own** — but that is
+**not yet** a zero. Before returning zero, in strict order:
+1. **Flag-bust** — if any `FLAGS.md` *Open* entry is not stamped `busted`, emit a `BUST-` task
+   for the oldest (does a slice build **without** the owner?). See `mother_prompt.md`.
+2. **Work-ahead** — if the current phase is **exhausted** (clean audit, no open PO directives,
+   **and** every open flag busted-or-owner-gated, so it is blocked **purely** on owner assets +
+   the human PO sign-off), pull the **next unbuilt phase's** buildable stories and emit them as
+   **`work-ahead`**-labelled tasks (see the phase scope gate below for the guardrails). This is
+   what stops the loop idle-spinning on a blocked phase.
+
+Only when there is **no** current-phase work, **no** un-busted flag, **and no** buildable
+work-ahead does the scan return **zero** — and that empty backlog *is* the orchestrator's
+construction clearance: the hand-off that makes the loop run the father's PO review, which adds
+the **visual + earlier-phase-regression** clearance and, if all clear, **signs the phase off**.
+Do NOT invent marginal polish, idle flourishes, or refactors to hit a quota of three — a zero is
+reached only when the current phase *and* the reachable next-phase work are both genuinely dry.
+(The father runs on its own `FATHER_EVERY` cadence regardless, so work-ahead never starves the
+sign-off.)
 
 **Pre-selection filters (apply BEFORE ranking)**:
 
-- **Phase scope gate**: Stories from any phase **later** than the current phase (and the parked `## Beyond the phases` section) are **ineligible** until the current phase is **signed off** in `po-review.md`'s `## Phase Sign-off` list. Implemented-and-tests-green is NOT the gate — the PO/father's Visual Review sign-off is. The spec is explicit: "Phase 1 is the whole bet … Nothing past Phase 1 starts until Phase 1 passes its Visual Review and is bug-free." Placeholder art is acceptable in early phases — nail the feel first; visual refinements beyond basic readability wait for later phases.
+- **Phase scope gate**: Stories from any phase **later** than the current phase (and the parked `## Beyond the phases` section) are **ineligible** until the current phase is **signed off** in `po-review.md`'s `## Phase Sign-off` list — **except as provisional work-ahead** (below). Implemented-and-tests-green is NOT the sign-off gate — the PO/father's Visual Review is. Placeholder art is acceptable in early phases — nail the feel first; visual refinements beyond basic readability wait for later phases.
+  - **Work-ahead carve-out** (spec: `index.md` → "Work-ahead exception"): next-phase stories become eligible **only** once the current phase is **exhausted** (built + tests green + construction-audit clean **and** every open flag busted-or-owner-gated → blocked purely on owner/human). When eligible, select next-phase stories that are **independent of the blocked item** and emit them **`work-ahead`**-labelled. Guardrails, non-negotiable: work-ahead **never** advances the phase or writes the sign-off list; its features ship **dormant** (gated / not in the default current-phase run) so the PO's current-phase play-test is unaffected; and **current-phase work always preempts** — if a `BUG-`, a reopened PO directive, or an un-busted flag appears, drop work-ahead and serve the current phase first. Do NOT work ahead merely because a single current-phase task is hard or blocked while other current-phase work or un-busted flags remain — exhausted means *nothing current-phase is buildable*.
 - **Domain saturation filter**: If a domain was marked saturated in Phase 1 (3+ of the last 15 done tasks), do NOT select another task from it unless it is the only remaining gap in the current phase. Log the reason if overriding.
 - **Anti-polish heuristic**: Pure visual refinements (flourishes, idle animations, coat variations, look-around behaviors) are ineligible when any v1 core gameplay feature or user-facing flow is incomplete.
 

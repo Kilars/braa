@@ -16,8 +16,18 @@
 >
 > **Phasing rule:** every phase ends on something you can *play and look at*, not
 > a half-wired system. **Phase 1 is the whole bet** — the core "mark the moment"
-> verb, made genuinely good, on one trick. Nothing past Phase 1 starts until
-> Phase 1 passes its Visual Review and is bug-free.
+> verb, made genuinely good, on one trick. A phase is **declared done only on the PO's
+> Visual-Review sign-off**, never on "code compiles + tests green."
+>
+> **Work-ahead exception (so the build loop never idle-spins on a blocked phase):** when
+> the current phase is *exhausted* — all its stories built + tests green + construction-audit
+> clean, and every open flag busted-or-owner-gated, so it is blocked **purely** on owner
+> assets + the human sign-off — the loop may build the **next** phase's stories
+> **provisionally**. This is subordinate, not advancement: it never counts as sign-off, it
+> stays **dormant** in the live build so it can't disturb the current phase's play-test, and
+> it is **preempted** the instant current-phase work reappears (a PO reopen, a new/un-busted
+> flag, a regression). The spirit of "the whole bet" holds — the core is still proven before
+> anything is *declared* done — the loop just stops wasting cycles while it waits on a human.
 
 ---
 

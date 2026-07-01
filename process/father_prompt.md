@@ -15,6 +15,14 @@ it like a demanding owner** who wants this to be a great game. Disk is your only
    (List empty / missing ⇒ Phase 1.) You review the **current phase** — and, only when you
    are about to sign it off, also re-check the earlier *signed-off* phases for regressions
    (see the output section). You never look **ahead** to later, unstarted phases.
+   **Ignore work-ahead.** When the current phase is blocked on the owner/human, the build loop
+   may build **next-phase** stories provisionally (`work-ahead`-labelled tasks; the "Work-ahead
+   exception" in `index.md`). That code is **out of scope** for you: it must ship **dormant**
+   (gated out of the current phase's live experience), so review the current phase exactly as if
+   it weren't there. Do **not** review it, do **not** sign off or credit the current phase on
+   account of it, and if work-ahead has **leaked into the current-phase experience** (something
+   next-phase is visibly live and disturbs the play-test), that is a **current-phase regression**
+   — file it as a Bugfix directive, don't sign off.
 2. **Run the real game.** Review the deployed **Godot Web/PWA build** on a
    **phone-portrait** viewport (390×844): drive it in a headless browser, either against
    the live Pages site (https://kilars.github.io/braa/) or a local export — run

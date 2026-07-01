@@ -7,8 +7,12 @@ tap **BRA** the instant it sits, get a payoff that lands on the beat. This is th
 - **Spec:** [.docs/specs/](.docs/specs/) — user stories, phased. One file per phase
   (`phase1.md` … `phase7.md`), `index.md` for the shared frame (North Star, Cross-cutting,
   Non-Goals + a phase index), and `po-review.md` for the PO play-test log. **Phase 1 is
-  the whole bet**: one good-looking dog, one Sitt, one perfect mark. Nothing past Phase 1
-  starts until Phase 1 passes visual review and is bug-free.
+  the whole bet**: one good-looking dog, one Sitt, one perfect mark. A phase is *declared
+  done* only on the PO's visual-review sign-off — but when a phase is **exhausted and blocked
+  purely on the owner/human** (built + green + all flags busted-or-owner-gated), the loop may
+  build the next phase's stories **provisionally** (dormant, never counts as sign-off,
+  preempted by any current-phase work) rather than idle-spin. See the "Work-ahead exception"
+  in `.docs/specs/index.md` and the flag-bust / work-ahead rules in `process/mother_prompt.md`.
 - **Decisions:** [adr/](adr/) (0001–0006) — ADRs are the source of truth for tech
   choices. There is no `tech-decisions.md`.
 
