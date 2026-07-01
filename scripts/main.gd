@@ -451,8 +451,9 @@ func _setup_light() -> void:
 ## edge-to-edge (P1-2 / D12).
 const FRAME_FILL := 0.70
 
-## Portrait layout constants (029). The project pins a 720×1280 logical viewport
-## (stretch=keep), so these are stable everywhere — headless, browser, any device.
+## Portrait layout constants (029). The 720×1280 logical viewport is the DESIGN base;
+## with stretch=expand (063) the real frame is taller on modern phones, but these are
+## anchor-relative offsets (insets from the real edges), so they hold on any portrait device.
 ## The BRA button band and the apex-tell marker are deliberately coupled: the marker
 ## sits 4 px outside the button on every edge so the pulse *rings* the verb. Expressing
 ## the tell offsets in terms of the button's keeps that coupling alive across a resize,

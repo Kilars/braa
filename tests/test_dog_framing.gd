@@ -5,7 +5,8 @@ extends "res://tests/test_case.gd"
 ## AABB below is measured headless from the committed glb (probe, 2026-06-28).
 
 const FOV := 75.0
-const PORTRAIT := 0.5625  # 720/1280 — the project's logical viewport (stretch=keep)
+const PORTRAIT := 0.5625  # 720/1280 — the design aspect; a valid point in the portrait range
+                          # DogFraming must handle (real device aspect is read live, stretch=expand)
 
 # Measured from assets/models/dog.glb: centre (0, 0.928, 0.279), size (0.95, 1.898,
 # 2.098). pos = centre - size/2. get_aabb() is the static mesh AABB (pose-independent),

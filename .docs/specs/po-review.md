@@ -40,10 +40,12 @@ Two owner asks captured directly (not from a father play-test) — both **curren
    as the clear focus. This is a **modest step now**, *not* the full Phase-7 environment-art
    pass (props / depth / heavy lighting polish still defer to **Phase 7**) — keep it cheap and
    readable. Ride a Visual-Review capture. *(Improvement, not a bug — the garden isn't broken.)*
-   **→ DELIVERED (task 062, commit `c0ab6cd`) and Visual-Review-verified good this pass** — the sky is now a
-   warm blue→peach gradient, the sun is a genuine **haloed** disc (bright warm core + soft golden glow, round —
-   no longer the hard flat egg), and the grass is **painterly noise-mottled** (deep/mid/sunny-green patches,
-   not one flat plane), with **no** cyan horizon seam. See the P2-10 entry under "What holds up" below.
+   **→ Stylization DELIVERED (task 062, commit `c0ab6cd`), content re-verified good this pass** — the sky is
+   now a warm blue→peach gradient, the sun is a genuine **haloed** disc (bright warm core + soft golden glow,
+   round — no longer the hard flat egg), and the grass is **painterly noise-mottled** (deep/mid/sunny-green
+   patches, not one flat plane), with **no** cyan horizon seam. See the P2-10 entry under "What holds up".
+   **Caveat found this pass:** the stylized world renders inside a 9:16 **black letterbox** on 390×844 (a
+   separate config defect, not the stylization ask) — filed under **Bugfixes**; the content stays, the box goes.
 2. **Dog faces the player for tricks — new story P2-11** (added to `phase2.md`). Whenever the
    dog performs a **real** trick it turns to face the camera POV so the apex reads head-on;
    a feint keeps its wander heading. Buildable now (Sitt only); build + Visual-Review it.
@@ -52,26 +54,33 @@ Two owner asks captured directly (not from a father play-test) — both **curren
 
 ### PO Review — 2026-07-01
 
-Fresh, fully independent **re-verification** re-play on **current HEAD (commit `c0ab6cd` — the 062
-garden stylization, on top of 061 face-turn + 060 voice)** — my own harness (`/tmp/po_capture.mjs`),
-my own eyes on every frame, my own new captures (this pass under `.screenshots/po-fresh/`, distinct
-from the prior pass's `po062/`). Drove the **current-HEAD local licensed bundle** (`build/web` — the
-38 MB pck that bundles the unencrypted, sit-capable Labrador; `index.pck` mtime 13:27 sits *after*
+Fresh, fully independent re-play on **current HEAD (commit `88e0972` / tree at `c0ab6cd` — the 062
+garden stylization, on top of 061 face-turn + 060 voice)** — my own harness
+(`tools/po_phase2_pass.mjs` + `tools/po_letterbox_check.mjs`), my own eyes on every frame, my own new
+captures under `.screenshots/po-p2/`. Drove the **current-HEAD local licensed bundle** (`build/web` —
+the 38 MB pck that bundles the unencrypted, sit-capable Labrador; `index.pck` mtime 13:42 sits *after*
 every source, `find scripts scenes assets -newer build/web/index.pck` empty, tree clean → byte-current
 for gameplay, includes the 062 garden stylization) served over a local http origin and driven in
-headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer. (Local export
-over live Pages because CI lags the last gameplay commits.) Boot is clean on every run: `__appReady`
-true, `dog loaded: …dog_licensed.glb (1 coat surface forced opaque)`, `dog ambles a bounded patch
-between offers`, `dog can Sitt — varying the offer cadence 0.8–2.0s, sometimes feinting`, and **zero**
-SCRIPT ERROR / pageerror across all runs (a 14-frame free-run living-loop burst, an 18-frame
-fine-spaced autotap sit→turn→mark→stand-up cycle, a forced-lock capture, and a forced-trainer-ring
-capture — all under `.screenshots/po-fresh/`).
+headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer — and I also
+drove the **live Pages site** (https://kilars.github.io/braa/) at 390×844 for the letterbox check
+below. Boot is clean on every run: `__appReady` true, `dog loaded: …dog_licensed.glb (1 coat surface
+forced opaque)`, `dog ambles a bounded patch between offers`, `dog can Sitt — varying the offer
+cadence 0.8–2.0s, sometimes feinting`, and **zero** SCRIPT ERROR / pageerror across all runs (a
+16-frame free-run living-loop burst, an 18-frame autotap sit→turn→mark→stand-up cycle, a forced-lock
+capture, and a forced-trainer-ring capture — all under `.screenshots/po-p2/`).
 
-**No genuinely new item this pass — this is a re-verification.** The one new build since my last pass,
-P2-10 garden stylization (task 062), was delivered before this pass and I **re-confirmed it good** in
-my own fresh full-res pixels (`.screenshots/po-fresh/zoom-sky-free03.png`, `lock-vs-unlock.png`,
-`trainer-00.png`, and the `sheet-free.png` / `sheet-tap.png` contact sheets). All three things the
-owner asked for hold:
+**This pass found a real, buildable current-phase defect the prior re-verification missed: the garden
+is letterboxed by black bars on the mandated 390×844 phone viewport (see Bugfixes).** The letterbox
+black blends into the black montage gutters, which is how a contact-sheet-only look slides past it —
+a per-row brightness scan + a magenta-bordered full frame (`.screenshots/po-p2/zoom-letterbox.png`)
+make it undeniable, on **both** the local bundle and the live site. So the earlier "no buildable
+current-phase directive left / blocked purely on owner" conclusion no longer holds — there is a
+buildable fix to make now (**not** owner-gated).
+
+**The garden stylization CONTENT (task 062) holds — but the world is boxed by a black letterbox (new
+Bugfix above).** The owner's three stylization asks were all delivered and I re-confirmed them good in
+my own fresh full-res pixels (`.screenshots/po-p2/zoom-sky.png`, `zoom-lock.png`, `sheet-free.png` /
+`sheet-tap.png`):
 - **Warmer sky.** The old blue→flat-pale-yellow band is now a **bright sky-blue zenith grading down to
   a warm peach/cream horizon** — the Pokémon-GO warmth asked for. Reads clean behind the dog and UI.
 - **A deliberate, haloed sun.** The old **hard flat egg** is replaced by a round disc with a
@@ -80,9 +89,10 @@ owner asked for hold:
 - **Painterly grass.** The old single flat gradient plane now carries **low-frequency mottled patches
   of deep-shadow / mid / sunny green**, so the lawn reads painterly rather than a flat fill — a tonal
   "shape" (Phase-7 still owns real relief/props). Cheap, phone-legible, dog stays the clear focus.
-And the earlier seam worry is gone: the grass meets the warm horizon haze **with no cyan sliver**, and
-**BRA** still floats over the grass with **no** opaque control band. A modest, correct Phase-2 step —
-not a Phase-7 environment pass. Keep it.
+The earlier seam worry is gone: the grass meets the warm horizon haze **with no cyan sliver**, and
+**BRA** floats over the grass with **no** opaque control band. Good stylization — but it renders inside
+a 9:16 letterbox, so on a real phone the sky is capped by a black band above and the grass by a black
+band below (see Bugfixes). **The stylization stays; the letterbox is the fix.**
 
 **P2-11 "face me for the trick" (task 061) still holds this pass.** Re-confirmed on the autotap
 sit-cycle (`sheet-tap.png`): the dog walks in three-quarter/side → **rotates to face the camera on its
@@ -91,25 +101,28 @@ walk** (smooth, no snap, no foot-slide) → **seated apex facing head-on** with 
 cycle, and stays correctly tied to the real trick only — in wander frames the dog faces its *travel*
 direction (rear/side views dot the free-run sheet), never face-locking outside a committed trick.
 
-**Every *buildable* Phase-2 story is now done and holds up in my own live pixels** (P2-4, P2-5, P2-7,
-P2-8, P2-9, P2-10 incl. the 062 stylization, P2-11). With the garden directive now cleared,
-there is **no buildable current-phase directive left** — Phase 2 is now blocked **purely** on owner
-assets + the human sign-off. The one remaining gate is the **owner-gated trick roster** (**P2-1 /
-P2-2 / P2-3** — see Changes): the licensed dog still ships only the Sitt, so there is no second trick
-to select, perform, or polish, and Phase 2's headline "more tricks" capability can't be delivered
-without owner-supplied clips. Do **not** sign Phase 2 off.
+**Each Phase-2 story's mechanic holds up in my own live pixels** (P2-4, P2-5, P2-7, P2-8, P2-9,
+P2-10-stylization, P2-11) — but P2-10 is **not** clean: the look-down world is letterboxed on the
+mandated phone viewport (see Bugfixes), so there **is** a buildable current-phase directive to make
+now. Phase 2 is therefore **not** blocked purely on the owner: fix the letterbox first. Separately,
+the **owner-gated trick roster** (**P2-1 / P2-2 / P2-3** — see Changes) also still blocks the phase's
+headline: the licensed dog ships only the Sitt, so there is no second trick to select, perform, or
+polish, and "more tricks" can't be delivered without owner-supplied clips. Do **not** sign Phase 2 off.
 
 **What holds up (verified live this pass, keep it):**
-- **P2-10 — the garden (functional + now stylized).** *Stylized in 062, re-verified good this pass* (see
-  the dedicated paragraph above). Warm blue→peach sky gradient, a **haloed** sun disc (core + soft
-  golden glow, round), **painterly mottled** grass, the Labrador grounded by a soft contact shadow, and
-  **"BRA"** floating over the lower grass with **no** opaque control band and **no** cyan horizon seam
-  (`.screenshots/po-fresh/zoom-sky-free03.png`, `trainer-00.png`, and the whole `sheet-free.png`). The
-  garden now reads with real Pokémon-GO character while the dog stays the clear focus.
+- **P2-10 — the garden (stylized content good, but letterboxed → see Bugfixes).** The *content*
+  re-verified good this pass (see the dedicated paragraph above): warm blue→peach sky gradient, a
+  **haloed** sun disc (core + soft golden glow, round), **painterly mottled** grass, the Labrador
+  grounded by a soft contact shadow, and **"BRA"** floating over the lower grass with **no** opaque
+  control band and **no** cyan horizon seam (`.screenshots/po-p2/zoom-sky.png`, and the whole
+  `sheet-free.png`). It reads with real Pokémon-GO character and the dog stays the focus — **but** the
+  whole world renders in a 9:16 letterbox with black bands top and bottom on 390×844
+  (`.screenshots/po-p2/zoom-letterbox.png`), so the acceptance criterion "a world to play in" that
+  fills the phone is **not** met yet. Not a hold — filed as a Bugfix.
 - **P2-11 — face me for the trick.** Holds this pass (see the dedicated paragraph above and
   `sheet-tap.png`). Dog turns head-on before the sit apex, smooth in-character turn, completes before
   the apex, and does **not** face-lock outside real tricks.
-- **P2-8 — the dog lives.** Across the 14-frame free-run (`.screenshots/po-fresh/free-*.png`,
+- **P2-8 — the dog lives.** Across the 16-frame free-run (`.screenshots/po-p2/free-*.png`,
   contact-sheeted to `sheet-free.png`) the dog **wandered** the patch through many distinct headings —
   front-facing seated, rear-facing walking away, three-quarter and side profiles — on a **real walk
   gait**, facing its travel direction with **no foot-slide**, and it **stayed framed** every frame.
@@ -118,17 +131,17 @@ without owner-supplied clips. Do **not** sign Phase 2 off.
   0.8–2.0s, sometimes feinting`. Good.
 - **P2-9 — the fading timing trainer.** Caught the **bold cyan ring** live, unforced, encircling the
   BRA word as a fresh trick approaches its apex (dotted through the `sheet-free.png` sheet and confirmed
-  pinned under `?bra_force_trainer=1`, `.screenshots/po-fresh/trainer-00.png`) — a cool outlined ring,
+  pinned under `?bra_force_trainer=1`, `.screenshots/po-p2/train-00.png`) — a cool outlined ring,
   clearly **distinct** from the gold apex tell, riding the same `SitWindow` as the score. Its
   prominence fades with the learned bar (unit-tested `opacity = 1 − learned` envelope). Good.
 - **P2-4 — the learned bar fills.** Under `?bra_autotap=1` the top meter fills **green** as PERFECTs
-  land (the `sheet-tap.png` autotap cycle shows the green fill climbing across rows 2–3 + the gold
-  **PERFECT** readout in the clear sky). The full-gold mastered latch + the trainer ring going away at
-  mastery were pixel-verified in prior passes; this run confirms the fill mechanic is intact and
-  climbing. Good.
+  land — I cropped the bar early vs late (`.screenshots/po-p2/zoom-bar3.png`): an **empty grey track**
+  at the start of the cycle, **~55 % green** later, with the gold **PERFECT** readout firing in the
+  clear sky. The full-gold mastered latch + the trainer ring going away at mastery were pixel-verified
+  in prior passes; this run confirms the fill mechanic is intact and climbing. Good.
 - **P2-7 — anti-mash freeze.** With `?bra_force_lock=1` the **"BRA"** word reads clearly **dimmed to a
   faint grey** versus the crisp white "BRA" of every unlocked frame — captured side-by-side in
-  `.screenshots/po-fresh/lock-vs-unlock.png` — so the locked state is legible and static
+  `.screenshots/po-p2/zoom-lock.png` — so the locked state is legible and static
   (reduced-motion-safe); the fixed-350 ms re-arm is unit-tested. Good.
 - **P2-5 — leave and come back.** *Not re-shot this pass* (060 voice + 061 face-turn + 062 garden touch
   neither the save path nor persistence). Carries forward from the prior same-origin reload verification: a filled
@@ -142,16 +155,37 @@ without owner-supplied clips. Do **not** sign Phase 2 off.
 
 #### Bugfixes
 
-- (none) — every run booted clean (`__appReady` true, licensed Sitt dog) with **zero** console errors;
-  idle → wander → **turn to face the camera** → sit → mark → stand-up → loop, plus fill, the lock, and
-  the trainer ring all worked.
+- **The garden is letterboxed by black bars on real phones — the look-down world doesn't fill the
+  screen (P2-10 / X-1).** *What I saw:* on the mandated **390×844** phone-portrait viewport (the
+  canonical iPhone logical resolution), the whole scene renders inside a fixed **9:16** box with a
+  **pure-black band across the top (~75 px) and the bottom (~64 px)** — together ~16 % of the screen.
+  Measured objectively (rows 0–74 and 780–843 read mean brightness **0**; the sky only begins at row
+  ~75) and shown framed in `.screenshots/po-p2/zoom-letterbox.png` (magenta = the true frame edge).
+  The canvas element itself fills 390×844 (top=0), so the bars are drawn **by the engine**, and it
+  reproduces **identically on the live deployed Pages site** (`letterbox-live.png`), not just locally.
+  Root cause is in the committed config: `project.godot` sets `window/stretch/aspect="keep"` against a
+  **720×1280 (9:16, 0.5625)** design, so any device taller than 9:16 — every modern phone (iPhone X+ ≈
+  0.462, most Android ≈ 0.46) — gets letterboxed. *Why it's wrong:* **P2-10** promises a Pokémon-GO
+  look-down **"world to play in"** that *replaces the flat void* and lets the dog roam; framing that
+  world in black voids top and bottom undercuts the immersion and wastes ~1/6 of a phone screen, and
+  **X-1** is "built for one-hand portrait phone." The stylization content the owner asked for (warm
+  sky, haloed sun, painterly grass) landed well — but it's boxed. *What "good" looks like:* the garden
+  **fills the full phone screen** — no black bands at 390×844 (rows 0 and 843 are garden, not black) —
+  across the common portrait aspect range (~0.46–0.56). The standard mobile fix is
+  `window/stretch/aspect="expand"` (or `"keep_width"`) so the sky/grass extend to the top and bottom
+  edges while the dog stays centered and the BRA / learned-bar UI stay anchored; then re-verify in
+  live pixels at 390×844 that no black letterbox remains. Buildable now — **not** owner-gated.
+- Otherwise every run booted clean (`__appReady` true, licensed Sitt dog) with **zero** console errors;
+  idle → wander → **turn to face the camera** → sit → mark → stand-up → loop, plus the green fill, the
+  lock, and the trainer ring all worked inside the (letterboxed) frame.
 
 #### Improvements (buildable now)
 
-- (none) — the sole prior improvement directive, the **garden stylization** (P2-10, owner directive
-  item 1), was **built (task 062, commit `c0ab6cd`) and re-verified good this pass** in my own fresh
-  pixels (warmer peach sky, haloed sun, painterly mottled grass, no cyan seam — see "What holds up").
-  Pruned. No other buildable current-phase improvement stands: every buildable Phase-2 story holds live.
+- (none new as an *improvement*) — the sole prior improvement directive, the **garden stylization**
+  (P2-10, owner directive item 1), was **built (task 062, commit `c0ab6cd`) and its content re-verified
+  good this pass** in my own fresh pixels (warmer peach sky, haloed sun, painterly mottled grass, no
+  cyan seam — see "What holds up"). Pruned. The one open buildable current-phase item this pass is a
+  correctness defect, not a polish improvement — the garden **letterbox** — filed under **Bugfixes**.
 
 #### Changes / scope (owner-gated — the trick roster can't grow without it)
 
@@ -165,18 +199,18 @@ without owner-supplied clips. Do **not** sign Phase 2 off.
   apex animation (P2-2), and its own Visual Review (P2-3) become buildable. Do **not** build a
   one-entry selector or fake a second trick. (Keep/raise the owner flag in `.task-board/FLAGS.md`.)
 
-**Sign-off status:** Phase 2 stays open. This pass independently re-played current HEAD including the
-**062 garden stylization**, which I re-verified clean and good in my own fresh pixels (warm peach sky,
-haloed sun, painterly mottled grass, no cyan seam, dog stays the focus — the sole buildable directive
-from my last pass is now cleared).
-Every buildable Phase-2 story now holds (P2-4, P2-5, P2-7, P2-8, P2-9, P2-10, P2-11), so **there is
-no buildable current-phase directive left** — Phase 2 is now blocked **purely** on the owner + the
-human sign-off. The remaining gate is **owner-gated** on trick clips (P2-1/P2-2/P2-3), each new trick
-clearing its **own Visual Review (P2-3)**; the licensed dog ships only the Sitt, so the phase's
-headline "more tricks" capability cannot yet be delivered. Plus three things a future sign-off pass
-should still catch in live pixels: the **P2-4 erosion / confused-beat** setback, the **mastery
-celebratory beat**, and that the persistence flush captures the very latest marks. Do not sign off
-yet, and do not invent other work — the loop may work-ahead (dormant) while it waits on the owner.
+**Sign-off status:** Phase 2 stays **open** — and this pass it is **not** blocked purely on the owner.
+Each Phase-2 mechanic holds in my own live pixels (P2-4 green fill climbs, P2-5 persists, P2-7 lock
+dims legibly, P2-8 wander, P2-9 fading cyan trainer ring, P2-10 stylization content, P2-11 face-turn),
+but I found a **buildable current-phase defect**: on the mandated 390×844 phone viewport the look-down
+garden is **letterboxed** by black bands top and bottom (`window/stretch/aspect="keep"` at 720×1280),
+reproduced on **both** the local bundle and the **live** site — so P2-10's "a world to play in" that
+fills the phone is not met. **Fix the letterbox** (see Bugfixes) before Phase 2 can be signed off; it
+**preempts** any work-ahead. Separately, the phase's headline "more tricks" stays **owner-gated** on
+trick clips (P2-1/P2-2/P2-3), each new trick clearing its **own Visual Review (P2-3)** — the licensed
+dog ships only the Sitt. And three things a future sign-off pass should still catch in live pixels:
+the **P2-4 erosion / confused-beat** setback, the **mastery celebratory beat**, and that the
+persistence flush captures the very latest marks. Do not sign off yet.
 
 ---
 

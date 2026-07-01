@@ -21,7 +21,13 @@ window/size/viewport_width=720
 window/size/viewport_height=1280
 window/handheld/orientation="portrait"
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+; "expand" (not "keep") so the look-down garden FILLS every phone — modern phones are taller
+; than the 720×1280 (9:16) design, and "keep" letterboxed them with black top/bottom bands
+; (~16% of a 390×844 screen). "expand" matches the real window aspect: the infinite
+; ProceduralSky + grass fill the taller frame, the camera reads the live aspect
+; (_viewport_aspect) and re-fits the dog, and the anchor-based UI re-anchors to the new edges.
+; See task 063 / PO 2026-07-01. Guarded by tests/test_stretch_aspect.gd.
+window/stretch/aspect="expand"
 
 [rendering]
 
