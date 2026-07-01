@@ -48,6 +48,32 @@ func test_a_mark_persists_and_reloads_into_progress_and_bar() -> void:
 	b.queue_free()
 	_clear_save()
 
+func test_per_trick_progress_is_isolated_and_persists_by_id() -> void:
+	# BUST-064 / 065: with Ligg wired alongside Sitt, learned progress is keyed per trick. A mark on
+	# the current trick must persist under ITS id and never leak into the other trick's bar. Proves
+	# main holds a per-trick map + saves the whole map, and a fresh boot restores each key on its own.
+	_clear_save()
+	var a := instantiate_main()
+	assert_true(a._progress_by_trick.has("sitt"), "sitt progress exists in the per-trick map")
+	assert_true(a._progress_by_trick.has("ligg"), "ligg progress exists in the per-trick map (Ligg is wired)")
+	assert_eq(a._current_trick, "sitt", "default current trick is Sitt (no ?bra_trick reach off-web)")
+	assert_true(a._progress == a._progress_by_trick["sitt"], "_progress aliases the CURRENT trick's model")
+	a._progress_by_trick["sitt"].value = 0.5
+	a._progress_by_trick["ligg"].value = 0.0
+	a._save_progress()
+	a.queue_free()
+
+	var saved := TrickStore.new().load()
+	assert_true(saved.has("sitt"), "the store persists the sitt key")
+	assert_true(absf(float((saved["sitt"] as Dictionary).get("value", -1.0)) - 0.5) < 1e-4,
+		"sitt's learned value round-trips under its own key")
+
+	var b := instantiate_main()
+	assert_true(absf(b._progress_by_trick["sitt"].value - 0.5) < 1e-4, "sitt restores its saved fill")
+	assert_eq(b._progress_by_trick["ligg"].value, 0.0, "ligg stays empty — no cross-trick leak")
+	b.queue_free()
+	_clear_save()
+
 func test_mastery_checkpoint_survives_a_reload() -> void:
 	_clear_save()
 	# Session A: drive the model to mastered and save it through the production path.

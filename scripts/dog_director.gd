@@ -24,9 +24,17 @@ func _init(animation_player: AnimationPlayer) -> void:
 	var names := _ap.get_animation_list() if _ap != null else PackedStringArray()
 	clips = DogClips.resolve(names)
 
-## Whether this dog can perform a real sit (vs. the idle-only CC0 placeholder).
+## Whether this dog can perform the named trick (065, BUST-064): build + hold clips both resolved.
+## The director drives an arbitrary trick through this + the play_trick* / trick_window family, so a
+## second trick (Ligg) rides the exact Sitt machinery with a clip-name swap. Unknown / unwired trick
+## → false, so play_trick no-ops rather than faking a pose (the asset gate holds per trick).
+func has_trick(id: String) -> bool:
+	return clips.has_trick(id)
+
+## Whether this dog can perform a real sit (vs. the idle-only CC0 placeholder). Sitt-bound wrapper
+## over the generic path so the existing P1 callers/tests are unchanged.
 func has_sit() -> bool:
-	return clips.has_sit()
+	return has_trick(DogClips.TRICK_SITT)
 
 ## Whether this dog has an authored positive reaction to play on a successful mark
 ## (024f). False on the CC0 placeholder — play_reaction then stays a no-op.
@@ -56,14 +64,18 @@ func play_walk() -> void:
 	_set_loop(clips.walk, Animation.LOOP_LINEAR)
 	_ap.play(clips.walk)
 
-## Play the build-into-the-sit, then hold the seated loop (P1-3). Requires a
-## sit-capable dog; a no-op (stays idle) otherwise — never a faked sit.
-func play_sit() -> void:
-	if _ap == null or not has_sit():
+## Play the named trick's build-in, then hold its apex loop (065; P1-3 for Sitt). Requires the dog
+## to carry that trick's clips; a no-op (stays idle) otherwise — never a faked trick.
+func play_trick(id: String) -> void:
+	if _ap == null or not has_trick(id):
 		return
-	_set_loop(clips.sit_loop, Animation.LOOP_LINEAR)
-	_ap.play(clips.sit_start)
-	_ap.queue(clips.sit_loop)
+	_set_loop(clips.trick_loop(id), Animation.LOOP_LINEAR)
+	_ap.play(clips.trick_start(id))
+	_ap.queue(clips.trick_loop(id))
+
+## Play the build-into-the-sit, then hold the seated loop (P1-3). Sitt-bound wrapper over play_trick.
+func play_sit() -> void:
+	play_trick(DogClips.TRICK_SITT)
 
 ## Begin a sit then ABORT it (048, P2-8 feint): play the real `Sitting_start` build-in and
 ## fall STRAIGHT back to idle, WITHOUT queueing the seated loop — so the dip never reaches a
@@ -72,37 +84,52 @@ func play_sit() -> void:
 ## new asset and no faked pose. A no-op on a dog that can't sit (the CC0 placeholder) — it has
 ## no build-in to play, so it can never feint (never a faked dip; the 024b asset gate holds).
 func play_feint() -> void:
-	if _ap == null or not has_sit():
-		return
-	_set_loop(clips.sit_start, Animation.LOOP_NONE)  # the dip plays once, never loops a hold
-	_ap.play(clips.sit_start)
-	if clips.idle != "":
-		_ap.queue(clips.idle)  # stand straight back up — never reach the seated hold
+	play_trick_feint(DogClips.TRICK_SITT)
 
-## The scoring window for this dog's sit: apex = end of `Sitting_start` (single
-## source of truth). Returns null when the dog can't sit.
-func sit_window() -> SitWindow:
-	if _ap == null or not has_sit():
+## Begin the named trick then ABORT it (048/065, P2-8 feint): play the real build-in and fall STRAIGHT
+## back to idle, WITHOUT queueing the apex hold — so the dip never reaches a markable apex. Generalised
+## from play_feint so any wired trick (Sitt, Ligg) can feint honestly by reusing its own build-in clip.
+## No-op on a dog that lacks the trick's clips (it has no build-in to dip; the asset gate holds).
+func play_trick_feint(id: String) -> void:
+	if _ap == null or not has_trick(id):
+		return
+	_set_loop(clips.trick_start(id), Animation.LOOP_NONE)  # the dip plays once, never loops a hold
+	_ap.play(clips.trick_start(id))
+	if clips.idle != "":
+		_ap.queue(clips.idle)  # stand straight back up — never reach the apex hold
+
+## The scoring window for the named trick: apex = end of its build-in clip (single source of truth),
+## markable across the build+hold span (065). Returns null when the dog can't perform the trick.
+func trick_window(id: String) -> SitWindow:
+	if _ap == null or not has_trick(id):
 		return null
-	var start_len := _ap.get_animation(clips.sit_start).length
-	var loop_len := _ap.get_animation(clips.sit_loop).length
-	# The scoring bands' canonical home is SitWindow (029); the apex stays the end
-	# of `Sitting_start`. Pass the defaults explicitly so difficulty can override later.
+	var start_len := _ap.get_animation(clips.trick_start(id)).length
+	var loop_len := _ap.get_animation(clips.trick_loop(id)).length
+	# The scoring bands' canonical home is SitWindow (029); the apex stays the end of the build-in.
+	# Pass the defaults explicitly so difficulty can override later.
 	return SitWindow.from_sit_clips(start_len, loop_len,
 		SitWindow.DEFAULT_PERFECT_RADIUS, SitWindow.DEFAULT_OK_RADIUS)
+
+## The scoring window for this dog's sit (apex = end of `Sitting_start`). Sitt-bound wrapper.
+func sit_window() -> SitWindow:
+	return trick_window(DogClips.TRICK_SITT)
 
 ## Play the dog's positive reaction ONCE on a successful mark (024f, P1-6), then fall
 ## back to its resting pose (the seated hold if sitting, else idle) so it doesn't freeze
 ## on the celebration. A no-op on a dog with no reaction clip (the CC0 placeholder) —
 ## the gameplay gate (MarkPayoff.reacts, keyed off a successful mark) already keeps it
 ## from firing on a miss, and here we never fake a reaction the asset can't perform.
-func play_reaction() -> void:
+## `rest_loop` is the hold to settle back into after the celebration — the CURRENT trick's apex loop
+## (065), so a mark on Ligg falls back into the down-hold, not the seated one. Defaults to the seated
+## loop for the existing P1 callers/tests (unchanged behaviour); falls back to idle if neither exists.
+func play_reaction(rest_loop := "") -> void:
 	if _ap == null or not has_reaction():
 		return
 	_set_loop(clips.reaction, Animation.LOOP_NONE)
 	_ap.play(clips.reaction)
-	if clips.sit_loop != "":
-		_ap.queue(clips.sit_loop)
+	var rest := rest_loop if rest_loop != "" else clips.sit_loop
+	if rest != "":
+		_ap.queue(rest)
 	elif clips.idle != "":
 		_ap.queue(clips.idle)
 
@@ -114,21 +141,35 @@ func play_reaction() -> void:
 ## frozen mid-sit and never faking a stand-up it can't perform (the 024b asset gate holds).
 ## Honest reuse of the licensed `Sitting_end` — no new asset.
 func play_sit_end() -> void:
+	play_trick_end(DogClips.TRICK_SITT)
+
+## Stand the dog back up out of the named trick's hold with its AUTHORED end clip (`Sitting_end` /
+## `Lie_end`), then settle into idle — the eased third beat of the cycle (build → hold → STAND-UP,
+## 059/065). Falls back to a plain idle when the trick ships no end clip, so the dog always ends up
+## alive at rest, never frozen mid-pose and never faking a stand-up it can't perform. Honest reuse of
+## the licensed end clip — no new asset.
+func play_trick_end(id: String) -> void:
 	if _ap == null:
 		return
-	if clips.sit_end == "":
+	var end_clip := clips.trick_end(id)
+	if end_clip == "":
 		play_idle()  # no authored stand-up — settle straight to idle rather than freeze
 		return
-	_set_loop(clips.sit_end, Animation.LOOP_NONE)  # the stand-up plays once, never loops
-	_ap.play(clips.sit_end)
+	_set_loop(end_clip, Animation.LOOP_NONE)  # the stand-up plays once, never loops
+	_ap.play(end_clip)
 	if clips.idle != "":
 		_ap.queue(clips.idle)  # settle into the ambient idle after standing
 
-## True while the authored stand-up is the clip currently playing (059). main holds the ambient
-## roam IN PLACE during it so the stand-up reads before the dog ambles off, without touching the
-## SitLoop cadence (the next offer stays on its own clock — this only gates which clip shows).
+## True while the named trick's authored stand-up is the clip currently playing (059/065). main holds
+## the ambient roam IN PLACE during it so the stand-up reads before the dog ambles off, without
+## touching the SitLoop cadence (the next offer stays on its own clock — this only gates which clip shows).
+func is_ending_trick(id: String) -> bool:
+	var end_clip := clips.trick_end(id)
+	return _ap != null and end_clip != "" and _ap.current_animation == end_clip
+
+## True while the Sitt stand-up plays. Sitt-bound wrapper over is_ending_trick.
 func is_standing_up() -> bool:
-	return _ap != null and clips.sit_end != "" and _ap.current_animation == clips.sit_end
+	return is_ending_trick(DogClips.TRICK_SITT)
 
 func _set_loop(clip: String, mode: Animation.LoopMode) -> void:
 	if _ap.has_animation(clip):

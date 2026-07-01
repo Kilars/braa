@@ -8,10 +8,21 @@ extends RefCounted
 ## `AnimalArmature|...|Idle` and `Arm_Labrador|Sitting_start` naming schemes, and
 ## "sitting" (not the looser "sit") guards against decoys like `Crouch_Idle_loop`.
 
+## Stable trick ids — the keys the director / main / save-store address a trick by (065, BUST-064).
+## Kept here so the resolver, the director, and main.gd all name a trick the same way.
+const TRICK_SITT := "sitt"
+const TRICK_LIGG := "ligg"
+
 var idle: String       ## the ambient idle clip (P1-2); "" if the dog has none
 var sit_start: String  ## build-into-the-sit clip; the apex is its end. "" if none
 var sit_loop: String   ## fully-seated hold loop. "" if none
 var sit_end: String    ## stand-back-up clip. "" if none
+## Ligg (lie down, P2-2 / 065): the licensed asset already holds these `Lie_*` clips (manifest
+## dog_licensed.clips.txt) — unwired until BUST-064 routed them here. Resolved distinct from Sitt and
+## from the belly-settle (Legg deg, `Lie_belly_*`, task 067) / sleep (`Lie_Sleep_*`) poses. "" if none.
+var lie_start: String  ## build-into-the-lie clip; the apex (fully down) is its end. "" if none
+var lie_loop: String   ## fully-down hold loop. "" if none
+var lie_end: String    ## stand-back-up-from-lie clip. "" if none
 var reaction: String   ## positive reaction on a mark (024f, P1-6); "" if the dog has none
 var walk: String       ## locomotion clip for the ambient wander (050, P2-8); "" if the dog has none
 
@@ -32,6 +43,9 @@ func _init() -> void:
 	sit_start = ""
 	sit_loop = ""
 	sit_end = ""
+	lie_start = ""
+	lie_loop = ""
+	lie_end = ""
 	reaction = ""
 	walk = ""
 
@@ -41,6 +55,9 @@ static func resolve(names: PackedStringArray) -> DogClips:
 	c.sit_start = _pick(names, "sitting", "start")
 	c.sit_loop = _pick_sit_loop(names)
 	c.sit_end = _pick(names, "sitting", "end")
+	c.lie_start = _pick_lie(names, "start")
+	c.lie_loop = _pick_lie_loop(names)
+	c.lie_end = _pick_lie(names, "end")
 	c.reaction = _pick_reaction(names)
 	c.walk = _pick_walk(names)
 	return c
@@ -50,6 +67,37 @@ static func resolve(names: PackedStringArray) -> DogClips:
 ## a sit (P1-1 "no placeholder stand-in", and the 024b asset gate).
 func has_sit() -> bool:
 	return sit_start != "" and sit_loop != ""
+
+## True when this dog can perform Ligg (lie down) — build + hold both present (065, P2-2). The CC0
+## placeholder returns false, so the director never fakes a lie-down it can't perform (the asset gate
+## the licensed Labrador does hold: its `Lie_*` clips are in the manifest).
+func has_lie() -> bool:
+	return lie_start != "" and lie_loop != ""
+
+## Generic trick accessors (065, BUST-064): the director + main drive a NAMED trick via a
+## (start, loop, end) bundle so adding a trick is a clip-name swap, not a new code path. Unknown ids
+## resolve to "" / has_trick()==false, so an unwired trick degrades honestly (never fakes a pose).
+func trick_start(id: String) -> String:
+	match id:
+		TRICK_SITT: return sit_start
+		TRICK_LIGG: return lie_start
+	return ""
+
+func trick_loop(id: String) -> String:
+	match id:
+		TRICK_SITT: return sit_loop
+		TRICK_LIGG: return lie_loop
+	return ""
+
+func trick_end(id: String) -> String:
+	match id:
+		TRICK_SITT: return sit_end
+		TRICK_LIGG: return lie_end
+	return ""
+
+## True when the named trick's build + hold clips both resolved on this dog (mirrors has_sit/has_lie).
+func has_trick(id: String) -> bool:
+	return trick_start(id) != "" and trick_loop(id) != ""
 
 ## True when this dog has an authored positive-reaction clip (024f). False on the CC0
 ## placeholder — the director then skips the reaction (stays in its resting pose) and
@@ -102,6 +150,30 @@ static func _pick_sit_loop(names: PackedStringArray) -> String:
 	for n in names:
 		var leaf := _leaf(n).to_lower()
 		if leaf.contains("sitting") and not leaf.contains("start") and not leaf.contains("end"):
+			return n
+	return ""
+
+## Ligg (lie down, 065/P2-2): the first `Lie_*` clip whose leaf carries substring `b` (start / end)
+## but is NEITHER the belly-settle (`Lie_belly_*` = Legg deg, task 067) NOR the sleep pose
+## (`Lie_Sleep_*`) — those share the "lie" stem but are a different trick, so Ligg must exclude them.
+## Skips (continues past) a belly/sleep match rather than returning it, so a later plain-lie clip
+## still resolves regardless of clip order.
+static func _pick_lie(names: PackedStringArray, b: String) -> String:
+	for n in names:
+		var leaf := _leaf(n).to_lower()
+		if leaf.contains("lie") and leaf.contains(b) \
+			and not leaf.contains("belly") and not leaf.contains("sleep"):
+			return n
+	return ""
+
+## The fully-down Ligg hold loop: the first plain-lie clip that is neither the build-in (start) nor
+## the stand-up (end), matched by EXCLUSION — the glTF importer strips "loop" from `Lie_loop_1/2` to
+## `Lie_1/2` (same as Sitting), so "loop" can't be matched literally. Excludes belly/sleep decoys.
+static func _pick_lie_loop(names: PackedStringArray) -> String:
+	for n in names:
+		var leaf := _leaf(n).to_lower()
+		if leaf.contains("lie") and not leaf.contains("start") and not leaf.contains("end") \
+			and not leaf.contains("belly") and not leaf.contains("sleep"):
 			return n
 	return ""
 

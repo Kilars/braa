@@ -39,6 +39,34 @@ Entry format:
 
 ## Open
 
+### FLAG 2026-07-01 — The Phase-2 trick roster (P2-1/P2-2/P2-3) is "owner-gated"  ·  **busted 2026-07-01 (BUST-064) — MOSTLY DE-GATED, scope narrowed to 3 absent clips**
+- **Source:** `.docs/specs/po-review.md` (the 2026-07-01 PO pass) **asserted** the trick roster is
+  "owner-gated on trick clips — the licensed Labrador ships only the Sitt, so there is no second
+  trick." This assertion was never raised as a flag, so Iteration step 2's flag-bust sweep would
+  have missed it — exactly the anti-pattern that skipped P2-1/2/3 before. The orchestrator raised it
+  here and busted it the same pass.
+- **The bust (against the raw manifest, NOT the running game — behavior ≠ inventory):** grep of the
+  committed inventory `assets/models/dog_licensed.clips.txt` (139 lines, the real licensed glb clip
+  list) shows the asset **already holds** two more trick's clips beyond Sitt:
+  - **Ligg** (lie down) → `Lie_start / Lie_loop_1|2 / Lie_end` — **PRESENT, unwired → BUILD task, not owner-gated.**
+  - **Legg deg** (settle on belly) → `Lie_belly_start|loop|end` (+ `Lie_Sleep_*`) — **PRESENT, unwired → BUILD task.**
+  These are exactly the P2-2 starter set ("**Sitt**, **Ligg**, **Legg deg**, then expand"). The app
+  only *wires* Sitt (`DogClips.resolve()` resolves only `sitting`-vocab clips), so the running game
+  shows one trick — but the asset holds three. **Routed to build tasks:** **065** (wire Ligg as a real,
+  distinct, markable second trick — this iteration) and **067** (Legg deg, follow-up); the two-entry
+  selector P2-1 is **066** (a real two-trick chooser is not the "one-entry selector" the PO warned
+  against — that caution was premised on there being only one trick, which the manifest refutes).
+- **Narrowed residual (genuinely owner-gated — clips ABSENT from the asset):** **Gi labb** (paw/shake),
+  **Rull** (roll over), and **Snurr** (spin) have **no** matching clip in the manifest (a grep for
+  paw/shake/roll/spin finds only decoys like `Crouch_*` / `Jump*`, none a clean trick apex). These
+  three stay owner-gated until the owner supplies clips (or they are hand-authored). The phase's
+  headline "more tricks" is therefore **buildable now** to a 3-trick roster (Sitt+Ligg+Legg deg) —
+  it is **not** blocked purely on the owner.
+- **Assumption while building:** 065 wires Ligg through the existing (already per-trick-keyed)
+  `TrickProgress`/`TrickStore` + trick-agnostic `SitWindow`/`SitLoop`, reachable via a debug param
+  (`?bra_trick=ligg`, the same harness pattern as `?bra_force_lock`) until the P2-1 selector (066)
+  lands; default gameplay stays Sitt so the PO-verified current experience is unregressed.
+
 ### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated  ·  **busted 2026-06-30 (BUST-043) — scope narrowed**
 - **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
   De-gated by **BUST-043** (2026-06-30) — this flag was raised *whole* with **no spike**, the

@@ -107,6 +107,79 @@ func test_a_dog_with_no_walk_clip_cannot_amble() -> void:
 	assert_eq(c.walk, "", "no walk clip resolves to nothing")
 	assert_false(c.has_walk(), "a dog with no walk clip can't amble (skip, never fake)")
 
+# The licensed Labrador's LIE-DOWN (Ligg, P2-2) clip leaves AS GODOT IMPORTS THEM: exactly like
+# Sitting, the glTF importer strips "loop" from `Lie_loop_1/2` -> `Lie_1/2`, so the hold loop must
+# resolve by EXCLUSION, not the literal "loop". The decoys `Lie_belly_*` (Legg deg, the SETTLE trick,
+# task 067) and `Lie_Sleep_*` (a sleep pose) share the "lie" stem but are a DIFFERENT trick — Ligg
+# must never resolve to them. Verified against the committed manifest (dog_licensed.clips.txt).
+const LAB_LIE := ["Arm_Labrador|Idle_1",
+	"Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_1", "Arm_Labrador|Sitting_end",
+	"Arm_Labrador|Lie_start", "Arm_Labrador|Lie_1", "Arm_Labrador|Lie_2", "Arm_Labrador|Lie_end",
+	"Arm_Labrador|Lie_belly_start", "Arm_Labrador|Lie_belly_1", "Arm_Labrador|Lie_belly_end",
+	"Arm_Labrador|Lie_Sleep_start", "Arm_Labrador|Lie_Sleep_loop", "Arm_Labrador|Lie_Sleep_end"]
+
+func test_labrador_resolves_ligg_lie_clips() -> void:
+	# BUST-064 / P2-2: Ligg (lie down) clips are PRESENT in the licensed asset (per the manifest),
+	# just unwired. The resolver must find the plain lie build/hold/stand triple, distinct from Sitt.
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_true(c.has_lie(), "the Labrador has a real Ligg (lie down)")
+	assert_eq(c.lie_start, "Arm_Labrador|Lie_start", "Ligg build-in clip")
+	assert_eq(c.lie_loop, "Arm_Labrador|Lie_1", "first Ligg hold-loop clip (Godot strips 'loop')")
+	assert_eq(c.lie_end, "Arm_Labrador|Lie_end", "Ligg stand-up clip")
+
+func test_ligg_is_not_the_belly_settle_or_sleep_pose() -> void:
+	# P2-2: Ligg (plain lie) must read distinct from Legg deg (Lie_belly_*, task 067) and never
+	# resolve to the sleep pose. The "lie" stem is shared, so the resolver excludes belly + sleep.
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_ne(c.lie_start, "Arm_Labrador|Lie_belly_start", "Ligg is not the belly-settle (Legg deg)")
+	assert_ne(c.lie_loop, "Arm_Labrador|Lie_belly_1", "Ligg hold is not the belly hold")
+	assert_ne(c.lie_start, "Arm_Labrador|Lie_Sleep_start", "Ligg is not the sleep pose")
+	assert_ne(c.lie_loop, "Arm_Labrador|Lie_Sleep_loop", "Ligg hold is not the sleep pose")
+
+func test_cc0_has_no_ligg() -> void:
+	var c := DogClips.resolve(PackedStringArray(CC0))
+	assert_false(c.has_lie(), "the CC0 placeholder ships no lie-down clip")
+	assert_eq(c.lie_start, "", "no Ligg build-in on the CC0 dog")
+
+func test_generic_trick_accessors_map_ids_to_clip_bundles() -> void:
+	# The director + main drive a NAMED trick via a generic (start, loop, end) bundle so adding a
+	# trick is a clip-name swap, not a new code path: "sitt" -> Sitting_*, "ligg" -> Lie_*.
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_true(c.has_trick("sitt"), "sitt is a known, resolved trick")
+	assert_true(c.has_trick("ligg"), "ligg is a known, resolved trick")
+	assert_eq(c.trick_start("sitt"), c.sit_start, "sitt bundle start == sit_start")
+	assert_eq(c.trick_loop("sitt"), c.sit_loop, "sitt bundle loop == sit_loop")
+	assert_eq(c.trick_end("sitt"), c.sit_end, "sitt bundle end == sit_end")
+	assert_eq(c.trick_start("ligg"), c.lie_start, "ligg bundle start == lie_start")
+	assert_eq(c.trick_loop("ligg"), c.lie_loop, "ligg bundle loop == lie_loop")
+	assert_eq(c.trick_end("ligg"), c.lie_end, "ligg bundle end == lie_end")
+	assert_false(c.has_trick("nope"), "an unknown trick id resolves to nothing")
+	assert_eq(c.trick_start("nope"), "", "an unknown trick id has no start clip")
+
+func test_licensed_dog_if_present_resolves_ligg() -> void:
+	# BUST-064: binds to the REAL imported licensed Labrador — proves Ligg is genuinely IN the asset
+	# (behavior != inventory: the running game wires only Sitt, but the glb holds Lie_*). Gitignored
+	# asset, so absent in public CI: skip cleanly there (the assert_true dodges the 0-assertion gate)
+	# and verify for real in local dev.
+	var p := "res://assets/models/dog_licensed.glb"
+	if not ResourceLoader.exists(p):
+		assert_true(true, "licensed dog absent (e.g. public CI) — skipped")
+		return
+	var packed := load(p) as PackedScene
+	assert_true(packed != null, "the licensed dog glb must load as a PackedScene")
+	if packed == null:
+		return
+	var dog := packed.instantiate()
+	var ap := DogClips.find_animation_player(dog)
+	assert_true(ap != null, "the licensed dog must have an AnimationPlayer")
+	if ap != null:
+		var c := DogClips.resolve(ap.get_animation_list())
+		assert_true(c.has_lie(), "the licensed Labrador must resolve a real Ligg (lie down) — it's in the manifest")
+		assert_true(ap.has_animation(c.lie_start), "resolved lie_start must be a real clip on the dog")
+		assert_true(ap.has_animation(c.lie_loop), "resolved lie_loop must be a real clip on the dog")
+		assert_true(c.has_trick("ligg"), "ligg is drivable via the generic trick accessor")
+	dog.free()
+
 func test_committed_dog_exposes_a_real_idle_clip() -> void:
 	# Binds to the REAL committed asset (mirrors test_smoke): after --import the dog
 	# must yield an AnimationPlayer whose resolved idle is an actual clip on it.

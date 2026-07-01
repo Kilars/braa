@@ -118,20 +118,28 @@ var _autotapped := false  ## one auto-mark per sit; reset when the sit ends
 ## headless, and normal web play are untouched.
 var _force_lock := false
 
-## Learned-progress model + on-screen bar (045, P2-4 "feel the dog learning"). Sitt is the
-## only trick today (the licensed pack ships no other trick clip), so main holds a single
-## TrickProgress; the selector (P2-1) and persistence (P2-5) make it per-trick later. A
-## well-timed BRA fills the bar; a mistimed / wrong-moment tap erodes it.
-var _progress := TrickProgress.new()
+## Learned-progress model + on-screen bar (045, P2-4 "feel the dog learning"). Progress is keyed
+## PER TRICK (`_progress_by_trick`, id → TrickProgress) now that Ligg is wired alongside Sitt
+## (065, BUST-064): the licensed asset holds `Lie_*` too, so "one trick" was behavior, not inventory.
+## `_progress` ALIASES the current trick's model so the whole scoring/erosion/bar path stays unchanged;
+## the selector (066) repoints it when the player switches trick. A well-timed BRA fills the bar; a
+## mistimed / wrong-moment tap erodes it.
+var _progress_by_trick := {}
+var _progress: TrickProgress
 var _learned_bar: LearnedBar
 
-## Per-trick learned-progress persistence (049, P2-5 "leave and come back" / X-7 offline). The
-## save store loads on boot into _progress (so a returning player sees their filled / mastered
-## bar immediately) and is written after every progress change. Keyed per trick from day one
-## by the named id below — today exactly one trick, Sitt; the selector (P2-1) drops more into
-## the same map later. Local user:// (IndexedDB on web): no backend, no account, no network.
+## Per-trick learned-progress persistence (049, P2-5 "leave and come back" / X-7 offline). The save
+## store loads on boot into the per-trick map (so a returning player sees each trick's filled /
+## mastered bar immediately) and is written after every change. Keyed per trick from day one — Sitt
+## and Ligg today; more drop into the same map as they wire. Local user:// (IndexedDB on web): no
+## backend, no account, no network.
 var _store := TrickStore.new()
-const TRICK_ID_SITT := "sitt"
+const TRICK_ID_SITT := DogClips.TRICK_SITT
+const TRICK_ID_LIGG := DogClips.TRICK_LIGG
+## The trick the dog is currently training (065). Defaults to Sitt everywhere (desktop / headless /
+## normal play), so the PO-verified default experience is unchanged; the `?bra_trick=ligg` web reach
+## (below) selects Ligg for Visual Review until the 066 selector UI lands.
+var _current_trick := TRICK_ID_SITT
 
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
@@ -185,6 +193,7 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
+	_current_trick = _query_trick()  # which trick to train (066 selector; ?bra_trick= web reach until then)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_setup_environment()
@@ -246,6 +255,19 @@ func _query_autotap() -> bool:
 		return false
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
+
+## Trick-selection seam (065, BUST-064 / P2-1 066): read `?bra_trick=ligg` (or `=sitt`) off the live
+## web URL to pick which trick the dog trains, so Ligg is drivable + Visual-Reviewable before the 066
+## selector UI lands. Defaults to Sitt everywhere else (desktop / headless / normal play), so the
+## PO-verified default experience is unchanged. Reads a STRING (never a bare bool) to dodge the
+## Web-export null-Variant marshalling that bit the apex tell (036); unknown values fall back to Sitt.
+func _query_trick() -> String:
+	if not OS.has_feature("web"):
+		return TRICK_ID_SITT
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) == TYPE_STRING and (search as String).to_lower().contains("bra_trick=ligg"):
+		return TRICK_ID_LIGG
+	return TRICK_ID_SITT
 
 ## Visual-review seam (046/P2-7): true only when the live web URL carries `?bra_force_lock=1`.
 ## Pins the BRA button locked so the anti-mash dim renders for one deterministic screenshot (the
@@ -336,7 +358,7 @@ func _advance_loop(delta: float) -> void:
 	if _loop == null or _director == null:
 		return
 	var sit_end := _window.sit_end if _window != null else 0.0
-	match _loop.tick(delta, _director.has_sit(), _session.elapsed(), sit_end):
+	match _loop.tick(delta, _director.has_trick(_current_trick), _session.elapsed(), sit_end):
 		SitLoop.Intent.START_SIT:
 			_begin_sit()
 		SitLoop.Intent.END_SIT:
@@ -351,8 +373,8 @@ func _advance_loop(delta: float) -> void:
 ## (P1-4 honest tell — one source of truth). _process advances the clock; the button reads it.
 func _begin_sit() -> void:
 	_pause_wander()  # settle the roam so the seat reads (050, P2-8 — composes with 048)
-	_director.play_sit()
-	_window = _director.sit_window()
+	_director.play_trick(_current_trick)  # Sitt or Ligg — the dog performs the current trick (065)
+	_window = _director.trick_window(_current_trick)
 	_session.open(_window)
 	_engage_face_for_sit()  # turn to face the camera so the apex reads head-on (061, P2-11)
 	_tell = ApexTell.from_window(_window, _motion_scale)
@@ -369,7 +391,7 @@ func _end_sit() -> void:
 	_tell = null
 	_trainer = null  # drop the approach ring — marker goes dark next _process frame (058)
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
-	_director.play_sit_end()  # stand back up through the authored `Sitting_end` (059), then idle
+	_director.play_trick_end(_current_trick)  # stand back up through the trick's authored end clip (059/065), then idle
 	_release_face()  # ease the facing back to the roam heading, then hand yaw to the wander (061)
 	_resume_wander()  # come back round to roaming the patch (050)
 
@@ -380,7 +402,7 @@ func _end_sit() -> void:
 ## beat, with ZERO new downstream branches. Only the dog's animation differs from idle.
 func _begin_feint() -> void:
 	_pause_wander()  # settle so the dip reads as a deliberate fake-sit, not a stride (050)
-	_director.play_feint()
+	_director.play_trick_feint(_current_trick)  # feint the current trick's build-in (065)
 
 ## End a feint (048, P2-8): the dip is over; stand back to the ambient idle so the loop comes
 ## round to the next offer. The session was never opened, so there is nothing to close here.
@@ -801,13 +823,16 @@ func _start_dog(dog: Node) -> void:
 	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
 	# one sit. On the CC0 dog (no Sitt) the loop simply parks in idle; no faked sit.
 	_loop = SitLoop.new()
-	if _director.has_sit():
-		# Sit-capable dog (licensed Labrador, 025): the loop offers a sit on a VARYING gap
-		# (P2-8, no metronome) and sometimes feints; each real sit's apex (the score's PERFECT
-		# instant) is the single source the tell is built from in _begin_sit. _process advances
-		# the sit clock.
-		print("[Bra!] dog can Sitt — varying the offer cadence %.1f–%.1fs, sometimes feinting (real apex from the licensed Labrador)"
-			% [SitLoop.MIN_INTER_SIT_GAP, SitLoop.MAX_INTER_SIT_GAP])
+	if _director.has_trick(_current_trick):
+		# Trick-capable dog (licensed Labrador, 025): the loop offers the current trick on a VARYING
+		# gap (P2-8, no metronome) and sometimes feints; each real offer's apex (the score's PERFECT
+		# instant) is the single source the tell is built from in _begin_sit. _process advances the clock.
+		if _current_trick == TRICK_ID_SITT:
+			print("[Bra!] dog can Sitt — varying the offer cadence %.1f–%.1fs, sometimes feinting (real apex from the licensed Labrador)"
+				% [SitLoop.MIN_INTER_SIT_GAP, SitLoop.MAX_INTER_SIT_GAP])
+		else:
+			print("[Bra!] dog can perform '%s' — varying the offer cadence %.1f–%.1fs, sometimes feinting (real apex from the licensed Labrador)"
+				% [_current_trick, SitLoop.MIN_INTER_SIT_GAP, SitLoop.MAX_INTER_SIT_GAP])
 	else:
 		# CC0 dev fallback: no sit, so the loop parks in idle and every BRA tap is DEAD
 		# (does nothing, no penalty — P1-5). The button still works; it lights up the
@@ -1007,27 +1032,41 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
 	_save_progress()  # persist after every change so the bar survives a reload (049/P2-5)
 
-## Load saved per-trick progress on boot (049/P2-5). Restores the current trick's saved entry
-## into _progress so _setup_learned_bar shows the returning player's filled / mastered bar
-## immediately. First run (or a corrupt / wrong-version save) restores nothing → clean zero
-## (TrickStore degrades to {}). An unknown trick id in the save is simply never looked up.
+## The tricks main holds a learned bar for (065). Each gets its own persisted TrickProgress, keyed by
+## id in the save map, so per-trick progress never leaks across tricks. Grows as more tricks wire (067).
+const KNOWN_TRICKS := [TRICK_ID_SITT, TRICK_ID_LIGG]
+
+## Load saved per-trick progress on boot (049/P2-5). Builds one TrickProgress per known trick, restores
+## each from its own key in the save map, then points `_progress` at the current trick's model so
+## _setup_learned_bar shows the returning player's filled / mastered bar immediately. First run (or a
+## corrupt / wrong-version save) restores nothing → clean zeros (TrickStore degrades to {}).
 func _load_progress() -> void:
 	var saved := _store.load()
-	var entry: Variant = saved.get(TRICK_ID_SITT, {})
-	if typeof(entry) == TYPE_DICTIONARY:
-		_progress.restore(entry)
+	for id in KNOWN_TRICKS:
+		var p := TrickProgress.new()
+		var entry: Variant = saved.get(id, {})
+		if typeof(entry) == TYPE_DICTIONARY:
+			p.restore(entry)
+		_progress_by_trick[id] = p
+	_progress = _progress_by_trick[_current_trick]
 
-## Persist the current trick's progress (049/P2-5). One JSON map keyed per trick (today just
-## Sitt) to user:// — IndexedDB on web, no backend / account / network (X-7 offline).
+## Persist every trick's progress (049/P2-5). One JSON map keyed per trick to user:// — IndexedDB on
+## web, no backend / account / network (X-7 offline). Saves the whole map so switching trick and saving
+## never drops another trick's fill.
 func _save_progress() -> void:
-	_store.save({TRICK_ID_SITT: _progress.to_dict()})
+	var out := {}
+	for id in _progress_by_trick:
+		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
+	_store.save(out)
 
 ## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
 ## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog
 ## with no reaction clip (the CC0 placeholder) — never a faked celebration.
 func _play_mastery_beat() -> void:
 	if _director != null:
-		_director.play_reaction()
+		# Settle back into the CURRENT trick's hold after the celebration (065) — the down-hold for
+		# Ligg, the seated hold for Sitt — not always the seated one.
+		_director.play_reaction(_director.clips.trick_loop(_current_trick))
 
 ## Begin the procedural confused beat (045/P2-4): the mirror of the joyful mark. _process
 ## drives a brief damped recoil from here and restores the dog to its rest transform. Scaled
@@ -1072,7 +1111,7 @@ func _drive_wander(delta: float) -> void:
 	# `Sitting_end` reads before the amble resumes and the walk clip can't clobber it a frame
 	# in. This gates only which clip shows — the next offer stays on SitLoop's own clock, so the
 	# P2-8 variable cadence is untouched.
-	if _wander_active and not _director.is_standing_up():
+	if _wander_active and not _director.is_ending_trick(_current_trick):
 		_wander.advance(delta)
 		if _wander.is_moving() and not _ambling:
 			_director.play_walk()   # step the legs while the root glides
@@ -1196,7 +1235,7 @@ func _play_payoff(tier: SitWindow.Tier) -> void:
 	if _payoff != null:
 		_payoff.play(payoff)
 	if payoff.reacts() and _director != null:
-		_director.play_reaction()
+		_director.play_reaction(_director.clips.trick_loop(_current_trick))  # settle back into the current trick's hold (065)
 		# Web-only capture/e2e signal: a counter the reaction-capture harness watches so it
 		# can sync its screenshot burst to the exact frame the hop starts (034). No-op
 		# off the web export; harmless in normal play.
