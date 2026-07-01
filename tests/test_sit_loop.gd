@@ -161,6 +161,19 @@ func test_the_loop_repeats_indefinitely() -> void:
 	assert_eq(loop.state(), SitLoop.State.SITTING,
 		"cycle 2 sit comes round — the loop repeats, it does not stall after one sit")
 
+func test_reset_to_idle_parks_the_loop_for_a_fresh_offer() -> void:
+	# 066/P2-1: when the player picks a different trick mid-offer, main closes the open sit on the
+	# OLD trick and asks the loop to reset — so the loop parks back in IDLE and the next offer comes
+	# round fresh as the newly-chosen trick, instead of stalling mid-sit (the session is closed, so
+	# the SITTING branch would never see its sit_end + hold and would never come round again).
+	var loop := _loop()
+	_drive_to_sit(loop)
+	assert_eq(loop.state(), SitLoop.State.SITTING, "a real sit is open before the reset")
+	loop.reset_to_idle()
+	assert_eq(loop.state(), SitLoop.State.IDLE, "reset parks the loop back in idle")
+	_drive_to_sit(loop)
+	assert_eq(loop.state(), SitLoop.State.SITTING, "a fresh offer still comes round after the reset — no stall")
+
 func test_tell_is_built_from_the_same_window_the_score_uses() -> void:
 	# The honest-tell invariant (P1-4): main._begin_sit opens the session and builds the
 	# tell from ONE window, so the glow peaks exactly where a tap scores PERFECT. Pin that

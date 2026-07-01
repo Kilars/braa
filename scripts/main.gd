@@ -128,6 +128,14 @@ var _progress_by_trick := {}
 var _progress: TrickProgress
 var _learned_bar: LearnedBar
 
+## The trick selector (066, P2-1 "Pick a trick"): the top-of-HUD chip row that lets the player choose
+## which trick to train, one chip per trick the loaded dog can perform (never a faked trick — empty on
+## the idle-only CC0 dog). Its `trick_selected` routes into select_trick(); _refresh_selector() feeds
+## it each trick's own persisted learned/mastery state. Retires the `?bra_trick=` reach as the player-
+## facing chooser, though that web-only debug reach is KEPT (off by default) to boot the Visual-Review
+## capture harness straight into a specific trick.
+var _selector: TrickSelector
+
 ## Per-trick learned-progress persistence (049, P2-5 "leave and come back" / X-7 offline). The save
 ## store loads on boot into the per-trick map (so a returning player sees each trick's filled /
 ## mastered bar immediately) and is written after every change. Keyed per trick from day one — Sitt
@@ -194,7 +202,7 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
-	_current_trick = _query_trick()  # which trick to train (066 selector; ?bra_trick= web reach until then)
+	_current_trick = _query_trick()  # the INITIAL trick; the 066 selector switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_setup_environment()
@@ -507,20 +515,30 @@ const TELL_HALF_WIDTH := ApexTellMarker.SIZE * 0.5  ## 160 — half the pulse sq
 const BRA_CENTER_Y := (BRA_OFFSET_TOP + BRA_OFFSET_BOTTOM) * 0.5
 const TELL_OFFSET_TOP := BRA_CENTER_Y - TELL_HALF_WIDTH
 const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
-## Timing readout: a band across the upper portrait area, clear of dog and button (024g).
-const READOUT_OFFSET_LEFT := 24.0
-const READOUT_OFFSET_RIGHT := -24.0
-## Lifted into the clear sky above the dog's crown (P1-7 polish, 038): the centred dog's
-## ears reached the old 96–220 band, so the flashed tier overlapped the head. Pulled up
-## ~40 px (band height unchanged) while keeping a comfortable top margin off the letterbox.
-const READOUT_OFFSET_TOP := 56.0
-const READOUT_OFFSET_BOTTOM := 180.0
-## Learned bar (045, P2-4): a thin persistent meter pinned at the readout's proven-safe top
-## edge (038), in the clear sky above the dog. Full width inset like the button; the transient
-## readout word flashes below it. Reads by FILL LENGTH so it's legible under reduced motion.
-const LEARNED_BAR_OFFSET_TOP := READOUT_OFFSET_TOP
+## Trick selector (066, P2-1): a chip row pinned at the very top of the HUD — the learned bar and the
+## timing readout stack BELOW it, their offsets DERIVED from the selector's foot so the whole top
+## stack stays consistent if the selector's height/inset ever changes (the same coupling discipline
+## the apex-tell marker keeps with the button). It floats in the clear sky, well above the centred
+## dog's crown and far from the bottom BRA band, so it is never a second in-round verb (P2-1).
+const SELECTOR_MARGIN_X := 48.0
+const SELECTOR_OFFSET_TOP := 28.0
+const SELECTOR_HEIGHT := TrickSelector.HEIGHT       ## 52 — the selector's own preferred band height
+const SELECTOR_FOOT := SELECTOR_OFFSET_TOP + SELECTOR_HEIGHT
+
+## Learned bar (045, P2-4): a thin persistent meter just below the selector, in the clear sky above
+## the dog. Full width inset like the button; the transient readout word flashes below it. Reads by
+## FILL LENGTH so it's legible under reduced motion.
+const LEARNED_BAR_OFFSET_TOP := SELECTOR_FOOT + 12.0
 const LEARNED_BAR_HEIGHT := 16.0
 const LEARNED_BAR_MARGIN_X := 48.0
+
+## Timing readout: a band across the upper portrait area, clear of dog and button (024g). Stacked
+## below the learned bar. 038 kept the flashed tier word off the centred dog's crown; the taller
+## expand frame (063) leaves ample sky for the selector + bar + readout stack above the dog.
+const READOUT_OFFSET_LEFT := 24.0
+const READOUT_OFFSET_RIGHT := -24.0
+const READOUT_OFFSET_TOP := LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT + 16.0
+const READOUT_OFFSET_BOTTOM := READOUT_OFFSET_TOP + 124.0  ## 124 px band (unchanged height, 038)
 ## Confused-beat shape (045): a short damped yaw wobble on a bad tap, scaled by the reduced-
 ## motion factor so it dampens (never a hard snap) when motion is reduced (X-5).
 const CONFUSED_DURATION := 0.45
@@ -891,6 +909,7 @@ func _setup_bra_button() -> void:
 	_setup_trainer_marker(ui)
 	_setup_readout(ui)
 	_setup_learned_bar(ui)
+	_setup_selector(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -972,6 +991,88 @@ func _setup_learned_bar(ui: CanvasLayer) -> void:
 	_learned_bar = bar
 	_learned_bar.set_value(_progress.value, _progress.mastered)
 
+## The trick selector (066, P2-1): a chip row across the top of the HUD to pick which trick to train.
+## Anchored full-width across the top band (same insets as the learned bar / button), it floats over
+## the clear sky. Populated from _refresh_selector() with only the tricks the loaded dog can perform;
+## its `trick_selected` signal drives select_trick(). Mounted even on the CC0 dog (it just draws an
+## empty roster there — the honest "nothing to train" read).
+func _setup_selector(ui: CanvasLayer) -> void:
+	var selector := TrickSelector.new()
+	selector.name = "TrickSelector"
+	selector.anchor_left = 0.0
+	selector.anchor_right = 1.0
+	selector.anchor_top = 0.0
+	selector.anchor_bottom = 0.0
+	selector.offset_left = SELECTOR_MARGIN_X
+	selector.offset_right = -SELECTOR_MARGIN_X
+	selector.offset_top = SELECTOR_OFFSET_TOP
+	selector.offset_bottom = SELECTOR_OFFSET_TOP + SELECTOR_HEIGHT
+	ui.add_child(selector)
+	_selector = selector
+	_selector.trick_selected.connect(select_trick)
+	_refresh_selector()
+	_publish_current_trick()  # seed the web e2e hook with the initial trick (066)
+
+## The tricks the loaded dog can actually perform, in the canonical KNOWN_TRICKS order (065/067). The
+## selector offers exactly these — never a trick the dog can't perform (the never-fake gate): on the
+## CC0 placeholder this is empty, on the licensed Labrador it is Sitt + Ligg + Legg deg.
+func _selectable_tricks() -> Array:
+	var out: Array = []
+	if _director == null:
+		return out
+	for id in KNOWN_TRICKS:
+		if _director.has_trick(id):
+			out.append(id)
+	return out
+
+## Rebuild the selector's roster from the performable tricks + each one's own persisted learned/mastery
+## state (P2-1 "each entry shows its own … state"), and highlight the current trick. Called on mount,
+## after a trick switch, and could be called after a progress change if the chips ever animate live.
+func _refresh_selector() -> void:
+	if _selector == null:
+		return
+	var entries: Array = []
+	for id in _selectable_tricks():
+		var p: TrickProgress = _progress_by_trick.get(id)
+		entries.append({
+			"id": id,
+			"value": p.value if p != null else 0.0,
+			"mastered": p.mastered if p != null else false,
+		})
+	_selector.set_entries(entries, _current_trick)
+
+## Pick a trick to train (066, P2-1): repoint _current_trick and the learned bar/model to THAT trick's
+## own persisted state, and highlight it in the selector. Picking is a BETWEEN-rounds choice, never a
+## second in-round verb — so if an offer of the OLD trick is mid-flight, close it cleanly first (the
+## dog stands up through the OLD trick's own end clip, never a mismatched one) and reset the loop so the
+## next offer comes round fresh as the newly-chosen trick. A no-op for an unknown id or the current
+## trick. Routing is dog-agnostic (the selector is what filters to performable tricks), so it is
+## scene-testable on the CC0 dog.
+func select_trick(id: String) -> void:
+	if not KNOWN_TRICKS.has(id) or id == _current_trick:
+		return
+	# Close whatever offer of the OLD trick is in flight before switching.
+	if _session.is_open():
+		_end_sit()                              # graceful stand-up on the OLD trick; closes the window, resumes the roam
+	elif _loop != null and _loop.is_feinting():
+		_end_feint()                            # the dip settles back to idle + resumes the roam
+	if _loop != null:
+		_loop.reset_to_idle()                   # next offer comes round fresh as the newly-chosen trick
+	_current_trick = id
+	_progress = _progress_by_trick[id]          # the whole scoring/erosion/bar path now reads the new trick's model
+	if _learned_bar != null:
+		_learned_bar.set_value(_progress.value, _progress.mastered)
+	_refresh_selector()
+	_publish_current_trick()  # reflect the switch onto the web e2e hook (066)
+
+## Web-only e2e hook (066): expose the trained trick id so a LIVE browser test can prove a real chip
+## tap actually switches it — the selector's crux (a canvas tap → _gui_input → trick_selected →
+## select_trick). Mirrors the __bra_reaction_n / __appReady hooks; a no-op off the web export and
+## harmless in normal play. This is a test seam only — the selector never reads it back.
+func _publish_current_trick() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__bra_current_trick = '%s';" % _current_trick, true)
+
 ## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
 ## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are
 ## STATIC states (not animations), so the lock reads under reduced motion (X-5). Disabling also
@@ -1039,6 +1140,7 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		_play_mastery_beat()
 	elif not SitWindow.is_successful(tier):
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
+	_refresh_selector()  # keep the current trick's chip pip in step with the learned bar (066/P2-1)
 	_save_progress()  # persist after every change so the bar survives a reload (049/P2-5)
 
 ## The tricks main holds a learned bar for (065). Each gets its own persisted TrickProgress, keyed by

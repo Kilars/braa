@@ -51,6 +51,17 @@ func _init(rng: RandomNumberGenerator = null, p_sit_hold := DEFAULT_SIT_HOLD) ->
 func _draw_next_gap() -> void:
 	_next_gap = _rng.randf_range(MIN_INTER_SIT_GAP, MAX_INTER_SIT_GAP)
 
+## Park the loop back in IDLE and draw a fresh gap (066, P2-1). main calls this when the player picks
+## a different trick mid-offer: it closes the open sit on the OLD trick, then resets here so the next
+## offer comes round fresh as the newly-chosen trick. Without it the loop would stay SITTING while the
+## session is closed — its SITTING branch waits on session_elapsed (now frozen), so it would never
+## come round again and the game would stall. Idempotent from any state.
+func reset_to_idle() -> void:
+	_state = State.IDLE
+	_idle_elapsed = 0.0
+	_feint_elapsed = 0.0
+	_draw_next_gap()
+
 func state() -> int:
 	return _state
 
