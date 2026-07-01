@@ -159,6 +159,31 @@ var _ambling := false
 var _contact_shadow: MeshInstance3D
 var _shadow_rest: Vector3
 
+## Face-the-camera turn on a real trick (061, P2-11 "face me for the trick"). The scene camera is
+## fixed; when a real (non-feint) sit begins the dog must turn to face the camera POV so the apex
+## reads head-on. `_camera` is the framed Camera3D (kept so the target heading is computed from its
+## real position). `_face` is the pure bounded-speed turner (scripts/face_turn.gd) — null while
+## roaming (the wander drives the yaw directly, unchanged), built when a trick engages and dropped
+## once a post-trick release re-aligns with the roam. `_facing` is true while turning IN to / holding
+## the camera; false during the eased release. `_sit_face_heading` caches the camera-facing target
+## for the current sit (the dog is frozen for the sit, so it's constant). A FEINT never engages any
+## of this — feints don't call `_engage_face_for_sit`, so the dog keeps its wander heading (P2-11).
+var _camera: Camera3D
+var _face: FaceTurn
+var _facing := false
+var _sit_face_heading := 0.0
+
+## The natural in-character turn rate (rad/s, ~200°/s — a brisk dog pivot) used for the release and
+## as the floor for the turn-in; the turn-in is sped UP from here only as much as it must to finish
+## before the apex (FACE_APEX_FRACTION of the time-to-apex, floored by FACE_MIN_DEADLINE). Reduced
+## motion (X-5) swaps in FACE_REDUCED_SPEED so the facing resolves near-instantly (still resolves —
+## a dampened/near-instant turn is fine). FACE_DEFAULT_APEX is the fallback when no window is open.
+const FACE_ROAM_SPEED := 3.5
+const FACE_APEX_FRACTION := 0.6
+const FACE_MIN_DEADLINE := 0.15
+const FACE_REDUCED_SPEED := 100.0
+const FACE_DEFAULT_APEX := 1.0
+
 func _ready() -> void:
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
@@ -329,6 +354,7 @@ func _begin_sit() -> void:
 	_director.play_sit()
 	_window = _director.sit_window()
 	_session.open(_window)
+	_engage_face_for_sit()  # turn to face the camera so the apex reads head-on (061, P2-11)
 	_tell = ApexTell.from_window(_window, _motion_scale)
 	# Build the approach-cue ring from the SAME window (single source of truth) — its teach
 	# strength reflects the CURRENT learned level so each sit's ring fades with the bar (058).
@@ -344,6 +370,7 @@ func _end_sit() -> void:
 	_trainer = null  # drop the approach ring — marker goes dark next _process frame (058)
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
 	_director.play_sit_end()  # stand back up through the authored `Sitting_end` (059), then idle
+	_release_face()  # ease the facing back to the roam heading, then hand yaw to the wander (061)
 	_resume_wander()  # come back round to roaming the patch (050)
 
 ## Begin a feint (048, P2-8): the dog visibly dips toward a sit and aborts. CRUCIALLY this
@@ -513,6 +540,7 @@ func _frame_camera(dog: Node) -> void:
 	target_pos.y = box.position.y + box.size.y * LOOK_DOWN_TARGET_Y
 	cam.look_at_from_position(eye, target_pos, Vector3.UP)
 	cam.make_current()
+	_camera = cam  # kept so the face-the-camera turn (061/P2-11) aims at its real position
 
 ## Grass ground plane (047/P2-10): a large PlaneMesh at the dog's FOOT PLANE so the dog
 ## stands visibly ON grass. Sized 40×40 m so the horizon split (where the plane meets the
@@ -638,6 +666,7 @@ func _fallback_camera() -> void:
 	add_child(cam)  # before look_at — see _frame_camera (026)
 	cam.look_at_from_position(Vector3(0.0, 1.0, 3.0), Vector3(0.0, 0.9, 0.0), Vector3.UP)
 	cam.make_current()
+	_camera = cam  # kept so the face-the-camera turn (061/P2-11) aims at its real position
 
 ## Viewport width/height. The project pins a 720×1280 logical viewport (stretch=keep),
 ## so this is a stable portrait aspect everywhere — headless, browser, any device.
@@ -1002,6 +1031,7 @@ func _drive_wander(delta: float) -> void:
 		elif not _wander.is_moving() and _ambling:
 			_director.play_idle()   # paused at a target — stand and look around
 			_ambling = false
+	_advance_facing(delta)  # ease the face-the-camera turn / its release (061, P2-11)
 	if _confused_age < 0.0:
 		_dog.transform = _wander_base()
 	_track_contact_shadow()
@@ -1025,12 +1055,78 @@ func _dog_base_transform() -> Transform3D:
 	return _dog_rest
 
 ## Build the wander transform from the pure WanderField: translate the rest spot by the XZ offset
-## (keep the rest Y so the feet stay on the grass) and yaw the rest basis to the travel heading so
-## the dog faces where it's walking (reads as roaming, not sliding).
+## (keep the rest Y so the feet stay on the grass) and yaw the rest basis to the current yaw so the
+## dog faces where it's walking (reads as roaming, not sliding) — OR, during a real trick, to the
+## face-the-camera heading (061, via _dog_yaw), so the seated apex reads head-on.
 func _wander_base() -> Transform3D:
 	var off := _wander.position()
-	var basis := _dog_rest.basis.rotated(Vector3.UP, _wander.heading())
+	var basis := _dog_rest.basis.rotated(Vector3.UP, _dog_yaw())
 	return Transform3D(basis, _dog_rest.origin + Vector3(off.x, 0.0, off.y))
+
+## The dog's yaw this frame: the face-the-camera turner while a trick is engaging / releasing (061,
+## P2-11), else the wander travel heading (050). Once the release re-aligns, `_face` is dropped and
+## the wander drives the yaw directly again — steady-roam feel is unchanged.
+func _dog_yaw() -> float:
+	if _face != null:
+		return _face.heading()
+	return _wander.heading()
+
+## Engage the face-the-camera turn for a real sit (061, P2-11): cache the camera-facing target and
+## build a bounded turner from the dog's current yaw that COMPLETES before the seated apex — sized so
+## a turn of any magnitude finishes within FACE_APEX_FRACTION of the time-to-apex (floored), and at
+## least the natural roam rate. Reduced motion (X-5) resolves near-instantly. A feint never calls
+## this, so it keeps its wander heading. A no-op on a dog with no wander/root (nothing to turn).
+func _engage_face_for_sit() -> void:
+	if _wander == null or _dog == null:
+		return
+	_sit_face_heading = _camera_facing_heading()
+	var start := _dog_yaw()
+	var reduced := _motion_scale < 1.0  # damped tell scale ⇒ prefers-reduced-motion is active
+	var speed := FACE_REDUCED_SPEED
+	if not reduced:
+		var turn := absf(wrapf(_sit_face_heading - start, -PI, PI))
+		var apex := _window.apex if _window != null else FACE_DEFAULT_APEX
+		var deadline := maxf(FACE_MIN_DEADLINE, apex * FACE_APEX_FRACTION)
+		speed = maxf(FACE_ROAM_SPEED, turn / deadline)  # fast enough to beat the apex, never slower than natural
+	_face = FaceTurn.new(start, _sit_face_heading, speed)
+	_facing = true
+
+## Release the facing after the trick (061): stop holding the camera and drop to the natural roam
+## turn rate. `_advance_facing` then eases `_face` back to the wander heading and, once re-aligned,
+## hands the yaw back to the wander (drops `_face`). A no-op if no turn was engaged.
+func _release_face() -> void:
+	_facing = false
+	if _face != null:
+		_face.set_speed(FACE_REDUCED_SPEED if _motion_scale < 1.0 else FACE_ROAM_SPEED)
+
+## Advance the face-the-camera turn each frame (061). While `_facing`, hold the cached camera
+## target (the turn-in); after `_release_face`, retarget to the live wander heading (the eased
+## turn-out) and, once re-aligned, drop `_face` so the wander drives the yaw directly again. A no-op
+## while roaming (no `_face`).
+func _advance_facing(delta: float) -> void:
+	if _face == null:
+		return
+	if _facing:
+		_face.retarget(_sit_face_heading)
+	else:
+		_face.retarget(_wander.heading())
+	_face.advance(delta)
+	if not _facing and _face.is_facing():
+		_face = null  # re-aligned with the roam — hand the yaw back to the instant wander
+
+## The yaw that faces the camera POV (061, P2-11), in the WanderField convention (heading =
+## atan2(dir.x, dir.z) faces `dir`, proven by the wander Visual Review). So the dog->camera XZ
+## vector's atan2 turns the dog to face the camera — model-agnostic, no hardcoded angle. Falls back
+## to the current yaw if the camera or dog is missing (nothing sensible to aim at).
+func _camera_facing_heading() -> float:
+	if _camera == null or _dog == null:
+		return _dog_yaw() if _wander != null else 0.0
+	var dogp := _dog.transform.origin
+	var camp := _camera.transform.origin
+	var dir := Vector2(camp.x - dogp.x, camp.z - dogp.z)  # (worldX, worldZ), the WanderField convention
+	if dir.length() < 1e-4:
+		return _dog_yaw()
+	return atan2(dir.x, dir.y)  # y holds worldZ — matches WanderField.heading = atan2(to.x, to.y)
 
 ## Slide the contact-shadow blob to stay under the wandering dog (050) — its XZ tracks the wander
 ## offset; its Y (the grass foot plane, with the Z-fight lift) is untouched so the dog stays
