@@ -30,71 +30,73 @@
 
 ### PO Review — 2026-07-01
 
-Re-played Phase 2 on the **current-HEAD local licensed bundle** (`build/web` — the 38 MB pck that
-bundles the unencrypted, sit-capable Labrador) served over http and driven in headless Chromium at
-390×844 — SwiftShader == the deployed GL Compatibility renderer. I drove the **local current-HEAD
-export** rather than the live Pages site because tasks **048 / 050 / 058** landed minutes ago and the
-CI deploy lags; the bundle is byte-current for gameplay (the two newest commits touched only the
-board + capture tools). Boot is clean: `__appReady` true, `dog loaded: …dog_licensed.glb` +
-`dog can Sitt`, **zero** SCRIPT ERROR / pageerror across every run.
+Fresh play-test, independent of the prior passes' notes. Drove the **current-HEAD local licensed
+bundle** (`build/web` — the 38 MB pck that bundles the unencrypted, sit-capable Labrador; I confirmed
+the pck's mtime is ~43 min **newer** than the newest `scripts/*.gd`, so it is byte-current for
+gameplay) served over http and driven in headless Chromium at 390×844 — SwiftShader == the deployed
+GL Compatibility renderer. I chose the local export over the live Pages site because the CI deploy
+lags the last gameplay commits. Boot is clean on every run: `__appReady` true, `dog loaded:
+…dog_licensed.glb (1 coat surface forced opaque)`, `dog can Sitt — varying the offer cadence
+0.8–2.0s, sometimes feinting`, and **zero** SCRIPT ERROR / pageerror across four separate runs
+(main playtest, mastery/fade sweep, forced-lock, forced-trainer, and a 160-tap erosion spray).
 
-**The two directives from the last pass are now BUILT and verified good in live pixels** — **P2-8**
-(variable cadence + feints, task 048; bounded-patch wander, task 050) and **P2-9** (fading timing
-trainer, task 058). With those landed, **every *buildable* Phase-2 story is now done and holds up**
-(P2-4, P2-5, P2-7, P2-8, P2-9, P2-10). The **only** thing keeping Phase 2 open is the owner-gated
-trick roster (**P2-1 / P2-2 / P2-3** — see Changes): the licensed dog still ships only the Sitt, so
-there is no second trick to select, perform, or polish. **There is no new buildable work this pass.**
-Do not sign Phase 2 off, and do not invent filler — the loop now waits on the owner for trick clips.
+**Every *buildable* Phase-2 story is done and holds up in live pixels** (P2-4, P2-5, P2-7, P2-8, P2-9,
+P2-10) — this pass I re-confirmed them from my own screenshots, and in two cases with **stronger**
+evidence than before (persistence and the lock, below). The **only** thing keeping Phase 2 open is
+the owner-gated trick roster (**P2-1 / P2-2 / P2-3** — see Changes): the licensed dog still ships only
+the Sitt, so there is no second trick to select, perform, or polish. **There is no new buildable work
+this pass.** Do not sign Phase 2 off, and do not invent filler — the loop waits on the owner for
+trick clips.
 
 **What holds up (verified live this pass, keep it):**
-- **P2-10 — the garden.** Present in every frame: sky band + a visible sun across the top, green
+- **P2-10 — the garden.** Present in every frame: a sky band + a visible sun across the top, green
   grass below, the Labrador grounded by a soft contact shadow, and **"BRA"** floating over the lower
-  grass with **no** opaque control band (`.screenshots/po2-wander-08.png`). Good.
-- **P2-8 — the dog now lives (was the #1 gap; now good).** Over a 36 s non-forced run the dog
-  **wandered** the patch — its horizontal centroid roamed **x≈85↔299** across a 390-wide frame,
-  walking to each edge and **turning back** so it never left frame, on a **real walk gait**: it
-  **faces its travel direction** mid-stride, no foot-slide (`po2-wander-08.png` — dog at the left
-  edge, facing left, mid-stride). Sits now land at **varying positions**, not dead-centre
-  (`po2-wander-40.png` — a clean Sitt at the right edge). The metronome is gone: `scripts/sit_loop.gd`
-  draws each idle gap **fresh from [0.8 s, 2.0 s]** and **35 %** of offers are **feints** (a
-  dip-and-abort opening no markable window; the feint reuses the real sit build-in, so a sit-less dog
-  can never fake one). A live ring burst found the trainer cue **dark in 45/60 frames** — i.e. dark
-  between offers / during feints, consistent with no window opening on a feint. Good.
-- **P2-9 — the fading timing trainer (was the #2 gap; now good).** On a brand-new trick (empty bar)
-  a **bold cyan ring** appears and **shrinks onto the BRA word, landing exactly at the apex**: a live
-  non-forced burst caught the **big** ring mid-approach (`058-live-25-cy5373.png`) and the **landed**
-  small ring tight around BRA at the instant the dog is **fully seated at apex** (`058-live-32-cy2916.png`),
-  and it reads **distinct from the gold "now" apex tell** (a separate gold halo fires the same
-  instant). It **fades as the bar fills and is gone at mastery**: under autotap the ring's lower-band
-  cyan averaged ~266 px while learning and **0 px once the bar latched gold**, with the dog **still
-  cycling** — not frozen (`po2-fade-08.png` bar ~20 % green, ring active during sits; `po2-fade-112.png`
-  full **gold** bar, **no ring**, dog mid-reaction). It rides the same `SitWindow` (present only during
-  real sit approaches). Good.
-- **P2-4 — the learned bar fills and masters.** The top meter fills **green** with PERFECTs and
-  **latches a full gold** bar at mastery (`po2-fade-08.png` ~20 % green; `po2-fade-112.png` full
-  gold); PERFECT clearly nets forward. Good.
-- **P2-7 — anti-mash freeze.** Untouched by 048/050/058; the fixed-350 ms re-arm is unit-tested and
-  the dim-lock seam (`?bra_force_lock=1`) was verified live last pass. Good.
-- **P2-5 — leave and come back.** Per-trick progress persisted across a plain reload last pass (task
-  049, `user://` IndexedDB, no backend); untouched this pass. Good.
-- *Not yet pixel-verified (for the eventual sign-off pass):* the **P2-4 erosion / confused-beat**
-  path — a MISS/DEAD dropping the bar, the brief red setback wash, and the dog's confused recoil.
-  `?bra_autotap=1` only fires PERFECT, and the wash/wobble are ~0.45 s flashes a strobe-sampled burst
-  can miss; the mechanic is unit-tested, but a sign-off pass should still catch the drop + wash +
-  recoil in live pixels.
+  grass with **no** opaque control band (`.screenshots/po-live-apex.png`, `po-live-idle.png`). Good.
+- **P2-8 — the dog lives.** Across non-forced runs the dog **wandered** the patch (caught at the
+  left-lean, centre, and right of a 390-wide frame across `po-live-idle.png` / `po3-lock-on.png` /
+  `po3-fade-early.png`) on a **real walk gait**, facing its travel direction with no foot-slide, and
+  **turned back** so it never left frame. The cadence is **not** a metronome: a 90-frame free-run
+  apex burst opened a markable window in only **3/90** frames and a 90-tap spray landed just **2**
+  marks — sparse, varying openings consistent with variable gaps + **feints** (boot log confirms
+  `varying the offer cadence 0.8–2.0s, sometimes feinting`). Good.
+- **P2-9 — the fading timing trainer.** A **bold cyan ring** shrinks onto the BRA word and **lands
+  exactly at the seated apex**: `po3-force-trainer.png` and `058-live-25-cy5373.png` show the big ring
+  mid-approach, and `058-live-32-cy2916.png` shows the **landed** small cyan ring tight around "BRA"
+  at the instant the dog is **fully seated** — nested **inside** the gold "now" apex tell, so the two
+  cues read **distinct**. It rides the same `SitWindow` (dark between offers / on feints) and its
+  prominence scales with the learned bar (unit-tested envelope); the mastered state shows no ring
+  (`po3-persist-reload.png`). Good.
+- **P2-4 — the learned bar fills and masters.** Under `?bra_autotap=1` the top meter fills **green**
+  with PERFECTs (`po3-fade-early.png`, ~40 % green with the PERFECT readout flashing) and **latches a
+  full gold bar at mastery** (`po3-persist-reload.png` — a solid full-width gold bar). PERFECT clearly
+  nets forward. Good.
+- **P2-5 — leave and come back (re-confirmed live this pass).** After mastering under autotap I did a
+  **plain reload with no seam** and the bar came back a **full gold mastered bar** (`po3-persist-reload.png`)
+  — per-trick progress restored from `user://` (IndexedDB, no backend/account). Good.
+- **P2-7 — anti-mash freeze (re-confirmed live this pass).** With `?bra_force_lock=1` the **"BRA"**
+  word reads clearly **dimmed/greyed** vs the crisp white of the unlocked frame (`po3-lock-on.png` vs
+  `po3-lock-off.png`), so the locked state is legible; the fixed-350 ms re-arm is unit-tested. Good.
+- *Not cleanly pixel-verified yet (a sign-off-pass item, not a bug):* the **P2-4 erosion /
+  confused-beat** path. A fresh-save 160-tap spray exercised it hard — **3** taps landed as marks and
+  **78** as "no mark" DEAD taps, with **0 errors** — so the negative-learning path runs and never
+  crashes, but the red setback wash + confused recoil are ~0.45 s flashes that a strobe-sampled burst
+  keeps missing (the DEAD taps also hold the bar near-floored, so there's little to wash). The
+  mechanic is unit-tested; a future sign-off pass should still catch the drop + wash + recoil in
+  live pixels.
 
 #### Bugfixes
 
 - (none) — every run booted clean (`__appReady` true, licensed Sitt dog) with **zero** console
-  errors; idle → wander → sit → mark → loop, mastery, the fade, and the trainer ring all worked.
+  errors; idle → wander → sit → mark → loop, mastery, persistence, the lock, and the trainer ring all
+  worked.
 
 #### Improvements (buildable now)
 
-- (none) — **P2-8** and **P2-9**, the only two buildable Phase-2 stories outstanding last pass, are
-  now built and verified good (see "What holds up"). No buildable Phase-2 improvement remains; the
-  one open Phase-2 gap is owner-gated (below).
+- (none) — the only two buildable Phase-2 stories outstanding earlier (P2-8, P2-9) are built and
+  verified good (see "What holds up"). No buildable Phase-2 improvement remains; the one open Phase-2
+  gap is owner-gated (below).
 - **Garden sun reads as a flat egg-shaped blob (minor, Phase-7-leaning).** Still a hard-edged,
-  slightly vertical-ellipse yellow disc with no halo in the SwiftShader capture (`po2-wander-40.png`);
+  slightly vertical-ellipse yellow disc with no halo in the SwiftShader capture (`po-live-apex.png`);
   the procedural sky-sun glow may add a halo on real-device GL. *Why it's minor:* P2-10 explicitly
   defers richer environment art to Phase 7, so this does **not** block Phase 2 — flagged only so the
   Phase-7 pass tightens the sun to a crisp, haloed disc.
