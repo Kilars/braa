@@ -28,6 +28,22 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
+### Owner directive — 2026-07-01 (larssski)
+
+Two owner asks captured directly (not from a father play-test) — both **current-phase
+(Phase 2)** work, so they **preempt** any work-ahead:
+
+1. **Garden — push the stylization a bit further (P2-10 improvement, buildable now).** The
+   functional garden reads, but it's plain. Give it **more stylized, Pokémon-GO-style
+   character** — a richer/warmer sky gradient, a more **shaped, painterly grass** (not a flat
+   green plane), and a more deliberate sun — while staying clean and phone-legible with the dog
+   as the clear focus. This is a **modest step now**, *not* the full Phase-7 environment-art
+   pass (props / depth / heavy lighting polish still defer to **Phase 7**) — keep it cheap and
+   readable. Ride a Visual-Review capture. *(Improvement, not a bug — the garden isn't broken.)*
+2. **Dog faces the player for tricks — new story P2-11** (added to `phase2.md`). Whenever the
+   dog performs a **real** trick it turns to face the camera POV so the apex reads head-on;
+   a feint keeps its wander heading. Buildable now (Sitt only); build + Visual-Review it.
+
 ### PO Review — 2026-07-01
 
 Fresh, fully independent re-play on **current HEAD (commit `46930fb`, the new 059 stand-up)** — my own

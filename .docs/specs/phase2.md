@@ -109,3 +109,18 @@ Phase-1 Sitt standard**. Breadth of tricks, zero drop in polish.
     because the wandering dog (P2-8) needs ground to roam on; richer environment art
     (props, depth, lighting polish) defers to **Phase 7**. (PO-Directive 2026-06-29;
     X-4 stylized-realism)
+
+- **P2-11 — Face me for the trick.**
+  *As a player, I want the dog to turn and face me (the camera POV) whenever it performs a
+  trick, so that I read the trick head-on and the payoff feels aimed at me — never caught in
+  profile or from behind.*
+  Acceptance:
+  - When a **real (non-feint) trick** begins, the dog **turns to face the camera POV** and
+    performs the trick so its **apex reads head-on** — it never sits/lies side-on or rear-on.
+  - The turn is **smooth and in-character** — it rotates on its walk/turn (consistent with
+    P2-8's honest gait), **no instant snap, no foot-slide**, and it **completes before the
+    apex** so the markable moment is always framed to the player.
+  - A **feint** commits to no trick, so it does **not** force a face-camera turn — the dog
+    keeps its ambient wander heading; only a committed trick turns to face. (P2-8)
+  - Reduced motion: the facing still **resolves** (a dampened/near-instant turn is fine), so
+    the trick is always read head-on even with `prefers-reduced-motion`. (X-5, D13)
