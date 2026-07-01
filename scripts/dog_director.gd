@@ -106,6 +106,30 @@ func play_reaction() -> void:
 	elif clips.idle != "":
 		_ap.queue(clips.idle)
 
+## Stand the dog back up out of the seated hold with its AUTHORED stand-up clip (`Sitting_end`)
+## — the missing third beat of the sit cycle (build-in → hold → STAND-UP), so the exit eases
+## through the real animation instead of snapping straight from the seated loop to idle on the
+## blend alone (059). Then settle into the ambient idle. Falls back to a plain idle when the dog
+## ships no stand-up clip (the CC0 placeholder), so the dog always ends up alive at rest, never
+## frozen mid-sit and never faking a stand-up it can't perform (the 024b asset gate holds).
+## Honest reuse of the licensed `Sitting_end` — no new asset.
+func play_sit_end() -> void:
+	if _ap == null:
+		return
+	if clips.sit_end == "":
+		play_idle()  # no authored stand-up — settle straight to idle rather than freeze
+		return
+	_set_loop(clips.sit_end, Animation.LOOP_NONE)  # the stand-up plays once, never loops
+	_ap.play(clips.sit_end)
+	if clips.idle != "":
+		_ap.queue(clips.idle)  # settle into the ambient idle after standing
+
+## True while the authored stand-up is the clip currently playing (059). main holds the ambient
+## roam IN PLACE during it so the stand-up reads before the dog ambles off, without touching the
+## SitLoop cadence (the next offer stays on its own clock — this only gates which clip shows).
+func is_standing_up() -> bool:
+	return _ap != null and clips.sit_end != "" and _ap.current_animation == clips.sit_end
+
 func _set_loop(clip: String, mode: Animation.LoopMode) -> void:
 	if _ap.has_animation(clip):
 		_ap.get_animation(clip).loop_mode = mode

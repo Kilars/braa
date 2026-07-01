@@ -1,7 +1,7 @@
 // Grab N frames across several sit cycles so we can pick a SEATED pose to compare the coat
 // against the pre-fix shot (032). Boots the Godot Web bundle in headless Chromium (SwiftShader
 // == the deployed GL Compatibility renderer), settles, then screenshots every ~600ms.
-// Usage: env -u LD_LIBRARY_PATH node tools/web_capture_frames.mjs <bundle-dir> <out-prefix> <count>
+// Usage: env -u LD_LIBRARY_PATH node tools/web_capture_frames.mjs <bundle-dir> <out-prefix> <count> [gapMs]
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -10,6 +10,7 @@ import { chromium } from "playwright";
 const bundleDir = process.argv[2];
 const prefix = process.argv[3] || ".screenshots/032-frame";
 const count = parseInt(process.argv[4] || "8", 10);
+const gapMs = parseInt(process.argv[5] || "600", 10);  // denser spacing catches brief transitions
 if (!bundleDir) { console.error("usage: web_capture_frames.mjs <bundle-dir> <out-prefix> <count>"); process.exit(2); }
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
@@ -38,7 +39,7 @@ try {
 	for (let i = 0; i < count; i++) {
 		const buf = await page.screenshot({ type: "png" });
 		await writeFile(`${prefix}-${String(i).padStart(2, "0")}.png`, buf);
-		await page.waitForTimeout(600);
+		await page.waitForTimeout(gapMs);
 	}
 	console.log(`saved ${count} frames to ${prefix}-NN.png`);
 } catch (e) {

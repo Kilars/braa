@@ -343,7 +343,7 @@ func _end_sit() -> void:
 	_tell = null
 	_trainer = null  # drop the approach ring — marker goes dark next _process frame (058)
 	_autotapped = false  # arm the next sit's capture mark (034 seam)
-	_director.play_idle()
+	_director.play_sit_end()  # stand back up through the authored `Sitting_end` (059), then idle
 	_resume_wander()  # come back round to roaming the patch (050)
 
 ## Begin a feint (048, P2-8): the dog visibly dips toward a sit and aborts. CRUCIALLY this
@@ -990,7 +990,11 @@ func _drive_confused(delta: float) -> void:
 func _drive_wander(delta: float) -> void:
 	if _wander == null or _dog == null:
 		return
-	if _wander_active:
+	# Hold the roam IN PLACE while the dog stands up out of a sit (059), so the authored
+	# `Sitting_end` reads before the amble resumes and the walk clip can't clobber it a frame
+	# in. This gates only which clip shows — the next offer stays on SitLoop's own clock, so the
+	# P2-8 variable cadence is untouched.
+	if _wander_active and not _director.is_standing_up():
 		_wander.advance(delta)
 		if _wander.is_moving() and not _ambling:
 			_director.play_walk()   # step the legs while the root glides
