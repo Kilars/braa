@@ -74,6 +74,29 @@ func test_per_trick_progress_is_isolated_and_persists_by_id() -> void:
 	b.queue_free()
 	_clear_save()
 
+func test_legg_deg_has_its_own_isolated_progress_slot() -> void:
+	# 067 / P2-2: wiring Legg deg as the third trick gives it its own per-trick progress key, keyed
+	# independently of Sitt and Ligg. Proves main holds a legg_deg slot that persists on its own key
+	# and never leaks into the other tricks' bars.
+	_clear_save()
+	var a := instantiate_main()
+	assert_true(a._progress_by_trick.has("legg_deg"), "legg_deg progress exists in the per-trick map (it's wired)")
+	a._progress_by_trick["sitt"].value = 0.0
+	a._progress_by_trick["ligg"].value = 0.0
+	a._progress_by_trick["legg_deg"].value = 0.7
+	a._save_progress()
+	a.queue_free()
+
+	var saved := TrickStore.new().load()
+	assert_true(saved.has("legg_deg"), "the store persists the legg_deg key")
+
+	var b := instantiate_main()
+	assert_true(absf(b._progress_by_trick["legg_deg"].value - 0.7) < 1e-4, "legg_deg restores its saved fill")
+	assert_eq(b._progress_by_trick["sitt"].value, 0.0, "sitt stays empty — no cross-trick leak")
+	assert_eq(b._progress_by_trick["ligg"].value, 0.0, "ligg stays empty — no cross-trick leak")
+	b.queue_free()
+	_clear_save()
+
 func test_mastery_checkpoint_survives_a_reload() -> void:
 	_clear_save()
 	# Session A: drive the model to mastered and save it through the production path.

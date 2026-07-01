@@ -116,6 +116,7 @@ const LAB_LIE := ["Arm_Labrador|Idle_1",
 	"Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_1", "Arm_Labrador|Sitting_end",
 	"Arm_Labrador|Lie_start", "Arm_Labrador|Lie_1", "Arm_Labrador|Lie_2", "Arm_Labrador|Lie_end",
 	"Arm_Labrador|Lie_belly_start", "Arm_Labrador|Lie_belly_1", "Arm_Labrador|Lie_belly_end",
+	"Arm_Labrador|Lie_belly_sleep_start", "Arm_Labrador|Lie_belly_sleep", "Arm_Labrador|Lie_belly_sleep_end",
 	"Arm_Labrador|Lie_Sleep_start", "Arm_Labrador|Lie_Sleep_loop", "Arm_Labrador|Lie_Sleep_end"]
 
 func test_labrador_resolves_ligg_lie_clips() -> void:
@@ -178,6 +179,68 @@ func test_licensed_dog_if_present_resolves_ligg() -> void:
 		assert_true(ap.has_animation(c.lie_start), "resolved lie_start must be a real clip on the dog")
 		assert_true(ap.has_animation(c.lie_loop), "resolved lie_loop must be a real clip on the dog")
 		assert_true(c.has_trick("ligg"), "ligg is drivable via the generic trick accessor")
+	dog.free()
+
+# Legg deg (settle on belly, P2-2/P2-3, task 067): the licensed asset already holds the belly-settle
+# `Lie_belly_start / Lie_belly_loop_1|2 / Lie_belly_end` clips (manifest) — unwired until BUST-064.
+# Like Sitting/Lie, the glTF importer strips "loop" (`Lie_belly_loop_1` -> `Lie_belly_1`), so the hold
+# resolves by EXCLUSION. Legg deg must read distinct from Ligg (plain lie) and NEVER resolve to the
+# belly-SLEEP decoys (`Lie_belly_sleep_*`) or the plain sleep pose (`Lie_Sleep_*`).
+func test_labrador_resolves_legg_deg_belly_clips() -> void:
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_true(c.has_legg_deg(), "the Labrador has a real Legg deg (belly settle)")
+	assert_eq(c.legg_start, "Arm_Labrador|Lie_belly_start", "Legg deg build-in clip")
+	assert_eq(c.legg_loop, "Arm_Labrador|Lie_belly_1", "first Legg deg hold-loop clip (Godot strips 'loop')")
+	assert_eq(c.legg_end, "Arm_Labrador|Lie_belly_end", "Legg deg stand-up clip")
+
+func test_legg_deg_is_distinct_from_ligg_and_never_the_sleep_pose() -> void:
+	# P2-3: Legg deg (belly settle) must read distinct from Ligg (plain lie) and must never resolve to
+	# the belly-sleep or plain-sleep decoys — all four share the "lie" stem.
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_ne(c.legg_start, c.lie_start, "Legg deg build-in is not the plain-lie (Ligg) build-in")
+	assert_ne(c.legg_loop, c.lie_loop, "Legg deg hold is not the plain-lie (Ligg) hold")
+	assert_ne(c.legg_start, "Arm_Labrador|Lie_belly_sleep_start", "Legg deg is not the belly-sleep pose")
+	assert_ne(c.legg_loop, "Arm_Labrador|Lie_belly_sleep", "Legg deg hold is not the belly-sleep pose")
+	assert_ne(c.legg_start, "Arm_Labrador|Lie_Sleep_start", "Legg deg is not the plain sleep pose")
+	# And the reverse guard: Ligg must never grab a belly clip now that both are present.
+	assert_false(c.lie_start.contains("belly"), "Ligg still excludes the belly-settle clips")
+
+func test_cc0_has_no_legg_deg() -> void:
+	var c := DogClips.resolve(PackedStringArray(CC0))
+	assert_false(c.has_legg_deg(), "the CC0 placeholder ships no belly-settle clip")
+	assert_eq(c.legg_start, "", "no Legg deg build-in on the CC0 dog")
+
+func test_generic_trick_accessors_include_legg_deg() -> void:
+	# Adding Legg deg is a clip-name swap through the generic bundle, not a new code path:
+	# "legg_deg" -> Lie_belly_*, driven by the same play_trick / trick_window family.
+	var c := DogClips.resolve(PackedStringArray(LAB_LIE))
+	assert_true(c.has_trick("legg_deg"), "legg_deg is a known, resolved trick")
+	assert_eq(c.trick_start("legg_deg"), c.legg_start, "legg_deg bundle start == legg_start")
+	assert_eq(c.trick_loop("legg_deg"), c.legg_loop, "legg_deg bundle loop == legg_loop")
+	assert_eq(c.trick_end("legg_deg"), c.legg_end, "legg_deg bundle end == legg_end")
+
+func test_licensed_dog_if_present_resolves_legg_deg() -> void:
+	# BUST-064: binds to the REAL imported licensed Labrador — proves Legg deg's belly clips are
+	# genuinely IN the asset (behavior != inventory). Gitignored asset, absent in public CI: skip
+	# cleanly there (the assert_true dodges the 0-assertion gate) and verify for real in local dev.
+	var p := "res://assets/models/dog_licensed.glb"
+	if not ResourceLoader.exists(p):
+		assert_true(true, "licensed dog absent (e.g. public CI) — skipped")
+		return
+	var packed := load(p) as PackedScene
+	assert_true(packed != null, "the licensed dog glb must load as a PackedScene")
+	if packed == null:
+		return
+	var dog := packed.instantiate()
+	var ap := DogClips.find_animation_player(dog)
+	assert_true(ap != null, "the licensed dog must have an AnimationPlayer")
+	if ap != null:
+		var c := DogClips.resolve(ap.get_animation_list())
+		assert_true(c.has_legg_deg(), "the licensed Labrador must resolve a real Legg deg — it's in the manifest")
+		assert_true(ap.has_animation(c.legg_start), "resolved legg_start must be a real clip on the dog")
+		assert_true(ap.has_animation(c.legg_loop), "resolved legg_loop must be a real clip on the dog")
+		assert_true(c.has_trick("legg_deg"), "legg_deg is drivable via the generic trick accessor")
+		assert_ne(c.legg_start, c.lie_start, "Legg deg and Ligg resolve to different build-in clips on the real asset")
 	dog.free()
 
 func test_committed_dog_exposes_a_real_idle_clip() -> void:

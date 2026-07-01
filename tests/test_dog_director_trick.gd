@@ -25,6 +25,47 @@ func _dual_trick_ap() -> AnimationPlayer:
 		"Lie_start", "Lie_1", "Lie_end",
 		"Lie_belly_start", "Lie_belly_1", "Lie_Sleep_loop"])
 
+# All THREE tricks present (Sitt + Ligg + Legg deg), with the belly-settle triple complete so
+# play_trick_end("legg_deg") has a real Lie_belly_end to exit through (067, P2-2/P2-3).
+func _triple_trick_ap() -> AnimationPlayer:
+	return _ap_with(["Idle",
+		"Sitting_start", "Sitting_1", "Sitting_end",
+		"Lie_start", "Lie_1", "Lie_end",
+		"Lie_belly_start", "Lie_belly_1", "Lie_belly_end",
+		"Lie_belly_sleep_start", "Lie_belly_sleep", "Lie_Sleep_loop"])
+
+func test_play_trick_legg_deg_settles_onto_the_belly_then_holds() -> void:
+	var dir := DogDirector.new(_triple_trick_ap())
+	assert_true(dir.has_trick("legg_deg"), "the pack resolves a real Legg deg (belly settle)")
+	dir.play_trick("legg_deg")
+	assert_eq(dir._ap.current_animation, "Lie_belly_start", "Legg deg plays the belly build-in first")
+	assert_true(dir._ap.get_queue().has("Lie_belly_1"), "then queues the belly-down hold loop")
+	assert_eq(dir._ap.get_animation("Lie_belly_1").loop_mode, Animation.LOOP_LINEAR, "the belly hold loops")
+	dir._ap.queue_free()
+
+func test_legg_deg_drives_a_different_clip_than_ligg() -> void:
+	# P2-3: Legg deg must read distinct from Ligg — the director drives a different build-in clip.
+	var dir := DogDirector.new(_triple_trick_ap())
+	dir.play_trick("legg_deg")
+	assert_ne(dir._ap.current_animation, "Lie_start", "Legg deg is NOT the plain-lie (Ligg) build-in")
+	dir._ap.queue_free()
+
+func test_trick_window_legg_deg_returns_a_real_scoring_window() -> void:
+	var dir := DogDirector.new(_triple_trick_ap())
+	var w := dir.trick_window("legg_deg")
+	assert_true(w != null, "Legg deg opens a real scoring window off its own clip lengths")
+	assert_true(w.apex > 0.0, "the Legg deg apex is the end of its build-in (non-zero)")
+	dir._ap.queue_free()
+
+func test_play_trick_end_legg_deg_stands_up_then_settles_to_idle() -> void:
+	var dir := DogDirector.new(_triple_trick_ap())
+	dir.play_trick_end("legg_deg")
+	assert_eq(dir._ap.current_animation, "Lie_belly_end", "Legg deg exits through its authored stand-up clip")
+	assert_true(dir._ap.get_queue().has("Idle"), "then settles into the ambient idle")
+	assert_true(dir.is_ending_trick("legg_deg"), "is_ending_trick is true while the Legg deg stand-up plays")
+	assert_false(dir.is_ending_trick("ligg"), "and it is trick-specific — Ligg is not ending")
+	dir._ap.queue_free()
+
 func test_play_trick_ligg_builds_into_the_lie_then_holds() -> void:
 	var dir := DogDirector.new(_dual_trick_ap())
 	assert_true(dir.has_trick("ligg"), "the pack resolves a real Ligg")

@@ -25,12 +25,14 @@ import { chromium } from "playwright";
 
 const bundleDir = process.argv[2];
 if (!bundleDir) {
-	console.error("usage: web_boot_check.mjs <bundle-dir> [--require <substr>]...");
+	console.error("usage: web_boot_check.mjs <bundle-dir> [--query <qs>] [--require <substr>]...");
 	process.exit(2);
 }
 const required = [];
+let query = "";  // optional ?bra_trick= selector (065/067) appended to index.html
 for (let i = 3; i < process.argv.length; i++) {
 	if (process.argv[i] === "--require") required.push(process.argv[++i]);
+	else if (process.argv[i] === "--query") query = (process.argv[++i] || "").replace(/^\?/, "");
 }
 
 // Godot's loader uses streaming wasm compilation — the .wasm MUST be served as
@@ -66,7 +68,7 @@ const server = createServer(async (req, res) => {
 
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const { port } = server.address();
-const url = `http://127.0.0.1:${port}/index.html`;
+const url = `http://127.0.0.1:${port}/index.html${query ? "?" + query : ""}`;
 console.log(`serving ${bundleDir} at ${url}`);
 
 const logs = [];

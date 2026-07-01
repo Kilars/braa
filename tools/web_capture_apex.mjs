@@ -6,7 +6,9 @@
 // silently-faint tell can't pass). PNG decoding is done in-page via a 2D canvas, so no
 // node image lib is needed; main.gd is untouched (no debug hooks).
 //
-// Usage: env -u LD_LIBRARY_PATH node tools/web_capture_apex.mjs <bundle-dir> <out.png>
+// Usage: env -u LD_LIBRARY_PATH node tools/web_capture_apex.mjs <bundle-dir> <out.png> [query]
+//   [query] — a URL query string (e.g. "bra_trick=legg_deg") so a trick reachable only via ?bra_trick=
+//   (065/067) has its held apex captured before the 066 selector UI lands. Omit for default (Sitt) play.
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -14,7 +16,8 @@ import { chromium } from "playwright";
 
 const bundleDir = process.argv[2];
 const outPng = process.argv[3] || ".screenshots/030-apex-tell-visible.png";
-if (!bundleDir) { console.error("usage: web_capture_apex.mjs <bundle-dir> <out.png>"); process.exit(2); }
+const query = (process.argv[4] || "").replace(/^\?/, "");  // optional ?bra_trick= selector (065/067)
+if (!bundleDir) { console.error("usage: web_capture_apex.mjs <bundle-dir> <out.png> [query]"); process.exit(2); }
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
 	".wasm": "application/wasm", ".pck": "application/octet-stream", ".json": "application/json",
@@ -31,7 +34,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const { port } = server.address();
-const url = `http://127.0.0.1:${port}/index.html`;
+const url = `http://127.0.0.1:${port}/index.html${query ? "?" + query : ""}`;
 
 // Count saturated-gold pixels in the bottom band (the BRA button area, where the apex ring
 // is drawn). Gold ring ≈ (255,199,51): high R, mid-high G, LOW B. The cream/tan dog has high

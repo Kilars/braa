@@ -136,6 +136,7 @@ var _learned_bar: LearnedBar
 var _store := TrickStore.new()
 const TRICK_ID_SITT := DogClips.TRICK_SITT
 const TRICK_ID_LIGG := DogClips.TRICK_LIGG
+const TRICK_ID_LEGG_DEG := DogClips.TRICK_LEGG_DEG
 ## The trick the dog is currently training (065). Defaults to Sitt everywhere (desktop / headless /
 ## normal play), so the PO-verified default experience is unchanged; the `?bra_trick=ligg` web reach
 ## (below) selects Ligg for Visual Review until the 066 selector UI lands.
@@ -256,16 +257,24 @@ func _query_autotap() -> bool:
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
 
-## Trick-selection seam (065, BUST-064 / P2-1 066): read `?bra_trick=ligg` (or `=sitt`) off the live
-## web URL to pick which trick the dog trains, so Ligg is drivable + Visual-Reviewable before the 066
-## selector UI lands. Defaults to Sitt everywhere else (desktop / headless / normal play), so the
+## Trick-selection seam (065/067, BUST-064 / P2-1 066): read `?bra_trick=ligg` / `=legg_deg` (or
+## `=sitt`) off the live web URL to pick which trick the dog trains, so each wired trick is drivable +
+## Visual-Reviewable before the 066 selector UI lands. Defaults to Sitt everywhere else (desktop /
+## headless / normal play), so the
 ## PO-verified default experience is unchanged. Reads a STRING (never a bare bool) to dodge the
 ## Web-export null-Variant marshalling that bit the apex tell (036); unknown values fall back to Sitt.
 func _query_trick() -> String:
 	if not OS.has_feature("web"):
 		return TRICK_ID_SITT
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
-	if typeof(search) == TYPE_STRING and (search as String).to_lower().contains("bra_trick=ligg"):
+	if typeof(search) != TYPE_STRING:
+		return TRICK_ID_SITT
+	var q := (search as String).to_lower()
+	# Legg deg checked before Ligg: `legg_deg` and `ligg` are distinct substrings, but keep the
+	# more specific id first so the branch reads unambiguously as more tricks wire (066 selector).
+	if q.contains("bra_trick=legg_deg"):
+		return TRICK_ID_LEGG_DEG
+	if q.contains("bra_trick=ligg"):
 		return TRICK_ID_LIGG
 	return TRICK_ID_SITT
 
@@ -1034,7 +1043,7 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 
 ## The tricks main holds a learned bar for (065). Each gets its own persisted TrickProgress, keyed by
 ## id in the save map, so per-trick progress never leaks across tricks. Grows as more tricks wire (067).
-const KNOWN_TRICKS := [TRICK_ID_SITT, TRICK_ID_LIGG]
+const KNOWN_TRICKS := [TRICK_ID_SITT, TRICK_ID_LIGG, TRICK_ID_LEGG_DEG]
 
 ## Load saved per-trick progress on boot (049/P2-5). Builds one TrickProgress per known trick, restores
 ## each from its own key in the save map, then points `_progress` at the current trick's model so
