@@ -54,11 +54,15 @@ Entry format:
   voice file at authoring time does not violate it** (the game still plays a static `.wav`). The
   old "X-7 … so a cloud-voice substitute is out too" was wrong — it conflated runtime with
   authoring, which is exactly why the whole capability got flagged instead of spiked.
-- **Assumption while building:** the warm **Piper local-neural** Norwegian "Bra!" now ships at
-  `assets/audio/bra_tts_placeholder.wav` (task **044 landed 2026-06-30**, voice
-  `no_NO-talesyntese-medium`), replacing the robotic espeak stand-in (task 035) under the same
-  cue id with no code change. The Piper clip is drop-in replaced by your human Maren recording,
-  also with no code change.
+- **Assumption while building:** the stand-in at `assets/audio/bra_tts_placeholder.wav` is now a
+  **bright, light, female native-Swedish** Piper "Bra!" — voice **`sv_SE-alma-medium`** (task
+  **060 landed 2026-07-01**, owner directive: brighter/lighter/female). "Bra" is the same word +
+  pronunciation in Swedish and Norwegian, so the cue stays correct. This supersedes task 044's
+  neutral `no_NO-talesyntese-medium` clip (f0 149 Hz → **227 Hz female**; centroid 811 → **1116 Hz
+  brighter**), same cue id, **no code change**. Reproducible via `tools/gen_bra_voice.sh`. The
+  clip is still drop-in replaced by your warm **human Maren** recording, also with no code change —
+  **that literal human voice is all this flag still gates.** (The timbre/gender is judged on the
+  owner's on-device listen of the live site; the owner said "just deploy," so it shipped.)
 
 ## Resolved
 

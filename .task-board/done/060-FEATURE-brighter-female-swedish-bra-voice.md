@@ -61,10 +61,51 @@ prefers whatever `.wav` is at `PayoffPlayer.VOICE_ASSET`
 
 ## Acceptance Criteria
 
-- [ ] `assets/audio/bra_tts_placeholder.wav` is a **bright, female** native-**Swedish** (or tuned)
+- [x] `assets/audio/bra_tts_placeholder.wav` is a **bright, female** native-**Swedish**
       Piper "Bra!", mono / 16-bit / 22050 Hz; brighter + higher-f0 than the 044 NO clip.
-- [ ] No GDScript change; the voice-asset test stays green.
-- [ ] Gate intact: silent on MISS/dead; PERFECT louder + slightly higher than OK.
-- [ ] `verify.sh` green; `.wav` + regenerated `.import` + `tools/gen_bra_voice.sh` committed.
-- [ ] Exact voice id + any pitch/formant shift recorded in Results (provenance).
-- [ ] Voice flag note updated; narrowed human-Maren flag left open (this task does not close it).
+- [x] No GDScript change; the voice-asset test stays green (verify test leg green).
+- [x] Gate intact: silent on MISS/dead; PERFECT louder + slightly higher than OK (untouched —
+      asset swap only, `payoff_player.gd` unchanged).
+- [x] `verify.sh` green; `.wav` + `.import` (byte-identical, see Results) + `tools/gen_bra_voice.sh` committed.
+- [x] Exact voice id recorded in Results (provenance); no pitch/formant shift needed (native female).
+- [x] Voice flag note updated; narrowed human-Maren flag left open (this task does not close it).
+
+## Results (2026-07-01)
+
+**What shipped:** the neutral `no_NO-talesyntese-medium` clip (task 044) at
+`assets/audio/bra_tts_placeholder.wav` is replaced by a **bright, light, female native-Swedish**
+Piper "Bra!". Same path, same cue id → **zero GDScript change** (`payoff_player.gd:27`
+`VOICE_ASSET` unchanged), verify gate green (import · boot · test · export), voice-asset test
+green. No pitch/formant DSP was needed — a native female voice was found.
+
+**Voice chosen: `sv_SE-alma-medium`** (rhasspy/piper-voices, `sv/sv_SE/alma/medium`) — single
+**female** speaker, 22050 Hz native. Swedish "bra" is the same word / meaning / ~identical
+/brɑː/ as Norwegian, so the cue stays correct while gaining the brighter female timbre.
+
+**Audition sweep (headless "bright + female" proxy — measured f0 + spectral centroid, since
+headless can't hear):**
+
+| voice | f0 | centroid | verdict |
+|-------|----|----|----|
+| 044 `no_NO-talesyntese-medium` (old) | 149 Hz | 811 Hz | neutral/dark (baseline) |
+| `sv_SE-nst-medium` | **90 Hz** | 685 Hz | **male** — rejected |
+| `sv_SE-lisa-medium` | 208 Hz | 1035 Hz | female, good |
+| **`sv_SE-alma-medium`** (shipped) | **223–227 Hz** | **1030–1116 Hz** | **female + brightest — chosen** |
+
+**Shipped clip:** f0 ≈ **223 Hz** (female range 180–250), spectral centroid ≈ **1116 Hz** (vs 811
+— +38% brighter), 0.43 s, mono 16-bit 22050 Hz, peak **−5.0 dBFS** (matches the 044/espeak
+headroom so the swap changes *timbre, not loudness* — the layered click + PERFECT/OK gate are
+unaffected). A gentle **+3 dB high-shelf @ 3.5 kHz** adds the "brighter/lighter" air on top of the
+native female timbre; 5 ms/15 ms declick fades; leading/trailing silence trimmed.
+
+**Reproducibility:** `tools/gen_bra_voice.sh` pins the whole pipeline (fetch alma model → piper
+render `--length-scale 1.0` → trim → high-shelf → fades → peak-normalise → 22050 Hz mono/16-bit).
+Run inside the devshell: `nix develop -c bash tools/gen_bra_voice.sh`. **Note:** Piper's VITS model
+is mildly stochastic, so exact bytes vary per run, but every render lands in-target (f0 ~220–235,
+centroid ~1030–1116) — the metrics, not the bytes, are the contract. The `.import` sidecar is
+**byte-identical** (wav importer stores no source hash; UID + params unchanged), so only the `.wav`
+content changed on the export.
+
+**On-device timbre call is the owner's** — they said "just deploy without asking," so this shipped
+to the live site; the brightness/gender judgement rides their live-site listen, and the warm
+**human Maren** recording remains the narrowed-flag endgame (this task does **not** close it).
