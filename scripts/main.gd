@@ -395,15 +395,18 @@ func _end_feint() -> void:
 ## the DirectionalLight3D direction in _setup_light (upper sky for a look-down view).
 func _setup_environment() -> void:
 	var sky_mat := ProceduralSkyMaterial.new()
-	# Sky gradient: deep blue at the zenith, warm bright horizon so the sun disc pops
-	sky_mat.sky_top_color = Color(0.18, 0.48, 0.92)
-	sky_mat.sky_horizon_color = Color(0.90, 0.90, 0.75)   # warm bright near-horizon haze
-	sky_mat.sky_curve = 0.15                    # gradual, not banded
-	# Ground half of the procedural sky (below horizon) — warm haze, not used directly
-	# since a real mesh plane covers this half, but set to a warm neutral so any gap
-	# between the plane edge and the horizon reads as warm rather than void black.
-	sky_mat.ground_bottom_color = Color(0.55, 0.72, 0.40)
-	sky_mat.ground_horizon_color = Color(0.72, 0.86, 0.98)
+	# Sky gradient (P2-10 stylization, 062): a bright clear sky-blue zenith grading down to a WARM
+	# peach/cream near-horizon — the Pokémon-GO warmth the owner asked for, and a richer grade than
+	# the old blue→flat-pale-yellow band. Peach means red leads green leads blue at the horizon.
+	sky_mat.sky_top_color = Color(0.24, 0.55, 0.92)       # bright, clear sky-blue zenith
+	sky_mat.sky_horizon_color = Color(0.99, 0.82, 0.62)   # warm peach/cream near-horizon glow
+	sky_mat.sky_curve = 0.2                     # gentle grade — the warm band spreads up, not banded
+	# Ground half of the procedural sky (below horizon). The finite 40 m grass plane doesn't quite
+	# reach the true horizon, so a thin band of this shows between the plane's far edge and the sky.
+	# Match it to a warm haze at the horizon fading to grass-green below, so that band reads as a
+	# distant grassy haze — NOT the old light-blue sliver that cut a cyan seam under the peach sky.
+	sky_mat.ground_bottom_color = Color(0.40, 0.58, 0.30)   # muted distant grass
+	sky_mat.ground_horizon_color = Color(0.93, 0.83, 0.66)  # warm haze, blends with the peach sky horizon
 	sky_mat.ground_curve = 0.1
 	# Sun disc: aligned with the DirectionalLight3D so the disc IS the key light. A clean,
 	# readable disc — sun_angle_max sets the disc radius; sun_curve sharpens the inner glow.
@@ -557,11 +560,34 @@ func _setup_ground_plane(dog: Node) -> void:
 	var plane_mesh := PlaneMesh.new()
 	plane_mesh.size = Vector2(40.0, 40.0)  # large enough that horizon is within the plane
 	var mat := StandardMaterial3D.new()
-	# Stylized garden green — a slightly desaturated mid-green reads naturally under the sky.
-	mat.albedo_color = Color(0.28, 0.60, 0.22)
+	# Painterly grass (062/P2-10 stylization): a low-frequency noise with a green colour-ramp paints
+	# mottled patches of deep-shadow / mid / sunny green across the plane, so the lawn reads
+	# painterly rather than one flat gradient (the owner's 2026-07-01 directive). Baked to an Image
+	# (NoiseTexture2D), so it renders in every GL path incl. the local software renderer. Cheap: one
+	# albedo texture, no shader, no extra geometry — the plane stays flat so the dog's foot plane and
+	# contact shadow are untouched (grounding safe); "shape" is tonal, not geometric (Phase-7 defers
+	# real relief). GL-Compatibility-safe.
+	var noise := FastNoiseLite.new()
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency = 0.03             # a few large soft patches across the baked texture
+	var ramp := Gradient.new()
+	ramp.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	ramp.colors = PackedColorArray([
+		Color(0.14, 0.38, 0.15),       # deep shadowed green
+		Color(0.27, 0.57, 0.24),       # mid grass
+		Color(0.44, 0.72, 0.34),       # light sunny green
+	])
+	var grass_tex := NoiseTexture2D.new()
+	grass_tex.noise = noise
+	grass_tex.color_ramp = ramp
+	grass_tex.seamless = true          # tiles across the large plane without a visible seam
+	grass_tex.width = 256
+	grass_tex.height = 256
+	mat.albedo_texture = grass_tex
+	mat.uv1_scale = Vector3(3.0, 3.0, 1.0)   # a handful of patch repeats across the 40 m plane
 	mat.roughness = 0.95   # matte grass, no specular glint
 	mat.metallic = 0.0
-	# Allow the sun's directional shadow / shading to land on it naturally.
+	# Allow the sun's directional shading to land on it naturally.
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	var ground := MeshInstance3D.new()
 	ground.name = "GrassGround"
@@ -588,20 +614,42 @@ func _setup_sun_disc(dog: Node) -> void:
 	# the disc sits at atan2(1.2-0.5, 5) ≈ ~8° above camera eye — safely in the sky band.
 	# Offset +0.8 m right so the disc clears the learned-bar (centred UI element) and
 	# reads as off-axis — more natural sun position, not dead-center on the bar.
-	var sun_pos := Vector3(dog_center.x + 0.8, dog_center.y + 1.2, dog_center.z - 5.0)
-	var sphere_mesh := SphereMesh.new()
-	sphere_mesh.radius = 0.42   # ~0.84 m diameter at ~5.5 m = ~9° — clearly legible sun
-	sphere_mesh.height = 0.84
+	# A touch higher than the 047 disc so the larger halo stays clear of the horizon line.
+	var sun_pos := Vector3(dog_center.x + 0.8, dog_center.y + 1.6, dog_center.z - 5.0)
+	# A radial gradient (062/P2-10 stylization): a bright warm core → a solid golden disc body →
+	# a soft transparent halo. This IS the "crisp, deliberate, haloed" sun the PO asked for — the
+	# old opaque low-poly sphere read as a hard EGG with no glow in SwiftShader. Baked to an Image
+	# (GradientTexture2D), so it renders in EVERY GL path including the local software renderer.
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 0.34, 0.40, 1.0])
+	grad.colors = PackedColorArray([
+		Color(1.0, 0.99, 0.90, 1.0),   # near-white warm core
+		Color(1.0, 0.90, 0.55, 1.0),   # golden disc body — solid to here (crisp edge)
+		Color(1.0, 0.84, 0.45, 0.55),  # halo begins: warm gold, alpha drops
+		Color(1.0, 0.80, 0.40, 0.0),   # halo fades fully out
+	])
+	var grad_tex := GradientTexture2D.new()
+	grad_tex.gradient = grad
+	grad_tex.fill = GradientTexture2D.FILL_RADIAL
+	grad_tex.fill_from = Vector2(0.5, 0.5)   # centre of the quad
+	grad_tex.fill_to = Vector2(0.5, 1.0)     # radius reaches the quad edge
+	grad_tex.width = 256
+	grad_tex.height = 256
+	# A camera-facing quad: always a perfect round disc regardless of the look-down pitch (the
+	# low-poly sphere read as an egg). Sized so the SOLID core (~0.34 of radius) is ~0.8 m and the
+	# soft halo reaches ~2.4 m across.
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.4, 2.4)
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.95, 0.60)   # warm golden — clearly visible sun colour
+	mat.albedo_texture = grad_tex
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-luminous, not lit by the scene
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.90, 0.40)       # warm golden glow
-	mat.emission_energy_multiplier = 3.0         # bright enough to read against sky gradient
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA      # the radial alpha IS the halo falloff
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED     # always face the camera → round disc
+	mat.billboard_keep_scale = true
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var disc := MeshInstance3D.new()
 	disc.name = "SunDisc"
-	disc.mesh = sphere_mesh
+	disc.mesh = quad
 	disc.material_override = mat
 	disc.position = sun_pos
 	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

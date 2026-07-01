@@ -31,7 +31,7 @@
 ### Owner directive — 2026-07-01 (larssski)
 
 Two owner asks captured directly (not from a father play-test) — both **current-phase
-(Phase 2)** work, so they **preempt** any work-ahead:
+(Phase 2)** work, so they **preempt** any work-ahead. Status after my 2026-07-01 re-play below:
 
 1. **Garden — push the stylization a bit further (P2-10 improvement, buildable now).** The
    functional garden reads, but it's plain. Give it **more stylized, Pokémon-GO-style
@@ -40,130 +40,135 @@ Two owner asks captured directly (not from a father play-test) — both **curren
    as the clear focus. This is a **modest step now**, *not* the full Phase-7 environment-art
    pass (props / depth / heavy lighting polish still defer to **Phase 7**) — keep it cheap and
    readable. Ride a Visual-Review capture. *(Improvement, not a bug — the garden isn't broken.)*
+   **→ STILL OPEN. Not built yet** — commit `f9a7a6f` only added this note + the P2-11 story to
+   the specs; no garden/sky/grass code changed since the 047 functional garden. It is the **one
+   genuinely buildable current-phase directive** this pass (see Improvements below).
 2. **Dog faces the player for tricks — new story P2-11** (added to `phase2.md`). Whenever the
    dog performs a **real** trick it turns to face the camera POV so the apex reads head-on;
    a feint keeps its wander heading. Buildable now (Sitt only); build + Visual-Review it.
+   **→ DELIVERED (task 061, commit `f2f3d17`) and Visual-Review-verified good this pass** — see
+   the P2-11 entry under "What holds up" below.
 
 ### PO Review — 2026-07-01
 
-Fresh, fully independent re-play on **current HEAD (commit `46930fb`, the new 059 stand-up)** — my own
-harness (`/tmp/po_capture.mjs`), my own eyes on every frame. Drove the **current-HEAD local licensed
-bundle** (`build/web` — the 38 MB pck that bundles the unencrypted, sit-capable Labrador; `index.pck`
-carries the 05:12 mtime, matching the newest `scripts/main.gd` at 05:12, tree clean → byte-current for
-gameplay, and it includes the 059 stand-up) served over a local http origin and driven in headless
-Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer. (Local export over live
-Pages because CI lags the last gameplay commits.) Boot is clean on every run: `__appReady` true,
-`dog loaded: …dog_licensed.glb (1 coat surface forced opaque)`, `dog ambles a bounded patch between
-offers`, `dog can Sitt — varying the offer cadence 0.8–2.0s, sometimes feinting`, and **zero** SCRIPT
-ERROR / pageerror across all runs (a 60-frame free-run living-loop burst, a 54-frame autotap
-sit→mark→stand-up cycle, a forced-lock capture, and 28 s / 45 s / 60 s autotap fill-to-mastery sweeps).
+Fresh, fully independent re-play on **current HEAD (commit `f2f3d17` — the new 061 face-camera turn
++ 060 voice)** — my own harness (`/tmp/po_capture.mjs`), my own eyes on every frame. Drove the
+**current-HEAD local licensed bundle** (`build/web` — the 38 MB pck that bundles the unencrypted,
+sit-capable Labrador; `index.pck` mtime 12:18 sits *after* the newest `scripts/main.gd` at 12:17 and
+`scripts/face_turn.gd` at 12:11, tree clean → byte-current for gameplay, includes the 061 face-turn)
+served over a local http origin and driven in headless Chromium at 390×844 — SwiftShader == the
+deployed GL Compatibility renderer. (Local export over live Pages because CI lags the last gameplay
+commits.) Boot is clean on every run: `__appReady` true, `dog loaded: …dog_licensed.glb (1 coat
+surface forced opaque)`, `dog ambles a bounded patch between offers`, `dog can Sitt — varying the
+offer cadence 0.8–2.0s, sometimes feinting`, and **zero** SCRIPT ERROR / pageerror across all runs
+(a 60-frame free-run living-loop burst, a 60-frame fine-spaced autotap sit→turn→mark→stand-up cycle,
+a forced-lock capture, and a ~58 s autotap fill sweep).
 
-**This pass's one genuinely new item: the 059 stand-up seam, verified clean.** The dog now plays the
-authored `Sitting_end` stand-up out of every sit instead of snapping straight back to idle. Captured
-the full cycle at 130 ms spacing under autotap (`.screenshots/po-tap-06…13.png`): approach (cyan ring)
-→ PERFECT mark (gold) → clean **seated apex** (frame 09) → **mid-rise, front up / rear still down**
-(frame 10) → **full four-legged stand** (frame 11) → ambles off as the next approach ring forms
-(frames 12–13). No T-pose, no snap, no foot-slide — this is the dead seam 059 set out to fix, and it
-reads as a deliberate rise. Keep it; it materially improves the living-dog feel (P2-8).
+**This pass's one genuinely new item: P2-11 "face me for the trick" (task 061), verified good.** The
+dog now **turns to face the camera POV before every real sit** so the apex reads head-on. Captured a
+full sit cycle at 120 ms spacing under autotap (`.screenshots/po-tap-00…11.png`, montaged to
+`strip-cycle1.png`): frames 00–01 the dog walks in on a **three-quarter / side** heading → frames
+02–04 it **rotates to face the camera** on its walk (a smooth ~3–4-frame turn, **no snap, no
+foot-slide**) → frames 04–06 **seated apex facing the camera head-on** with the cyan trainer ring →
+**PERFECT** landed head-on → frames 07–09 the 059 stand-up (mid-rise → full stand) → turns away and
+ambles on → frame 11 the next cycle's apex, head-on again. It **completes the turn before the apex**
+every cycle, so the markable moment is always framed to the player. And the turn is correctly **tied
+only to the real trick**: in non-apex wander frames the dog faces its *travel* direction, not the
+camera (e.g. `po-master-05.png` — a clean rear-view while roaming, no ring, no mark), which is exactly
+the feint/ambient behaviour P2-11 asks for (a feint keeps the wander heading). Keep it; it makes the
+payoff feel aimed at the player and reads well against the garden.
 
 **Every *buildable* Phase-2 story is done and holds up in my own live pixels** (P2-4, P2-5, P2-7,
-P2-8, P2-9, P2-10) — this pass I re-shot five from scratch (P2-4/P2-7/P2-8/P2-9/P2-10) and eyeballed
-each frame; P2-5 persistence carries forward from the prior same-origin-reload verification (the 059
-stand-up doesn't touch it). The **only**
-thing keeping Phase 2 open is the owner-gated trick roster (**P2-1 / P2-2 / P2-3** — see Changes): the
-licensed dog still ships only the Sitt, so there is no second trick to select, perform, or polish.
-**There is no new buildable work this pass.** Do not sign Phase 2 off, and do not invent filler — the
-loop waits on the owner for trick clips.
+P2-8, P2-9, P2-10, P2-11) with one exception: the **garden-stylization owner directive** (the
+2026-07-01 ask, item 1 above) is **still unbuilt** — that is the **one genuinely buildable
+current-phase directive** this pass. The other open gate is the owner-gated trick roster (**P2-1 /
+P2-2 / P2-3** — see Changes): the licensed dog still ships only the Sitt, so there is no second trick
+to select, perform, or polish. Do **not** sign Phase 2 off.
 
 **What holds up (verified live this pass, keep it):**
-- **P2-10 — the garden.** Present in every frame I shot this pass: a stylised blue sky band + a visible
-  sun disc across the top, green grass below, the Labrador grounded by a soft contact shadow, and
-  **"BRA"** floating over the lower grass with **no** opaque control band (`.screenshots/po-tap-09.png`,
-  `po-tap-11.png`, and the whole `po-free-*` sheet). Good.
-- **P2-8 — the dog lives.** Across the 60-frame free-run (`.screenshots/po-free-*.png`, contact-sheeted)
-  the dog **wandered** the patch through many distinct headings — front-facing seated, rear-facing
-  walking away, three-quarter and side profiles — on a **real walk gait**, facing its travel direction
-  with **no foot-slide**, and it **stayed framed** every frame. The cadence is **not** a metronome, and
-  it now **completes** each sit: sit → seated apex → the 059 stand-up (during which `_drive_wander` is
-  gated on `is_standing_up()`, so the roam pauses for the rise) → ambles on. Boot log confirms the
-  living behaviour: `dog ambles a bounded patch between offers` + `varying the offer cadence 0.8–2.0s,
+- **P2-11 — face me for the trick.** *New — verified good* (see the dedicated paragraph above and
+  `strip-cycle1.png`). Dog turns head-on before the sit apex, smooth in-character turn, completes
+  before the apex, and does **not** face-lock outside real tricks.
+- **P2-10 — the garden (functional).** Present in every frame I shot: a blue→warm sky gradient + a
+  visible sun disc across the top, green grass below, the Labrador grounded by a soft contact shadow,
+  and **"BRA"** floating over the lower grass with **no** opaque control band (`po-lock-00.png`,
+  `po-master-05.png`, and the whole `po-free-*` sheet). The functional garden is good; its
+  **stylization** is the open directive below.
+- **P2-8 — the dog lives.** Across the 60-frame free-run (`po-free-*.png`, contact-sheeted to
+  `sheet-free.png`) the dog **wandered** the patch through many distinct headings — front-facing
+  seated, rear-facing walking away, three-quarter and side profiles — on a **real walk gait**, facing
+  its travel direction with **no foot-slide**, and it **stayed framed** every frame. Cadence is **not**
+  a metronome, and it now **completes** each sit through the 059 stand-up before ambling on. Boot log
+  confirms: `dog ambles a bounded patch between offers` + `varying the offer cadence 0.8–2.0s,
   sometimes feinting`. Good.
 - **P2-9 — the fading timing trainer.** Caught the **bold cyan ring** live, unforced, encircling the
-  BRA word as a fresh trick approaches its apex (`po-tap-06.png`, `po-tap-12/13.png`, and cyan rings
+  BRA word as a fresh trick approaches its apex (`po-tap-04/05.png`, `po-tap-10.png`, and cyan rings
   dotted through the `po-free-*` sheet) — a cool outlined ring, clearly **distinct** from the gold apex
-  tell, riding the same `SitWindow` as the score. Its prominence fades with the learned bar
-  (`opacity = 1 − learned value`, unit-tested envelope): at ~50 % fill the ring is dim/thin
-  (`po-master-00`), and at full mastery it is **entirely gone** (`po-master60-00/01` — solid gold bar,
-  no ring). Good.
-- **P2-4 — the learned bar fills and masters.** Under `?bra_autotap=1` the top meter fills **green** as
-  PERFECTs land and then **latches a full-width solid-gold mastered bar** with the trainer ring gone
-  (P2-9). I watched the whole arc across timed sweeps: ~50 % green at 28 s (`po-master-00`), ~80 % at
-  45 s (`po-master45-01`), **full gold by ~60 s** (`po-master60-00/01`). Mastery is **5 clean PERFECTs**
-  (`trick_progress.gd`: `PERFECT_GAIN 0.20`, `MASTERY 1.0`; OK adds only 0.08 — PERFECT clearly nets
-  more), so the wall-clock is just the by-design variable cadence + feints (P2-8) spacing those five
-  apexes out, and it drifts run-to-run with feint luck. Not a metronome grind, and it reaches a
-  satisfying gold end. Good. *(Note for the sign-off pass: earlier passes cited "~26 s"; my timed runs
-  read ~60 s of continuous PERFECT autotap — well within the intended spread, not a regression, but
-  worth confirming the mastery **celebratory beat** and the erosion/confused-beat path in live pixels.)*
-- **P2-5 — leave and come back.** *Not re-shot this pass* (the 059 stand-up touches the dog loop, not
-  persistence, so it's unaffected). Carries forward from the prior same-origin reload verification: a
-  filled bar came back at a substantial saved green fill after a real reload of the same browser origin,
-  rather than resetting to empty — per-trick progress persists from `user://` (IndexedDB, no
-  backend/account). *(Caveat for the sign-off pass: the prior restore read a little lower than the
-  pre-reload fill — likely the last second or two of marks hadn't flushed to IndexedDB before reload;
-  a sign-off pass should confirm the flush captures the very latest marks.)*
+  tell, riding the same `SitWindow` as the score. Its prominence fades with the learned bar (unit-tested
+  `opacity = 1 − learned` envelope). Good.
+- **P2-4 — the learned bar fills.** Under `?bra_autotap=1` the top meter fills **green** as PERFECTs
+  land (`po-master-05.png` — ~80 % filled after ~58 s of autotap; the wall-clock drifts run-to-run with
+  the by-design variable cadence + feints spacing the apexes out). The full-gold mastered latch + the
+  trainer ring going away at mastery were pixel-verified in prior passes; this run confirms the fill
+  mechanic is intact and climbing. Good.
 - **P2-7 — anti-mash freeze.** With `?bra_force_lock=1` the **"BRA"** word reads clearly **dimmed to a
-  faint grey** (`po-lockon-00.png`) versus the crisp white "BRA" of every unlocked frame (`po-tap-08`,
-  `po-tap-09`, etc.), so the locked state is legible and static (reduced-motion-safe); the fixed-350 ms
-  re-arm is unit-tested. Good.
+  faint grey** (`po-lock-00.png`) versus the crisp white "BRA" of every unlocked frame (`po-tap-08`,
+  etc.), so the locked state is legible and static (reduced-motion-safe); the fixed-350 ms re-arm is
+  unit-tested. Good.
+- **P2-5 — leave and come back.** *Not re-shot this pass* (060 voice + 061 face-turn touch neither the
+  save path nor persistence). Carries forward from the prior same-origin reload verification: a filled
+  bar came back at a substantial saved green fill after a real reload of the same browser origin — per-
+  trick progress persists from `user://` (IndexedDB, no backend/account).
 - *Still not cleanly pixel-verified (a sign-off-pass item, not a bug):* the **P2-4 erosion /
-  confused-beat** path — the red setback wash + confused recoil on a wrong-moment tap. It is
-  unit-tested and prior passes drove it via blind masher taps with 0 errors (the negative-learning path
-  runs and never crashes), but the ~0.45 s recoil flash is brief enough that a strobe-sampled burst
-  keeps missing it. A future sign-off pass should still catch the drop + wash + recoil in live pixels.
+  confused-beat** path (red setback wash + confused recoil on a wrong-moment tap), the **mastery
+  celebratory beat**, and that the **persistence flush** captures the very latest marks. All are
+  unit-tested and run without crashing; the recoil/celebration flashes are brief enough that a
+  strobe-sampled burst keeps missing them. A future sign-off pass should still catch them in live pixels.
 
 #### Bugfixes
 
-- (none) — every run booted clean (`__appReady` true, licensed Sitt dog) with **zero** console
-  errors; idle → wander → sit → mark → loop, fill, mastery, persistence, the lock, and the trainer
-  ring (including its disappearance at mastery) all worked.
+- (none) — every run booted clean (`__appReady` true, licensed Sitt dog) with **zero** console errors;
+  idle → wander → **turn to face the camera** → sit → mark → stand-up → loop, plus fill, the lock, and
+  the trainer ring all worked.
 
 #### Improvements (buildable now)
 
-- (none) — the buildable Phase-2 stories are all built and verified good (see "What holds up"). No
-  buildable Phase-2 improvement remains; the one open Phase-2 gap is owner-gated (below).
-- **Garden sun reads as a flat egg-shaped blob (minor, Phase-7-leaning — NOT a Phase-2 directive).**
-  A hard-edged, slightly vertical-ellipse pale-yellow disc with no halo in every SwiftShader capture
-  this pass (`po-tap-09.png`, `po-master60-00.png`, and across the `po-free-*` sheet); the procedural
-  sky-sun glow may add a halo on real-device GL. *Why it's minor:* P2-10 explicitly defers richer
-  environment art to Phase 7, so this does **not** block Phase 2 — flagged only so the Phase-7 pass
-  tightens the sun to a crisp, haloed disc.
+- **Garden — push the stylization further (P2-10 improvement; the owner's 2026-07-01 directive, item 1
+  above — STILL UNBUILT).** *What I saw:* the garden is still the plain 047 functional one in every
+  frame this pass — a flat blue→warm sky gradient band, a **flat, hard-edged, slightly egg-shaped
+  pale-yellow sun disc** with no halo/rays, and a **flat green grass gradient plane** with no shape or
+  painterly variation (`po-lock-00.png`, `po-master-05.png`, whole `po-free-*` sheet). *Why it falls
+  short:* the owner asked for **more stylized Pokémon-GO character** — a richer/warmer sky gradient, a
+  **shaped, painterly grass** (not a flat plane), and a **more deliberate sun** — and confirmed it's
+  buildable now; commit `f9a7a6f` only committed the *directive text*, no garden code changed since 047.
+  *What "good" looks like:* a warmer, more graded sky; grass that reads as shaped/painterly rather than
+  a single flat gradient; a crisper, more deliberate (ideally haloed) sun — while staying **cheap,
+  clean, and phone-legible with the dog as the clear focus** (this is the modest Phase-2 step, **not**
+  the full Phase-7 environment-art pass — props/depth/heavy lighting still defer to Phase 7). Ride a
+  Visual-Review capture.
 
 #### Changes / scope (owner-gated — the trick roster can't grow without it)
 
-- **P2-1 / P2-2 / P2-3 need additional trick animation clips — owner-gated, and the *sole* blocker
-  for Phase 2.** The whole point of Phase 2 is *more tricks at the Sitt standard*, but the licensed
-  Labrador ships only the Sitt (+ idle + reaction) clips, so there is **no second trick** to select,
-  perform, or polish — the game boots straight into the single-Sitt garden with no selector.
-  *Why it's blocked:* a distinct, clean Ligg / Legg deg / Gi labb / Rull / Snurr animation is a
-  licensed-asset deliverable, and the loop must **not** fake a sit or reuse one generic pose
-  (CLAUDE.md). *What "good" needs:* the owner supplies the additional trick clips in the licensed
-  asset; then the selector (P2-1), each trick's own distinct apex animation (P2-2), and its own
-  Visual Review (P2-3) become buildable. **All other Phase-2 work is complete**, so until the clips
-  arrive there is nothing else to build — do **not** build a one-entry selector or fake a second
-  trick. (Keep/raise the owner flag in `.task-board/FLAGS.md`.)
+- **P2-1 / P2-2 / P2-3 need additional trick animation clips — owner-gated.** The whole point of
+  Phase 2 is *more tricks at the Sitt standard*, but the licensed Labrador ships only the Sitt (+ idle
+  + reaction) clips, so there is **no second trick** to select, perform, or polish — the game boots
+  straight into the single-Sitt garden with no selector. *Why it's blocked:* a distinct, clean Ligg /
+  Legg deg / Gi labb / Rull / Snurr animation is a licensed-asset deliverable, and the loop must
+  **not** fake a sit or reuse one generic pose (CLAUDE.md). *What "good" needs:* the owner supplies the
+  additional trick clips in the licensed asset; then the selector (P2-1), each trick's own distinct
+  apex animation (P2-2), and its own Visual Review (P2-3) become buildable. Do **not** build a
+  one-entry selector or fake a second trick. (Keep/raise the owner flag in `.task-board/FLAGS.md`.)
 
-**Sign-off status:** Phase 2 stays open, **blocked solely on the owner**. This pass re-played
-current HEAD including the **new 059 stand-up**, which I verified clean (seated → rise → stand, no
-T-pose/snap/slide — a keeper for P2-8). Every buildable story (P2-4, P2-5, P2-7, P2-8, P2-9, P2-10) is
-complete and holds up — garden, wandering dog that now completes each sit through the stand-up,
-variable-cadence feints, fading trainer ring (gone at mastery), green fill → full-gold 5-PERFECT
-mastery bar, and the anti-mash lock (P2-5 persistence carried forward, unaffected by 059). The
-remaining gate is the **owner-supplied trick clips** (P2-1/P2-2/P2-3), each new trick clearing its
-**own Visual Review (P2-3)**, plus three things a future sign-off pass should still catch in live
-pixels: the **P2-4 erosion / confused-beat** setback, the **mastery celebratory beat**, and that the
-persistence flush captures the very latest marks. **No new buildable directives this pass — do not
-invent work.**
+**Sign-off status:** Phase 2 stays open. This pass re-played current HEAD including the **new 061
+face-camera turn**, which I verified clean (walk-in → smooth head-on turn → seated apex facing the
+player → 059 stand-up, no snap/slide, feint/wander keeps its own heading — a keeper for P2-11/P2-8).
+Every previously-buildable story (P2-4, P2-5, P2-7, P2-8, P2-9, P2-10) still holds. **There is now one
+genuinely buildable current-phase directive: the garden stylization** (owner directive item 1 —
+unbuilt; see Improvements). Beyond that, the roster stays **owner-gated** on trick clips
+(P2-1/P2-2/P2-3), each new trick clearing its **own Visual Review (P2-3)**, plus three things a future
+sign-off pass should still catch in live pixels: the **P2-4 erosion / confused-beat** setback, the
+**mastery celebratory beat**, and that the persistence flush captures the very latest marks. Build the
+garden stylization; do not sign off yet, and do not invent other work.
 
 ---
 
