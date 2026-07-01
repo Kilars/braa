@@ -69,6 +69,33 @@ func test_disk_round_trip_through_user_path() -> void:
 	assert_true(_approx(back["sitt"]["value"], 0.7), "the saved value reads back off user://")
 	_clear_save()
 
+# 7. Coins ride the same save file (068, P3-D3) — backward-compatible with the 049 tricks contract.
+func test_coins_round_trip_alongside_tricks() -> void:
+	var model := {"sitt": {"value": 0.5, "mastered": true}}
+	var blob := TrickStore.encode(model, 42)
+	assert_eq(TrickStore.decode_coins(blob), 42, "coins round-trip through encode/decode_coins")
+	# The 049 tricks contract is untouched: decode() still returns exactly the tricks map.
+	var back := TrickStore.decode(blob)
+	assert_true(back.has("sitt"), "encode(map, coins) still carries the tricks map for decode()")
+
+func test_coinless_and_corrupt_blobs_decode_to_zero_coins() -> void:
+	# A pre-068 (049-era) save has no coins key -> 0, not a crash.
+	var old_blob := JSON.stringify({"version": TrickStore.SCHEMA_VERSION, "tricks": {}})
+	assert_eq(TrickStore.decode_coins(old_blob), 0, "a coins-less legacy save reads 0 coins")
+	assert_eq(TrickStore.decode_coins("{garbage"), 0, "a corrupt save reads 0 coins, no crash")
+	assert_eq(TrickStore.decode_coins(""), 0, "an empty save reads 0 coins")
+	var wrong_version := JSON.stringify({"version": 0, "tricks": {}, "coins": 99})
+	assert_eq(TrickStore.decode_coins(wrong_version), 0, "a wrong-version save reads 0 coins (forward-compat)")
+
+func test_disk_round_trip_carries_coins() -> void:
+	_clear_save()
+	var writer := TrickStore.new()
+	writer.save({"sitt": {"value": 0.3, "mastered": false}}, 7)
+	var reader := TrickStore.new()
+	assert_eq(reader.load_coins(), 7, "coins read back off user:// alongside the tricks map")
+	assert_true(reader.load().has("sitt"), "the tricks map still reads back too")
+	_clear_save()
+
 # Named constants, not scattered literals (cf. 029).
 func test_constants_are_named() -> void:
 	assert_eq(TrickStore.SCHEMA_VERSION, 1, "schema version is a named constant")

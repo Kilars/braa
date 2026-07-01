@@ -150,6 +150,16 @@ const TRICK_ID_LEGG_DEG := DogClips.TRICK_LEGG_DEG
 ## (below) selects Ligg for Visual Review until the 066 selector UI lands.
 var _current_trick := TRICK_ID_SITT
 
+## The coin economy (068, Phase-3 P3-D3 "unlock breeds via a light economy"): mastering a trick earns
+## coins toward adopting a breed. The balance rides the SAME save file as the learned bars (TrickStore)
+## so a returning player keeps their coins across a reload (X-7 offline). `_coin_readout` shows the
+## running balance in the HUD. Earning + balance + persistence build now; the adopt/select UI that
+## SPENDS coins waits on the owner-gated extra breed models (BUST-068 residual), so no spend caller
+## exists yet — CoinPurse.spend()/can_afford() are covered by unit tests, ready for that UI.
+var _purse := CoinPurse.new()
+var _coin_readout: Label
+const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks = 30 toward a breed)
+
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
 ## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
@@ -205,6 +215,7 @@ func _ready() -> void:
 	_current_trick = _query_trick()  # the INITIAL trick; the 066 selector switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
+	_load_coins()            # restore the saved coin balance BEFORE the readout is built (068/P3-D3)
 	_setup_environment()
 	_setup_light()
 	var dog := _load_dog()
@@ -539,6 +550,13 @@ const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
 const READOUT_OFFSET_TOP := LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT + 16.0
 const READOUT_OFFSET_BOTTOM := READOUT_OFFSET_TOP + 124.0  ## 124 px band (unchanged height, 038)
+## Coin readout (068/P3-D3): a small, unobtrusive running balance tucked in the top-right corner —
+## clear of the centred selector chips and the learned bar, so the earned-coins feedback is visible
+## without disturbing the PO-signed Phase-2 top-band stack.
+const COIN_READOUT_MARGIN := 20.0
+const COIN_READOUT_WIDTH := 150.0
+const COIN_READOUT_HEIGHT := 40.0
+const COIN_READOUT_FONT := 30
 ## Confused-beat shape (045): a short damped yaw wobble on a bad tap, scaled by the reduced-
 ## motion factor so it dampens (never a hard snap) when motion is reduced (X-5).
 const CONFUSED_DURATION := 0.45
@@ -910,6 +928,7 @@ func _setup_bra_button() -> void:
 	_setup_readout(ui)
 	_setup_learned_bar(ui)
 	_setup_selector(ui)
+	_setup_coin_readout(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -990,6 +1009,33 @@ func _setup_learned_bar(ui: CanvasLayer) -> void:
 	ui.add_child(bar)
 	_learned_bar = bar
 	_learned_bar.set_value(_progress.value, _progress.mastered)
+
+## The coin readout (068/P3-D3): a small balance label in the top-right corner. Shows the coins the
+## player has earned toward adopting a breed; updated whenever a trick is mastered. Mouse-transparent
+## so it never eats a tap (P1-5). A dark outline keeps it legible over both bright sky and grass. The
+## initial text reflects the balance already restored on boot by _load_coins (a returning player sees
+## their coins immediately).
+func _setup_coin_readout(ui: CanvasLayer) -> void:
+	var label := Label.new()
+	label.name = "CoinReadout"
+	label.anchor_left = 1.0
+	label.anchor_right = 1.0
+	label.anchor_top = 0.0
+	label.anchor_bottom = 0.0
+	label.offset_left = -COIN_READOUT_MARGIN - COIN_READOUT_WIDTH
+	label.offset_right = -COIN_READOUT_MARGIN
+	label.offset_top = COIN_READOUT_MARGIN
+	label.offset_bottom = COIN_READOUT_MARGIN + COIN_READOUT_HEIGHT
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", COIN_READOUT_FONT)
+	label.add_theme_color_override("font_color", Color(1, 0.92, 0.45))  # warm coin-gold
+	label.add_theme_color_override("font_outline_color", Color(0.08, 0.06, 0.02))
+	label.add_theme_constant_override("outline_size", 10)
+	ui.add_child(label)
+	_coin_readout = label
+	_refresh_coins()  # seed with the balance restored on boot (_load_coins)
 
 ## The trick selector (066, P2-1): a chip row across the top of the HUD to pick which trick to train.
 ## Anchored full-width across the top band (same insets as the learned bar / button), it floats over
@@ -1138,6 +1184,8 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 			_learned_bar.pulse_setback()
 	if _progress.just_mastered(delta):
 		_play_mastery_beat()
+		_purse.earn(COIN_REWARD_MASTERY)  # mastering a trick pays out toward adopting a breed (068/P3-D3)
+		_refresh_coins()
 	elif not SitWindow.is_successful(tier):
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
 	_refresh_selector()  # keep the current trick's chip pip in step with the learned bar (066/P2-1)
@@ -1168,7 +1216,19 @@ func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out)
+	_store.save(out, _purse.balance)  # coins ride the same save file (068/P3-D3)
+
+## Restore the saved coin balance on boot (068/P3-D3). Runs before the coin readout is built so a
+## returning player sees their earned coins immediately. First run / corrupt save -> 0 (TrickStore
+## degrades cleanly). Mastery restored from disk does NOT re-fire just_mastered, and the balance is
+## read from disk rather than recomputed, so coins are never re-awarded on load.
+func _load_coins() -> void:
+	_purse.restore({"balance": _store.load_coins()})
+
+## Push the current coin balance onto the HUD readout (068/P3-D3). No-op before the readout mounts.
+func _refresh_coins() -> void:
+	if _coin_readout != null:
+		_coin_readout.text = "%d 🪙" % _purse.balance
 
 ## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
 ## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog
