@@ -20,8 +20,12 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
    father, scan `FLAGS.md` *Open* for any flag **not** stamped `busted` — if one exists, emit
    a **`BUST-`** *flag-bust* task for the oldest (does any slice of that gate build **without**
    the owner? — see the flag-bust rule below) instead of falling into a redundant
-   re-verification pass. Only an empty board with **no un-busted open flags** is a true idle
-   hand-off.
+   re-verification pass. Also sweep the current phase's **asserted owner-gates** — any story the
+   board / `po-review.md` calls "owner-gated / blocked on owner" that was **never raised as a
+   flag** (so the `FLAGS.md` sweep missed it — exactly how the Phase-2 trick roster got skipped):
+   raise it as a flag and bust it now (an **asset** gate against the raw manifest, per the
+   flag-bust rule below). A phase is only truly idle once every gate — **flagged or merely
+   asserted** — has been busted.
 3. **Work** — run `start-working` on the backlog; move each task file
    `backlog → in-progress → done` as you go.
 4. **Gate** — before exit, run the full verify gate and confirm green:
@@ -81,6 +85,16 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
   anti-pattern above); a later flag bust found a warm **local neural** voice (Piper — offline,
   no owner action) is buildable, routed it to a build task, and narrowed the flag to only the
   literal **human** recording.
+- **Never *assert* an owner-gate — flag it, so the bust process catches it.** If work looks
+  blocked on an owner asset/decision, do **not** quietly write "owner-gated" in a task or the
+  board and skip the story (that hides it from the flag-bust sweep — precisely how the Phase-2
+  trick roster P2-1/2/3 got skipped). **Raise a `FLAGS.md` flag**; Iteration step 2's sweep then
+  busts it. An **asset** gate is busted against the **raw asset inventory, never the running
+  game** — **behavior ≠ inventory**: the app only *wires* a few clips via `DogClips`, so "the
+  game shows one trick" ≠ "the asset has one trick". Grep the committed manifest
+  `assets/models/dog_licensed.clips.txt` (the licensed glb's real 113-clip list) or dump the glb;
+  a clip that **exists but is unwired is a BUILD task, not an owner-gate** (e.g. `Lie_*` = Ligg,
+  already in the asset). Only a clip **genuinely absent** stays owner-gated → narrow the flag.
 - **Work ahead when the current phase is exhausted (never idle-spin).** The idle ladder, in
   strict order: **(1)** buildable work in the **current** phase — including bugs — always comes
   first; **(2)** else, **flag-bust** an un-busted open flag; **(3)** else, if the current phase

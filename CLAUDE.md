@@ -70,6 +70,13 @@ ends with `✓ verify gate green`. Treat a failing leg as a hard stop.
 - **Dog scripts are dog-agnostic and clip-name-driven.** The deployed CC0 dog only
   idles (no Sitt clip); the real Sitt lives in the licensed Labrador, gated behind
   ADR-0006 encryption. Drive sit logic off clip names — never hardcode a fake sit.
+- **The licensed glb has 113 clips — the app *wires* only Sitt.** `DogClips.resolve()` only
+  resolves idle/sit/reaction names, so the running game shows one trick — but the asset already
+  holds **Ligg** (`Lie_*`), **Legg deg** (`Lie_belly_*`), dig, crouch, jumps, bark, swim, … The
+  committed inventory is [`assets/models/dog_licensed.clips.txt`](assets/models/dog_licensed.clips.txt).
+  **Never infer the asset's contents from the running game (behavior ≠ inventory)** — grep the
+  manifest. "Owner-gated on assets" is a hypothesis to **flag-bust against that manifest**, never a
+  verdict from the running build (this is what wrongly skipped the Phase-2 trick roster P2-1/2/3).
 - **Local Chromium** (export boot check / e2e) needs `env -u LD_LIBRARY_PATH` or it
   dies with a glibc error. CI is unaffected.
 - Skinned-dog `global_transform`/AABB is ~origin until frame 1 — accumulate

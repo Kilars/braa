@@ -1,0 +1,139 @@
+# Licensed Labrador — animation clip manifest (dog_licensed.glb)
+
+SOURCE OF TRUTH for what the licensed asset CONTAINS. The glb itself is gitignored
+(licensed), but these clip *names* are safe to commit — and they are the answer to
+"does the dog already have trick X?". GREP THIS FILE. Never infer the asset's inventory
+from the running game: the app only *wires* a handful of clips via DogClips, so the game
+showing one trick does NOT mean the asset has one trick. Behavior != inventory.
+
+Regenerate after any asset swap:
+  python3 - <<'PY'
+  import json,struct
+  f=open('assets/models/dog_licensed.glb','rb'); struct.unpack('<III',f.read(12))
+  clen,_=struct.unpack('<II',f.read(8)); j=json.loads(f.read(clen))
+  print('\n'.join(a.get('name','?') for a in j.get('animations',[])))
+  PY
+
+Spec trick (Phase 2, P2-2 roster) -> clip already in this asset:
+  Sitt      -> Sitting_start / Sitting_loop_1|2 / Sitting_end      [WIRED today]
+  Ligg      -> Lie_start / Lie_loop_1|2 / Lie_end                  [PRESENT, unwired]
+  Legg deg  -> Lie_belly_start|loop|end / Lie_Sleep_*              [PRESENT, unwired]
+  expansion -> dig=Digging_*, crouch=Crouch_*, hop=Jump_Place_IP   [PRESENT]
+  NOT in asset (needs owner clip or hand-authoring): gi labb (paw/shake),
+             rull (roll over), snurr (spin)
+Reaction: Jump_Place_IP [wired], Bark.
+
+=== 113 clips ===
+Arm_Labrador|Attack_Bite
+Arm_Labrador|Attack_Bite_IP
+Arm_Labrador|Attack_F
+Arm_Labrador|Attack_J
+Arm_Labrador|Attack_L
+Arm_Labrador|Attack_R
+Arm_Labrador|Bark
+Arm_Labrador|Crouch_B_IP
+Arm_Labrador|Crouch_BL_IP
+Arm_Labrador|Crouch_BR_IP
+Arm_Labrador|Crouch_F_IP
+Arm_Labrador|Crouch_Idle_end
+Arm_Labrador|Crouch_Idle_loop_1
+Arm_Labrador|Crouch_Idle_loop_2
+Arm_Labrador|Crouch_Idle_start
+Arm_Labrador|Crouch_L_IP
+Arm_Labrador|Crouch_R_IP
+Arm_Labrador|Crouch_turn_L_IP
+Arm_Labrador|Crouch_turn_R_IP
+Arm_Labrador|Death_L
+Arm_Labrador|Death_R
+Arm_Labrador|Defecate
+Arm_Labrador|Digging_end
+Arm_Labrador|Digging_loop
+Arm_Labrador|Digging_start
+Arm_Labrador|Drink_loop
+Arm_Labrador|Eat_loop
+Arm_Labrador|Eat_tear
+Arm_Labrador|EatDrink_end
+Arm_Labrador|EatDrink_start
+Arm_Labrador|Fall
+Arm_Labrador|Hit_B
+Arm_Labrador|Hit_F
+Arm_Labrador|Hit_M
+Arm_Labrador|Idle_1
+Arm_Labrador|Idle_2
+Arm_Labrador|Idle_3
+Arm_Labrador|Idle_4
+Arm_Labrador|Idle_5_end
+Arm_Labrador|Idle_5_loop
+Arm_Labrador|Idle_5_start
+Arm_Labrador|Idle_6
+Arm_Labrador|Idle_7
+Arm_Labrador|Jump_F_IP
+Arm_Labrador|Jump_Place_IP
+Arm_Labrador|Jump_Run_IP
+Arm_Labrador|JumpAir_high
+Arm_Labrador|JumpAir_high_F
+Arm_Labrador|JumpAir_Horiz
+Arm_Labrador|JumpAir_low
+Arm_Labrador|JumpAir_low_F
+Arm_Labrador|JumpAir_Up
+Arm_Labrador|JumpAir_Up_F
+Arm_Labrador|JumpLand
+Arm_Labrador|JumpLand_F_IP
+Arm_Labrador|JumpLand_Place
+Arm_Labrador|JumpStart_Down_IP
+Arm_Labrador|JumpStart_F_IP
+Arm_Labrador|JumpStart_Place
+Arm_Labrador|JumpStart_Up
+Arm_Labrador|JumpUp_End_IP
+Arm_Labrador|Lie_belly_end
+Arm_Labrador|Lie_belly_loop_1
+Arm_Labrador|Lie_belly_loop_2
+Arm_Labrador|Lie_belly_sleep
+Arm_Labrador|Lie_belly_sleep_end
+Arm_Labrador|Lie_belly_sleep_start
+Arm_Labrador|Lie_belly_start
+Arm_Labrador|Lie_end
+Arm_Labrador|Lie_loop_1
+Arm_Labrador|Lie_loop_2
+Arm_Labrador|Lie_Sleep_end
+Arm_Labrador|Lie_Sleep_loop
+Arm_Labrador|Lie_Sleep_start
+Arm_Labrador|Lie_start
+Arm_Labrador|Pick_up
+Arm_Labrador|Pick_up_idle
+Arm_Labrador|Pissing
+Arm_Labrador|Put_down
+Arm_Labrador|Run_F_IP
+Arm_Labrador|Run_L_IP
+Arm_Labrador|Run_R_IP
+Arm_Labrador|RunFast_F_IP
+Arm_Labrador|RunFast_L_IP
+Arm_Labrador|RunFast_R_IP
+Arm_Labrador|Scratching
+Arm_Labrador|Sitting_end
+Arm_Labrador|Sitting_loop_1
+Arm_Labrador|Sitting_loop_2
+Arm_Labrador|Sitting_start
+Arm_Labrador|Swim_B_IP
+Arm_Labrador|Swim_BL_IP
+Arm_Labrador|Swim_BR_IP
+Arm_Labrador|Swim_enter_IP
+Arm_Labrador|Swim_F_IP
+Arm_Labrador|Swim_idle
+Arm_Labrador|Swim_L_IP
+Arm_Labrador|Swim_R_IP
+Arm_Labrador|Swim_Turn_L_IP
+Arm_Labrador|Swim_Turn_R_IP
+Arm_Labrador|Trot_F_IP
+Arm_Labrador|Trot_L_IP
+Arm_Labrador|Trot_R_IP
+Arm_Labrador|Turn_L180_IP
+Arm_Labrador|Turn_L_IP
+Arm_Labrador|Turn_R180_IP
+Arm_Labrador|Turn_R_IP
+Arm_Labrador|Walk_B_IP
+Arm_Labrador|Walk_BL_IP
+Arm_Labrador|Walk_BR_IP
+Arm_Labrador|Walk_F_IP
+Arm_Labrador|Walk_L_IP
+Arm_Labrador|Walk_R_IP

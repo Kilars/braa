@@ -68,6 +68,16 @@ Use a **subagent** (Agent tool, model: `sonnet`) to perform this analysis. The s
    - Test files and what they cover
    - TODOs, FIXMEs, HACK comments
 
+2.5 **Check the raw asset inventory, NOT the running app or `DogClips`.** When a spec item needs
+   an animation/asset (e.g. Phase-2 "more tricks"), grep the committed manifest
+   `assets/models/dog_licensed.clips.txt` (the licensed glb's real 113-clip list). Do **not**
+   infer the asset's contents from what the running game does or from `DogClips` (which only
+   *wires* idle/sit/reaction) — **behavior ≠ inventory**. A clip that **exists but is unwired**
+   (e.g. `Lie_*` = Ligg, `Lie_belly_*` = Legg deg) is a **BUILD gap → task**, not owner-gated.
+   Mark "owner-gated" **only** when the clip is genuinely **absent** from the manifest — and then
+   **raise a `FLAGS.md` flag** (so the mother's flag-bust sweep re-checks it), never a silent
+   "owner-gated" verdict that skips the story (that is exactly how P2-1/2/3 were wrongly skipped).
+
 3. **Build a Spec Coverage Matrix** — for each item from the spec, mark its status:
 
    | Spec Item | Status | Evidence |
