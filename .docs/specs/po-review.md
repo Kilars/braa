@@ -1,15 +1,31 @@
 **PO Review**
 
-**Improvements**
+### PO Review — 2026-07-02
 
-3. **The coins are a context-free number — the collection goal isn't legible.** The player
-   masters tricks and watches a bare count climb, but nothing on screen says these are coins
-   *earned toward adopting a new dog*, and there is nowhere to spend them. *Why it falls short:*
-   P3-D3 asks that "the collection axis is visible"; right now the earn side works but its purpose
-   is invisible. *Good (buildable now, before any breed model):* give the readout a minimal label
-   / affordance conveying purpose (e.g. a "coins" caption or a small toward-a-dog hint). The
-   **full adopt UI** (coin price + locked state + breed thumbnail) genuinely needs the owner-gated
-   extra breed models — keep it flagged, do **not** fake a breed to fill the panel.
+Played the current build (HEAD `29d0580`) on the local licensed bundle at 390×844 phone-portrait
+(headless Chromium / SwiftShader = the deployed GL Compatibility renderer). Boot log confirms the
+licensed Labrador + "can Sitt" + feinting; **zero** SCRIPT ERROR / pageerror across boot + play.
+
+**Confirmed fixed / working this pass:**
+- **Coin readout (069) — the "coins" caption ships and reads cleanly.** A drawn gold coin + count +
+  a "coins" caption sit on their own top line, clear of the chip row; no tofu-box glyph. This meets
+  the *minimal* "make the collection axis legible" ask, so **Improvement-3 is pruned** — only the
+  spend-side adopt UI stays owner-gated (a flag, not a directive; don't fake a breed to fill it).
+- **Trick selector (066)** switches the active trick on tap (Sitt→Ligg→Legg deg→Sitt, verified by
+  canvas taps + `__bra_current_trick`).
+- **P2-11 holds into Phase 3** — for a real trick the dog turns to face the camera POV and performs
+  it head-on and centred (free-05/08 approach with the trainer ring; free-03/07/10 sit facing forward).
+
+**Sharpening for the owner's Actionable notes below (what "good" looks like, buildable now):**
+- *Note 2 (too distracted):* I watched roughly a third of offers abort as feints — real markable
+  moments feel scarce. Good = ~**90%** real completed tricks, ~**10%** feints/distraction.
+- *Note 3 (off-centre / looking away):* between offers the dog stands **rear-on**, tail to the
+  player (`free-00`). Good = keep it framed and generally facing the player between offers (alive,
+  not a statue, but never a long rear-on stretch); add a **scratch** as one of the feints — it's funny.
+- *Notes 1 & 4 and Improvement-4 / Change-5 below stand as written — all still unbuilt this pass:
+  no completion popup, no `BreedPersonality`, no persisted roster in the running build.*
+
+**Improvements**
 
 4. **Training has no breed-personality dimension yet (P3-3).** I ran many mark cycles and every
    session trains identically — learn speed, distractibility, window stability and energy are the
