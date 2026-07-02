@@ -54,5 +54,6 @@ licensed Labrador + "can Sitt" + feinting; **zero** SCRIPT ERROR / pageerror acr
 
 4. Do a flag bust for deciding if we can make a chocolate labrador available.
 5. The trick is hard to time, the circle apex makes users wanna swipe not tap. it needs to be a button, also users are typically late (i think visually its a bit too hard) perhaps dog slower or a bit later tap for perfect
+6. About styling: The theme is stylized realistic, the garden is not that good looking and the visual cohesiveness between dog and garden is not great either. Do some visual work in this phase as well.
 
 
