@@ -46,6 +46,11 @@ func has_reaction() -> bool:
 func has_walk() -> bool:
 	return clips.has_walk()
 
+## Whether this dog has a self-scratch clip for a funny ambient feint (071, PO note 3). False on the
+## CC0 placeholder — play_scratch then no-ops and main falls back to the plain trick-dip feint.
+func has_scratch() -> bool:
+	return clips.has_scratch()
+
 ## Loop the ambient idle so the dog reads as alive at rest (P1-2). No-op if the
 ## dog exposes no idle clip.
 func play_idle() -> void:
@@ -76,6 +81,19 @@ func play_trick(id: String) -> void:
 ## Play the build-into-the-sit, then hold the seated loop (P1-3). Sitt-bound wrapper over play_trick.
 func play_sit() -> void:
 	play_trick(DogClips.TRICK_SITT)
+
+## Play the self-scratch ONCE as a funny ambient feint (071, PO note 3), then queue idle so the dog
+## stands back to its ambient rest — the same honest one-shot-then-idle pattern as play_trick_feint /
+## play_reaction. A scratch opens NO scoring window (main routes it through the feint path, so a tap
+## during it is DEAD — P2-8). A no-op on a dog with no scratch clip (the CC0 placeholder) — it has
+## none to play, so it never fakes one (main falls back to the plain trick-dip feint).
+func play_scratch() -> void:
+	if _ap == null or not has_scratch():
+		return
+	_set_loop(clips.scratch, Animation.LOOP_NONE)  # a brief one-shot, never a hold loop
+	_ap.play(clips.scratch)
+	if clips.idle != "":
+		_ap.queue(clips.idle)  # stand back to the ambient idle after the scratch
 
 ## Begin a sit then ABORT it (048, P2-8 feint): play the real `Sitting_start` build-in and
 ## fall STRAIGHT back to idle, WITHOUT queueing the seated loop — so the dip never reaches a

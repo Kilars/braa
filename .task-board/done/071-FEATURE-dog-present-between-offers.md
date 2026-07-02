@@ -127,18 +127,48 @@ Parts 1 & 2 (framing/facing feel) are **Visual Review** — verify in pixels at 
 
 ## Acceptance criteria
 
-- [ ] TDD: failing tests first for scratch clip resolution + `has_scratch()` (LAB true, CC0 false),
+- [x] TDD: failing tests first for scratch clip resolution + `has_scratch()` (LAB true, CC0 false),
       `play_scratch()` (plays once + queues idle; no-op scratch-less), and `is_scratch_feint()`
       distribution (~half of feints, false outside FEINTING) — RED → GREEN.
-- [ ] A feint is sometimes a **scratch** (via `Scratching`) and sometimes the trick-dip; both open
+- [x] A feint is sometimes a **scratch** (via `Scratching`) and sometimes the trick-dip; both open
       no markable window (a tap during either is DEAD, no penalty). CC0 dog never scratches.
-- [ ] `WanderField.DEFAULT_RADIUS` tightened so the dog stays screen-centred; still ambles (not static).
-- [ ] Between offers the dog **generally faces the player** (never a long rear-on stretch) yet stays
+- [x] `WanderField.DEFAULT_RADIUS` tightened so the dog stays screen-centred; still ambles (not static).
+- [x] Between offers the dog **generally faces the player** (never a long rear-on stretch) yet stays
       alive (eased, subtle — not rigidly locked front-on); a moving dog still faces its travel dir.
-- [ ] Visual Review at 390×844 (licensed bundle, headless Chromium, `env -u LD_LIBRARY_PATH`):
+- [x] Visual Review at 390×844 (licensed bundle, headless Chromium, `env -u LD_LIBRARY_PATH`):
       capture a between-offers burst — dog centred + facing the player, and a scratch feint frame;
       no rear-on hold. Boot clean, zero console errors. Screenshots under `.screenshots/071-*`.
-- [ ] Placeholder check clean on the diff; `nix develop -c bash verify.sh` green.
+- [x] Placeholder check clean on the diff; `nix develop -c bash verify.sh` green.
+
+## Resolution (2026-07-02)
+
+Shipped all three parts. **Part 1 (facing)** — reused the 061 `FaceTurn`/`_advance_facing` path: a
+paused dog eases (roam rate) to `_camera_facing_heading()` (`_engage_resting_face` on the amble→pause
+transition); a moving dog hands yaw back to its travel heading (`_release_resting_face`). Restructured
+`_advance_facing` so only the trick turn-IN (`_facing`) eases while the roam is paused; the ambient
+resting turn + the trick turn-OUT ease only while `_wander_active` — keeping the 045 confused-beat
+"no drift" invariant and the frozen offer base intact. **Part 2 (centring)** — `WanderField.DEFAULT_RADIUS`
+0.32 → 0.20. **Part 3 (scratch feint)** — `DogClips.scratch`/`has_scratch()`/`_pick_scratch` (licensed
+`Scratching`, absent on CC0), `DogDirector.play_scratch()` (one-shot then queue idle),
+`SitLoop.is_scratch_feint()` (a second seeded coin-flip, `SCRATCH_FEINT_CHANCE 0.5`, when a feint
+opens), dispatched in `main._begin_feint` (`_loop`-null-guarded; falls back to the trick-dip if the
+dog has no scratch clip). Feint knobs made instance vars (defaulting to the consts) so a web-only
+`?bra_force_scratch=1` capture seam can pin every offer to a scratch feint (the brief scratch is
+otherwise ~5% of offers — same idiom as `?bra_force_tell`).
+
+TDD: 7 new failing tests → green (`test_dog_clips` scratch resolution + real-asset binding,
+`test_dog_director_scratch`, `test_sit_loop` scratch-feint distribution / flag-outside-feint /
+no-markable-window). Two 061 scene tests (`test_face_wiring`) updated to the new note-3 contract —
+they asserted "no facing between offers", now superseded; the surviving 061 invariants (a real trick
+turns to the camera; a feint never engages the *trick* turn-in; the release hands facing back to the
+roam) are still asserted. Full suite 297 tests, 0 failures. `verify.sh` green (import·boot·test·export).
+
+Visual Review (390×844, licensed bundle, headless Chromium): default-play burst
+(`.screenshots/071-play-00..19`) — dog centred, 18/20 frames facing the player; the one rear-on frame
+is a brief mid-amble pivot (13→14→15), not a stationary hold. Forced-scratch burst
+(`.screenshots/071-scratch-00..13`) — a distinct scratch dip/bow + hind-leg raise, then settle to
+idle. Boot clean, zero console errors. Review verdict: PASS. Placeholder check clean (only the
+legitimate "CC0 placeholder" asset name + honest never-fake documentation).
 
 ## Notes
 

@@ -6,6 +6,26 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 3 (breeds/economy/personality) CURRENT — building PO 2026-07-02 notes — 2026-07-02
+
+Phase 2 signed off (2026-07-01); **Phase 3 is current**. The economy/personality/roster spine builds
+without the owner (BUST-068); only extra breed models + P3-D1/D2/D4 decisions stay owner-gated. The
+owner's 2026-07-02 `po-review.md` pass added actionable notes; the loop is working them in order.
+
+**Recently completed (Phase 3):** 068 coin economy core · 069 coin readout (drawn coin + "coins"
+caption) · 070 feint rate 0.35→0.10 (note 2) · **071 dog present between offers — centred + faces the
+player + scratch feint (note 3). DONE 2026-07-02.** Reused the 061 `FaceTurn` for a roam-rate
+resting-face (paused dog faces the player, moving dog faces travel dir), tightened `WanderField`
+radius 0.32→0.20, and added a `Scratching` feint variety (`DogClips`/`DogDirector`/`SitLoop`, seeded
+50/50 with the trick-dip). 297 tests / 0 failures; verify green; Visual Review PASS (`.screenshots/071-*`).
+
+**Backlog:** 072 — one active trick at a time + completion menu (note 1). **Still queued from the
+2026-07-02 PO notes (await the next scan):** note 4 (flag-bust a chocolate Labrador), note 5 (apex
+circle → a real button + easier timing), note 6 (garden styling + dog↔garden cohesion), plus
+Improvement-4 (`BreedPersonality`) and Change-5 (persisted roster spine).
+
+---
+
 ## Status — Phase 2 OPEN; all buildable stories DONE (058/P2-9 landed) — awaiting PO sign-off — 2026-07-01
 
 Phase 1 **signed off**; **Phase 2 (`phase2.md`) is the current phase** per `po-review.md`'s Phase

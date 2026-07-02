@@ -198,3 +198,47 @@ func test_tell_is_built_from_the_same_window_the_score_uses() -> void:
 	var w := SitWindow.from_sit_clips(1.25, 2.0, 0.08, 0.20)
 	var tell := ApexTell.from_window(w, 1.0)
 	assert_eq(tell.apex, w.apex, "the tell peaks at the very apex the score uses")
+
+# --- 071: a feint is sometimes a funny SCRATCH, sometimes the plain trick-dip (PO note 3) ------
+
+func test_a_feint_is_sometimes_a_scratch_and_sometimes_the_trick_dip() -> void:
+	# 071 / PO note 3: when an offer feints, it coin-flips between a funny SCRATCH and the plain
+	# trick-dip. Over many seeded feints BOTH varieties occur and neither dominates — a mix, not a
+	# single behaviour. is_scratch_feint() is read while FEINTING (right after START_FEINT).
+	var loop := _loop(424242)
+	var scratch := 0
+	var dip := 0
+	for cycle in 800:
+		if _open_next_offer(loop) == SitLoop.Intent.START_FEINT:
+			if loop.is_scratch_feint():
+				scratch += 1
+			else:
+				dip += 1
+		_complete_open_offer(loop)
+	assert_true(scratch > 0, "some feints are a scratch (the funny one)")
+	assert_true(dip > 0, "some feints are the plain trick-dip")
+	var total := scratch + dip
+	var rate := float(scratch) / float(total)
+	assert_true(rate > 0.25 and rate < 0.75,
+		"scratch feints are ~half of feints (SCRATCH_FEINT_CHANCE), got %.2f of %d feints" % [rate, total])
+
+func test_scratch_feint_flag_is_false_outside_a_feint() -> void:
+	# is_scratch_feint() is only meaningful while FEINTING — it must never report true for a real
+	# sit or an idle beat (so main never routes a real sit's animation to the scratch).
+	var loop := _loop()
+	assert_false(loop.is_scratch_feint(), "no scratch feint while IDLE")
+	_drive_to_sit(loop)
+	assert_eq(loop.state(), SitLoop.State.SITTING, "a real sit is open")
+	assert_false(loop.is_scratch_feint(), "a real markable sit is never reported as a scratch feint")
+
+func test_a_scratch_feint_still_opens_no_markable_window() -> void:
+	# A scratch feint is still a FEINT: no scoring window opens, so a tap during it is a wrong-moment
+	# DEAD (P2-8). The scratch is a VARIETY of feint, never a markable sit.
+	var loop := _loop(424242)
+	for cycle in 800:
+		if _open_next_offer(loop) == SitLoop.Intent.START_FEINT and loop.is_scratch_feint():
+			assert_true(loop.is_feinting(), "a scratch feint keeps the loop FEINTING (no markable window)")
+			assert_false(loop.is_sitting(), "a scratch feint is NOT a markable sit")
+			return
+		_complete_open_offer(loop)
+	assert_true(false, "expected a scratch feint within 800 cycles")

@@ -32,6 +32,7 @@ var legg_loop: String  ## fully-settled-on-belly hold loop. "" if none
 var legg_end: String   ## stand-back-up-from-belly clip. "" if none
 var reaction: String   ## positive reaction on a mark (024f, P1-6); "" if the dog has none
 var walk: String       ## locomotion clip for the ambient wander (050, P2-8); "" if the dog has none
+var scratch: String    ## a self-scratch, used as a funny ambient feint (071, PO note 3); "" if the dog has none
 
 ## Leaf substrings that name a POSITIVE reaction, in priority order. A joyful in-place
 ## bounce reads as celebration at phone size, so the licensed pack's hop clips rank ahead
@@ -58,6 +59,7 @@ func _init() -> void:
 	legg_end = ""
 	reaction = ""
 	walk = ""
+	scratch = ""
 
 static func resolve(names: PackedStringArray) -> DogClips:
 	var c := DogClips.new()
@@ -73,6 +75,7 @@ static func resolve(names: PackedStringArray) -> DogClips:
 	c.legg_end = _pick_belly(names, "end")
 	c.reaction = _pick_reaction(names)
 	c.walk = _pick_walk(names)
+	c.scratch = _pick_scratch(names)
 	return c
 
 ## True when this dog can actually perform a sit (build + hold both present). The
@@ -133,6 +136,12 @@ func has_reaction() -> bool:
 ## stripped — exactly right since main drives the root translation itself).
 func has_walk() -> bool:
 	return walk != ""
+
+## True when this dog has a self-scratch clip for a funny ambient feint (071, PO note 3). False on
+## the CC0 placeholder — the director then skips the scratch (falls back to the trick-dip feint) and
+## never fakes one; the real scratch ships with the licensed Labrador (`Scratching`, in the manifest).
+func has_scratch() -> bool:
+	return scratch != ""
 
 ## Depth-first search for the dog's AnimationPlayer inside a loaded glb subtree. The one
 ## home for the recursive find that the scene loader (main.gd) and the clip tests share,
@@ -227,6 +236,15 @@ static func _pick(names: PackedStringArray, a: String, b: String) -> String:
 	for n in names:
 		var leaf := _leaf(n).to_lower()
 		if leaf.contains(a) and leaf.contains(b):
+			return n
+	return ""
+
+## The self-scratch clip for the funny ambient feint (071, PO note 3): the first leaf containing
+## "scratch" (the licensed `Scratching`). "" when the dog ships none — the CC0 placeholder, which
+## then never scratches (main falls back to the plain trick-dip feint; never a faked scratch).
+static func _pick_scratch(names: PackedStringArray) -> String:
+	for n in names:
+		if _leaf(n).to_lower().contains("scratch"):
 			return n
 	return ""
 

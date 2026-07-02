@@ -17,9 +17,10 @@ enum Phase { MOVING, PAUSING }
 
 ## Patch radius (m). The dog fills ~70% of the frame width centred (FRAME_FILL), so the lateral
 ## budget before its broadside silhouette clips an edge is small: a Visual-Review capture at 0.55
-## walked the dog's head off the right edge. 0.32 keeps it fully framed at its widest (facing
-## across the frame) while a ±0.32 m roam on a ~1 m dog still reads clearly as roaming.
-const DEFAULT_RADIUS := 0.32
+## walked the dog's head off the right edge. 0.20 keeps the dog reliably screen-CENTRED between
+## offers (PO note 3, task 071 — the owner wanted it "not out of the screen center") while a
+## ±0.20 m roam on a ~1 m dog still reads clearly as alive/ambling, not a static statue.
+const DEFAULT_RADIUS := 0.20
 const DEFAULT_SPEED := 0.45   ## metres/sec — a calm amble, not a dart
 const DEFAULT_PAUSE := 1.0    ## seconds paused at each target before ambling on
 const ARRIVE_EPSILON := 0.04  ## metres: within this of the target, count it reached

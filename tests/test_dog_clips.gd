@@ -17,6 +17,7 @@ const LAB := ["Arm_Labrador|Idle_1", "Arm_Labrador|Idle_2",
 	"Arm_Labrador|Crouch_Idle_loop_1",
 	"Arm_Labrador|Sitting_start", "Arm_Labrador|Sitting_1",
 	"Arm_Labrador|Sitting_2", "Arm_Labrador|Sitting_end",
+	"Arm_Labrador|Scratching",
 	"Arm_Labrador|Walk_F_IP"]
 
 func test_cc0_resolves_plain_idle_and_has_no_sit() -> void:
@@ -291,4 +292,41 @@ func test_licensed_dog_if_present_resolves_a_real_sit() -> void:
 		assert_true(c.has_reaction(), "the licensed Labrador must resolve a positive reaction")
 		assert_eq(c.reaction, "Arm_Labrador|Jump_Place_IP", "reaction is the joyful in-place hop, not Bark")
 		assert_true(ap.has_animation(c.reaction), "resolved reaction must be a real clip on the dog")
+	dog.free()
+
+# --- 071: scratch as a funny ambient feint (P3, PO note 3) ------------------------------------
+# The licensed Labrador ships `Arm_Labrador|Scratching` (manifest dog_licensed.clips.txt); the CC0
+# placeholder does not. The scratch is wired as a feint VARIETY, so it obeys the same never-fake
+# asset gate as the tricks: a dog without the clip resolves scratch == "" and never fakes one.
+
+func test_labrador_resolves_a_scratch_clip() -> void:
+	var c := DogClips.resolve(PackedStringArray(LAB))
+	assert_true(c.has_scratch(), "the licensed Labrador ships a Scratching clip (manifest)")
+	assert_true(c.scratch.to_lower().contains("scratch"), "the resolved scratch clip's leaf reads 'scratch', got %s" % c.scratch)
+
+func test_cc0_has_no_scratch_clip() -> void:
+	# The CC0 placeholder ships only locomotion + idle — no scratch — so it never fakes one (the
+	# same asset gate as the Sitt / reaction). play_scratch will no-op on it.
+	var c := DogClips.resolve(PackedStringArray(CC0))
+	assert_false(c.has_scratch(), "the CC0 dog has no self-scratch clip")
+	assert_eq(c.scratch, "", "no scratch clip resolved on the CC0 dog")
+
+func test_licensed_dog_if_present_resolves_scratch() -> void:
+	# Binds to the REAL imported licensed dog — proves Scratching is genuinely IN the asset
+	# (behavior != inventory). Gitignored asset, absent in public CI: skip cleanly there.
+	var p := "res://assets/models/dog_licensed.glb"
+	if not ResourceLoader.exists(p):
+		assert_true(true, "licensed dog absent (e.g. public CI) — skipped")
+		return
+	var packed := load(p) as PackedScene
+	if packed == null:
+		assert_true(false, "the licensed dog glb must load as a PackedScene")
+		return
+	var dog := packed.instantiate()
+	var ap := DogClips.find_animation_player(dog)
+	assert_true(ap != null, "the licensed dog must have an AnimationPlayer")
+	if ap != null:
+		var c := DogClips.resolve(ap.get_animation_list())
+		assert_true(c.has_scratch(), "the licensed Labrador must resolve a real Scratching clip — it's in the manifest")
+		assert_true(ap.has_animation(c.scratch), "resolved scratch must be a real clip on the dog")
 	dog.free()

@@ -30,13 +30,20 @@ const MAX_INTER_SIT_GAP := 2.0   ## longest — the spread is what kills the met
 const DEFAULT_SIT_HOLD := 0.5    ## seconds to hold the seated pose past the window close
 const FEINT_CHANCE := 0.10       ## ~1 in 10 offers feints; the rest complete the trick (PO note 2 — the dog isn't too distracted)
 const FEINT_HOLD := 0.45         ## seconds the aborted dip is held before standing back up
+const SCRATCH_FEINT_CHANCE := 0.5 ## of feints, ~half are a funny scratch; the rest are the plain trick-dip (071, PO note 3)
 
 var sit_hold: float            ## seconds the dog holds the seat past the markable window
+## Feint knobs — instance vars defaulting to the consts, so production behaves exactly as before but
+## the web scratch-capture seam (071, `?bra_force_scratch=1`) can pin both to 1.0 to make every offer
+## a scratch feint (the same "force a brief event so a burst can catch it" idiom as ?bra_force_tell).
+var feint_chance := FEINT_CHANCE
+var scratch_feint_chance := SCRATCH_FEINT_CHANCE
 var _rng: RandomNumberGenerator
 var _state: int = State.IDLE
 var _idle_elapsed: float = 0.0   ## seconds accumulated in the current idle gap
 var _feint_elapsed: float = 0.0  ## seconds accumulated in the current feint dip
 var _next_gap: float = 0.0       ## this cycle's idle gap, drawn fresh from [MIN, MAX] each idle
+var _feint_is_scratch := false   ## whether the CURRENT feint is a funny scratch vs. the trick-dip (071)
 
 ## rng: inject a seeded RandomNumberGenerator for deterministic tests; null (production) builds
 ## one with a random seed. p_sit_hold: seconds to hold the seat past the markable window.
@@ -60,6 +67,7 @@ func reset_to_idle() -> void:
 	_state = State.IDLE
 	_idle_elapsed = 0.0
 	_feint_elapsed = 0.0
+	_feint_is_scratch = false
 	_draw_next_gap()
 
 func state() -> int:
@@ -71,6 +79,12 @@ func is_sitting() -> bool:
 ## True while a feint dip is playing (no markable window is open — P2-8).
 func is_feinting() -> bool:
 	return _state == State.FEINTING
+
+## True while the CURRENT feint is a funny SCRATCH (vs. the plain trick-dip) — 071 / PO note 3. Only
+## meaningful while FEINTING: false for a real sit or an idle beat, so main never routes a real sit's
+## animation to the scratch. main reads this in _begin_feint to dispatch play_scratch vs play_trick_feint.
+func is_scratch_feint() -> bool:
+	return _state == State.FEINTING and _feint_is_scratch
 
 ## The gap (seconds) the loop is currently waiting out before the next offer — drawn fresh each
 ## idle cycle. Exposed so tests can pin the variable-cadence contract through the public surface.
@@ -93,9 +107,11 @@ func tick(delta: float, has_sit: bool, session_elapsed: float, sit_end: float) -
 			if _idle_elapsed >= _next_gap:
 				_idle_elapsed = 0.0
 				# Coin-flip this offer: a feint dips-and-aborts (no window), a real offer sits.
-				if _rng.randf() < FEINT_CHANCE:
+				if _rng.randf() < feint_chance:
 					_state = State.FEINTING
 					_feint_elapsed = 0.0
+					# Second coin-flip: this feint is either a funny scratch or the plain trick-dip (071).
+					_feint_is_scratch = _rng.randf() < scratch_feint_chance
 					return Intent.START_FEINT
 				_state = State.SITTING
 				return Intent.START_SIT

@@ -118,6 +118,13 @@ var _autotapped := false  ## one auto-mark per sit; reset when the sit ends
 ## headless, and normal web play are untouched.
 var _force_lock := false
 
+## Visual-review seam (071, PO note 3): set by _query_force_scratch() from the web URL
+## `?bra_force_scratch=1`. When on, the round loop is pinned so EVERY offer is a scratch feint
+## (feint_chance + scratch_feint_chance → 1.0), making the otherwise brief+rare scratch (~5% of
+## offers, ~0.45 s) reliably catchable in a capture burst — the same "force a brief event" idiom as
+## `?bra_force_tell` / `?bra_force_lock`. Web-only and off by default; normal play is untouched.
+var _force_scratch := false
+
 ## Learned-progress model + on-screen bar (045, P2-4 "feel the dog learning"). Progress is keyed
 ## PER TRICK (`_progress_by_trick`, id → TrickProgress) now that Ligg is wired alongside Sitt
 ## (065, BUST-064): the licensed asset holds `Lie_*` too, so "one trick" was behavior, not inventory.
@@ -198,6 +205,7 @@ var _shadow_rest: Vector3
 var _camera: Camera3D
 var _face: FaceTurn
 var _facing := false
+var _resting_face := false   ## true while easing the PAUSED dog to face the player between offers (071, PO note 3)
 var _sit_face_heading := 0.0
 
 ## The natural in-character turn rate (rad/s, ~200°/s — a brisk dog pivot) used for the release and
@@ -233,6 +241,7 @@ func _ready() -> void:
 	_force_tier = _query_force_tier()        # deterministic readout-contrast pixel proof (033, web-only)
 	_autotap = _query_autotap()              # deterministic reaction-capture mark (034, web-only)
 	_force_lock = _query_force_lock()        # deterministic anti-mash lock pixel proof (046, web-only)
+	_force_scratch = _query_force_scratch()  # deterministic scratch-feint capture (071, web-only)
 	_force_trainer = _query_force_trainer()  # deterministic approach-ring pixel proof (058, web-only)
 	_notify_web_ready()
 
@@ -307,6 +316,15 @@ func _query_force_lock() -> bool:
 		return false
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_lock=1")
+
+## Visual-review seam (071): read `?bra_force_scratch=1` off the live web URL to pin every offer to a
+## scratch feint so the brief scratch is reliably captured (see _force_scratch). Off the web export
+## JavaScriptBridge.eval is a no-op, so this is false in headless/desktop and normal play is untouched.
+func _query_force_scratch() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_force_scratch=1")
 
 ## Visual-review seam (058/P2-9): true only when the live web URL carries `?bra_force_trainer=1`.
 ## Pins the approach ring to a mid-approach radius at full opacity every frame so a SINGLE
@@ -430,7 +448,13 @@ func _end_sit() -> void:
 ## beat, with ZERO new downstream branches. Only the dog's animation differs from idle.
 func _begin_feint() -> void:
 	_pause_wander()  # settle so the dip reads as a deliberate fake-sit, not a stride (050)
-	_director.play_trick_feint(_current_trick)  # feint the current trick's build-in (065)
+	# A feint is sometimes the funny SCRATCH, sometimes the plain trick-dip (071, PO note 3). Both open
+	# NO scoring window (a tap during either is DEAD — P2-8). Falls back to the trick-dip if the dog
+	# has no scratch clip (the CC0 gate), so a scratch-less dog never fakes one.
+	if _loop != null and _loop.is_scratch_feint() and _director.has_scratch():
+		_director.play_scratch()                    # the funny scratch — still no markable window
+	else:
+		_director.play_trick_feint(_current_trick)  # feint the current trick's build-in (065)
 
 ## End a feint (048, P2-8): the dip is over; stand back to the ambient idle so the loop comes
 ## round to the next offer. The session was never opened, so there is nothing to close here.
@@ -872,6 +896,10 @@ func _start_dog(dog: Node) -> void:
 	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
 	# one sit. On the CC0 dog (no Sitt) the loop simply parks in idle; no faked sit.
 	_loop = SitLoop.new()
+	if _force_scratch:
+		# Capture seam (071): pin every offer to a scratch feint so the brief scratch is catchable.
+		_loop.feint_chance = 1.0
+		_loop.scratch_feint_chance = 1.0
 	if _director.has_trick(_current_trick):
 		# Trick-capable dog (licensed Labrador, 025): the loop offers the current trick on a VARYING
 		# gap (P2-8, no metronome) and sometimes feints; each real offer's apex (the score's PERFECT
@@ -1284,9 +1312,11 @@ func _drive_wander(delta: float) -> void:
 		if _wander.is_moving() and not _ambling:
 			_director.play_walk()   # step the legs while the root glides
 			_ambling = true
+			_release_resting_face()  # hand the yaw back to the travel heading (071)
 		elif not _wander.is_moving() and _ambling:
 			_director.play_idle()   # paused at a target — stand and look around
 			_ambling = false
+			_engage_resting_face()   # ease to generally face the player while paused (071, PO note 3)
 	_advance_facing(delta)  # ease the face-the-camera turn / its release (061, P2-11)
 	if _confused_age < 0.0:
 		_dog.transform = _wander_base()
@@ -1363,12 +1393,45 @@ func _advance_facing(delta: float) -> void:
 	if _face == null:
 		return
 	if _facing:
+		# The trick turn-IN owns the facing outright and must complete before the apex even though the
+		# sit paused the roam (061) — so it always eases, regardless of _wander_active.
 		_face.retarget(_sit_face_heading)
+		_face.advance(delta)
+		return
+	# Otherwise this is the ambient resting turn (071) or the trick turn-OUT release: both belong to
+	# the LIVE roam, so they ease only while the roam is active. A sit/feint/confused beat freezes the
+	# roam and with it this turn, so the recoil-return invariant (045) and the frozen offer base hold.
+	if not _wander_active:
+		return
+	if _resting_face:
+		_face.retarget(_camera_facing_heading())  # paused between offers: gently face the player (071)
 	else:
-		_face.retarget(_wander.heading())
+		_face.retarget(_wander.heading())          # moving / release: ease back to the travel heading
 	_face.advance(delta)
-	if not _facing and _face.is_facing():
+	if not _resting_face and _face.is_facing():
 		_face = null  # re-aligned with the roam — hand the yaw back to the instant wander
+
+## Ease the PAUSED dog to generally face the player between offers (071, PO note 3 — the owner saw it
+## stand rear-on, tail to the player). Reuses the 061 FaceTurn at the gentle roam rate; _advance_facing
+## then holds the camera-facing heading while paused. A moving dog still faces its travel heading (reads
+## as roaming, not moon-walking). A no-op while a trick owns the facing (_facing) or on a dog with no
+## wander/root. Kept subtle: an eased turn, never a snap and never a rigid front-lock.
+func _engage_resting_face() -> void:
+	if _wander == null or _dog == null or _facing:
+		return
+	_resting_face = true
+	var target := _camera_facing_heading()
+	if _face == null:
+		_face = FaceTurn.new(_dog_yaw(), target, FACE_ROAM_SPEED)
+	else:
+		_face.set_speed(FACE_ROAM_SPEED)
+		_face.retarget(target)
+
+## Hand the facing back to the travel heading when the dog starts ambling again (071). _advance_facing
+## then eases _face out to the wander heading and drops it once re-aligned — the steady-roam feel and
+## the 061 trick-facing release are both unchanged.
+func _release_resting_face() -> void:
+	_resting_face = false
 
 ## The yaw that faces the camera POV (061, P2-11), in the WanderField convention (heading =
 ## atan2(dir.x, dir.z) faces `dir`, proven by the wander Visual Review). So the dog->camera XZ
