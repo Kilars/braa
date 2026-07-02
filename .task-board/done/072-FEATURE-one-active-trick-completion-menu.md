@@ -134,3 +134,29 @@ still met (via the completion menu). Reuses the `CoinReadout` drawn-coin motif a
 `TrickSelector` dumb-renderer + `_gui_input` tap pattern — no new rendering primitives. The adopt /
 breed-thumbnail UI and any additional breeds remain owner-gated (BUST-068 residual) — this menu is
 the **trick** collection surface, not the breed adopt screen; do not fake a breed to fill it.
+
+## Done 2026-07-02
+
+- **Retired the always-on chip row.** Deleted `scripts/trick_selector.gd` + its two test files;
+  stripped `_selector`/`_setup_selector`/`_refresh_selector`/`SELECTOR_*` from `main.gd`. Reclaimed the
+  freed top band: the learned bar now anchors directly under the coin line
+  (`LEARNED_BAR_OFFSET_TOP = COIN_READOUT_TOP + CoinReadout.HEIGHT + 14`).
+- **New `scripts/trick_menu.gd`** (`class_name TrickMenu extends Control`), same dumb-renderer split as
+  TrickSelector/CoinReadout: pure `classify()` (LEARNED/AVAILABLE/LOCKED, roadmap ids always Locked),
+  `is_selectable()`, `id_at()` hit-map, `trick_chosen`/`dismissed` press-only signals, drawn-coin
+  header (no glyph tofu), a "Keep training" close + tap-backdrop-to-dismiss.
+- **Wired into `main.gd`:** `_menu_open` guard in `_advance_loop` (pauses offers), `_open_trick_menu()`
+  fired on the mastery crossing in `_apply_progress`, `_on_trick_chosen`→`select_trick`+close,
+  `_on_menu_dismissed`→close, a persistent top-left **"Tricks"** reopen button, and
+  `ROADMAP_LOCKED_TRICKS = [gi_labb, rull, snurr]` (BUST-064 residual, display-only Locked rows —
+  never selectable, never performable, never play a clip). Web hook `__bra_menu_open` for capture.
+- **TDD:** `tests/test_trick_menu.gd` (13) + `tests/test_trick_menu_wiring.gd` (10) written RED first,
+  then GREEN. Retargeted `test_coin_readout.gd`'s non-overlap invariant off the retired selector.
+- **Verify gate green** (import · boot · test 307/0 · export). Placeholder check clean (the only
+  hits are never-fake-gate documentation).
+- **Visual Review** (390×844, licensed bundle, headless Chromium via `tools/web_capture_menu.mjs`):
+  autotap mastered Sitt → menu popped legibly (`.screenshots/072-menu-open.png` — coins 10, Sitt
+  Learned, Ligg/Legg deg Available, Gi labb/Rull/Snurr Locked-greyed, Keep training); a real canvas
+  tap on the Available Ligg row switched `__bra_current_trick` sitt→ligg and closed the menu, offers
+  resumed with Ligg's own empty bar (`.screenshots/072-after-switch.png`). Coins persisted across the
+  switch. Boot clean, zero console errors.

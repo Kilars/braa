@@ -2,7 +2,7 @@ extends "res://tests/test_case.gd"
 ## The coin readout (069, Phase-3 P3-D3). CoinReadout is the dumb on-screen balance widget that
 ## replaces the 068 emoji Label. Two pure seams are locked here (the drawn coin + placement are
 ## Visual Review): the balance→text mapping shows ASCII digits and NEVER the 🪙 tofu emoji, and the
-## widget sits on its own top line so it can never collide with the P2-1 selector chip row.
+## widget sits on its own top line so it can never collide with the HUD stacked below it.
 ##
 ## No framebuffer needed — the text is read off the pure static balance_text(), and the non-overlap
 ## is a pure arithmetic invariant over main.gd's layout constants (read via preload, no scene boot).
@@ -30,10 +30,11 @@ func test_set_balance_clamps_and_reads_back() -> void:
 	assert_eq(r.balance(), 0, "set_balance floors a negative at 0")
 	r.free()
 
-func test_coin_line_sits_clear_of_the_selector_chip_row() -> void:
-	# Bug 2: with the full three-chip roster the rightmost chip collided with the top-right coin
-	# readout. Its own top line must end above where the selector band starts, at any chip count.
+func test_coin_line_sits_clear_of_the_hud_below() -> void:
+	# The coin readout keeps its OWN top line: its foot must end above the learned bar that stacks
+	# below it, so the balance never collides with the HUD beneath. (072 retired the always-on chip
+	# row that used to sit here; the learned bar now anchors directly under the coin line.)
 	var coin_foot: float = MainScript.COIN_READOUT_TOP + CoinReadout.HEIGHT
-	assert_true(coin_foot <= MainScript.SELECTOR_OFFSET_TOP,
-		"coin readout foot (%.1f) is above the selector top (%.1f) — no chip overlap"
-			% [coin_foot, MainScript.SELECTOR_OFFSET_TOP])
+	assert_true(coin_foot <= MainScript.LEARNED_BAR_OFFSET_TOP,
+		"coin readout foot (%.1f) is above the learned bar top (%.1f) — no overlap"
+			% [coin_foot, MainScript.LEARNED_BAR_OFFSET_TOP])

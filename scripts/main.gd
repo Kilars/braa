@@ -129,19 +129,27 @@ var _force_scratch := false
 ## PER TRICK (`_progress_by_trick`, id → TrickProgress) now that Ligg is wired alongside Sitt
 ## (065, BUST-064): the licensed asset holds `Lie_*` too, so "one trick" was behavior, not inventory.
 ## `_progress` ALIASES the current trick's model so the whole scoring/erosion/bar path stays unchanged;
-## the selector (066) repoints it when the player switches trick. A well-timed BRA fills the bar; a
-## mistimed / wrong-moment tap erodes it.
+## select_trick (driven by the 072 completion menu) repoints it when the player switches trick. A
+## well-timed BRA fills the bar; a mistimed / wrong-moment tap erodes it.
 var _progress_by_trick := {}
 var _progress: TrickProgress
 var _learned_bar: LearnedBar
 
-## The trick selector (066, P2-1 "Pick a trick"): the top-of-HUD chip row that lets the player choose
-## which trick to train, one chip per trick the loaded dog can perform (never a faked trick — empty on
-## the idle-only CC0 dog). Its `trick_selected` routes into select_trick(); _refresh_selector() feeds
-## it each trick's own persisted learned/mastery state. Retires the `?bra_trick=` reach as the player-
-## facing chooser, though that web-only debug reach is KEPT (off by default) to boot the Visual-Review
-## capture harness straight into a specific trick.
-var _selector: TrickSelector
+## The completion menu (072, PO note 1 "one active trick + a completion menu"): the game trains ONE
+## trick at a time; when the active trick is mastered this modal pops up showing the collection — the
+## just-learned trick (Learned), the other performable tricks (Available, tap to train next), the coin
+## balance, and the genuinely-absent tricks (Locked/greyed, never trainable — the never-fake gate). It
+## SUPERSEDES the always-on 066 chip row: picking a trick is now this between-rounds surface, not a
+## permanent second in-round verb. `_menu_open` pauses offers while it is up; `_tricks_button` reopens
+## it between rounds so switching is never a dead-end. The `?bra_trick=` web debug reach is KEPT (off
+## by default) to boot the Visual-Review capture harness straight into a specific trick.
+var _menu: TrickMenu
+var _menu_open := false
+var _tricks_button: Button
+## The genuinely-absent tricks (BUST-064 residual, owner-gated): the licensed Labrador ships no paw /
+## roll / spin clip, so these are shown as display-only Locked roadmap rows — never selectable, never
+## playing a faked clip. They wire as real tricks only once the owner supplies clips.
+const ROADMAP_LOCKED_TRICKS := ["gi_labb", "rull", "snurr"]
 
 ## Per-trick learned-progress persistence (049, P2-5 "leave and come back" / X-7 offline). The save
 ## store loads on boot into the per-trick map (so a returning player sees each trick's filled /
@@ -153,8 +161,8 @@ const TRICK_ID_SITT := DogClips.TRICK_SITT
 const TRICK_ID_LIGG := DogClips.TRICK_LIGG
 const TRICK_ID_LEGG_DEG := DogClips.TRICK_LEGG_DEG
 ## The trick the dog is currently training (065). Defaults to Sitt everywhere (desktop / headless /
-## normal play), so the PO-verified default experience is unchanged; the `?bra_trick=ligg` web reach
-## (below) selects Ligg for Visual Review until the 066 selector UI lands.
+## normal play), so the PO-verified default experience is unchanged; players switch it via the 072
+## completion menu, and the `?bra_trick=ligg` web reach (below) boots a specific trick for Visual Review.
 var _current_trick := TRICK_ID_SITT
 
 ## The coin economy (068, Phase-3 P3-D3 "unlock breeds via a light economy"): mastering a trick earns
@@ -220,7 +228,7 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
-	_current_trick = _query_trick()  # the INITIAL trick; the 066 selector switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
+	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_load_coins()            # restore the saved coin balance BEFORE the readout is built (068/P3-D3)
@@ -285,12 +293,12 @@ func _query_autotap() -> bool:
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
 
-## Trick-selection seam (065/067, BUST-064 / P2-1 066): read `?bra_trick=ligg` / `=legg_deg` (or
-## `=sitt`) off the live web URL to pick which trick the dog trains, so each wired trick is drivable +
-## Visual-Reviewable before the 066 selector UI lands. Defaults to Sitt everywhere else (desktop /
-## headless / normal play), so the
-## PO-verified default experience is unchanged. Reads a STRING (never a bare bool) to dodge the
-## Web-export null-Variant marshalling that bit the apex tell (036); unknown values fall back to Sitt.
+## Trick-selection seam (065/067, BUST-064): read `?bra_trick=ligg` / `=legg_deg` (or `=sitt`) off the
+## live web URL to boot the dog straight into a specific trick, so each wired trick is drivable +
+## Visual-Reviewable in a capture burst without hand-driving the completion menu. Defaults to Sitt
+## everywhere else (desktop / headless / normal play), so the PO-verified default experience is
+## unchanged. Reads a STRING (never a bare bool) to dodge the Web-export null-Variant marshalling that
+## bit the apex tell (036); unknown values fall back to Sitt.
 func _query_trick() -> String:
 	if not OS.has_feature("web"):
 		return TRICK_ID_SITT
@@ -299,7 +307,7 @@ func _query_trick() -> String:
 		return TRICK_ID_SITT
 	var q := (search as String).to_lower()
 	# Legg deg checked before Ligg: `legg_deg` and `ligg` are distinct substrings, but keep the
-	# more specific id first so the branch reads unambiguously as more tricks wire (066 selector).
+	# more specific id first so the branch reads unambiguously as more tricks wire.
 	if q.contains("bra_trick=legg_deg"):
 		return TRICK_ID_LEGG_DEG
 	if q.contains("bra_trick=ligg"):
@@ -401,6 +409,8 @@ func _process(delta: float) -> void:
 ## the next sit or stand the dog back to idle. A no-op until _start_dog builds _loop, and a
 ## permanent idle on the CC0 dog (has_sit == false) — never a faked sit.
 func _advance_loop(delta: float) -> void:
+	if _menu_open:
+		return  # the completion menu is up — pause offers so no trick fires behind the modal (072)
 	if _loop == null or _director == null:
 		return
 	var sit_end := _window.sit_end if _window != null else 0.0
@@ -550,39 +560,38 @@ const TELL_HALF_WIDTH := ApexTellMarker.SIZE * 0.5  ## 160 — half the pulse sq
 const BRA_CENTER_Y := (BRA_OFFSET_TOP + BRA_OFFSET_BOTTOM) * 0.5
 const TELL_OFFSET_TOP := BRA_CENTER_Y - TELL_HALF_WIDTH
 const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
-## Trick selector (066, P2-1): a chip row pinned at the very top of the HUD — the learned bar and the
-## timing readout stack BELOW it, their offsets DERIVED from the selector's foot so the whole top
-## stack stays consistent if the selector's height/inset ever changes (the same coupling discipline
-## the apex-tell marker keeps with the button). It floats in the clear sky, well above the centred
-## dog's crown and far from the bottom BRA band, so it is never a second in-round verb (P2-1).
-const SELECTOR_MARGIN_X := 48.0
-## The coin readout (069) gets its OWN top line above the chips; the selector top is DERIVED from
-## the coin line's foot + a gap, so the coin count can never collide with the rightmost chip at any
-## roster size (PO Review 2026-07-01, bug 2). The ample sky of the 063 expand frame holds the coin
-## line + the whole selector/bar/readout stack above the centred dog.
+## The coin readout (069) gets its OWN top line at the very top of the HUD. Since the always-on chip
+## row is retired (072, PO note 1 — the completion menu is the chooser now), the learned bar and timing
+## readout stack directly below the coin line, reclaiming the band the selector used to occupy.
 const COIN_READOUT_TOP := 10.0
-const SELECTOR_OFFSET_TOP := COIN_READOUT_TOP + CoinReadout.HEIGHT + 14.0  ## 64 — below the coin line
-const SELECTOR_HEIGHT := TrickSelector.HEIGHT       ## 52 — the selector's own preferred band height
-const SELECTOR_FOOT := SELECTOR_OFFSET_TOP + SELECTOR_HEIGHT
 
-## Learned bar (045, P2-4): a thin persistent meter just below the selector, in the clear sky above
-## the dog. Full width inset like the button; the transient readout word flashes below it. Reads by
-## FILL LENGTH so it's legible under reduced motion.
-const LEARNED_BAR_OFFSET_TOP := SELECTOR_FOOT + 12.0
+## The "Tricks" reopen button (072): a small persistent touch target in the top-LEFT corner (clear of
+## the top-right coin readout and far from the bottom BRA band), so the player can reopen the completion
+## menu between rounds to switch trick — never a dead-end waiting on a mastery.
+const TRICKS_BTN_MARGIN := 20.0
+const TRICKS_BTN_TOP := COIN_READOUT_TOP
+const TRICKS_BTN_WIDTH := 112.0
+const TRICKS_BTN_HEIGHT := 44.0
+
+## Learned bar (045, P2-4): a thin persistent meter below the coin line, in the clear sky above the
+## dog. Full width inset like the button; the transient readout word flashes below it. Reads by FILL
+## LENGTH so it's legible under reduced motion. Anchored under the coin line now the chip row is gone.
+const LEARNED_BAR_OFFSET_TOP := COIN_READOUT_TOP + CoinReadout.HEIGHT + 14.0  ## 64 — below the coin line
 const LEARNED_BAR_HEIGHT := 16.0
 const LEARNED_BAR_MARGIN_X := 48.0
 
 ## Timing readout: a band across the upper portrait area, clear of dog and button (024g). Stacked
 ## below the learned bar. 038 kept the flashed tier word off the centred dog's crown; the taller
-## expand frame (063) leaves ample sky for the selector + bar + readout stack above the dog.
+## expand frame (063) leaves ample sky for the coin line + bar + readout stack above the dog.
 const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
 const READOUT_OFFSET_TOP := LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT + 16.0
 const READOUT_OFFSET_BOTTOM := READOUT_OFFSET_TOP + 124.0  ## 124 px band (unchanged height, 038)
 ## Coin readout (068, redrawn in 069/P3-D3): a small running balance tucked on its OWN top line in
-## the top-right corner (COIN_READOUT_TOP), above the selector chip row — so the earned-coins
-## feedback is visible without colliding with the rightmost chip (069, bug 2). The CoinReadout node
-## draws its own coin disc + digits + "coins" caption, so main only supplies the anchor box + width.
+## the top-right corner (COIN_READOUT_TOP), clear of the top-left Tricks button — the earned-coins
+## feedback is always visible in-round, and the completion menu (072) shows the same balance in its
+## header. The CoinReadout node draws its own coin disc + digits + "coins" caption, so main only
+## supplies the anchor box + width.
 const COIN_READOUT_MARGIN := 20.0
 const COIN_READOUT_WIDTH := 170.0
 ## Confused-beat shape (045): a short damped yaw wobble on a bad tap, scaled by the reduced-
@@ -959,8 +968,8 @@ func _setup_bra_button() -> void:
 	_setup_trainer_marker(ui)
 	_setup_readout(ui)
 	_setup_learned_bar(ui)
-	_setup_selector(ui)
 	_setup_coin_readout(ui)
+	_setup_trick_menu(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -1056,37 +1065,50 @@ func _setup_coin_readout(ui: CanvasLayer) -> void:
 	readout.anchor_bottom = 0.0
 	readout.offset_left = -COIN_READOUT_MARGIN - COIN_READOUT_WIDTH
 	readout.offset_right = -COIN_READOUT_MARGIN
-	readout.offset_top = COIN_READOUT_TOP  # its own line above the chip row (069, bug 2)
+	readout.offset_top = COIN_READOUT_TOP  # its own top line, clear of the top-left Tricks button (072)
 	readout.offset_bottom = COIN_READOUT_TOP + CoinReadout.HEIGHT
 	ui.add_child(readout)
 	_coin_readout = readout
 	_refresh_coins()  # seed with the balance restored on boot (_load_coins)
 
-## The trick selector (066, P2-1): a chip row across the top of the HUD to pick which trick to train.
-## Anchored full-width across the top band (same insets as the learned bar / button), it floats over
-## the clear sky. Populated from _refresh_selector() with only the tricks the loaded dog can perform;
-## its `trick_selected` signal drives select_trick(). Mounted even on the CC0 dog (it just draws an
-## empty roster there — the honest "nothing to train" read).
-func _setup_selector(ui: CanvasLayer) -> void:
-	var selector := TrickSelector.new()
-	selector.name = "TrickSelector"
-	selector.anchor_left = 0.0
-	selector.anchor_right = 1.0
-	selector.anchor_top = 0.0
-	selector.anchor_bottom = 0.0
-	selector.offset_left = SELECTOR_MARGIN_X
-	selector.offset_right = -SELECTOR_MARGIN_X
-	selector.offset_top = SELECTOR_OFFSET_TOP
-	selector.offset_bottom = SELECTOR_OFFSET_TOP + SELECTOR_HEIGHT
-	ui.add_child(selector)
-	_selector = selector
-	_selector.trick_selected.connect(select_trick)
-	_refresh_selector()
-	_publish_current_trick()  # seed the web e2e hook with the initial trick (066)
+## The completion menu (072, PO note 1): a modal, mounted HIDDEN over the whole HUD, that pops up when
+## the active trick is mastered (and reopens from the Tricks button). Full-screen so its dimmed backdrop
+## veils the game and it eats every tap behind it. `trick_chosen` routes into select_trick(); `dismissed`
+## just hides it. A small persistent "Tricks" button in the top-left reopens it between rounds so a
+## returning player (all mastered) or one who wants to switch is never stuck waiting for a mastery.
+func _setup_trick_menu(ui: CanvasLayer) -> void:
+	var menu := TrickMenu.new()
+	menu.name = "TrickMenu"
+	menu.anchor_right = 1.0
+	menu.anchor_bottom = 1.0  # full-screen: the backdrop veils the game, the modal eats taps behind it
+	menu.hide()               # starts hidden — pops on mastery / the Tricks button
+	ui.add_child(menu)
+	_menu = menu
+	_menu.trick_chosen.connect(_on_trick_chosen)
+	_menu.dismissed.connect(_on_menu_dismissed)
+
+	var btn := Button.new()
+	btn.name = "TricksButton"
+	btn.text = "Tricks"
+	btn.add_theme_font_size_override("font_size", 22)
+	btn.anchor_left = 0.0
+	btn.anchor_right = 0.0
+	btn.anchor_top = 0.0
+	btn.anchor_bottom = 0.0
+	btn.offset_left = TRICKS_BTN_MARGIN
+	btn.offset_top = TRICKS_BTN_TOP
+	btn.offset_right = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH
+	btn.offset_bottom = TRICKS_BTN_TOP + TRICKS_BTN_HEIGHT
+	btn.focus_mode = Control.FOCUS_NONE  # no keyboard focus ring on a touch target
+	ui.add_child(btn)
+	btn.pressed.connect(_open_trick_menu)
+	_tricks_button = btn
+	_publish_current_trick()  # seed the web e2e hook with the initial trick (072, kept from 066)
+	_publish_menu_open()      # seed __bra_menu_open = false so a capture polls a defined value (072)
 
 ## The tricks the loaded dog can actually perform, in the canonical KNOWN_TRICKS order (065/067). The
-## selector offers exactly these — never a trick the dog can't perform (the never-fake gate): on the
-## CC0 placeholder this is empty, on the licensed Labrador it is Sitt + Ligg + Legg deg.
+## menu offers exactly these as Available/Learned — never a trick the dog can't perform (the never-fake
+## gate): on the CC0 placeholder this is empty, on the licensed Labrador it is Sitt + Ligg + Legg deg.
 func _selectable_tricks() -> Array:
 	var out: Array = []
 	if _director == null:
@@ -1096,28 +1118,72 @@ func _selectable_tricks() -> Array:
 			out.append(id)
 	return out
 
-## Rebuild the selector's roster from the performable tricks + each one's own persisted learned/mastery
-## state (P2-1 "each entry shows its own … state"), and highlight the current trick. Called on mount,
-## after a trick switch, and could be called after a progress change if the chips ever animate live.
-func _refresh_selector() -> void:
-	if _selector == null:
-		return
-	var entries: Array = []
-	for id in _selectable_tricks():
+## Build the completion-menu rows: the wired tricks (Learned/Available by their own mastery) followed
+## by the genuinely-absent roadmap tricks (always Locked). Order is stable so the collection reads the
+## same every open. The classify split itself is the pure, unit-locked honesty gate.
+func _menu_rows() -> Array:
+	var all_ids: Array = []
+	all_ids.append_array(KNOWN_TRICKS)
+	all_ids.append_array(ROADMAP_LOCKED_TRICKS)
+	var mastered := {}
+	for id in KNOWN_TRICKS:
 		var p: TrickProgress = _progress_by_trick.get(id)
-		entries.append({
-			"id": id,
-			"value": p.value if p != null else 0.0,
-			"mastered": p.mastered if p != null else false,
-		})
-	_selector.set_entries(entries, _current_trick)
+		mastered[id] = p != null and p.mastered
+	return TrickMenu.classify(all_ids, _selectable_tricks(), mastered, ROADMAP_LOCKED_TRICKS)
 
-## Pick a trick to train (066, P2-1): repoint _current_trick and the learned bar/model to THAT trick's
-## own persisted state, and highlight it in the selector. Picking is a BETWEEN-rounds choice, never a
+## Feed the current roster + coin balance into the menu (called just before it is shown).
+func _refresh_trick_menu() -> void:
+	if _menu != null:
+		_menu.set_rows(_menu_rows(), _purse.balance)
+
+## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
+## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
+## and the loop is parked in idle, so nothing lingers behind the modal; the `_menu_open` guard in
+## _advance_loop then keeps every offer from firing until the menu closes.
+func _open_trick_menu() -> void:
+	if _session.is_open():
+		_end_sit()
+	elif _loop != null and _loop.is_feinting():
+		_end_feint()
+	if _loop != null:
+		_loop.reset_to_idle()
+	_menu_open = true
+	_refresh_trick_menu()
+	if _menu != null:
+		_menu.show()
+	_publish_menu_open()
+
+## Hide the menu and resume offers (072). Shared by a choice and a dismiss.
+func _close_trick_menu() -> void:
+	_menu_open = false
+	if _menu != null:
+		_menu.hide()
+	_publish_menu_open()
+
+## Web-only e2e/capture hook (072): mirror the menu-open state onto window.__bra_menu_open so a live
+## browser capture can deterministically wait for the completion menu to pop (after an autotap masters
+## the trick) before screenshotting. A no-op off the web export; a test seam only, never read back.
+func _publish_menu_open() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__bra_menu_open = %s;" % ("true" if _menu_open else "false"), true)
+
+## A performable trick was chosen from the menu (072): switch to it (select_trick repoints the whole
+## scoring/bar path) and close the menu so offers resume as the new trick. select_trick ignores an
+## unknown id, so a Locked row's id (which the menu never emits anyway) could never switch the trick.
+func _on_trick_chosen(id: String) -> void:
+	select_trick(id)
+	_close_trick_menu()
+
+## The menu was dismissed without a choice (072): just hide it and keep training the current trick.
+func _on_menu_dismissed() -> void:
+	_close_trick_menu()
+
+## Pick a trick to train (P2-1; driven by the 072 completion menu): repoint _current_trick and the
+## learned bar/model to THAT trick's own persisted state. Picking is a BETWEEN-rounds choice, never a
 ## second in-round verb — so if an offer of the OLD trick is mid-flight, close it cleanly first (the
 ## dog stands up through the OLD trick's own end clip, never a mismatched one) and reset the loop so the
 ## next offer comes round fresh as the newly-chosen trick. A no-op for an unknown id or the current
-## trick. Routing is dog-agnostic (the selector is what filters to performable tricks), so it is
+## trick. Routing is dog-agnostic (the menu is what filters to performable tricks), so it is
 ## scene-testable on the CC0 dog.
 func select_trick(id: String) -> void:
 	if not KNOWN_TRICKS.has(id) or id == _current_trick:
@@ -1133,13 +1199,12 @@ func select_trick(id: String) -> void:
 	_progress = _progress_by_trick[id]          # the whole scoring/erosion/bar path now reads the new trick's model
 	if _learned_bar != null:
 		_learned_bar.set_value(_progress.value, _progress.mastered)
-	_refresh_selector()
-	_publish_current_trick()  # reflect the switch onto the web e2e hook (066)
+	_publish_current_trick()  # reflect the switch onto the web e2e hook (066/072)
 
-## Web-only e2e hook (066): expose the trained trick id so a LIVE browser test can prove a real chip
-## tap actually switches it — the selector's crux (a canvas tap → _gui_input → trick_selected →
+## Web-only e2e hook (066/072): expose the trained trick id so a LIVE browser test can prove a real
+## menu tap actually switches it — the menu's crux (a canvas tap → _gui_input → trick_chosen →
 ## select_trick). Mirrors the __bra_reaction_n / __appReady hooks; a no-op off the web export and
-## harmless in normal play. This is a test seam only — the selector never reads it back.
+## harmless in normal play. This is a test seam only — the menu never reads it back.
 func _publish_current_trick() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__bra_current_trick = '%s';" % _current_trick, true)
@@ -1211,9 +1276,9 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		_play_mastery_beat()
 		_purse.earn(COIN_REWARD_MASTERY)  # mastering a trick pays out toward adopting a breed (068/P3-D3)
 		_refresh_coins()
+		_open_trick_menu()  # the active trick is learned — pop the completion menu, pause offers (072/PO note 1)
 	elif not SitWindow.is_successful(tier):
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
-	_refresh_selector()  # keep the current trick's chip pip in step with the learned bar (066/P2-1)
 	_save_progress()  # persist after every change so the bar survives a reload (049/P2-5)
 
 ## The tricks main holds a learned bar for (065). Each gets its own persisted TrickProgress, keyed by

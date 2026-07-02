@@ -1,13 +1,13 @@
 class_name CoinReadout
 extends Control
 ## The coin readout (069, Phase-3 P3-D3): a small purpose-bearing balance widget — a DRAWN gold
-## coin disc + the earned-coin count + a "coins" caption — pinned on its OWN top line, clear of the
-## P2-1 selector chip row. It replaces the 068 emoji Label, whose coin emoji (U+1FA99) rendered as a
+## coin disc + the earned-coin count + a "coins" caption — pinned on its OWN top line in the HUD, clear
+## of the top-left Tricks button. It replaces the 068 emoji Label, whose coin emoji (U+1FA99) rendered as a
 ## missing-glyph "tofu" box in Godot's fallback font (PO Review 2026-07-01, bug 1). Drawing the coin
 ## as a disc removes the font-glyph dependency entirely, and the caption makes the collection axis
 ## legible (P3-D3, "the collection axis is visible" — bug 3).
 ##
-## Same dumb-renderer split the rest of the HUD uses (TierReadout / LearnedBar / TrickSelector):
+## Same dumb-renderer split the rest of the HUD uses (TierReadout / LearnedBar / TrickMenu):
 ## main owns the balance and feeds it in via set_balance(); this node only draws it. So the
 ## balance→text mapping is unit-testable render-free (balance_text) with no framebuffer.
 
