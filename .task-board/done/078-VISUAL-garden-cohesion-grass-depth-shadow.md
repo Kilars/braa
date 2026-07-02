@@ -60,19 +60,49 @@ the SwiftShader counter gotcha). Findings are blocking.
 
 ## Acceptance criteria
 
-- [ ] The ground is **stylized grass with real shading/texture** (tonal/normal variation), not a
+- [x] The ground is **stylized grass with real shading/texture** (tonal/normal variation), not a
       single flat green fill; any generated texture is a genuine asset (offline-made), not a solid
       color left as a stub.
-- [ ] The scene has **readable depth** near the horizon (fence line / bushes / graded horizon haze),
+- [x] The scene has **readable depth** near the horizon (fence line / bushes / graded horizon haze),
       GL-Compatibility-safe, low-cost, and it does not steal focus from the dog.
-- [ ] The dog is **grounded by a legible contact shadow** at 390×844 — it no longer reads as floating.
-- [ ] No letterbox regression (063): the garden fills 390×844, no black bands; dog stays centered and
+- [x] The dog is **grounded by a legible contact shadow** at 390×844 — it no longer reads as floating.
+- [x] No letterbox regression (063): the garden fills 390×844, no black bands; dog stays centered and
       well-lit.
-- [ ] Visual Review PASS (phone-portrait), frames verified by eye; findings blocking. Evidence under
+- [x] Visual Review PASS (phone-portrait), frames verified by eye; findings blocking. Evidence under
       `.screenshots/`.
-- [ ] Placeholder check clean on the diff (no flat-fill/solid-color "grass" stub; no bare-primitive
+- [x] Placeholder check clean on the diff (no flat-fill/solid-color "grass" stub; no bare-primitive
       prop left as a placeholder).
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+
+## Completion (2026-07-02)
+
+All in `scripts/main.gd` — a stylization pass over existing plumbing, no re-architecture; a VISUAL
+task (render glue, TDD-exempt), the garden-wiring + contact-shadow tests stay green.
+
+1. **Stylized grass** (`_setup_ground_plane`): the albedo `FastNoiseLite` now uses **FBM (4 octaves)**
+   so it carries the large soft patches AND a finer blade-scale grain in one baked texture; a **baked
+   normal map** (a second `NoiseTexture2D`, `as_normal_map`, `bump_strength 2.2`) gives the lawn
+   micro-relief so the directional sun catches it — the single biggest cue that killed the flat read.
+   Finer UV tiling (3→6) so grain reads as blades. Both textures are genuine generated `Image`s
+   (headless-safe), no flat fill.
+2. **Horizon depth** (new `_setup_hedge_band` + `_hedge_texture`): a wide, low **stylized hedge row**
+   seated at the far edge of the grass (17 m ahead, camera-facing quad) breaks the hard grass-meets-sky
+   cutout line. Its texture is an **authored procedural RGBA `Image`** — a bushy-green body with a
+   noise-varied **bumpy soft top** (feathered alpha, so no aliasing) hazed toward the warm sky for
+   atmospheric recession. One alpha-blended `StandardMaterial3D` quad, GL-Compatibility-safe, no shader.
+3. **Grounding** (`_setup_contact_shadow` / `_contact_shadow_material`): a **darker, more solid core**
+   (3-stop gradient 0.58→0.30→0.0) and a slightly **larger disc** (×1.12) so the dog reads planted.
+   The tested placement contract (foot-plane Y, footprint centre) is untouched — only the visual disc
+   changes; the 1 mm Z-fight lift stays within the wiring test's 0.01 eps.
+
+**Verify:** `nix develop -c bash verify.sh` green (import·boot·test·export). **Placeholder check:** clean
+(no stub/flat-fill hits on the diff). **Visual Review:** PASS at 390×844 (yellow + chocolate Lab) — an
+independent reviewer confirmed all counts: grass reads as textured/dappled (not a void), the hedge band
+breaks the hard horizon with real depth, the dog is grounded by the contact shadow, no letterbox
+regression. Evidence: `.screenshots/078-final-00..04.png` (yellow), `.screenshots/078-choc-01.png`
+(chocolate). Non-blocking bonus noted by the reviewer (deferred): perspective-graded grass scale
+(smaller cells toward the horizon) would sharpen the depth cue, but that wants a shader — out of scope
+for this GL-safe stylization pass.
 
 ## Notes
 

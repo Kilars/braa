@@ -255,6 +255,7 @@ func _ready() -> void:
 		_start_dog(dog)
 		_frame_camera(dog)
 		_setup_ground_plane(dog)    # grass ground plane at the foot plane (047/P2-10)
+		_setup_hedge_band(dog)      # stylized hedge at the horizon for depth (078/Note-6)
 		_setup_contact_shadow(dog)  # blob shadow ON the grass (031/P1-1)
 		_setup_sun_disc(dog)        # explicit sun disc in the sky (047/P2-10)
 	else:
@@ -707,15 +708,20 @@ func _setup_ground_plane(dog: Node) -> void:
 	# albedo texture, no shader, no extra geometry — the plane stays flat so the dog's foot plane and
 	# contact shadow are untouched (grounding safe); "shape" is tonal, not geometric (Phase-7 defers
 	# real relief). GL-Compatibility-safe.
+	# FBM fractal (078/Note-6): stacking octaves gives the albedo BOTH the large soft patches AND
+	# a finer blade-scale grain, so the lawn reads as textured grass rather than one smooth mottle.
 	var noise := FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	noise.frequency = 0.03             # a few large soft patches across the baked texture
+	noise.frequency = 0.035            # large soft patches; octaves add the finer grain on top
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 4          # patch + blade-scale detail in one baked texture
+	noise.fractal_gain = 0.55
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
 	ramp.colors = PackedColorArray([
-		Color(0.14, 0.38, 0.15),       # deep shadowed green
-		Color(0.27, 0.57, 0.24),       # mid grass
-		Color(0.44, 0.72, 0.34),       # light sunny green
+		Color(0.17, 0.39, 0.17),       # shadowed green (lifted so the lawn isn't rocky/patchy)
+		Color(0.28, 0.56, 0.24),       # mid grass
+		Color(0.46, 0.74, 0.35),       # light sunny green
 	])
 	var grass_tex := NoiseTexture2D.new()
 	grass_tex.noise = noise
@@ -724,8 +730,26 @@ func _setup_ground_plane(dog: Node) -> void:
 	grass_tex.width = 256
 	grass_tex.height = 256
 	mat.albedo_texture = grass_tex
-	mat.uv1_scale = Vector3(3.0, 3.0, 1.0)   # a handful of patch repeats across the 40 m plane
-	mat.roughness = 0.95   # matte grass, no specular glint
+	# A baked NORMAL map (078/Note-6): fine blade-scale ripples so the directional sun catches the
+	# lawn's micro-relief and it stops reading as a flat fill — the biggest single cue that killed
+	# the "cutout floating on a fill" look. Baked to an Image (headless-safe), no shader.
+	var relief := FastNoiseLite.new()
+	relief.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	relief.frequency = 0.16            # fine blade-scale bumps
+	relief.fractal_type = FastNoiseLite.FRACTAL_FBM
+	relief.fractal_octaves = 3
+	var grass_normal := NoiseTexture2D.new()
+	grass_normal.noise = relief
+	grass_normal.as_normal_map = true
+	grass_normal.bump_strength = 2.2   # soft dappled relief that reads at phone scale, not rubble
+	grass_normal.seamless = true
+	grass_normal.width = 256
+	grass_normal.height = 256
+	mat.normal_enabled = true
+	mat.normal_texture = grass_normal
+	mat.normal_scale = 1.0
+	mat.uv1_scale = Vector3(6.0, 6.0, 1.0)   # finer tiling so grain reads as blades, not big blobs
+	mat.roughness = 0.9    # matte grass, a hint of sheen so the normal-map relief shows
 	mat.metallic = 0.0
 	# Allow the sun's directional shading to land on it naturally.
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
@@ -735,6 +759,78 @@ func _setup_ground_plane(dog: Node) -> void:
 	ground.material_override = mat
 	ground.position = foot_center
 	add_child(ground)
+
+## Stylized hedge band at the horizon (078/Note-6): the PO found the ground meets the sky at a
+## HARD cutout line with no props or depth, so the photoreal dog reads as a floating cutout. A
+## wide, low hedge row seated at the far edge of the grass breaks that hard seam and gives the
+## world a "there there" — readable mid/background depth. It's a single camera-facing quad with an
+## AUTHORED procedural RGBA texture (a bumpy, soft-topped bushy-green silhouette baked once into an
+## Image — no flat fill, no bare primitive), placed ahead of the dog toward the horizon. GL-
+## Compatibility-safe: one alpha-blended StandardMaterial3D quad, no shader, no Forward+ feature.
+func _setup_hedge_band(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		return
+	var c := box.get_center()
+	var foot_y := box.position.y
+	var band := QuadMesh.new()
+	# Wide enough to span the frame at the horizon distance; ~3.2 m tall bushes.
+	const HEDGE_WIDTH := 60.0
+	const HEDGE_HEIGHT := 3.2
+	const HEDGE_DIST := 17.0   # metres ahead of the dog (-Z), just inside the 40 m grass far edge
+	band.size = Vector2(HEDGE_WIDTH, HEDGE_HEIGHT)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = _hedge_texture()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA   # the baked alpha IS the bumpy top
+	# Softly lit so the sun tints the hedge like the rest of the garden (not a flat unshaded band),
+	# but no normal map — a distant hedge reads as a stable silhouette.
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	mat.roughness = 1.0
+	mat.metallic = 0.0
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var hedge := MeshInstance3D.new()
+	hedge.name = "HedgeBand"
+	hedge.mesh = band
+	hedge.material_override = mat
+	# Base of the band at the foot plane; the quad centre sits half its height up. Placed ahead
+	# toward the horizon so it seats into the grass/sky seam. QuadMesh faces +Z → toward the camera.
+	hedge.position = Vector3(c.x, foot_y + HEDGE_HEIGHT * 0.5, c.z - HEDGE_DIST)
+	hedge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(hedge)
+
+## The hedge's texture (078): an AUTHORED procedural RGBA Image — a bushy-green body with a soft,
+## BUMPY top silhouette (per-column height varied by noise, feathered so it doesn't alias) and a
+## noise-mottled green so it reads as a stylized hedgerow, not a flat wall. Slightly hazed toward
+## the top to sit into the warm sky horizon (atmospheric recession). Baked once at boot into an
+## ImageTexture (no shader, headless-safe). This is a genuine generated asset, not a solid fill.
+func _hedge_texture() -> ImageTexture:
+	var w := 192
+	var h := 96
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var body := FastNoiseLite.new()
+	body.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	body.frequency = 0.05                 # soft clumps of light/dark foliage
+	var top := FastNoiseLite.new()
+	top.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	top.frequency = 0.09                  # gentle undulation of the hedge crown
+	var dark := Color(0.09, 0.24, 0.11)   # shadowed foliage
+	var light := Color(0.22, 0.43, 0.19)  # sunlit foliage
+	var haze := Color(0.85, 0.80, 0.66)   # warm horizon haze the crown fades toward
+	var feather := 4.0                    # rows of soft alpha at the crown so it doesn't alias
+	for x in w:
+		# Per-column crown height: y=0 is the image TOP; a lower top_row = a taller bush here.
+		var bump := top.get_noise_1d(float(x)) * 0.5 + 0.5           # 0..1
+		var top_row: float = lerpf(0.12, 0.5, bump) * float(h)
+		for y in h:
+			var vy := float(y)
+			var a := clampf((vy - top_row + feather) / feather, 0.0, 1.0)
+			var n := body.get_noise_2d(float(x), vy) * 0.5 + 0.5     # 0..1
+			var g := dark.lerp(light, n)
+			# Haze the upper crown toward the warm sky so the hedge recedes into the horizon.
+			var depth := clampf(1.0 - vy / float(h), 0.0, 1.0)       # 1 at the crown, 0 at the base
+			g = g.lerp(haze, depth * 0.22)
+			img.set_pixel(x, y, Color(g.r, g.g, g.b, a))
+	return ImageTexture.create_from_image(img)
 
 ## Explicit sun disc in the sky (047/P2-10): a SphereMesh placed in the visible sky band,
 ## positioned 1.2 m above and 5 m in front of the dog (-Z direction = away from camera),
@@ -810,7 +906,10 @@ func _setup_contact_shadow(dog: Node) -> void:
 	var blob := MeshInstance3D.new()
 	blob.name = "ContactShadow"
 	var disc := PlaneMesh.new()  # lies flat in the XZ plane (normal +Y), centred — a ground decal
-	var diameter := ContactShadow.radius(box) * 2.0
+	# 078/Note-6: a touch wider than the bare footprint disc so the darker core lands fully under
+	# the paws and the dog reads planted, not floating (the PO's "appears to float"). Position math
+	# (foot plane / centre — the tested contract) is untouched; only the visual disc grows.
+	var diameter := ContactShadow.radius(box) * 2.0 * 1.12
 	disc.size = Vector2(diameter, diameter)
 	blob.mesh = disc
 	blob.material_override = _contact_shadow_material()
@@ -832,9 +931,15 @@ func _setup_contact_shadow(dog: Node) -> void:
 ## hard coaster. The falloff is a procedural radial GradientTexture2D (no shader to compile
 ## — headless-safe) on an unshaded, double-sided, alpha-blended StandardMaterial3D.
 func _contact_shadow_material() -> StandardMaterial3D:
+	# 078/Note-6: a darker, more SOLID core (a mid stop holds the shadow together before it falls
+	# off) so the dog reads planted at phone size instead of floating — the PO's grounding note.
 	var grad := Gradient.new()
-	grad.set_color(0, Color(0.0, 0.0, 0.0, 0.45))  # centre: soft dark, under the budget
-	grad.set_color(1, Color(0.0, 0.0, 0.0, 0.0))   # rim: fully transparent
+	grad.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	grad.colors = PackedColorArray([
+		Color(0.0, 0.0, 0.0, 0.58),   # centre: a firm dark core under the paws
+		Color(0.0, 0.0, 0.0, 0.30),   # mid: soft falloff
+		Color(0.0, 0.0, 0.0, 0.0),    # rim: fully transparent
+	])
 	var tex := GradientTexture2D.new()
 	tex.gradient = grad
 	tex.fill = GradientTexture2D.FILL_RADIAL
