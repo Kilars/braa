@@ -1606,7 +1606,7 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 			_learned_bar.pulse_setback()
 	if _progress.just_mastered(delta):
 		_play_mastery_beat()
-		_purse.earn(COIN_REWARD_MASTERY)  # mastering a trick pays out toward adopting a breed (068/P3-D3)
+		_purse.earn(_difficulty.mastery_reward(COIN_REWARD_MASTERY))  # difficulty scales the payout (082, P4-3); Normal = identity
 		_refresh_coins()
 		_open_trick_menu()  # the active trick is learned — pop the completion menu, pause offers (072/PO note 1)
 	elif not SitWindow.is_successful(tier):

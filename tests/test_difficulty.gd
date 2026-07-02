@@ -199,3 +199,56 @@ func test_scale_tell_intensity_respects_x5_floor_on_reduced_motion() -> void:
 	var scaled: float = e.scale_tell_intensity(0.5)
 	assert_true(scaled > 0.0,
 		"Expert.scale_tell_intensity(0.5) > 0 — reduced motion still shows information (X-5)")
+
+# ---- Reward accessor (082, P4-3 "pain pays"): pure arithmetic, Normal = identity ----
+
+func test_mastery_reward_normal_is_identity() -> void:
+	# Normal mode's mastery_reward() is the identity — returns the base exactly, no payout scaling.
+	# This is the dormancy guarantee: with default Normal, the economy is unregressed and byte-identical.
+	var n := Difficulty.normal()
+	assert_eq(n.mastery_reward(10), 10, "Normal.mastery_reward(10) == 10 exactly (identity, no scaling)")
+	assert_eq(n.mastery_reward(5), 5, "Normal.mastery_reward(5) == 5 exactly (identity)")
+	assert_eq(n.mastery_reward(42), 42, "Normal.mastery_reward(42) == 42 exactly (identity)")
+
+func test_mastery_reward_hard_scales_up() -> void:
+	# Hard mode's mastery_reward() multiplies by hard's reward_scale (> 1.0 — "pain pays").
+	# reward_scale 1.4 × 10 = 14 exactly.
+	var h := Difficulty.hard()
+	var result: int = h.mastery_reward(10)
+	assert_eq(result, 14, "Hard.mastery_reward(10) == 14 (1.4 × 10, rounded to whole coin)")
+	assert_true(result > 10, "Hard.mastery_reward(10) > 10 (more than Normal's payout)")
+	assert_eq(typeof(result), TYPE_INT, "mastery_reward returns a whole integer (TYPE_INT)")
+
+func test_mastery_reward_expert_scales_higher() -> void:
+	# Expert mode's mastery_reward() scales more than Hard — expert.reward_scale > hard.reward_scale.
+	# reward_scale 2.0 × 10 = 20 exactly.
+	var e := Difficulty.expert()
+	var result: int = e.mastery_reward(10)
+	assert_eq(result, 20, "Expert.mastery_reward(10) == 20 (2.0 × 10, rounded to whole coin)")
+	assert_true(result > 10, "Expert.mastery_reward(10) > 10 (more than Normal's payout)")
+	assert_eq(typeof(result), TYPE_INT, "mastery_reward returns a whole integer")
+
+func test_mastery_reward_expert_strictly_higher_than_hard() -> void:
+	# Expert mode's payout is strictly higher than Hard's, maintaining the monotonic stack.
+	var h := Difficulty.hard()
+	var e := Difficulty.expert()
+	var hard_payout: int = h.mastery_reward(10)
+	var expert_payout: int = e.mastery_reward(10)
+	assert_true(expert_payout > hard_payout,
+		"Expert.mastery_reward(10) > Hard.mastery_reward(10) — higher risk pays strictly more")
+	assert_eq(expert_payout, 20, "Expert payout is 20")
+	assert_eq(hard_payout, 14, "Hard payout is 14")
+
+func test_mastery_reward_rounds_to_whole_coin() -> void:
+	# mastery_reward() rounds to a whole integer. With an odd-result scale, it rounds correctly.
+	# Normal × 10 = 10; Hard 1.4 × 10 = 14; Expert 2.0 × 10 = 20 (all whole already).
+	# Test that the rounding is applied: if reward_scale × base gives a fractional result, it rounds.
+	var h := Difficulty.hard()
+	# Hard 1.4 × 7 = 9.8, should round to 10.
+	var result: int = h.mastery_reward(7)
+	assert_eq(typeof(result), TYPE_INT, "mastery_reward always returns TYPE_INT")
+	assert_true(result >= 9 and result <= 10, "Hard.mastery_reward(7) rounds 9.8 to a whole coin (9 or 10)")
+
+	# Expert 2.0 × 10 = 20 (exact).
+	var e := Difficulty.expert()
+	assert_eq(e.mastery_reward(10), 20, "Expert.mastery_reward(10) == 20 (exact, no rounding needed)")

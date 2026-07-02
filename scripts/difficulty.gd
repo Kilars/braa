@@ -97,3 +97,9 @@ func scale_erosion(base: float) -> float:
 ## free from the tightened window (ok_radius already scaled) — no independent speed lever.
 func scale_tell_intensity(motion: float) -> float:
 	return clampf(motion * tell_intensity_scale, TELL_FLOOR, 1.0)
+
+## Mastery coin payout for this difficulty mode (P4-3, 082): base × reward_scale, rounded to a whole coin.
+## Normal is identity (× 1.0) — the dormancy guarantee, byte-identical default economy.
+## Hard/Expert pay strictly more ("pain pays").
+func mastery_reward(base: int) -> int:
+	return int(round(base * reward_scale))
