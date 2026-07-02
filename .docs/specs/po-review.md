@@ -56,6 +56,71 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
+### PO Review — 2026-07-01
+
+Played the current HEAD (`ae6b0d9`, the 068 coin economy) on the local licensed bundle
+(`build/web`, rebuilt 21:45 by a green verify) served over http in headless Chromium
+(SwiftShader == the deployed GL Compatibility renderer) at **390×844**. Zero console errors
+across a `?bra_autotap=1` mastery run **and** a reload run (boot log: licensed Labrador loads,
+"can Sitt"). I verified the **one owner-decided Phase-3 slice that's live** — the P3-D3 coin
+economy core — **in my own pixels:** the top-right readout boots at **0**, driving marks to
+master a trick pays out (readout ticks **0 → 10**), and the balance **survives a same-origin
+reload** (still **10** after re-boot) — earn + persist both hold, offline (X-7). Phase 1/2 are
+intact on the same build (garden fills the phone, dog loads with no primitive flash, three-chip
+selector present, Sitt/Ligg/Legg-deg loop marks cleanly).
+
+**But Phase 3's headline — pick, collect, and train *different breeds* — is not in the running
+game at all** (one breed, the Labrador; no breed choice, no roster, nowhere to spend a coin),
+and the single live Phase-3 surface (the coin readout) has two rough edges. **Not signing off.**
+
+**Bugfixes**
+
+1. **The coin icon renders as a broken-glyph "tofu" box.** The readout draws the number
+   followed by the 🪙 emoji (U+1FA99), but the label's font has no glyph for it, so it comes out
+   as a hollow patterned box beside the digit — visible at both `0` and `10`
+   (`/tmp/po-p3/00-boot-coin.png`, `t24-coin.png`). *Why it's wrong:* a missing-glyph box reads
+   as a bug / half-built asset the moment the player looks top-right — it fails the "reads first,
+   looks the part / quality gates hold" bar (X-4, X-6). *Good:* show the coin with something that
+   actually renders at phone size — a small drawn/vector gold coin, or drop the emoji for a plain
+   gold disc or a `coins` word — never a tofu box.
+
+2. **The coin readout overlaps the right-most selector chip.** With the full three-chip roster
+   (Sitt · Ligg · **Legg deg**), the selector row reaches into the top-right corner where the
+   readout is anchored, so `0` / `10` is drawn *on top of* the "Legg deg" chip
+   (`/tmp/po-p3/00-boot.png`, `t24.png`). *Why it's wrong:* it degrades the legibility of the
+   **P2-1 trick selector that is already signed off** — the chip label and the coin count collide.
+   *Good:* the coin readout sits clearly clear of the chip row at any roster size (its own line
+   below the chips, or the chip row reserves a right-margin), with no overlap.
+
+**Improvements**
+
+3. **The coins are a context-free number — the collection goal isn't legible.** The player
+   masters tricks and watches a bare count climb, but nothing on screen says these are coins
+   *earned toward adopting a new dog*, and there is nowhere to spend them. *Why it falls short:*
+   P3-D3 asks that "the collection axis is visible"; right now the earn side works but its purpose
+   is invisible. *Good (buildable now, before any breed model):* give the readout a minimal label
+   / affordance conveying purpose (e.g. a "coins" caption or a small toward-a-dog hint). The
+   **full adopt UI** (coin price + locked state + breed thumbnail) genuinely needs the owner-gated
+   extra breed models — keep it flagged, do **not** fake a breed to fill the panel.
+
+4. **Training has no breed-personality dimension yet (P3-3).** I ran many mark cycles and every
+   session trains identically — learn speed, distractibility, window stability and energy are the
+   same fixed feel regardless of "which dog." *Why it falls short:* P3-3 requires personality to
+   drive the difficulty levers so breeds are "deep kits, not skins." *Good (buildable now per
+   BUST-068, no owner needed):* a `BreedPersonality` data model wired to the existing
+   `SitWindow` / cadence / learn-speed levers, keyed to the **Labrador as breed #1**, so even the
+   single starter breed has a defined temperament and the levers are proven before more breeds land.
+
+**Changes**
+
+5. **There is no collection / roster surface (P3-4).** Coins accrue with nothing to collect and
+   no persisted list of owned dogs — the "roster I'm proud of / bright-spotlit select screen"
+   does not exist. *Good (buildable spine now):* persist an owned-dogs roster (starting with the
+   Labrador) alongside the coins in the same save, so the collection is a real persisted list the
+   adopt / select UI can later render; the **spotlit select-screen visuals and any additional
+   breeds stay owner-gated** (P3-1 / P3-2 appearance + P3-D1 / D2 / D4 decisions) and remain
+   flags, not buildable this pass.
+
 ---
 
 ## Forward PO Directives (captured 2026-06-29)
