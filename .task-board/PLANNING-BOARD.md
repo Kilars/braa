@@ -22,9 +22,11 @@ one active trick + completion menu (note 1). DONE 2026-07-02.** Notes 1/2/3 all 
   tap lands PERFECT, early edge unchanged (TDD, 3 new tests RED→GREEN). BRA button is now a rounded
   pill so the shrinking trainer ring reads as a *tap* target, not a swipe (Visual Review PASS,
   `.screenshots/058-trainer-ring.png`). Verify green.
-- **074 — BUST — Chocolate Labrador as a recolor (note 4).** Flag-bust: does a 2nd, breed-distinct
-  Labrador build **without the owner** by tinting the coat material? Research only → routes to a
-  build task or narrows the breed flag.
+- **074 — BUST — Chocolate Labrador as a recolor (note 4). DONE 2026-07-02 — BUILDABLE.** The
+  licensed Lab is a single coat material with a white `baseColorFactor` (colour is all in the baked
+  atlas), so a runtime `albedo_color ≈ #AA7D51` multiply reads as a convincing chocolate at phone
+  scale — a real 2nd breed, **no owner model.** Routed → **build task 076**; breed flag narrowed
+  (`busted BUST-074`). Only a cosmetic mouth-interior re-paint stays owner-gated (non-blocking).
 - **075 — FEATURE — `BreedPersonality` drives the difficulty levers (Improvement-4 / P3-3).** A pure
   temperament data model (learn speed / distractibility / window stability / energy) wired to the
   existing `TrickProgress` / `SitLoop` / `SitWindow`, keyed to the Labrador as breed #1. TDD, additive.
