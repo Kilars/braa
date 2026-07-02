@@ -100,7 +100,7 @@ func test_a_feint_opens_no_markable_window() -> void:
 	# keeps the session closed and a tap during it is a wrong-moment DEAD (P2-8 / P2-4).
 	var loop := _loop()
 	var feinted := false
-	for cycle in 50:
+	for cycle in 150:  # feints are now ~1 in 10 (070), so search a wider span for the seed's first one
 		var opened := _open_next_offer(loop)
 		if opened == SitLoop.Intent.START_FEINT:
 			feinted = true
@@ -114,7 +114,7 @@ func test_a_feint_opens_no_markable_window() -> void:
 func test_a_feint_ends_and_the_loop_resumes() -> void:
 	# After FEINT_HOLD the feint emits END_FEINT, returns to IDLE, and the next cycle proceeds.
 	var loop := _loop()
-	for cycle in 50:
+	for cycle in 150:  # feints are now ~1 in 10 (070), so search a wider span for the seed's first one
 		var opened := _open_next_offer(loop)
 		if opened == SitLoop.Intent.START_FEINT:
 			var ended := false
@@ -129,7 +129,24 @@ func test_a_feint_ends_and_the_loop_resumes() -> void:
 				"the loop comes round to the next offer after a feint — it does not stall")
 			return
 		_complete_open_offer(loop)
-	assert_true(false, "expected a feint within 50 cycles (FEINT_CHANCE ~0.35)")
+	assert_true(false, "expected a feint within 150 cycles (FEINT_CHANCE ~0.10)")
+
+func test_feint_rate_is_about_one_in_ten() -> void:
+	# 070 / PO note 2 "the dog is TOO distracted": over many completed offers on a seeded loop,
+	# only ~FEINT_CHANCE of them are feints — the owner's "~90% real completed tricks, ~10%
+	# feints". Wide tolerance so this pins the RATE BAND, not one seed's exact count. RED at the
+	# old 0.35 (observed ~a third) → GREEN once FEINT_CHANCE drops to ~0.10.
+	var loop := _loop(424242)
+	var feints := 0
+	var total := 0
+	while total < 400:
+		if _open_next_offer(loop) == SitLoop.Intent.START_FEINT:
+			feints += 1
+		_complete_open_offer(loop)  # stand back up either way, come round to the next offer
+		total += 1
+	var rate := float(feints) / float(total)
+	assert_true(rate > 0.03 and rate < 0.20,
+		"feint rate ~10%% so the dog isn't too distracted (PO note 2), got %.2f" % rate)
 
 func test_real_sits_still_happen() -> void:
 	# Feints don't replace all sits — FEINT_CHANCE < 1, so real markable sits still come round.

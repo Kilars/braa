@@ -28,7 +28,7 @@ enum Intent { NONE, START_SIT, END_SIT, START_FEINT, END_FEINT }
 const MIN_INTER_SIT_GAP := 0.8   ## shortest idle beat before the next offer
 const MAX_INTER_SIT_GAP := 2.0   ## longest — the spread is what kills the metronome
 const DEFAULT_SIT_HOLD := 0.5    ## seconds to hold the seated pose past the window close
-const FEINT_CHANCE := 0.35       ## fraction of offers that abort (a feint) instead of completing
+const FEINT_CHANCE := 0.10       ## ~1 in 10 offers feints; the rest complete the trick (PO note 2 — the dog isn't too distracted)
 const FEINT_HOLD := 0.45         ## seconds the aborted dip is held before standing back up
 
 var sit_hold: float            ## seconds the dog holds the seat past the markable window
