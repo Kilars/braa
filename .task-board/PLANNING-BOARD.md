@@ -25,9 +25,15 @@ seam activates non-Normal), independent of the owner-gated block, never advancin
   (`TrickStore.encode/decode_difficulty/load_difficulty`, legacy/corrupt/unknown → "normal"), boot resolves
   `_difficulty` from the persisted setting or the `?bra_difficulty=` dormant seam (no default-HUD selector).
   Verify green (369/0), placeholder-clean, default boot byte-identical to HEAD. No lever wired yet (081).
-- **081 — FEATURE (work-ahead) — higher difficulty changes the read, stacked on the breed (P4-2 + P4-4).**
-  `effective = breed_intrinsic × global_mode` on window radii / tell / feints / erosion (X-5 respected). Builds
-  on 080.
+- **081 — FEATURE (work-ahead) — higher difficulty changes the read, stacked on the breed (P4-2 + P4-4).
+  DONE 2026-07-02.** Composition lives as pure resolved accessors on `Difficulty` (`scale_radius/scale_feint/
+  scale_erosion/scale_tell_intensity`, Normal = identity); `main` composes `effective = breed × difficulty` at
+  the four sites — window radii (528), tell intensity (531, `ramp=ok_radius` so the tighter window makes the
+  tell narrower/"faster" for free — one source of truth), feints (1111 + 1462 breed-switch), and erosion (new
+  per-instance `TrickProgress._erosion_scale`/`set_erosion_scale`, mastery floor still protects). **Removed the
+  redundant `tell_speed_scale`** (would break ApexTell's tell-tracks-window invariant → dead seam). X-5 floor
+  `TELL_FLOOR=0.15` keeps the tell non-zero. Verify green (393/0, +43), placeholder-clean, default-Normal boot
+  byte-identical (dormancy regression tests green).
 - **082 — FEATURE (work-ahead) — pain pays: difficulty scales the mastery reward (P4-3).** `× reward_scale`
   at the earn site; Normal pays today's coins exactly. Builds on 080.
 

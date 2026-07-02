@@ -38,6 +38,11 @@ var mastered: bool = false  ## latches true at value >= MASTERY; never un-latche
 var _perfect_gain := PERFECT_GAIN
 var _ok_gain := OK_GAIN
 
+## Per-instance erosion scale, defaulting to 1.0 (identity — exact current behavior, no regression).
+## Driven by the global Difficulty's erosion_scale (081, P4-2): harder difficulties multiply the
+## bar drain on mistimed/wrong taps. Default 1.0 means every existing test and game path is UNCHANGED.
+var _erosion_scale := 1.0
+
 func _init(p_perfect := PERFECT_GAIN, p_ok := OK_GAIN) -> void:
 	_perfect_gain = p_perfect
 	_ok_gain = p_ok
@@ -50,23 +55,43 @@ func set_gains(p_perfect: float, p_ok: float) -> void:
 	_perfect_gain = p_perfect
 	_ok_gain = p_ok
 
+## Set the per-instance erosion scale (081, P4-2/P4-4). Called by main from _difficulty.erosion_scale
+## so the global difficulty's harshness applies to this trick's bar drain. Default 1.0 = identity
+## (exact current erosion, anti-regression contract). Mirrors the set_gains() pattern.
+func set_erosion_scale(scale: float) -> void:
+	_erosion_scale = scale
+
 ## Apply a scored tap. Returns the SIGNED delta actually applied after clamping, so main can
 ## drive feedback: delta > 0 → the bar filled; delta < 0 → a setback (confused beat + the bar
 ## visibly drops); see just_mastered() for the one-shot celebratory beat.
 func apply(tier: int) -> float:
 	var before := value
+	# Compute the raw delta once so we can return the exact same bits callers (including
+	# test assertions) compute from the same expression. The old code returned (value - before)
+	# which in GDScript can differ by an ULP from the raw delta due to float rounding in the
+	# subtract-after-add path. We return `raw` directly when the clamp doesn't bite (the common
+	# play path), and `value - before` only when the floor/ceiling clamps the value (mastered
+	# re-practice returns 0.0; over-eroded bar already at floor returns 0.0).
+	var raw: float = 0.0
 	match tier:
-		SitWindow.Tier.PERFECT: value += _perfect_gain
-		SitWindow.Tier.OK:      value += _ok_gain
-		SitWindow.Tier.MISS:    value -= MISS_EROSION
-		SitWindow.Tier.DEAD:    value -= DEAD_EROSION
+		SitWindow.Tier.PERFECT: raw = _perfect_gain
+		SitWindow.Tier.OK:      raw = _ok_gain
+		SitWindow.Tier.MISS:    raw = -(MISS_EROSION * _erosion_scale)
+		SitWindow.Tier.DEAD:    raw = -(DEAD_EROSION * _erosion_scale)
+	value += raw
 	# Mastery is a safe checkpoint: once mastered, the floor rises to MASTERY so re-practice
 	# can never drop a mastered trick below 100%.
 	var low := MASTERY if mastered else FLOOR
+	var unclamped := value
 	value = clampf(value, low, MASTERY)
 	if value >= MASTERY:
 		mastered = true
-	return value - before
+	# If the clamp bit (floor/ceiling changed the value), return the actual movement.
+	# Otherwise return `raw` — the exact value computed above — so callers asserting
+	# exact equality against the same expression get matching bits.
+	if value != unclamped:
+		return value - before
+	return raw
 
 ## True only on the tap that FIRST reaches mastery (drives the one-shot celebratory beat).
 ## `applied_delta` is the value apply() returned for that same tap: a positive delta whose

@@ -525,10 +525,17 @@ func _begin_sit() -> void:
 	_director.play_trick(_current_trick)  # Sitt or Ligg — the dog performs the current trick (065)
 	# The active breed's window_stability widens/tightens the timing bands (075, P3-3): the Labrador's
 	# forgiving temperament gives a touch more grace. Radii compose with 073's late_bias in SitWindow.
-	_window = _director.trick_window(_current_trick, _breed.perfect_radius(), _breed.ok_radius())
+	# Difficulty stacks on top (081, P4-2/P4-4): effective = breed_intrinsic × difficulty.window_scale.
+	# Normal is identity — no change to default play (dormancy).
+	_window = _director.trick_window(_current_trick,
+		_difficulty.scale_radius(_breed.perfect_radius()),
+		_difficulty.scale_radius(_breed.ok_radius()))
 	_session.open(_window)
 	_engage_face_for_sit()  # turn to face the camera so the apex reads head-on (061, P2-11)
-	_tell = ApexTell.from_window(_window, _motion_scale)
+	# Tell intensity scales with difficulty (081, P4-2): harder modes fade the tell. Clamped to
+	# TELL_FLOOR so a non-zero tell never collapses to zero (ADR X-5). The tell's narrowness/speed
+	# falls out for free from the already-tightened _window.ok_radius (one source of truth).
+	_tell = ApexTell.from_window(_window, _difficulty.scale_tell_intensity(_motion_scale))
 	# Build the approach-cue ring from the SAME window (single source of truth) — its teach
 	# strength reflects the CURRENT learned level so each sit's ring fades with the bar (058).
 	_trainer = TrainerRing.from_window(_window, TrainerRing.teach_strength(_progress.value, _progress.mastered))
@@ -1080,7 +1087,11 @@ func _load_dog() -> Node:
 ## (P1-2). On a sit-capable dog (licensed Labrador) the director also owns the
 ## build→apex→hold sit (024b); on the CC0 placeholder there is no Sitt clip, so we
 ## log the gap honestly and stay in idle — never a faked sit (see task 024b).
-func _start_dog(dog: Node) -> void:
+func _start_dog(dog: Node = null) -> void:
+	if dog == null:
+		dog = _dog  # re-initialize on the already-loaded dog (test seam: wiring tests call _start_dog() with no arg)
+	if dog == null:
+		return
 	var ap := DogClips.find_animation_player(dog)
 	if ap == null:
 		push_warning("[Bra!] dog has no AnimationPlayer — cannot animate")
@@ -1108,7 +1119,9 @@ func _start_dog(dog: Node) -> void:
 	# The active breed's temperament drives the loop's cadence + distractibility (075, P3-3): the
 	# Labrador's steady focus means slightly fewer feints, its energy sets how quick the offers come.
 	# The felt experience stays inside the PO-signed Phase-2 band (small deltas — Labrador energy 1.0).
-	_loop.feint_chance = _breed.feint_chance()
+	# Difficulty stacks on top (081, P4-2/P4-4): effective = breed.feint_chance() × difficulty.feint_scale.
+	# Normal is identity — no change to default play (dormancy).
+	_loop.feint_chance = _difficulty.scale_feint(_breed.feint_chance())
 	_loop.min_gap = _breed.min_gap()
 	_loop.max_gap = _breed.max_gap()
 	if _force_scratch:
@@ -1457,9 +1470,11 @@ func _apply_active_breed() -> void:
 	if _dog != null:
 		CoatTint.apply(_dog, _breed.coat_tint())  # re-tint the coat atlas for the chosen breed (076)
 	for tid in _progress_by_trick:
-		_breed.apply_gains_to(_progress_by_trick[tid] as TrickProgress)  # learn_speed re-scales each bar's fill (075)
+		var tp := _progress_by_trick[tid] as TrickProgress
+		_breed.apply_gains_to(tp)  # learn_speed re-scales each bar's fill (075)
+		tp.set_erosion_scale(_difficulty.erosion_scale)  # difficulty erosion re-applied on breed switch (081, P4-2/P4-4)
 	if _loop != null and not _force_scratch:  # _force_scratch pins every offer to a scratch (071) — don't clobber it
-		_loop.feint_chance = _breed.feint_chance()
+		_loop.feint_chance = _difficulty.scale_feint(_breed.feint_chance())  # breed × difficulty (081, P4-2/P4-4)
 		_loop.min_gap = _breed.min_gap()
 		_loop.max_gap = _breed.max_gap()
 
@@ -1612,6 +1627,9 @@ func _load_progress() -> void:
 		# The active breed's learn_speed scales each trick's fill gains (075, P3-3): a more trainable
 		# dog fills its learned bar faster. Labrador learns a touch fast; the constants stay the baseline.
 		var p := TrickProgress.new(_breed.perfect_gain(), _breed.ok_gain())
+		# Difficulty erosion stacks on top (081, P4-2/P4-4): harsher difficulty drains the bar faster
+		# on mistimed/wrong taps. Normal erosion_scale = 1.0 (identity — no change to default play).
+		p.set_erosion_scale(_difficulty.erosion_scale)
 		var entry: Variant = saved.get(id, {})
 		if typeof(entry) == TYPE_DICTIONARY:
 			p.restore(entry)

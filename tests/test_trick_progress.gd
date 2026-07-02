@@ -141,3 +141,73 @@ func test_restore_clamps_and_defaults_garbage() -> void:
 	q.restore({})  # empty entry
 	assert_eq(q.value, 0.0, "an empty saved entry restores a clean zero")
 	assert_false(q.mastered, "an empty saved entry is not mastered")
+
+# ---- Per-instance erosion scaling (081, P4-2): erosion multiplier driven by difficulty ----
+
+func test_erosion_scale_defaults_to_one() -> void:
+	# Without calling set_erosion_scale(), erosion behaves EXACTLY as today — anti-regression.
+	var p := TrickProgress.new()
+	p.apply(SitWindow.Tier.PERFECT)  # value ~0.20
+	p.apply(SitWindow.Tier.PERFECT)  # value ~0.40
+	var before := p.value
+	var miss_delta := p.apply(SitWindow.Tier.MISS)
+	var expected_erosion := TrickProgress.MISS_EROSION  # default 0.10
+	assert_eq(miss_delta, -expected_erosion,
+		"with default erosion_scale=1.0, MISS erodes by exactly MISS_EROSION (0.10)")
+	assert_eq(p.value, before - expected_erosion, "value drops by exactly MISS_EROSION")
+
+func test_erosion_scale_multiplies_miss_erosion() -> void:
+	# After set_erosion_scale(2.0), a MISS tap erodes by 2.0 × MISS_EROSION.
+	var p := TrickProgress.new()
+	p.set_erosion_scale(2.0)
+	# Build up value first so there's plenty to lose.
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.20
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.40
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.60
+	var before := p.value
+	var miss_delta := p.apply(SitWindow.Tier.MISS)
+	var expected_erosion := 2.0 * TrickProgress.MISS_EROSION  # 2.0 * 0.10 = 0.20
+	assert_eq(miss_delta, -expected_erosion,
+		"with erosion_scale=2.0, MISS erodes by 2.0 * MISS_EROSION (0.20)")
+	assert_eq(p.value, before - expected_erosion, "value drops by scaled erosion")
+
+func test_erosion_scale_multiplies_dead_erosion() -> void:
+	# After set_erosion_scale(2.0), a DEAD tap erodes by 2.0 × DEAD_EROSION.
+	var p := TrickProgress.new()
+	p.set_erosion_scale(2.0)
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.20
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.40
+	var before := p.value
+	var dead_delta := p.apply(SitWindow.Tier.DEAD)
+	var expected_erosion := 2.0 * TrickProgress.DEAD_EROSION  # 2.0 * 0.05 = 0.10
+	assert_eq(dead_delta, -expected_erosion,
+		"with erosion_scale=2.0, DEAD erodes by 2.0 * DEAD_EROSION (0.10)")
+	assert_eq(p.value, before - expected_erosion, "value drops by scaled erosion")
+
+func test_mastery_floor_protects_against_scaled_erosion() -> void:
+	# Even with a high erosion_scale, a mastered trick (value latched at 1.0) can't be eroded below MASTERY.
+	var p := TrickProgress.new()
+	p.set_erosion_scale(5.0)  # extreme scale: 5 × MISS_EROSION = 0.50, way past MASTERY threshold
+	# Master the trick first.
+	for i in 10:
+		p.apply(SitWindow.Tier.PERFECT)
+	assert_eq(p.value, 1.0, "the trick is mastered at 1.0")
+	assert_true(p.mastered, "mastered flag is set")
+	# Try to erode with a high scale — mastery floor must hold.
+	var before := p.value
+	p.apply(SitWindow.Tier.MISS)  # would normally erode by 5.0 * 0.10 = 0.50
+	assert_eq(p.value, 1.0, "mastery floor holds: value stays at MASTERY despite scaled erosion")
+	assert_true(p.mastered, "mastered flag stays true")
+
+func test_fractional_erosion_scale() -> void:
+	# A fractional erosion_scale (< 1.0) reduces erosion (gentler on mistaps, used by easier difficulties).
+	var p := TrickProgress.new()
+	p.set_erosion_scale(0.5)
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.20
+	p.apply(SitWindow.Tier.PERFECT)  # ~0.40
+	var before := p.value
+	var miss_delta := p.apply(SitWindow.Tier.MISS)
+	var expected_erosion := 0.5 * TrickProgress.MISS_EROSION  # 0.5 * 0.10 = 0.05
+	assert_eq(miss_delta, -expected_erosion,
+		"with erosion_scale=0.5, MISS erodes by 0.5 * MISS_EROSION (0.05)")
+	assert_eq(p.value, before - expected_erosion, "value drops by scaled erosion")
