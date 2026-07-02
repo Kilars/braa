@@ -234,6 +234,7 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
+	_breed = _query_breed()          # the ACTIVE breed (076): ?bra_breed=chocolate boots the chocolate Lab; must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
@@ -319,6 +320,22 @@ func _query_trick() -> String:
 	if q.contains("bra_trick=ligg"):
 		return TRICK_ID_LIGG
 	return TRICK_ID_SITT
+
+## Breed-selection seam (076, BUST-074): read `?bra_breed=chocolate` off the live web URL to boot the dog
+## as the chocolate Labrador (breed #2 — the SAME licensed rig with a warm-brown coat tint + its own
+## temperament), so the real recolor is Visual-Reviewable before the (owner-gated) adopt/select UI exists.
+## Defaults to the yellow Labrador everywhere else (desktop / headless / normal play), so the PO-signed
+## experience is unchanged. Reads a STRING (never a bare bool) to dodge the Web-export null-Variant
+## marshalling that bit the apex tell (036); unknown values fall back to the Labrador.
+func _query_breed() -> BreedPersonality:
+	if not OS.has_feature("web"):
+		return BreedPersonality.labrador()
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) != TYPE_STRING:
+		return BreedPersonality.labrador()
+	if (search as String).to_lower().contains("bra_breed=chocolate"):
+		return BreedPersonality.chocolate_labrador()
+	return BreedPersonality.labrador()
 
 ## Visual-review seam (046/P2-7): true only when the live web URL carries `?bra_force_lock=1`.
 ## Pins the BRA button locked so the anti-mash dim renders for one deterministic screenshot (the
@@ -881,7 +898,8 @@ func _load_dog() -> Node:
 	dog.name = "Dog"
 	add_child(dog)
 	var flattened := CoatOpaque.flatten(dog)  # kill the translucent fur-mask panels (032/P1-1/P1-9)
-	print("[Bra!] dog loaded: %s (%d coat surface(s) forced opaque)" % [path, flattened])
+	var tinted := CoatTint.apply(dog, _breed.coat_tint())  # per-breed coat recolor (076, BUST-074) — chocolate Lab = tint over the atlas; yellow Lab = identity
+	print("[Bra!] dog loaded: %s (%d coat surface(s) forced opaque, %d tinted for breed '%s')" % [path, flattened, tinted, _breed.id])
 	return dog
 
 ## Bring the dog to life: loop its ambient idle so it isn't a frozen rest pose

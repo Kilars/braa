@@ -80,18 +80,43 @@ chocolate Labrador is `~#AA7D51`.
 
 ## Acceptance criteria
 
-- [ ] TDD (logic): `BreedPersonality.chocolate_labrador()` (distinct `coat_tint` + temperament +
+- [x] TDD (logic): `BreedPersonality.chocolate_labrador()` (distinct `coat_tint` + temperament +
       roster entry) and `CoatTint.apply` (sets `albedo_color` on the coat override) — tests first,
       RED→GREEN. `labrador().coat_tint()` is identity `Color(1,1,1)` (yellow lab unchanged).
-- [ ] `CoatTint` tints ONLY the coat surface(s) CoatOpaque targets (eyes/nose/other untouched); runs
+- [x] `CoatTint` tints ONLY the coat surface(s) CoatOpaque targets (eyes/nose/other untouched); runs
       after `CoatOpaque.flatten()` on the cloned override (never mutates a shared resource).
-- [ ] Chocolate Labrador reachable as breed #2 via a debug seam (e.g. `?bra_breed=chocolate`); the
+- [x] Chocolate Labrador reachable as breed #2 via a debug seam (`?bra_breed=chocolate`); the
       yellow Labrador stays the default (no regression to the PO-signed experience).
-- [ ] **Visual Review (blocking, phone-portrait, REAL render):** the chocolate coat honestly reads as
-      a Chocolate Labrador (warm dark brown body, dark nose, fur detail intact) — NOT a mud-washed
-      yellow lab. Capture the chocolate dog at 390×844; orchestrator confirms by eye. If it can't be
-      made convincing by tuning the tint, re-flag as owner-gated (re-painted atlas) rather than ship a stub.
-- [ ] Placeholder check clean; `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] **Visual Review (blocking, phone-portrait, REAL render):** PASS — captured the chocolate dog at
+      390×844 on the local licensed bundle (`?bra_breed=chocolate`) and confirmed by eye: warm dark
+      chocolate-brown body, dark nose, fur detail intact, unmistakably distinct from the cream yellow
+      reference — NOT a mud-washed yellow lab.
+- [x] Placeholder check clean; `nix develop -c bash verify.sh` green (import·boot·test·export).
+
+## Completion notes (2026-07-02)
+
+**What shipped:**
+- `BreedPersonality.chocolate_labrador()` — breed #2 on the SAME licensed rig: temperament distinct on
+  every axis from the yellow Lab (learn 1.1 / distract 1.1 / window 1.0 / energy 1.1 — a warmer, busier
+  retriever, still very trainable) + `coat_tint()`. Added a `_coat_tint` field (optional trailing
+  `_init` param, default `Color(1,1,1)`) with a `coat_tint()` accessor; `labrador()`/neutral are identity.
+- `scripts/coat_tint.gd` (`CoatTint.apply`) — walks the dog subtree, and on each albedo-TEXTURED coat
+  surface (the exact surface `CoatOpaque` targets) duplicates the material, multiplies `albedo_color` by
+  the breed tint (keeping the atlas texture so fur/nose detail survive), assigns it back as an override.
+  Never mutates a shared resource; textureless eye/glass fades left alone. Runs right after
+  `CoatOpaque.flatten()` in `_load_dog`.
+- `main.gd` — `_query_breed()` reads `?bra_breed=chocolate` (STRING sentinel, dodges the web null-Variant
+  gotcha); `_breed = _query_breed()` set at top of `_ready()` (before `_load_dog`/`_start_dog`); boot log
+  now reports `N tinted for breed '<id>'`.
+
+**Tuning (Visual Review):** the bust's computed `~#AA7D51` rendered a light, reddish milk-chocolate under
+the bright scene sun. Darkened to `Color(0.50, 0.37, 0.26)` (`~#805E42`) so it reads as a deep coffee-brown
+Chocolate Lab. Evidence: `.screenshots/076-chocolate2-*.png` (chocolate) vs `076-yellow-*.png` (reference).
+
+**Residuals (unchanged, not blockers):** the multi-breed adopt/select UI stays owner-gated (P3-D1/D2/D4 +
+appearance polish); the mouth-interior tint (~0.84% of the atlas) is the accepted cosmetic residual
+(re-painted atlas is owner-gated). Yellow Lab remains the default — PO-signed experience unregressed.
+Tests +8 (5 new in `test_coat_tint.gd`, 3 new in `test_breed_personality.gd`). Verify gate green.
 
 ## Notes
 

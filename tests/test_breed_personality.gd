@@ -44,3 +44,27 @@ func test_more_energy_shortens_offer_gap() -> void:
 	assert_true(lab.min_gap() < SitLoop.MIN_INTER_SIT_GAP, "more energy → shorter min gap")
 	assert_true(lab.max_gap() < SitLoop.MAX_INTER_SIT_GAP, "more energy → quicker offers")
 	assert_true(lab.max_gap() == SitLoop.MAX_INTER_SIT_GAP / 2.0, "max_gap is divided by energy multiplier")
+
+func test_labrador_coat_tint_is_identity() -> void:
+	# The yellow Labrador (breed #1) is the baked atlas's own colour — an identity tint, unchanged.
+	assert_eq(BreedPersonality.labrador().coat_tint(), Color(1, 1, 1),
+		"the yellow Labrador coat is the baked atlas colour (identity tint = no recolor)")
+
+func test_neutral_personality_coat_tint_is_identity() -> void:
+	# The default (no tint arg) is identity too — a breed is a temperament first; recolor is opt-in.
+	assert_eq(BreedPersonality.new("x", "X").coat_tint(), Color(1, 1, 1),
+		"a breed with no explicit tint leaves the atlas colour alone")
+
+func test_chocolate_labrador_is_a_distinct_breed() -> void:
+	# Breed #2 (BUST-074): the SAME licensed rig with a warm dark-brown coat tint + its own temperament —
+	# a genuine second breed with no new owner model.
+	var choc := BreedPersonality.chocolate_labrador()
+	var lab := BreedPersonality.labrador()
+	assert_eq(choc.coat_tint(), Color(0.50, 0.37, 0.26),
+		"the chocolate Lab tints the coat atlas into a deep coffee-brown chocolate range (~#805E42, tuned vs the real render)")
+	assert_true(choc.id != lab.id, "a distinct roster entry (distinct id)")
+	# A distinct temperament, not just a recolor — the liveliness axes differ from the yellow Lab.
+	assert_true(choc.distractibility != lab.distractibility or choc.energy != lab.energy,
+		"the chocolate Lab has its own temperament (distractibility/energy differ from the Labrador)")
+	assert_true(choc.perfect_gain() > TrickProgress.PERFECT_GAIN,
+		"still very trainable (a retriever base — learns faster than the neutral baseline)")

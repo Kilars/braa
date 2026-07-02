@@ -21,21 +21,36 @@ var learn_speed: float       ## × TrickProgress gains  (>1 learns faster)
 var distractibility: float   ## × SitLoop.feint_chance (>1 feints more)
 var window_stability: float  ## × SitWindow radii      (>1 = more forgiving timing)
 var energy: float            ## × inverse of inter-sit gap (>1 = quicker offers)
+var _coat_tint: Color        ## multiplied over the coat albedo atlas (076) — see coat_tint()
 
 func _init(p_id: String, p_name: String, p_learn := 1.0, p_distract := 1.0,
-		p_window := 1.0, p_energy := 1.0) -> void:
+		p_window := 1.0, p_energy := 1.0, p_tint := Color(1, 1, 1)) -> void:
 	id = p_id
 	display_name = p_name
 	learn_speed = p_learn
 	distractibility = p_distract
 	window_stability = p_window
 	energy = p_energy
+	_coat_tint = p_tint
 
 ## The Labrador — breed #1. A famously trainable, eager, food-motivated retriever: learns a touch
 ## fast, steady focus (few feints), forgiving timing, medium-high energy. Small deliberate deltas so
 ## the felt experience stays inside the PO-signed Phase-2 band (additive, not a shake-up).
 static func labrador() -> BreedPersonality:
 	return BreedPersonality.new("labrador", "Labrador", 1.15, 0.9, 1.1, 1.0)
+
+## The Chocolate Labrador — breed #2 (076, BUST-074). The SAME licensed rig, recolored at runtime by
+## multiplying its one coat atlas by coat_tint() (≈#AA7D51) — a genuine second breed with NO new owner
+## model. Temperament-wise a warmer, busier retriever than the yellow Lab: the field-bred chocolate line
+## reads as a touch more distractible and higher-energy, still eminently trainable (learn_speed just under
+## the yellow Lab's) with slightly less forgiving timing. Distinct on every axis so it FEELS like its own
+## dog, not a palette swap.
+static func chocolate_labrador() -> BreedPersonality:
+	# Coat tint tuned against the REAL render (076 Visual Review): the bust's computed ~#AA7D51 came out
+	# a light, reddish milk-chocolate under the bright scene sun — darkened toward a deeper coffee brown
+	# (~#805E42) so it reads unmistakably as a Chocolate Lab, not a fox-red / muddy-yellow lab.
+	return BreedPersonality.new("chocolate_labrador", "Chocolate Labrador",
+		1.1, 1.1, 1.0, 1.1, Color(0.50, 0.37, 0.26))
 
 ## Resolved levers (callers use these, not the raw multipliers) — each composes a trait with the
 ## canonical constant that owns the tuning, so the multiplier meaning stays in one place.
@@ -46,3 +61,9 @@ func perfect_radius() -> float: return SitWindow.DEFAULT_PERFECT_RADIUS * window
 func ok_radius() -> float:      return SitWindow.DEFAULT_OK_RADIUS * window_stability
 func min_gap() -> float: return SitLoop.MIN_INTER_SIT_GAP / energy
 func max_gap() -> float: return SitLoop.MAX_INTER_SIT_GAP / energy
+
+## The breed's coat colour, multiplied over the baked albedo atlas by CoatTint (076). The yellow
+## Labrador is the identity Color(1,1,1) — its atlas IS the coat colour, so it's left untouched; the
+## chocolate Labrador multiplies the atlas into the warm-brown chocolate range. A paint job layered on
+## top of a real temperament, not a substitute for one.
+func coat_tint() -> Color: return _coat_tint
