@@ -1,49 +1,63 @@
 **PO Review**
 
-### PO Review — 2026-07-02
+### PO Review — 2026-07-02 (build HEAD `0506503` — chocolate-Lab + BreedPersonality drop)
 
-Played the current build (HEAD `29d0580`) on the local licensed bundle at 390×844 phone-portrait
-(headless Chromium / SwiftShader = the deployed GL Compatibility renderer). Boot log confirms the
-licensed Labrador + "can Sitt" + feinting; **zero** SCRIPT ERROR / pageerror across boot + play.
+Played the local licensed bundle (`build/web`, rebuilt 14:38) at 390×844 phone-portrait in headless
+Chromium / SwiftShader (== the deployed GL Compatibility renderer). Boot log confirms the licensed
+Labrador + "can Sitt"; the `?bra_breed=chocolate` boot logs the tinted `chocolate_labrador` coat.
+**Zero** SCRIPT ERROR / pageerror across default, autotap, completion-menu and chocolate boots.
+Evidence frames under `.screenshots/po-p3/`.
 
-**Confirmed fixed / working this pass:**
-- **Coin readout (069) — the "coins" caption ships and reads cleanly.** A drawn gold coin + count +
-  a "coins" caption sit on their own top line, clear of the chip row; no tofu-box glyph. This meets
-  the *minimal* "make the collection axis legible" ask, so **Improvement-3 is pruned** — only the
-  spend-side adopt UI stays owner-gated (a flag, not a directive; don't fake a breed to fill it).
-- **Trick selector (066)** switches the active trick on tap (Sitt→Ligg→Legg deg→Sitt, verified by
-  canvas taps + `__bra_current_trick`).
-- **P2-11 holds into Phase 3** — for a real trick the dog turns to face the camera POV and performs
-  it head-on and centred (free-05/08 approach with the trainer ring; free-03/07/10 sit facing forward).
+**Confirmed fixed / working — pruned from the directive list:**
+- **Completion menu (note 1 / 072) works.** Mastering Sitt pops a centred "Tricks" modal — Sitt
+  *Learned*, Ligg / Legg deg *Available*, Gi labb / Rull / Snurr *Locked*, a coin count, and a
+  "Keep training" button; the always-on chip row is gone. (`C-menu.png`)
+- **Framing / facing (note 3) holds in steady state** — between offers the dog stands centred and
+  faces the player, no long rear-on stretch. (`A-idle-00/04/08`)
+- **BreedPersonality spine (Improvement-4 / P3-3, 075) is built** — a `BreedPersonality` drives the
+  four levers, keyed to the Labrador as breed #1, with a distinct chocolate temperament. Not
+  observably broken in play, so pruned as a directive; its per-breed *feel* only becomes reviewable
+  once two breeds are trainable side by side (see the Change below).
+- **Chocolate Labrador (note 4 / 076) renders** as a distinctly darker-brown coat on the same rig —
+  an honest 2nd breed (a Lab coat-colour variant, not a faked breed). (`D-choc-00/02`)
 
-**Sharpening for the owner's Actionable notes below (what "good" looks like, buildable now):**
-- *Note 2 (too distracted):* I watched roughly a third of offers abort as feints — real markable
-  moments feel scarce. Good = ~**90%** real completed tricks, ~**10%** feints/distraction.
-- *Note 3 (off-centre / looking away):* between offers the dog stands **rear-on**, tail to the
-  player (`free-00`). Good = keep it framed and generally facing the player between offers (alive,
-  not a statue, but never a long rear-on stretch); add a **scratch** as one of the feints — it's funny.
-- *Notes 1 & 4 and Improvement-4 / Change-5 below stand as written — all still unbuilt this pass:
-  no completion popup, no `BreedPersonality`, no persisted roster in the running build.*
+**Bugfixes**
+
+1. **(Note 7) The post-BRA reaction is chaotic and unnatural — it breaks the core payoff.** On a
+   PERFECT mark the seated, forward-facing dog **spins its rear to the camera with its tail straight
+   up**, then **snaps through a full side profile and back to facing** in ~4 frames (~0.3 s).
+   *Evidence:* `B-react-016` (seated, facing) → `018` (rear-to-camera, tail vertical — the PERFECT
+   reaction frame) → `020` (side crouch) → `021` (full left profile, standing) → `022` (facing
+   again). *Why it's wrong:* NS-1 / X-3 promise the payoff *lands on the beat* — this is the
+   most-repeated moment in the game and right now it reads as a glitchy butt-spin + pose flick, not a
+   celebration; the turn-to-face also flicks/jitters. *Good:* one coherent, readable celebration that
+   **stays facing the player** (a happy wiggle / tail-wag / small bounce), smoothly blended out of the
+   sit and eased back to idle — no 180° rear-spin, no sub-150 ms pose snaps.
 
 **Improvements**
 
-4. **Training has no breed-personality dimension yet (P3-3).** I ran many mark cycles and every
-   session trains identically — learn speed, distractibility, window stability and energy are the
-   same fixed feel regardless of "which dog." *Why it falls short:* P3-3 requires personality to
-   drive the difficulty levers so breeds are "deep kits, not skins." *Good (buildable now per
-   BUST-068, no owner needed):* a `BreedPersonality` data model wired to the existing
-   `SitWindow` / cadence / learn-speed levers, keyed to the **Labrador as breed #1**, so even the
-   single starter breed has a defined temperament and the levers are proven before more breeds land.
+2. **(Note 6) The garden is a flat green void and does not cohere with the dog (X-4).** The ground is
+   a single mottled-green plane meeting a gradient sky at a hard horizon, with a sun blob and no props
+   or depth; the photoreal dog appears to float on it. *Evidence:* `A-idle-00`, `B-react-010`. *Why it
+   falls short:* X-4 requires stylized-realism throughout — the dog reads *and its world must read*.
+   *Good (buildable now):* give the ground real stylized-grass shading/texture and some depth (a graded
+   horizon, a fence line or bushes), and ground the dog with a contact shadow, so dog and garden read
+   as one stylized-real scene rather than a cutout on a fill.
 
 **Changes**
 
-5. **There is no collection / roster surface (P3-4).** Coins accrue with nothing to collect and
-   no persisted list of owned dogs — the "roster I'm proud of / bright-spotlit select screen"
-   does not exist. *Good (buildable spine now):* persist an owned-dogs roster (starting with the
-   Labrador) alongside the coins in the same save, so the collection is a real persisted list the
-   adopt / select UI can later render; the **spotlit select-screen visuals and any additional
-   breeds stay owner-gated** (P3-1 / P3-2 appearance + P3-D1 / D2 / D4 decisions) and remain
-   flags, not buildable this pass.
+3. **The collection loop is disconnected — Phase 3's whole point isn't playable yet
+   (P3-1 / P3-D3 / P3-4).** Coins accrue and persist (`trick_store` save schema holds coins + trick
+   progress), and a real 2nd breed (chocolate Lab, 076) now exists **with no owner asset** — but there
+   is **no in-game way to adopt or select a breed** (chocolate is reachable only via the `?bra_breed=`
+   debug URL), and the save persists **no owned-breeds roster**. So earned coins buy nothing and the
+   two dogs never meet in the running game. *Good (buildable now, no owner model — the pieces already
+   exist):* wire a minimal adopt + select spine — spend earned coins to **adopt the already-built
+   chocolate Lab**, persist an **owned-breeds roster** alongside the coins, and let the player **switch
+   which owned breed is active**, persisted across sessions. That turns the disconnected economy + 2nd
+   breed + menu into the actual collect-and-train loop. The **spotlit select-screen polish and any
+   *additional* breed models stay owner-gated** (P3-1 appearance / P3-D1 / D2) and remain flags, not
+   this directive.
 
 ---
 

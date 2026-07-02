@@ -189,6 +189,15 @@ var _dog: Node3D
 var _dog_rest: Transform3D
 var _confused_age := -1.0
 
+## The procedural "joyful beat" on a successful mark (077, PO Note 7) — the positive twin of the
+## confused beat, driven by JoyBeat off the same dog root. It REPLACES the authored `Jump_Place_IP`
+## reaction as the mark celebration: that hop rotated the dog rear-to-camera (tail up) and snapped
+## through a side profile (the "chaotic, unnatural" payoff the PO caught), and the manifest ships no
+## wag/tail clip to swap to. This facing-preserving bounce stays on the seated hold and can't spin
+## the dog. `_joy_age < 0` = inactive. (DogDirector.play_reaction stays a tested asset capability but
+## is no longer the mark celebration — see _play_payoff / _play_mastery_beat.)
+var _joy_age := -1.0
+
 ## The bounded-patch ambient wander (050, P2-8 locomotion): between offers the dog ambles a
 ## small disc on the grass (turning back at the edges), so it reads as a dog with a mind of its
 ## own rather than parked dead-centre (the PO's P2-8 note). The math lives in the pure WanderField;
@@ -427,6 +436,7 @@ func _process(delta: float) -> void:
 		_learned_bar.advance(delta)  # fade the setback wash (045/P2-4)
 	_drive_wander(delta)   # roam the patch + place the dog at its wander spot (050/P2-8)
 	_drive_confused(delta) # layer the bad-tap wobble on top of the wander base (045)
+	_drive_joy(delta)      # layer the good-mark celebration bounce on top of the wander base (077)
 
 ## Drive the repeating round loop (027, P1-9): each frame SitLoop decides whether to begin
 ## the next sit or stand the dog back to idle. A no-op until _start_dog builds _loop, and a
@@ -1376,14 +1386,12 @@ func _refresh_coins() -> void:
 	if _coin_readout != null:
 		_coin_readout.set_balance(_purse.balance)
 
-## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
-## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog
-## with no reaction clip (the CC0 placeholder) — never a faked celebration.
+## The celebratory beat when a trick reaches mastery (045/P2-4): the same facing-preserving joyful
+## bounce a PERFECT mark plays (077, PO Note 7). Procedural, so it reads as a coherent celebration
+## that stays facing the player — never the rear-spinning Jump_Place_IP hop. Works on any dog (the
+## bounce is not a faked clip, the same honest procedural pattern as the confused beat).
 func _play_mastery_beat() -> void:
-	if _director != null:
-		# Settle back into the CURRENT trick's hold after the celebration (065) — the down-hold for
-		# Ligg, the seated hold for Sitt — not always the seated one.
-		_director.play_reaction(_director.clips.trick_loop(_current_trick))
+	_play_joy_beat()
 
 ## Begin the procedural confused beat (045/P2-4): the mirror of the joyful mark. _process
 ## drives a brief damped recoil from here and restores the dog to its rest transform. Scaled
@@ -1415,6 +1423,32 @@ func _drive_confused(delta: float) -> void:
 	_dog.transform = base
 	_dog.rotate_object_local(Vector3.UP, angle)
 
+## Begin the procedural joyful beat (077, PO Note 7): the celebration on a successful mark. _process
+## drives a brief facing-preserving bounce from here (JoyBeat) and restores the dog to its rest
+## transform. Replaces the rear-spinning Jump_Place_IP reaction — the dog stays on its seated hold
+## (already playing) and just bounces happily. Cancels any lingering confused beat so a good mark
+## never wobbles and bounces at once. No-op if the dog isn't a Node3D we can nudge.
+func _play_joy_beat() -> void:
+	if _dog != null:
+		_confused_age = -1.0  # a successful mark is never also "confused"
+		_joy_age = 0.0
+
+## Step the procedural joyful beat (077): a damped happy bounce + gentle body waggle that KEEPS the
+## dog facing the player (JoyBeat caps the yaw), composed on top of the dog's CURRENT base transform —
+## its frozen seated spot while a mark's hold is up, or its wander spot — so the celebration never
+## fights the seated clip and always settles EXACTLY back to rest (no drift, no framing regression).
+## Dampened by the reduced-motion factor (X-5): scale 0 ⇒ no bounce. Mirrors _drive_confused exactly.
+func _drive_joy(delta: float) -> void:
+	if _dog == null or _joy_age < 0.0:
+		return
+	_joy_age += delta
+	var base := _dog_base_transform()
+	if _joy_age >= JoyBeat.DURATION:
+		_dog.transform = base  # settle exactly back — no drift
+		_joy_age = -1.0
+		return
+	_dog.transform = base * JoyBeat.offset(_joy_age, _motion_scale)
+
 ## Drive the ambient wander (050, P2-8): while active (between offers), advance the bounded-patch
 ## roam and switch the dog between its walk clip (ambling) and idle (paused at a target) — only on
 ## a change, so the clip isn't restarted every frame. Each frame it places the dog ROOT at its
@@ -1439,8 +1473,8 @@ func _drive_wander(delta: float) -> void:
 			_ambling = false
 			_engage_resting_face()   # ease to generally face the player while paused (071, PO note 3)
 	_advance_facing(delta)  # ease the face-the-camera turn / its release (061, P2-11)
-	if _confused_age < 0.0:
-		_dog.transform = _wander_base()
+	if _confused_age < 0.0 and _joy_age < 0.0:
+		_dog.transform = _wander_base()  # a confused/joyful beat owns the transform that frame instead
 	_track_contact_shadow()
 
 ## Pause the wander for an offer (sit/feint): freeze the roam so the dip/seat reads, and clear the
@@ -1587,9 +1621,13 @@ func _play_payoff(tier: SitWindow.Tier) -> void:
 	if _payoff != null:
 		_payoff.play(payoff)
 	if payoff.reacts() and _director != null:
-		_director.play_reaction(_director.clips.trick_loop(_current_trick))  # settle back into the current trick's hold (065)
+		# The celebration is now a facing-preserving procedural bounce (077, PO Note 7), NOT the
+		# authored Jump_Place_IP hop — that hop rotated the dog rear-to-camera and snapped through a
+		# side profile (the "chaotic, unnatural" payoff the PO caught), and the manifest has no
+		# wag/tail clip to swap in. The dog stays on its current trick's seated hold and bounces.
+		_play_joy_beat()
 		# Web-only capture/e2e signal: a counter the reaction-capture harness watches so it
-		# can sync its screenshot burst to the exact frame the hop starts (034). No-op
+		# can sync its screenshot burst to the exact frame the celebration starts (034). No-op
 		# off the web export; harmless in normal play.
 		if OS.has_feature("web"):
 			JavaScriptBridge.eval("window.__bra_reaction_n = (window.__bra_reaction_n||0)+1;", true)

@@ -6,6 +6,35 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 3 CURRENT — PO 2026-07-02 (HEAD 0506503) pass: 077 reaction-fix DONE, 078/079 queued — 2026-07-02
+
+The PO re-reviewed the chocolate-Lab + BreedPersonality drop (HEAD `0506503`) and pruned the shipped
+directives (completion menu, framing, BreedPersonality, chocolate render all confirmed), filing **three
+new buildable Phase-3 directives**. The empty backlog → scan emitted **077 / 078 / 079** in priority
+order (bugfix → improvement → change); **077 built this iteration.**
+
+- **077 — FIX — post-BRA reaction rear-spin → facing-preserving celebration (Bugfix/Note 7). DONE
+  2026-07-02.** The mark celebration played `Jump_Place_IP` — the only in-place celebration clip — which
+  **rotates the dog rear-to-camera** (tail up) and snaps through a side profile (PO frames
+  `B-react-018/021`), breaking the core payoff. New pure `JoyBeat` (unit-tested) drives a damped,
+  **yaw-capped** happy bounce off the dog root — the positive twin of the confused beat — that stays
+  facing the player, eases in/out, settles exactly to rest (X-5 scaled). Both mark sites (`_play_payoff`,
+  `_play_mastery_beat`) now drive it instead of the hop; `DogDirector.play_reaction` retained as a tested
+  capability. 5 TDD tests RED→GREEN, 326/0; **Visual Review PASS** — 17 live frames `.screenshots/077-joy-*`,
+  dog never rear-to-camera. Verify green, placeholder-clean.
+- **078 — VISUAL — garden cohesion: stylized grass + depth + contact shadow (Improvement/Note 6).
+  QUEUED.** The flat green void makes the photoreal dog read as a cutout; give the ground real stylized
+  shading/texture + horizon depth + a legible contact shadow so dog and world read as one stylized-real
+  scene. GL-Compatibility-safe; no letterbox regression.
+- **079 — FEATURE — adopt + select + persisted owned-breeds roster (Change/P3-1·D3·P3-4). QUEUED.**
+  Spend earned coins to adopt the already-built chocolate Lab, persist an owned-breeds roster in the one
+  save blob, switch the active breed — turning the disconnected economy + 2nd breed + menu into the real
+  collect-and-train loop. Additional breed *models* + select-screen *polish* stay owner-gated flags.
+
+**Next scan:** work 078 then 079 (both current-phase, no owner model needed). No un-busted flags remain.
+
+---
+
 ## Status — Phase 3 (breeds/economy/personality) CURRENT — scan tasked PO 2026-07-02 notes 4/5 + Improvement-4 — 2026-07-02
 
 Phase 2 signed off (2026-07-01); **Phase 3 is current**. The economy/personality/roster spine builds
