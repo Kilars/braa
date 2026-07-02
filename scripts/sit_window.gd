@@ -6,15 +6,17 @@ extends RefCounted
 ## markable over [sit_start, sit_end] (the AnimationPlayer clip's span). The apex
 ## is the fully-seated scoring peak. A tap is scored by closeness to the apex:
 ##
-##   PERFECT  |tap - apex| <= perfect_radius   (the apex band, P1-4's "now")
-##   OK       |tap - apex| <= ok_radius         (inside the window, off-peak)
+##   PERFECT  tap >= apex − perfect_radius  AND  tap <= apex + perfect_radius + late_bias
+##   OK       tap >= apex − ok_radius       AND  tap <= apex + ok_radius + late_bias
 ##   MISS     active sit, but outside the window
 ##   DEAD     no sit active (Phase 1: does nothing — no penalty, P1-5)
 ##
-## Radii are inclusive at their edges so the bands are exact and fair. The
-## gameplay layer feeds in tap_time as seconds-into-the-current-sit; the visuals
-## (button, tell, readout, payoff) all key off the Tier this returns. No engine
-## state is touched here, which is what keeps it test-first (test_sit_window.gd).
+## The before-apex (early) edges are strict; the after-apex (late) edges are widened by
+## `late_bias` so a natural human reaction-delay tap still scores PERFECT (PO note 5:
+## "users are typically late"). Radii are inclusive at their edges so the bands are
+## exact and fair. The gameplay layer feeds in tap_time as seconds-into-the-current-sit;
+## the visuals (button, tell, readout, payoff) all key off the Tier this returns. No
+## engine state is touched here, which is what keeps it test-first (test_sit_window.gd).
 
 enum Tier { DEAD, MISS, OK, PERFECT }
 
@@ -28,12 +30,14 @@ const EPSILON := 1e-5
 ## They live on the scoring class (not the AnimationPlayer driver) so a designer
 ## tuning difficulty finds them next to the math that uses them. `from_sit_clips`
 ## still takes explicit radii so difficulty can override these later (029).
-const DEFAULT_PERFECT_RADIUS := 0.08  ## the PERFECT band is apex ±80 ms
-const DEFAULT_OK_RADIUS := 0.20       ## the OK window is apex ±200 ms
+const DEFAULT_PERFECT_RADIUS := 0.08  ## PERFECT reaches apex−80 ms … apex+(80+late_bias) ms
+const DEFAULT_OK_RADIUS := 0.20       ## OK reaches apex−200 ms … apex+(200+late_bias) ms
+const DEFAULT_LATE_BIAS := 0.09       ## extra grace AFTER the apex (PO note 5 — players tap late)
 
 var apex: float           ## seconds: the fully-seated scoring peak
-var perfect_radius: float ## half-width of the PERFECT band, inclusive
-var ok_radius: float      ## half-width of the OK window, inclusive (>= perfect_radius)
+var perfect_radius: float ## half-width of the PERFECT band on the EARLY side, inclusive
+var ok_radius: float      ## half-width of the OK window on the EARLY side, inclusive (>= perfect_radius)
+var late_bias: float      ## extra seconds added to the LATE edge of both bands (PO note 5)
 var sit_start: float      ## seconds: when the sit becomes markable (clip start)
 var sit_end: float        ## seconds: when the sit stops being markable (clip end)
 
@@ -42,12 +46,14 @@ func _init(
 		p_perfect_radius: float,
 		p_ok_radius: float,
 		p_sit_start: float,
-		p_sit_end: float) -> void:
+		p_sit_end: float,
+		p_late_bias: float = DEFAULT_LATE_BIAS) -> void:
 	apex = p_apex
 	perfect_radius = p_perfect_radius
 	ok_radius = p_ok_radius
 	sit_start = p_sit_start
 	sit_end = p_sit_end
+	late_bias = p_late_bias
 
 ## Build a window straight from an AnimationPlayer clip: the sit spans
 ## [0, length], with the apex keyframed at `apex` seconds into it.
@@ -55,8 +61,9 @@ static func from_clip(
 		length: float,
 		apex: float,
 		perfect_radius: float,
-		ok_radius: float) -> SitWindow:
-	return SitWindow.new(apex, perfect_radius, ok_radius, 0.0, length)
+		ok_radius: float,
+		p_late_bias: float = DEFAULT_LATE_BIAS) -> SitWindow:
+	return SitWindow.new(apex, perfect_radius, ok_radius, 0.0, length, p_late_bias)
 
 ## Build a window for a clip-driven sit (024b). The dog builds into the sit over
 ## `start_len` — the apex (fully seated) is the END of that build — then holds the
@@ -68,17 +75,22 @@ static func from_sit_clips(
 		start_len: float,
 		loop_len: float,
 		perfect_radius: float,
-		ok_radius: float) -> SitWindow:
-	return SitWindow.new(start_len, perfect_radius, ok_radius, 0.0, start_len + loop_len)
+		ok_radius: float,
+		p_late_bias: float = DEFAULT_LATE_BIAS) -> SitWindow:
+	return SitWindow.new(start_len, perfect_radius, ok_radius, 0.0, start_len + loop_len, p_late_bias)
 
-## Score a tap at `tap_time` seconds into the current sit. See the table above.
+## Score a tap at `tap_time` seconds into the current sit. See the class doc above.
+## `late_bias` (>=0) widens the AFTER-apex edge of each band; the before-apex (early)
+## edge is unchanged — tapping before the dog is seated stays strict (PO note 5).
 func score(tap_time: float) -> Tier:
 	if tap_time < sit_start - EPSILON or tap_time > sit_end + EPSILON:
 		return Tier.DEAD
-	var dist := absf(tap_time - apex)
-	if dist <= perfect_radius + EPSILON:
+	var signed := tap_time - apex                       # >0 = late (after seated peak)
+	var perfect_late := perfect_radius + late_bias
+	var ok_late := ok_radius + late_bias
+	if signed >= -perfect_radius - EPSILON and signed <= perfect_late + EPSILON:
 		return Tier.PERFECT
-	if dist <= ok_radius + EPSILON:
+	if signed >= -ok_radius - EPSILON and signed <= ok_late + EPSILON:
 		return Tier.OK
 	return Tier.MISS
 

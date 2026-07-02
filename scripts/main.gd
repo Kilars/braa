@@ -929,10 +929,11 @@ func _start_dog(dog: Node) -> void:
 ## One big, thumb-friendly BRA button anchored across the bottom of the portrait
 ## frame (P1-5) — the single verb. It fires on release (Button's default
 ## ACTION_MODE_BUTTON_RELEASE = pointerup, P1-7), never a frame early.
-## Garden (047/P2-10): the button FLOATS over the grass — its opaque panel background
-## is removed via StyleBoxEmpty so only the "BRA" word is visible over the lower grass
-## area. Position, size, and the apex-tell coupling (TELL_OFFSET_*) are unchanged; the
-## button remains a large thumb target (P1-5) — just no opaque control strip behind it.
+## Garden (047/P2-10): the button floats over the grass with a subtle circular
+## hit-target backdrop (073/PO note 5): a semi-transparent rounded pill so the
+## shrinking trainer ring reads "press this circle" rather than "trace this path."
+## The ring (TrainerRingMarker) has mouse_filter=IGNORE so every tap on or inside
+## the ring lands on the button — never requires a drag/swipe.
 func _setup_bra_button() -> void:
 	var ui := CanvasLayer.new()
 	ui.name = "UI"
@@ -941,14 +942,34 @@ func _setup_bra_button() -> void:
 	bra.name = "BraButton"
 	bra.text = "BRA"
 	bra.add_theme_font_size_override("font_size", 96)
-	# Float the verb over the grass: clear the Button's opaque panel background by
-	# assigning an empty StyleBox for all four visual states. The text + apex ring still
-	# render; only the opaque band behind them is removed (P2-10).
+	# Subtle circular hit-target backdrop (073/PO note 5): the approach ring (trainer ring)
+	# converges on the button, and a plain transparent button reads as a swipe path.
+	# A semi-transparent rounded pill makes the target read unambiguously as "tap here."
+	# corner_radius 9999 forces a pill/capsule shape regardless of button size — the shorter
+	# dimension caps the rounding, so it's always a fully-rounded capsule on the 192 px-tall
+	# button band (BRA_OFFSET_TOP..BRA_OFFSET_BOTTOM = 280-88 = 192 px).
+	# The fill is a very soft warm white at 18% alpha — present over the grass without
+	# obscuring the dog or the approach ring above it (P2-10 float aesthetic preserved).
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(1.0, 1.0, 1.0, 0.18)
+	normal_style.corner_radius_top_left = 9999
+	normal_style.corner_radius_top_right = 9999
+	normal_style.corner_radius_bottom_left = 9999
+	normal_style.corner_radius_bottom_right = 9999
+	# Pressed state: slightly brighter fill gives tactile feedback on a finger-down.
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = Color(1.0, 1.0, 1.0, 0.32)
+	pressed_style.corner_radius_top_left = 9999
+	pressed_style.corner_radius_top_right = 9999
+	pressed_style.corner_radius_bottom_left = 9999
+	pressed_style.corner_radius_bottom_right = 9999
+	# Hover: same as normal on touch devices (hover = finger hovering, not meaningful);
+	# keep it identical so the style doesn't flash on desktop testing.
 	var empty := StyleBoxEmpty.new()
-	bra.add_theme_stylebox_override("normal",   empty)
-	bra.add_theme_stylebox_override("hover",    empty)
-	bra.add_theme_stylebox_override("pressed",  empty)
-	bra.add_theme_stylebox_override("disabled", empty)
+	bra.add_theme_stylebox_override("normal",   normal_style)
+	bra.add_theme_stylebox_override("hover",    normal_style)
+	bra.add_theme_stylebox_override("pressed",  pressed_style)
+	bra.add_theme_stylebox_override("disabled", normal_style)  # modulate dims it via BRA_LOCKED_ALPHA
 	bra.add_theme_stylebox_override("focus",    empty)
 	# Span the bottom band with a comfortable thumb margin: a wide, tall target
 	# reachable one-handed in portrait, clear of the dog framed above.

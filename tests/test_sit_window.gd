@@ -29,7 +29,9 @@ func test_perfect_band_edge_is_inclusive() -> void:
 func test_just_outside_perfect_band_is_ok() -> void:
 	var w := _window()
 	assert_eq(w.score(1.2 - 0.12), SitWindow.Tier.OK, "early off-peak")
-	assert_eq(w.score(1.2 + 0.12), SitWindow.Tier.OK, "late off-peak")
+	# PO note 5 late-bias: 0.12 s after apex is now inside the PERFECT late edge
+	# (perfect_radius 0.08 + late_bias 0.09 = 0.17 > 0.12), so this tap is PERFECT not OK.
+	assert_eq(w.score(1.2 + 0.12), SitWindow.Tier.PERFECT, "late 120ms: now PERFECT due to late-bias (PO note 5)")
 
 func test_ok_window_edge_is_inclusive() -> void:
 	var w := _window()
@@ -101,12 +103,18 @@ func test_canonical_scoring_radii_live_on_the_scoring_class() -> void:
 
 func test_window_from_canonical_defaults_scores_the_specced_bands() -> void:
 	# A sit built with the canonical radii scores the spec's bands exactly.
+	# PO note 5 late-bias: after-apex edges are widened by DEFAULT_LATE_BIAS (0.09 s).
+	# PERFECT late edge = 0.08 + 0.09 = 0.17 s; OK late edge = 0.20 + 0.09 = 0.29 s.
 	var w := SitWindow.from_sit_clips(0.8, 1.5,
 		SitWindow.DEFAULT_PERFECT_RADIUS, SitWindow.DEFAULT_OK_RADIUS)
 	assert_eq(w.score(0.8), SitWindow.Tier.PERFECT, "apex tap is perfect")
-	assert_eq(w.score(0.8 + 0.08), SitWindow.Tier.PERFECT, "edge of ±80ms is perfect")
-	assert_eq(w.score(0.8 + 0.20), SitWindow.Tier.OK, "edge of ±200ms is ok")
-	assert_eq(w.score(0.8 + 0.21), SitWindow.Tier.MISS, "past the ok window is a miss")
+	assert_eq(w.score(0.8 + 0.08), SitWindow.Tier.PERFECT, "early edge of 80ms is still perfect")
+	# +0.20 s > PERFECT late edge (0.17) but <= OK late edge (0.29) → OK (PO note 5 — late OK edge now 0.29 s, not 0.20 s)
+	assert_eq(w.score(0.8 + 0.20), SitWindow.Tier.OK, "late 200ms: within the OK late-bias window (PO note 5)")
+	# +0.29 s is exactly at the OK late edge (ok_radius + late_bias = 0.20 + 0.09), inclusive → OK (PO note 5)
+	assert_eq(w.score(0.8 + 0.29), SitWindow.Tier.OK, "late 290ms: at the OK late edge exactly (PO note 5)")
+	# +0.30 s is past the OK late edge (0.30 > 0.29) → MISS (PO note 5 — old MISS boundary was +0.20 s, now +0.29 s)
+	assert_eq(w.score(0.8 + 0.30), SitWindow.Tier.MISS, "past the late ok edge is a miss (PO note 5)")
 
 func test_scoring_tap_is_audible_only_on_perfect_or_ok() -> void:
 	# P1-6 gate: the payoff (voice + SFX + reaction) fires on a successful mark
@@ -116,3 +124,27 @@ func test_scoring_tap_is_audible_only_on_perfect_or_ok() -> void:
 	assert_true(SitWindow.is_successful(w.score(1.0)), "OK is a successful mark")
 	assert_false(SitWindow.is_successful(w.score(0.5)), "MISS is not a mark")
 	assert_false(SitWindow.is_successful(w.score(3.0)), "DEAD is not a mark")
+
+func test_slightly_late_tap_is_still_perfect() -> void:
+	# A tap 120 ms AFTER the apex — a natural reaction delay — now lands PERFECT (was MISS at ±80).
+	# PO note 5: players are typically late, so the after-apex edge should be more forgiving.
+	var w := SitWindow.from_sit_clips(0.6, 0.5, SitWindow.DEFAULT_PERFECT_RADIUS,
+		SitWindow.DEFAULT_OK_RADIUS)   # apex = 0.6
+	assert_eq(w.score(0.6 + 0.12), SitWindow.Tier.PERFECT,
+		"a 120 ms-late tap should be forgiven as PERFECT (PO note 5)")
+
+func test_early_tap_stays_strict() -> void:
+	# The before-apex edge is UNCHANGED — tapping 120 ms early is not PERFECT (dog not yet seated).
+	# The late-bias must not loosen the early edge.
+	var w := SitWindow.from_sit_clips(0.6, 0.5, SitWindow.DEFAULT_PERFECT_RADIUS,
+		SitWindow.DEFAULT_OK_RADIUS)
+	assert_ne(w.score(0.6 - 0.12), SitWindow.Tier.PERFECT,
+		"an early tap must stay strict — late bias must not loosen the early edge")
+
+func test_band_is_late_biased_not_symmetric() -> void:
+	# The PERFECT band reaches further after the apex than before it.
+	# The late edge should be at perfect_radius + late_bias, not perfect_radius.
+	var w := SitWindow.from_sit_clips(0.6, 0.5, SitWindow.DEFAULT_PERFECT_RADIUS,
+		SitWindow.DEFAULT_OK_RADIUS)
+	assert_eq(w.score(0.6 + SitWindow.DEFAULT_PERFECT_RADIUS + SitWindow.DEFAULT_LATE_BIAS - 0.005),
+		SitWindow.Tier.PERFECT, "late edge = perfect_radius + late_bias")

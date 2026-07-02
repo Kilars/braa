@@ -6,23 +6,32 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase 3 (breeds/economy/personality) CURRENT — building PO 2026-07-02 notes — 2026-07-02
+## Status — Phase 3 (breeds/economy/personality) CURRENT — scan tasked PO 2026-07-02 notes 4/5 + Improvement-4 — 2026-07-02
 
 Phase 2 signed off (2026-07-01); **Phase 3 is current**. The economy/personality/roster spine builds
 without the owner (BUST-068); only extra breed models + P3-D1/D2/D4 decisions stay owner-gated. The
 owner's 2026-07-02 `po-review.md` pass added actionable notes; the loop is working them in order.
 
-**Recently completed (Phase 3):** 068 coin economy core · 069 coin readout (drawn coin + "coins"
-caption) · 070 feint rate 0.35→0.10 (note 2) · **071 dog present between offers — centred + faces the
-player + scratch feint (note 3). DONE 2026-07-02.** Reused the 061 `FaceTurn` for a roam-rate
-resting-face (paused dog faces the player, moving dog faces travel dir), tightened `WanderField`
-radius 0.32→0.20, and added a `Scratching` feint variety (`DogClips`/`DogDirector`/`SitLoop`, seeded
-50/50 with the trick-dip). 297 tests / 0 failures; verify green; Visual Review PASS (`.screenshots/071-*`).
+**Recently completed (Phase 3):** 068 coin economy core · 069 coin readout · 070 feint rate 0.35→0.10
+(note 2) · 071 dog present between offers — centred + faces player + scratch feint (note 3) · **072 —
+one active trick + completion menu (note 1). DONE 2026-07-02.** Notes 1/2/3 all shipped.
 
-**Backlog:** 072 — one active trick at a time + completion menu (note 1). **Still queued from the
-2026-07-02 PO notes (await the next scan):** note 4 (flag-bust a chocolate Labrador), note 5 (apex
-circle → a real button + easier timing), note 6 (garden styling + dog↔garden cohesion), plus
-Improvement-4 (`BreedPersonality`) and Change-5 (persisted roster spine).
+**This scan (empty backlog → 3 tasks, current-phase work):**
+- **073 — FIX — mark is hard to time: clearer tap target + late-biased PERFECT (note 5). DONE
+  2026-07-02.** `SitWindow` bands are now late-biased (`DEFAULT_LATE_BIAS := 0.09`): a ~120 ms-late
+  tap lands PERFECT, early edge unchanged (TDD, 3 new tests RED→GREEN). BRA button is now a rounded
+  pill so the shrinking trainer ring reads as a *tap* target, not a swipe (Visual Review PASS,
+  `.screenshots/058-trainer-ring.png`). Verify green.
+- **074 — BUST — Chocolate Labrador as a recolor (note 4).** Flag-bust: does a 2nd, breed-distinct
+  Labrador build **without the owner** by tinting the coat material? Research only → routes to a
+  build task or narrows the breed flag.
+- **075 — FEATURE — `BreedPersonality` drives the difficulty levers (Improvement-4 / P3-3).** A pure
+  temperament data model (learn speed / distractibility / window stability / energy) wired to the
+  existing `TrickProgress` / `SitLoop` / `SitWindow`, keyed to the Labrador as breed #1. TDD, additive.
+
+**Still queued (next scan):** note 6 (garden styling + dog↔garden cohesion — deferred this round by
+the domain-saturation filter: visual/UI dominate the last 15 done) and Change-5 (persisted roster
+spine, P3-4).
 
 ---
 

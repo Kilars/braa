@@ -34,8 +34,11 @@ func test_tap_at_apex_after_advancing_is_perfect() -> void:
 func test_tap_just_off_apex_is_ok() -> void:
 	var s := SitSession.new()
 	s.open(_window())
-	s.advance(0.95)  # 0.15s past apex → inside OK (±0.20), outside PERFECT (±0.08)
-	assert_eq(s.tap(), SitWindow.Tier.OK, "a tap just off the apex is OK")
+	# PO note 5 late-bias: 0.15 s past apex is now PERFECT, not OK.
+	# perfect_radius 0.08 + late_bias 0.09 = 0.17 s late edge; 0.15 < 0.17 → PERFECT.
+	# Use 0.25 s past apex: beyond perfect late edge (0.17) but within OK late edge (0.29).
+	s.advance(1.05)  # 0.25s past apex → OK (within ok_radius+late_bias=0.29, beyond perfect+late=0.17)
+	assert_eq(s.tap(), SitWindow.Tier.OK, "a tap 250ms past the apex is OK (PO note 5 late-bias)")
 
 func test_tap_far_from_apex_but_during_sit_is_miss() -> void:
 	var s := SitSession.new()
