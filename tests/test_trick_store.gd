@@ -136,3 +136,60 @@ func test_disk_round_trip_carries_roster() -> void:
 func test_constants_are_named() -> void:
 	assert_eq(TrickStore.SCHEMA_VERSION, 1, "schema version is a named constant")
 	assert_true(TrickStore.SAVE_PATH.begins_with("user://"), "the save lives under user:// (X-7 offline, no backend)")
+
+# 9. Difficulty rides the same save blob (080, P4-1) — backward-compatible with 049/068/079.
+func test_difficulty_rides_the_same_save_blob() -> void:
+	var model := {"sitt": {"value": 0.5, "mastered": true}}
+	var roster := {"owned": ["labrador"], "active": "labrador"}
+	var blob := TrickStore.encode(model, 20, roster, "expert")
+	assert_eq(TrickStore.decode_difficulty(blob), "expert", "difficulty round-trips through encode/decode_difficulty")
+	# The 049 tricks + 068 coins + 079 roster contracts are untouched by the added difficulty.
+	assert_eq(TrickStore.decode_coins(blob), 20, "coins still round-trip alongside the difficulty")
+	assert_true(TrickStore.decode(blob).has("sitt"), "the tricks map still round-trips alongside the difficulty")
+	var back_roster := TrickStore.decode_roster(blob)
+	assert_eq(back_roster.get("active"), "labrador", "the roster still round-trips alongside the difficulty")
+
+func test_difficulty_with_normal_mode_in_encode() -> void:
+	# The default encode() call (3-arg or fewer) stamps "normal" so the setting is dormant.
+	var model := {"sitt": {"value": 0.3, "mastered": false}}
+	var blob := TrickStore.encode(model)  # no difficulty arg — defaults to "normal"
+	assert_eq(TrickStore.decode_difficulty(blob), "normal", "encode() with no difficulty arg defaults to 'normal'")
+
+func test_difficulty_with_explicit_hard_mode() -> void:
+	var model := {"sitt": {"value": 0.4, "mastered": true}}
+	var blob := TrickStore.encode(model, 15, {}, "hard")
+	assert_eq(TrickStore.decode_difficulty(blob), "hard", "encode() with explicit 'hard' mode stamps 'hard'")
+
+func test_legacy_save_defaults_to_normal_difficulty() -> void:
+	# A pre-080 blob with no "difficulty" key (tricks + coins + roster, no difficulty) decodes to "normal".
+	# This simulates a save made by the 049/068/079 version of the codec.
+	var old_blob := JSON.stringify({"version": TrickStore.SCHEMA_VERSION, "tricks": {}, "coins": 5, "roster": {"owned": ["labrador"], "active": "labrador"}})
+	assert_eq(TrickStore.decode_difficulty(old_blob), "normal", "a pre-080 save with no difficulty key defaults to 'normal'")
+
+func test_corrupt_difficulty_defaults_to_normal() -> void:
+	# A corrupt / empty / wrong-version blob decodes difficulty to "normal" (safe degradation).
+	assert_eq(TrickStore.decode_difficulty(""), "normal", "an empty save reads 'normal' difficulty")
+	assert_eq(TrickStore.decode_difficulty("{garbage"), "normal", "a corrupt save reads 'normal' difficulty, no crash")
+	assert_eq(TrickStore.decode_difficulty("[1,2,3]"), "normal", "a non-dictionary JSON reads 'normal' difficulty")
+	var wrong_version := JSON.stringify({"version": 0, "tricks": {}, "difficulty": "expert"})
+	assert_eq(TrickStore.decode_difficulty(wrong_version), "normal", "a wrong-version save reads 'normal' difficulty (forward-compat)")
+
+func test_unknown_difficulty_mode_id_defaults_to_normal() -> void:
+	# A blob carrying an unknown/typo mode id (e.g. "impossible", "nightmare") decodes to "normal"
+	# by validating against Difficulty.is_known.
+	var blob := JSON.stringify({"version": TrickStore.SCHEMA_VERSION, "tricks": {}, "coins": 0, "difficulty": "impossible"})
+	assert_eq(TrickStore.decode_difficulty(blob), "normal", "an unknown difficulty mode id falls back to 'normal'")
+
+func test_disk_round_trip_carries_difficulty() -> void:
+	_clear_save()
+	var writer := TrickStore.new()
+	writer.save({"sitt": {"value": 0.3, "mastered": false}}, 8,
+		{"owned": ["labrador"], "active": "labrador"}, "hard")
+	var reader := TrickStore.new()
+	assert_eq(reader.load_difficulty(), "hard", "difficulty reads back off user:// alongside the other fields")
+	# The other fields still work: tricks, coins, roster.
+	assert_true(reader.load().has("sitt"), "the tricks map still reads back alongside the difficulty")
+	assert_eq(reader.load_coins(), 8, "coins still read back alongside the difficulty")
+	var back_roster := reader.load_roster()
+	assert_eq(back_roster.get("active"), "labrador", "the roster still reads back alongside the difficulty")
+	_clear_save()

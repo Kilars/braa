@@ -190,6 +190,13 @@ const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks 
 var _roster := BreedRoster.new()
 const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick mastery payout (3 × 10)
 
+## The global difficulty mode (080, P4-1 "Choose how hard"). Pure value object; Normal = identity
+## (reproduces today's tuning EXACTLY, no regression). Hard/Expert are dormant first-pass deltas tuned
+## when Phase 4 becomes current. Defaults to Normal on boot; overridable by `?bra_difficulty=` web seam.
+## No player-facing selector in the default HUD (dormant) — the mode is read-only unless the seam
+## explicitly picks a non-Normal mode. 081+ apply the bundle to resolve the read levers.
+var _difficulty := Difficulty.normal()
+
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
 ## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
@@ -255,6 +262,7 @@ func _ready() -> void:
 	_load_roster()                   # restore the owned-breeds roster + active breed BEFORE the dog loads (079/P3-4)
 	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
+	_difficulty = _resolve_difficulty()  # the GLOBAL difficulty: the persisted setting or the ?bra_difficulty= override (080/P4-1); dormant (defaults to Normal)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_load_coins()            # restore the saved coin balance BEFORE the readout is built (068/P3-D3)
@@ -363,6 +371,39 @@ func _query_breed_id() -> String:
 		return ""
 	if (search as String).to_lower().contains("bra_breed=chocolate"):
 		return "chocolate_labrador"
+	return ""
+
+## Resolve the GLOBAL difficulty for this boot (080/P4-1): the `?bra_difficulty=` web seam
+## override wins (a debug hook so the Visual-Review harness can test Hard/Expert dormant modes),
+## else the persisted difficulty setting, else "normal". So a fresh/corrupt boot defaults to Normal
+## (identity, byte-identical to HEAD), and a returning player boots into their last-chosen mode
+## (or Normal if the save is legacy/corrupt). Reads a STRING (never a bare bool) to dodge the
+## Web-export null-Variant marshalling that bit the apex tell (036); unknown values fall back to
+## the persisted setting or "normal".
+func _resolve_difficulty() -> Difficulty:
+	var forced := _query_difficulty()
+	if forced != "" and Difficulty.is_known(forced):
+		return Difficulty.by_id(forced)  # web override — test the dormant modes
+	var persisted := _store.load_difficulty()
+	return Difficulty.by_id(persisted)
+
+## Difficulty-mode seam (080/P4-1): read `?bra_difficulty=normal|hard|expert` off the live web
+## URL, returning the mode id ("" = no override → use the persisted setting). Reads a STRING
+## sentinel (never a bare bool) to dodge the Web-export null-Variant marshalling gotcha (036);
+## unknown/garbage values return "" (fall back to the persisted setting).
+func _query_difficulty() -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) != TYPE_STRING:
+		return ""
+	var q := (search as String).to_lower()
+	if q.contains("bra_difficulty=hard"):
+		return "hard"
+	if q.contains("bra_difficulty=expert"):
+		return "expert"
+	if q.contains("bra_difficulty=normal"):
+		return "normal"
 	return ""
 
 ## Visual-review seam (046/P2-7): true only when the live web URL carries `?bra_force_lock=1`.
@@ -1579,12 +1620,12 @@ func _load_progress() -> void:
 
 ## Persist every trick's progress (049/P2-5). One JSON map keyed per trick to user:// — IndexedDB on
 ## web, no backend / account / network (X-7 offline). Saves the whole map so switching trick and saving
-## never drops another trick's fill.
+## never drops another trick's fill. Coins, roster, and difficulty ride the same blob (068/079/080).
 func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out, _purse.balance, _roster.to_dict())  # coins + owned-breeds roster ride the same save file (068/079)
+	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id)  # coins + roster + difficulty ride the same save file (068/079/080)
 
 ## Restore the saved coin balance on boot (068/P3-D3). Runs before the coin readout is built so a
 ## returning player sees their earned coins immediately. First run / corrupt save -> 0 (TrickStore
