@@ -27,9 +27,13 @@ one active trick + completion menu (note 1). DONE 2026-07-02.** Notes 1/2/3 all 
   atlas), so a runtime `albedo_color ≈ #AA7D51` multiply reads as a convincing chocolate at phone
   scale — a real 2nd breed, **no owner model.** Routed → **build task 076**; breed flag narrowed
   (`busted BUST-074`). Only a cosmetic mouth-interior re-paint stays owner-gated (non-blocking).
-- **075 — FEATURE — `BreedPersonality` drives the difficulty levers (Improvement-4 / P3-3).** A pure
-  temperament data model (learn speed / distractibility / window stability / energy) wired to the
-  existing `TrickProgress` / `SitLoop` / `SitWindow`, keyed to the Labrador as breed #1. TDD, additive.
+- **075 — FEATURE — `BreedPersonality` drives the difficulty levers (Improvement-4 / P3-3). DONE
+  2026-07-02.** New pure `BreedPersonality` (RefCounted) holds four temperament multipliers around
+  1.0 and resolves them against the canonical constants; Labrador #1 = learn 1.15 / distract 0.9 /
+  window 1.1 / energy 1.0. Wired additively: `TrickProgress._init(p_perfect, p_ok)` (defaults =
+  constants, anti-regression), settable `SitLoop.min_gap`/`max_gap`, `DogDirector.trick_window` takes
+  optional radii, and `main.gd` holds one `_breed` feeding all four levers. 4 new TDD tests RED→GREEN;
+  every existing test stays green (neutral 1.0 == baseline); verify green; placeholder-clean.
 
 **Still queued (next scan):** note 6 (garden styling + dog↔garden cohesion — deferred this round by
 the domain-saturation filter: visual/UI dominate the last 15 done) and Change-5 (persisted roster

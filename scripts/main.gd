@@ -36,6 +36,12 @@ var _tap_gate := TapGate.new()
 ## The BRA button, kept so _process can dim + disable it while the gate is locked (046).
 var _bra_button: Button
 
+## The active breed's temperament (075, P3-3): a pure value object whose four traits resolve the
+## difficulty levers (learn speed, distractibility, window stability, energy). One breed today —
+## the Labrador (#1) — feeding TrickProgress gains, SitLoop feint chance + gap, and SitWindow radii,
+## so a breed is a temperament not a paint job. The multi-breed selector wires in once 074/roster land.
+var _breed := BreedPersonality.labrador()
+
 ## The repeating round loop (027, P1-9): drives idle → sit → idle → sit … each frame so
 ## the mark never stalls after one sit. Pure state machine; main acts on its Intent.
 var _loop: SitLoop
@@ -430,7 +436,9 @@ func _advance_loop(delta: float) -> void:
 func _begin_sit() -> void:
 	_pause_wander()  # settle the roam so the seat reads (050, P2-8 — composes with 048)
 	_director.play_trick(_current_trick)  # Sitt or Ligg — the dog performs the current trick (065)
-	_window = _director.trick_window(_current_trick)
+	# The active breed's window_stability widens/tightens the timing bands (075, P3-3): the Labrador's
+	# forgiving temperament gives a touch more grace. Radii compose with 073's late_bias in SitWindow.
+	_window = _director.trick_window(_current_trick, _breed.perfect_radius(), _breed.ok_radius())
 	_session.open(_window)
 	_engage_face_for_sit()  # turn to face the camera so the apex reads head-on (061, P2-11)
 	_tell = ApexTell.from_window(_window, _motion_scale)
@@ -905,8 +913,15 @@ func _start_dog(dog: Node) -> void:
 	# stands back to idle (_end_sit) and comes round again — the mark never stalls after
 	# one sit. On the CC0 dog (no Sitt) the loop simply parks in idle; no faked sit.
 	_loop = SitLoop.new()
+	# The active breed's temperament drives the loop's cadence + distractibility (075, P3-3): the
+	# Labrador's steady focus means slightly fewer feints, its energy sets how quick the offers come.
+	# The felt experience stays inside the PO-signed Phase-2 band (small deltas — Labrador energy 1.0).
+	_loop.feint_chance = _breed.feint_chance()
+	_loop.min_gap = _breed.min_gap()
+	_loop.max_gap = _breed.max_gap()
 	if _force_scratch:
 		# Capture seam (071): pin every offer to a scratch feint so the brief scratch is catchable.
+		# Overrides the breed's feint chance — the seam must fire every offer.
 		_loop.feint_chance = 1.0
 		_loop.scratch_feint_chance = 1.0
 	if _director.has_trick(_current_trick):
@@ -1313,7 +1328,9 @@ const KNOWN_TRICKS := [TRICK_ID_SITT, TRICK_ID_LIGG, TRICK_ID_LEGG_DEG]
 func _load_progress() -> void:
 	var saved := _store.load()
 	for id in KNOWN_TRICKS:
-		var p := TrickProgress.new()
+		# The active breed's learn_speed scales each trick's fill gains (075, P3-3): a more trainable
+		# dog fills its learned bar faster. Labrador learns a touch fast; the constants stay the baseline.
+		var p := TrickProgress.new(_breed.perfect_gain(), _breed.ok_gain())
 		var entry: Variant = saved.get(id, {})
 		if typeof(entry) == TYPE_DICTIONARY:
 			p.restore(entry)

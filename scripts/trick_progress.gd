@@ -30,14 +30,26 @@ const FLOOR := 0.0
 var value: float = 0.0      ## learned fraction in [0, 1]
 var mastered: bool = false  ## latches true at value >= MASTERY; never un-latches (safe checkpoint)
 
+## Per-instance gains, defaulting to the canonical constants so every existing call site behaves
+## EXACTLY as before (the anti-regression contract). The breed-personality model (075, P3-3) builds
+## a trick's progress with the active breed's learn_speed-scaled gains (perfect_gain()/ok_gain()) so
+## a more trainable dog fills its learned bar faster. The constants stay the baseline — the mastery
+## checkpoint math and other call sites depend on them — only the applied gain is overridable.
+var _perfect_gain := PERFECT_GAIN
+var _ok_gain := OK_GAIN
+
+func _init(p_perfect := PERFECT_GAIN, p_ok := OK_GAIN) -> void:
+	_perfect_gain = p_perfect
+	_ok_gain = p_ok
+
 ## Apply a scored tap. Returns the SIGNED delta actually applied after clamping, so main can
 ## drive feedback: delta > 0 → the bar filled; delta < 0 → a setback (confused beat + the bar
 ## visibly drops); see just_mastered() for the one-shot celebratory beat.
 func apply(tier: int) -> float:
 	var before := value
 	match tier:
-		SitWindow.Tier.PERFECT: value += PERFECT_GAIN
-		SitWindow.Tier.OK:      value += OK_GAIN
+		SitWindow.Tier.PERFECT: value += _perfect_gain
+		SitWindow.Tier.OK:      value += _ok_gain
 		SitWindow.Tier.MISS:    value -= MISS_EROSION
 		SitWindow.Tier.DEAD:    value -= DEAD_EROSION
 	# Mastery is a safe checkpoint: once mastered, the floor rises to MASTERY so re-practice

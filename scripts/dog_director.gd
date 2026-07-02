@@ -118,15 +118,17 @@ func play_trick_feint(id: String) -> void:
 
 ## The scoring window for the named trick: apex = end of its build-in clip (single source of truth),
 ## markable across the build+hold span (065). Returns null when the dog can't perform the trick.
-func trick_window(id: String) -> SitWindow:
+## The radii default to SitWindow's canonical bands but a caller can override them — the breed's
+## window_stability lever (075, P3-3) passes the active breed's perfect_radius()/ok_radius() so a
+## more forgiving temperament widens the timing window.
+func trick_window(id: String, perfect_radius := SitWindow.DEFAULT_PERFECT_RADIUS,
+		ok_radius := SitWindow.DEFAULT_OK_RADIUS) -> SitWindow:
 	if _ap == null or not has_trick(id):
 		return null
 	var start_len := _ap.get_animation(clips.trick_start(id)).length
 	var loop_len := _ap.get_animation(clips.trick_loop(id)).length
 	# The scoring bands' canonical home is SitWindow (029); the apex stays the end of the build-in.
-	# Pass the defaults explicitly so difficulty can override later.
-	return SitWindow.from_sit_clips(start_len, loop_len,
-		SitWindow.DEFAULT_PERFECT_RADIUS, SitWindow.DEFAULT_OK_RADIUS)
+	return SitWindow.from_sit_clips(start_len, loop_len, perfect_radius, ok_radius)
 
 ## The scoring window for this dog's sit (apex = end of `Sitting_start`). Sitt-bound wrapper.
 func sit_window() -> SitWindow:

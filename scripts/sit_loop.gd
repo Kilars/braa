@@ -38,6 +38,12 @@ var sit_hold: float            ## seconds the dog holds the seat past the markab
 ## a scratch feint (the same "force a brief event so a burst can catch it" idiom as ?bra_force_tell).
 var feint_chance := FEINT_CHANCE
 var scratch_feint_chance := SCRATCH_FEINT_CHANCE
+## Inter-sit gap bounds — instance vars defaulting to the consts so production is unchanged. The
+## breed-personality model (075, P3-3) sets these from the active breed's energy: a higher-energy dog
+## offers quicker (min_gap()/max_gap() divide the consts by energy). _draw_next_gap() reads these,
+## not the raw consts, so a breed's cadence lands the moment main sets them.
+var min_gap := MIN_INTER_SIT_GAP
+var max_gap := MAX_INTER_SIT_GAP
 var _rng: RandomNumberGenerator
 var _state: int = State.IDLE
 var _idle_elapsed: float = 0.0   ## seconds accumulated in the current idle gap
@@ -54,9 +60,10 @@ func _init(rng: RandomNumberGenerator = null, p_sit_hold := DEFAULT_SIT_HOLD) ->
 	sit_hold = p_sit_hold
 	_draw_next_gap()
 
-## Draw this idle cycle's gap fresh from [MIN, MAX] — the spread is what removes the metronome.
+## Draw this idle cycle's gap fresh from [min_gap, max_gap] — the spread is what removes the
+## metronome; the bounds default to the consts but a breed's energy can tighten them (075, P3-3).
 func _draw_next_gap() -> void:
-	_next_gap = _rng.randf_range(MIN_INTER_SIT_GAP, MAX_INTER_SIT_GAP)
+	_next_gap = _rng.randf_range(min_gap, max_gap)
 
 ## Park the loop back in IDLE and draw a fresh gap (066, P2-1). main calls this when the player picks
 ## a different trick mid-offer: it closes the open sit on the OLD trick, then resets here so the next

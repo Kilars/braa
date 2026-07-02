@@ -141,18 +141,28 @@ behavior exactly (that is the anti-regression contract).
 
 ## Acceptance criteria
 
-- [ ] TDD: `tests/test_breed_personality.gd` written first (RED → GREEN) covering: neutral
+- [x] TDD: `tests/test_breed_personality.gd` written first (RED → GREEN) covering: neutral
       personality == baseline constants; Labrador has a defined (non-neutral) temperament; higher
       learn_speed fills the bar faster; more energy shortens the gap.
-- [ ] `BreedPersonality` (pure `RefCounted`) exposes resolved levers (`perfect_gain`/`ok_gain`/
+- [x] `BreedPersonality` (pure `RefCounted`) exposes resolved levers (`perfect_gain`/`ok_gain`/
       `feint_chance`/`perfect_radius`/`ok_radius`/`min_gap`/`max_gap`) and a `labrador()` breed #1.
-- [ ] `TrickProgress` takes optional per-instance gain overrides **defaulting to the current
+- [x] `TrickProgress` takes optional per-instance gain overrides **defaulting to the current
       constants** (no existing call site or test regresses); `SitLoop` gap bounds + feint chance and
       `SitWindow` radii are driven from the active breed in `main.gd`.
-- [ ] `main.gd` holds one active `BreedPersonality` (Labrador) feeding all four levers; the felt
+- [x] `main.gd` holds one active `BreedPersonality` (Labrador) feeding all four levers; the felt
       experience stays in the PO-signed Phase-2 band (additive, small deltas — no shake-up).
-- [ ] Placeholder check clean on the diff; `nix develop -c bash verify.sh` green
+- [x] Placeholder check clean on the diff; `nix develop -c bash verify.sh` green
       (import·boot·test·export).
+
+## Outcome
+
+GREEN complete. New `scripts/breed_personality.gd` (pure `RefCounted`, Labrador #1 = learn 1.15 /
+distract 0.9 / window 1.1 / energy 1.0). Wired: `TrickProgress._init(p_perfect, p_ok)` defaults to
+the constants (anti-regression); `SitLoop.min_gap`/`max_gap` instance vars read by `_draw_next_gap`;
+`DogDirector.trick_window(id, perfect_radius, ok_radius)` defaults to the canonical bands; `main.gd`
+holds one `_breed` and feeds all four levers (progress gains, loop feint chance + gap, window radii).
+`_force_scratch` capture seam still overrides feint_chance last. `verify.sh` green
+(import·boot·test·export); 4 new tests GREEN; placeholder check clean.
 
 ## Notes
 
