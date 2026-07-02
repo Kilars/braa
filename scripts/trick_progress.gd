@@ -42,6 +42,14 @@ func _init(p_perfect := PERFECT_GAIN, p_ok := OK_GAIN) -> void:
 	_perfect_gain = p_perfect
 	_ok_gain = p_ok
 
+## Repoint the applied per-instance gains (079, live breed switch). When the player switches the active
+## breed at runtime, its learn_speed re-scales the fill applied on the NEXT tap without rebuilding the
+## model — so the felt fill speed matches the chosen dog. The canonical constants stay the baseline
+## (the mastery checkpoint math keys off them); only the applied gain changes.
+func set_gains(p_perfect: float, p_ok: float) -> void:
+	_perfect_gain = p_perfect
+	_ok_gain = p_ok
+
 ## Apply a scored tap. Returns the SIGNED delta actually applied after clamping, so main can
 ## drive feedback: delta > 0 → the bar filled; delta < 0 → a setback (confused beat + the bar
 ## visibly drops); see just_mastered() for the one-shot celebratory beat.

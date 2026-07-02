@@ -96,6 +96,42 @@ func test_disk_round_trip_carries_coins() -> void:
 	assert_true(reader.load().has("sitt"), "the tricks map still reads back too")
 	_clear_save()
 
+# 8. The owned-breeds roster rides the SAME save blob (079, P3-4) — backward-compatible with 049/068.
+func test_roster_rides_the_same_save_blob() -> void:
+	var model := {"sitt": {"value": 0.5, "mastered": true}}
+	var roster := {"owned": ["labrador", "chocolate_labrador"], "active": "chocolate_labrador"}
+	var blob := TrickStore.encode(model, 30, roster)
+	var back := TrickStore.decode_roster(blob)
+	assert_eq(back.get("active"), "chocolate_labrador", "the active breed round-trips through decode_roster")
+	assert_true((back.get("owned") as Array).has("chocolate_labrador"), "owned breeds round-trip")
+	# The 049 tricks + 068 coins contracts are untouched by the added roster.
+	assert_eq(TrickStore.decode_coins(blob), 30, "coins still round-trip alongside the roster")
+	assert_true(TrickStore.decode(blob).has("sitt"), "the tricks map still round-trips alongside the roster")
+
+func test_legacy_save_defaults_to_starter_owned() -> void:
+	# A coins/tricks-only (pre-079) blob has no roster key -> owns + active the starter Labrador, never
+	# empty. A corrupt / empty / wrong-version blob degrades the same way.
+	var old_blob := JSON.stringify({"version": TrickStore.SCHEMA_VERSION, "tricks": {}, "coins": 5})
+	var back := TrickStore.decode_roster(old_blob)
+	assert_eq(back.get("active"), "labrador", "a pre-079 save's active breed defaults to the starter")
+	assert_true((back.get("owned") as Array).has("labrador"), "a pre-079 save owns the starter Labrador")
+	for bad in ["", "{garbage", JSON.stringify({"version": 0, "roster": {"owned": ["chocolate_labrador"]}})]:
+		var d := TrickStore.decode_roster(bad)
+		assert_true((d.get("owned") as Array).has("labrador"),
+			"a corrupt/empty/wrong-version save degrades to owning the starter, never a dog-less player")
+
+func test_disk_round_trip_carries_roster() -> void:
+	_clear_save()
+	var writer := TrickStore.new()
+	writer.save({"sitt": {"value": 0.3, "mastered": false}}, 12,
+		{"owned": ["labrador", "chocolate_labrador"], "active": "chocolate_labrador"})
+	var reader := TrickStore.new()
+	var back := reader.load_roster()
+	assert_eq(back.get("active"), "chocolate_labrador", "the active breed reads back off user://")
+	assert_true((back.get("owned") as Array).has("chocolate_labrador"), "owned breeds read back off user://")
+	assert_eq(reader.load_coins(), 12, "coins still read back alongside the roster")
+	_clear_save()
+
 # Named constants, not scattered literals (cf. 029).
 func test_constants_are_named() -> void:
 	assert_eq(TrickStore.SCHEMA_VERSION, 1, "schema version is a named constant")

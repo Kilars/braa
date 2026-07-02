@@ -135,6 +135,62 @@ func test_release_does_not_emit() -> void:
 	assert_eq(got.n, 0, "a release does not emit — press-only, one emit per tap")
 	m.free()
 
+# ---- breeds section: adopt (spend coins) + select the active breed (079, P3-D3 / P3-4) -------------
+
+const CAT := [
+	{"id": "labrador", "name": "Labrador", "tint": Color(0.86, 0.72, 0.47)},
+	{"id": "chocolate_labrador", "name": "Chocolate Labrador", "tint": Color(0.40, 0.28, 0.20)},
+]
+
+func test_classify_breeds_active_owned_buyable_locked() -> void:
+	# The active breed reads Active; another owned breed reads Owned (tap → switch); an unowned breed the
+	# player can afford reads Buyable (tap → adopt); an unowned breed they can't afford reads Locked.
+	var owned_affordable := TrickMenu.classify_breeds(CAT, ["labrador"], "labrador", 30, 30)
+	assert_eq(owned_affordable[0].state, TrickMenu.BreedState.ACTIVE, "the active breed reads Active")
+	assert_eq(owned_affordable[1].state, TrickMenu.BreedState.BUYABLE, "an affordable unowned breed reads Buyable")
+	var owned_broke := TrickMenu.classify_breeds(CAT, ["labrador"], "labrador", 10, 30)
+	assert_eq(owned_broke[1].state, TrickMenu.BreedState.LOCKED, "an unaffordable unowned breed reads Locked")
+	var both := TrickMenu.classify_breeds(CAT, ["labrador", "chocolate_labrador"], "chocolate_labrador", 0, 30)
+	assert_eq(both[0].state, TrickMenu.BreedState.OWNED, "a non-active owned breed reads Owned (tap → switch)")
+	assert_eq(both[1].state, TrickMenu.BreedState.ACTIVE, "the active owned breed reads Active")
+	assert_eq(both[1].price, 30, "each row carries the adopt price for the locked/buyable badge")
+
+func _breed_menu(breeds: Array) -> TrickMenu:
+	var m := TrickMenu.new()
+	m.size = Vector2(390.0, 844.0)
+	m.set_rows([{"id": SITT, "state": TrickMenu.State.LEARNED}], 30)  # a trick row so the panel lays out normally
+	m.set_breeds(breeds)
+	return m
+
+func test_press_on_owned_breed_emits_breed_chosen() -> void:
+	var m := _breed_menu(TrickMenu.classify_breeds(CAT, ["labrador", "chocolate_labrador"], "labrador", 0, 30))
+	var got := {"id": ""}
+	m.breed_chosen.connect(func(id): got.id = id)
+	m._gui_input(_press(m._breed_row_rect(1).get_center()))  # row 1 = chocolate, owned + not active
+	assert_eq(got.id, "chocolate_labrador", "tapping an owned non-active breed switches to it")
+	m.free()
+
+func test_press_on_buyable_breed_emits_breed_adopt() -> void:
+	var m := _breed_menu(TrickMenu.classify_breeds(CAT, ["labrador"], "labrador", 30, 30))
+	var got := {"id": ""}
+	m.breed_adopt.connect(func(id): got.id = id)
+	m._gui_input(_press(m._breed_row_rect(1).get_center()))  # row 1 = chocolate, buyable
+	assert_eq(got.id, "chocolate_labrador", "tapping an affordable unowned breed requests an adopt")
+	m.free()
+
+func test_press_on_active_or_locked_breed_emits_nothing() -> void:
+	var m := _breed_menu(TrickMenu.classify_breeds(CAT, ["labrador"], "labrador", 10, 30))
+	var got := {"chosen": 0, "adopt": 0, "dismissed": 0}
+	m.breed_chosen.connect(func(_id): got.chosen += 1)
+	m.breed_adopt.connect(func(_id): got.adopt += 1)
+	m.dismissed.connect(func(): got.dismissed += 1)
+	m._gui_input(_press(m._breed_row_rect(0).get_center()))  # row 0 = labrador, already Active
+	m._gui_input(_press(m._breed_row_rect(1).get_center()))  # row 1 = chocolate, Locked (can't afford)
+	assert_eq(got.chosen, 0, "the active breed absorbs a tap (already active, no switch)")
+	assert_eq(got.adopt, 0, "an unaffordable breed absorbs a tap (no adopt, no debt)")
+	assert_eq(got.dismissed, 0, "a breed row is absorbed, never a dismiss")
+	m.free()
+
 func _press(pos: Vector2) -> InputEventMouseButton:
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT

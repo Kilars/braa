@@ -67,3 +67,38 @@ func max_gap() -> float: return SitLoop.MAX_INTER_SIT_GAP / energy
 ## chocolate Labrador multiplies the atlas into the warm-brown chocolate range. A paint job layered on
 ## top of a real temperament, not a substitute for one.
 func coat_tint() -> Color: return _coat_tint
+
+## The honest coat-colour chip the adopt/select menu shows (079) — NOT a faked breed image, just the
+## real coat colour as a swatch. A tinted breed shows its tint directly; the yellow Labrador's tint is
+## the identity (its coat IS the atlas, so there's no tint to show), so it falls back to the atlas's
+## representative sandy-yellow. So the two breeds read as clearly different, honest coat colours.
+const LAB_SWATCH := Color(0.86, 0.72, 0.47)  ## the yellow Lab's atlas reads as this warm sandy tan
+func swatch_color() -> Color:
+	return LAB_SWATCH if _coat_tint.is_equal_approx(Color(1, 1, 1)) else _coat_tint
+
+# ---- the catalog the roster + adopt-select menu read (079) ----------------------------------------
+## The shipped breeds, in roster order (starter first). The ONLY place the breed list is enumerated —
+## is_known / by_id / the menu all read this, so a new breed is a one-line add here.
+static func catalog() -> Array:
+	return [labrador(), chocolate_labrador()]
+
+## True iff `id` names a shipped breed (never an unshipped / owner-gated / ghost id). The roster admits
+## only known ids; the store degrades an unknown saved id away.
+static func is_known(id: String) -> bool:
+	for b in catalog():
+		if (b as BreedPersonality).id == id:
+			return true
+	return false
+
+## Resolve a breed id to its personality. An unknown id falls back to the starter Labrador — never a
+## dog-less resolve, so a corrupt/legacy active id still boots a real dog.
+static func by_id(id: String) -> BreedPersonality:
+	for b in catalog():
+		if (b as BreedPersonality).id == id:
+			return b
+	return labrador()
+
+## Repoint an existing TrickProgress's gains to this breed's learn_speed (079, live breed switch), so a
+## more-trainable breed fills its learned bar faster the moment the player switches to it.
+func apply_gains_to(progress: TrickProgress) -> void:
+	progress.set_gains(perfect_gain(), ok_gain())

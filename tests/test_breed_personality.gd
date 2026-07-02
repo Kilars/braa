@@ -68,3 +68,40 @@ func test_chocolate_labrador_is_a_distinct_breed() -> void:
 		"the chocolate Lab has its own temperament (distractibility/energy differ from the Labrador)")
 	assert_true(choc.perfect_gain() > TrickProgress.PERFECT_GAIN,
 		"still very trainable (a retriever base — learns faster than the neutral baseline)")
+
+# ---- the catalog / resolver the roster + adopt-select menu read (079) ------------------------------
+
+func test_by_id_resolves_known_breeds() -> void:
+	assert_eq(BreedPersonality.by_id("labrador").id, "labrador", "by_id resolves the Labrador")
+	assert_eq(BreedPersonality.by_id("chocolate_labrador").id, "chocolate_labrador",
+		"by_id resolves the chocolate Labrador")
+	assert_eq(BreedPersonality.by_id("ghost").id, "labrador",
+		"an unknown id falls back to the starter Labrador (never a dog-less resolve)")
+
+func test_is_known_only_for_shipped_breeds() -> void:
+	assert_true(BreedPersonality.is_known("labrador"), "the Labrador is a shipped breed")
+	assert_true(BreedPersonality.is_known("chocolate_labrador"), "the chocolate Lab is a shipped breed")
+	assert_false(BreedPersonality.is_known("border_collie"), "an unshipped breed is not known (owner-gated)")
+
+func test_catalog_lists_both_shipped_breeds_in_order() -> void:
+	var cat := BreedPersonality.catalog()
+	assert_eq(cat.size(), 2, "the catalog holds exactly the two shipped breeds")
+	assert_eq((cat[0] as BreedPersonality).id, "labrador", "the starter Labrador is first")
+	assert_eq((cat[1] as BreedPersonality).id, "chocolate_labrador", "the chocolate Lab is second")
+
+func test_swatch_colors_are_distinct_and_honest() -> void:
+	# The menu thumbnail is an honest coat-colour chip (not a faked breed image): the two breeds read as
+	# clearly different colours, and the chocolate reads darker than the yellow Lab.
+	var lab := BreedPersonality.labrador().swatch_color()
+	var choc := BreedPersonality.chocolate_labrador().swatch_color()
+	assert_true(lab != choc, "the two breeds have distinct coat swatches")
+	assert_true(choc.r < lab.r and choc.g < lab.g, "the chocolate coat swatch reads darker than the yellow Lab")
+
+func test_set_gains_updates_fill_speed_live() -> void:
+	# A live breed switch (079) re-applies the new learn_speed to an existing TrickProgress via set_gains,
+	# so the felt fill speed matches the chosen dog without rebuilding the model.
+	var p := TrickProgress.new()  # baseline gains
+	p.set_gains(TrickProgress.PERFECT_GAIN * 2.0, TrickProgress.OK_GAIN * 2.0)
+	p.apply(SitWindow.Tier.PERFECT)
+	assert_true(p.value > TrickProgress.PERFECT_GAIN,
+		"set_gains raises the applied fill so a more-trainable breed fills faster after a live switch")

@@ -181,6 +181,15 @@ var _purse := CoinPurse.new()
 var _coin_readout: CoinReadout
 const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks = 30 toward a breed)
 
+## The owned-breeds roster + the collect-and-train loop (079, P3-1/P3-D3/P3-4). The player owns the
+## starter yellow Labrador from the first run; mastering tricks earns coins (above) that can be SPENT to
+## adopt the already-built chocolate Lab (076), and the active breed can be switched between owned dogs —
+## all persisted alongside the coins + learned bars in the ONE TrickStore save blob (X-7 offline). The
+## adopt/switch surface is the completion menu's breeds section (TrickMenu); `_breed` (above) tracks the
+## active breed's temperament + coat. A fresh/corrupt/legacy save degrades to owning just the Labrador.
+var _roster := BreedRoster.new()
+const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick mastery payout (3 × 10)
+
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
 ## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
@@ -243,7 +252,8 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
-	_breed = _query_breed()          # the ACTIVE breed (076): ?bra_breed=chocolate boots the chocolate Lab; must precede _load_dog (coat tint) + _start_dog (levers)
+	_load_roster()                   # restore the owned-breeds roster + active breed BEFORE the dog loads (079/P3-4)
+	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
@@ -331,21 +341,29 @@ func _query_trick() -> String:
 		return TRICK_ID_LIGG
 	return TRICK_ID_SITT
 
-## Breed-selection seam (076, BUST-074): read `?bra_breed=chocolate` off the live web URL to boot the dog
-## as the chocolate Labrador (breed #2 — the SAME licensed rig with a warm-brown coat tint + its own
-## temperament), so the real recolor is Visual-Reviewable before the (owner-gated) adopt/select UI exists.
-## Defaults to the yellow Labrador everywhere else (desktop / headless / normal play), so the PO-signed
-## experience is unchanged. Reads a STRING (never a bare bool) to dodge the Web-export null-Variant
-## marshalling that bit the apex tell (036); unknown values fall back to the Labrador.
-func _query_breed() -> BreedPersonality:
+## Resolve the ACTIVE breed for this boot (079): the `?bra_breed=` capture override wins (a kept dev seam
+## so the Visual-Review harness can boot straight into a breed without owning it), else the persisted
+## roster's active breed. So a returning player boots into the dog they last chose, and the in-game
+## select works with no debug URL — the URL is now just the capture shortcut, not the only path (076).
+func _resolve_active_breed() -> BreedPersonality:
+	var forced := _query_breed_id()
+	if forced != "" and BreedPersonality.is_known(forced):
+		return BreedPersonality.by_id(forced)  # capture-harness override — shows the breed without needing it owned
+	return BreedPersonality.by_id(_roster.active)
+
+## Breed-capture seam (076, BUST-074 → 079 dev seam): read `?bra_breed=chocolate` off the live web URL to
+## boot the dog straight into a breed for Visual Review, returning its id ("" = no override → use the
+## roster). Reads a STRING (never a bare bool) to dodge the Web-export null-Variant marshalling that bit
+## the apex tell (036); unknown values return "" (fall back to the roster's active breed).
+func _query_breed_id() -> String:
 	if not OS.has_feature("web"):
-		return BreedPersonality.labrador()
+		return ""
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	if typeof(search) != TYPE_STRING:
-		return BreedPersonality.labrador()
+		return ""
 	if (search as String).to_lower().contains("bra_breed=chocolate"):
-		return BreedPersonality.chocolate_labrador()
-	return BreedPersonality.labrador()
+		return "chocolate_labrador"
+	return ""
 
 ## Visual-review seam (046/P2-7): true only when the live web URL carries `?bra_force_lock=1`.
 ## Pins the BRA button locked so the anti-mash dim renders for one deterministic screenshot (the
@@ -1255,6 +1273,8 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_menu = menu
 	_menu.trick_chosen.connect(_on_trick_chosen)
 	_menu.dismissed.connect(_on_menu_dismissed)
+	_menu.breed_chosen.connect(_on_breed_chosen)  # switch to an owned breed (079/P3-4)
+	_menu.breed_adopt.connect(_on_breed_adopt)    # spend coins to adopt a breed (079/P3-D3)
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
@@ -1274,6 +1294,7 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_tricks_button = btn
 	_publish_current_trick()  # seed the web e2e hook with the initial trick (072, kept from 066)
 	_publish_menu_open()      # seed __bra_menu_open = false so a capture polls a defined value (072)
+	_publish_roster()         # seed the active breed + owned roster + balance for the 079 capture
 
 ## The tricks the loaded dog can actually perform, in the canonical KNOWN_TRICKS order (065/067). The
 ## menu offers exactly these as Available/Learned — never a trick the dog can't perform (the never-fake
@@ -1300,10 +1321,22 @@ func _menu_rows() -> Array:
 		mastered[id] = p != null and p.mastered
 	return TrickMenu.classify(all_ids, _selectable_tricks(), mastered, ROADMAP_LOCKED_TRICKS)
 
-## Feed the current roster + coin balance into the menu (called just before it is shown).
+## Feed the current trick rows + breed rows + coin balance into the menu (called just before it shows).
 func _refresh_trick_menu() -> void:
 	if _menu != null:
 		_menu.set_rows(_menu_rows(), _purse.balance)
+		_menu.set_breeds(_breed_rows())  # the adopt/select breeds section (079)
+		_publish_breed_rows()            # publish the breed-row centres for the live e2e capture (079)
+
+## Build the completion-menu breed rows (079): the shipped-breed catalog classified against the owned
+## roster + the active breed + the coin balance + the adopt price, so each row reads Active / Switch /
+## Adopt(price) / Locked(price). The swatch is each breed's honest coat colour (never a faked image).
+func _breed_rows() -> Array:
+	var cat: Array = []
+	for entry in BreedPersonality.catalog():
+		var bp := entry as BreedPersonality
+		cat.append({"id": bp.id, "name": bp.display_name, "tint": bp.swatch_color()})
+	return TrickMenu.classify_breeds(cat, _roster.owned, _roster.active, _purse.balance, BREED_ADOPT_COST)
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
 ## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
@@ -1347,6 +1380,48 @@ func _on_trick_chosen(id: String) -> void:
 func _on_menu_dismissed() -> void:
 	_close_trick_menu()
 
+## Adopt a breed by spending coins (079, P3-D3). Guards: a known, not-yet-owned breed only; the spend is
+## atomic through the production CoinPurse (unaffordable → a no-op, no debt, breed not owned — the row
+## stays Locked/priced). On success record the breed, refresh the HUD balance + the menu's breed rows,
+## and persist coins + roster in the one save blob. The menu stays OPEN so the player sees the adopt land
+## (the row flips to Owned/Switch) and can immediately switch to their new dog.
+func _on_breed_adopt(id: String) -> void:
+	if not BreedPersonality.is_known(id) or _roster.owns(id):
+		return
+	if not _purse.spend(BREED_ADOPT_COST):
+		return  # unaffordable — no debt, breed not owned
+	_roster.adopt(id)
+	_refresh_coins()     # debits the HUD + republishes balance/owned for the e2e hooks (079)
+	_refresh_trick_menu()
+	_save_progress()
+
+## Switch which owned breed is active (079, P3-4). set_active refuses an unowned breed (a no-op returning
+## false), so an unowned id can never take over. On a real switch re-point _breed and re-apply the breed's
+## coat (076) + temperament (075) to the live dog, refresh the menu (the Active badge moves), and persist
+## the active breed so a returning player boots straight into their chosen dog.
+func _on_breed_chosen(id: String) -> void:
+	if not _roster.set_active(id):
+		return  # not owned — never switch to a breed the player doesn't own
+	_apply_active_breed()
+	_publish_roster()
+	_save_progress()
+	_close_trick_menu()  # reveal the switched dog + resume training (like choosing a trick, 072)
+
+## Re-point the active breed onto the running dog (079): its coat tint (076) re-tints the coat atlas in
+## place, and its four personality levers (075) re-apply — each trick's fill gains and the loop's feint
+## chance + offer cadence take the new temperament immediately; the timing-window radii apply on the next
+## offer (read from _breed in _begin_sit). Dog-agnostic: a coatless/CC0 dog just isn't re-tinted.
+func _apply_active_breed() -> void:
+	_breed = BreedPersonality.by_id(_roster.active)
+	if _dog != null:
+		CoatTint.apply(_dog, _breed.coat_tint())  # re-tint the coat atlas for the chosen breed (076)
+	for tid in _progress_by_trick:
+		_breed.apply_gains_to(_progress_by_trick[tid] as TrickProgress)  # learn_speed re-scales each bar's fill (075)
+	if _loop != null and not _force_scratch:  # _force_scratch pins every offer to a scratch (071) — don't clobber it
+		_loop.feint_chance = _breed.feint_chance()
+		_loop.min_gap = _breed.min_gap()
+		_loop.max_gap = _breed.max_gap()
+
 ## Pick a trick to train (P2-1; driven by the 072 completion menu): repoint _current_trick and the
 ## learned bar/model to THAT trick's own persisted state. Picking is a BETWEEN-rounds choice, never a
 ## second in-round verb — so if an offer of the OLD trick is mid-flight, close it cleanly first (the
@@ -1377,6 +1452,38 @@ func select_trick(id: String) -> void:
 func _publish_current_trick() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__bra_current_trick = '%s';" % _current_trick, true)
+
+## Web-only e2e/capture hook (079): mirror the roster (active breed + owned ids) + the coin balance onto
+## window.* so a LIVE browser capture can deterministically prove the collect-and-train loop — an adopt
+## debits the balance and flips `__bra_owned`, a switch flips `__bra_active_breed`, and a reload restores
+## both. Mirrors the __bra_current_trick / __bra_menu_open seams; a no-op off the web export, never read
+## back in play. Published on boot + after every adopt/switch.
+func _publish_roster() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("window.__bra_active_breed = '%s';" % _roster.active, true)
+	JavaScriptBridge.eval("window.__bra_owned = %s;" % JSON.stringify(_roster.owned), true)
+	JavaScriptBridge.eval("window.__bra_balance = %d;" % _purse.balance, true)
+
+## Web-only e2e/capture hook (079): publish each breed row's centre (in viewport px) + its id + the
+## viewport size, so the capture lands a REAL canvas tap on a specific breed row (adopt / switch) rather
+## than hard-coding fragile screenshot pixels — the honest-tap proof the 072 menu capture pioneered.
+## Published whenever the menu is refreshed (so the coords match the currently-drawn rows).
+func _publish_breed_rows() -> void:
+	if not OS.has_feature("web") or _menu == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var breeds: Array = []
+	for i in _menu.breed_count():
+		var c := _menu.breed_row_center(i)
+		breeds.append({"id": _menu.breed_id(i), "x": c.x, "y": c.y})
+	JavaScriptBridge.eval("window.__bra_breed_rows = %s;" % JSON.stringify(breeds), true)
+	var tricks: Array = []
+	for i in _menu.row_count():
+		var c := _menu.row_center(i)
+		tricks.append({"id": _menu.row_id(i), "x": c.x, "y": c.y})
+	JavaScriptBridge.eval("window.__bra_trick_rows = %s;" % JSON.stringify(tricks), true)
+	JavaScriptBridge.eval("window.__bra_viewport = [%f, %f];" % [vp.x, vp.y], true)
 
 ## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
 ## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are
@@ -1477,7 +1584,7 @@ func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out, _purse.balance)  # coins ride the same save file (068/P3-D3)
+	_store.save(out, _purse.balance, _roster.to_dict())  # coins + owned-breeds roster ride the same save file (068/079)
 
 ## Restore the saved coin balance on boot (068/P3-D3). Runs before the coin readout is built so a
 ## returning player sees their earned coins immediately. First run / corrupt save -> 0 (TrickStore
@@ -1486,10 +1593,18 @@ func _save_progress() -> void:
 func _load_coins() -> void:
 	_purse.restore({"balance": _store.load_coins()})
 
+## Restore the owned-breeds roster on boot (079/P3-4). Runs before the active breed is resolved so a
+## returning player boots into their chosen dog with their adopted breeds. First run / corrupt / legacy
+## save -> owning just the starter Labrador (TrickStore + BreedRoster both degrade cleanly), never a
+## dog-less player and never a crash.
+func _load_roster() -> void:
+	_roster.restore(_store.load_roster())
+
 ## Push the current coin balance onto the HUD readout (068/P3-D3). No-op before the readout mounts.
 func _refresh_coins() -> void:
 	if _coin_readout != null:
 		_coin_readout.set_balance(_purse.balance)
+	_publish_roster()  # keep the e2e balance + roster hooks fresh on every coin change (earn/spend, 079)
 
 ## The celebratory beat when a trick reaches mastery (045/P2-4): the same facing-preserving joyful
 ## bounce a PERFECT mark plays (077, PO Note 7). Procedural, so it reads as a coherent celebration

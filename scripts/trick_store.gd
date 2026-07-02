@@ -20,8 +20,15 @@ const SCHEMA_VERSION := 1
 ## a mismatched version rather than silently mis-reading an old or foreign blob. `coins` (068,
 ## P3-D3) rides the SAME save file so a returning player restores tricks and coins atomically; it
 ## defaults to 0 so every pre-068 caller (which passes only a tricks map) is unchanged.
-static func encode(tricks: Dictionary, coins: int = 0) -> String:
-	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins})
+static func encode(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}) -> String:
+	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins, "roster": roster})
+
+## The owned-breeds roster a corrupt / empty / legacy (pre-079) save degrades to (079, P3-4): owning +
+## active the starter Labrador, never empty — a broken save never strands the player with no dog. A
+## fresh Dictionary each call (never a shared mutable). The literal "labrador" is BreedRoster.STARTER;
+## the store stays a dumb byte-carrier, so it doesn't import the model to name its own default.
+static func _default_roster() -> Dictionary:
+	return {"owned": ["labrador"], "active": "labrador"}
 
 ## Pure: JSON string -> model map. Corrupt / empty / non-dictionary / wrong-version all degrade
 ## to {} — a clean zero state, never a crash. A broken save just starts the player fresh; the
@@ -46,14 +53,27 @@ static func decode_coins(text: String) -> int:
 		return 0
 	return maxi(0, int(parsed.get("coins", 0)))
 
+## Pure: JSON string -> the owned-breeds roster entry (079, P3-4). A missing (pre-079) / corrupt /
+## empty / wrong-version blob degrades to the starter-only default, so a returning player always at
+## least owns the Labrador. The invariants (starter always owned, active must be owned, only known ids)
+## are re-asserted by BreedRoster.restore — this just hands back the stored dict or the safe default.
+static func decode_roster(text: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return _default_roster()
+	if parsed.get("version") != SCHEMA_VERSION:
+		return _default_roster()
+	var roster: Variant = parsed.get("roster")
+	return roster if typeof(roster) == TYPE_DICTIONARY and not (roster as Dictionary).is_empty() else _default_roster()
+
 ## Write the model map (+ coin balance) to user:// (IndexedDB on web). Best-effort: if the file
 ## can't be opened we skip rather than crash mid-play — a momentarily lost save is never worth a
 ## runtime error, and the next progress change re-attempts the write. `coins` defaults to 0 so a
 ## pre-068 caller is unchanged.
-func save(tricks: Dictionary, coins: int = 0) -> void:
+func save(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}) -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
-		f.store_string(encode(tricks, coins))
+		f.store_string(encode(tricks, coins, roster))
 
 ## Read the saved model map back. First run (no file) -> {} clean zero state, never a crash; a
 ## present-but-corrupt file also degrades to {} via decode().
@@ -70,3 +90,11 @@ func load_coins() -> int:
 		return 0
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	return decode_coins(f.get_as_text()) if f != null else 0
+
+## Read the saved owned-breeds roster back (079, P3-4). First run (no file) or any corrupt/legacy save
+## -> the starter-only default, never a crash and never a dog-less player.
+func load_roster() -> Dictionary:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return _default_roster()
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	return decode_roster(f.get_as_text()) if f != null else _default_roster()

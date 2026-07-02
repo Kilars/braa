@@ -98,21 +98,51 @@ active breed persist. Verify by eye. Findings blocking.
 
 ## Acceptance criteria
 
-- [ ] TDD (RED→GREEN): roster round-trips in the same save blob; legacy saves default to owning the
+- [x] TDD (RED→GREEN): roster round-trips in the same save blob; legacy saves default to owning the
       starter Labrador; `BreedRoster` invariants (adopt/owns/set_active-only-among-owned/restore-clamp)
       hold; adopt spends coins via `CoinPurse` (affordable succeeds & debits; unaffordable is a no-op).
-- [ ] The owned-breeds roster + active breed **persist across sessions** in the one `user://` save
+- [x] The owned-breeds roster + active breed **persist across sessions** in the one `user://` save
       blob alongside coins + tricks; corrupt/legacy saves degrade to "owns the Labrador," never a crash
       and never a dog-less player.
-- [ ] In the running game (no debug URL) the player can **spend earned coins to adopt the chocolate
+- [x] In the running game (no debug URL) the player can **spend earned coins to adopt the chocolate
       Lab** and **switch which owned breed is active**; the active dog shows its coat (076) + personality
       (075); the adopt UI shows the **price + a clear locked state**.
-- [ ] Visual Review PASS (phone-portrait): adopt → switch → coat changes → reload persists; frames
-      verified by eye; findings blocking. Evidence under `.screenshots/`.
-- [ ] Additional breed *models* (Border Collie / French Bulldog / Husky) and the spotlit
+- [x] Visual Review PASS (phone-portrait): adopt → switch → coat changes → reload persists; frames
+      verified by eye; findings blocking. Evidence under `.screenshots/079-*`.
+- [x] Additional breed *models* (Border Collie / French Bulldog / Husky) and the spotlit
       select-screen *polish* remain owner-gated flags — NOT faked here.
-- [ ] Placeholder check clean (no faked breed thumbnail/image; honest real-coat swatch only).
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Placeholder check clean (no faked breed thumbnail/image; honest real-coat swatch only).
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+
+## Outcome (shipped)
+
+The disconnected economy + 2nd breed + menu are now the real collect-and-train loop, no owner asset needed.
+
+- **`BreedRoster`** (new pure model): owned-breed set + active id; starter Labrador always owned; active
+  is always owned; restore admits only known breed ids and clamps garbage/unowned → starter. 7 unit tests.
+- **`TrickStore`**: the owned-breeds roster now rides the SAME `user://` save blob as tricks+coins
+  (`encode/decode_roster/load_roster/save` extended); legacy/corrupt/empty/wrong-version → starter-only
+  default, never dog-less. 3 store tests.
+- **`BreedPersonality`**: `catalog()/is_known()/by_id()` resolver + `swatch_color()` (honest coat chip,
+  never a faked image) + `apply_gains_to()` for a live switch. `TrickProgress.set_gains()` added. 5+ tests.
+- **`TrickMenu`**: a Breeds section — `classify_breeds` → Active/Switch(owned)/Adopt(buyable)/Locked
+  (unaffordable, priced) rows with swatch + name + price; `breed_chosen`/`breed_adopt` press-only signals;
+  panel grows to fit, trick-only geometry (072) byte-identical when no breeds. 4 unit tests.
+- **`main.gd`**: `_roster` restored on boot → resolves the active breed (roster pick, `?bra_breed=` kept
+  only as a capture override); `_on_breed_adopt` (spend `BREED_ADOPT_COST`=30 via CoinPurse, no-op if
+  broke) + `_on_breed_chosen` (switch → re-tint coat + re-apply levers → close menu → persist); roster
+  saved in the one blob. 5 scene-wiring tests. Web e2e hooks (`__bra_active_breed/__bra_owned/__bra_balance`
+  + published trick/breed row centres) mirror the 072 seams for honest real-tap capture.
+
+**Verify:** 350 tests, 0 failures; import·boot·test·export green.
+**Visual Review (`tools/web_capture_breeds.mjs`, 390×844, licensed bundle, ALL real canvas taps):** master
+Sitt→Ligg→Legg deg (0→30 coins) → adopt chocolate (spend→0, owned) → switch (dog re-tints to chocolate,
+menu closes) → RELOAD (no debug URL) boots straight into the chocolate Lab. Frames `.screenshots/079-01..05`
+verified by eye: breeds section legible, priced-locked→adopt→switch states read clearly, coat visibly
+changes to deep chocolate-brown, persistence holds.
+
+**Residual owner-gated flags (NOT faked):** additional breed *models* (Border Collie / French Bulldog /
+Husky — P3-D1/D2) and the spotlit select-screen *showcase polish* (P3-1 appearance beyond legibility).
 
 ## Notes
 

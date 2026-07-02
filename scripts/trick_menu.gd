@@ -19,9 +19,20 @@ signal trick_chosen(id: String)
 ## main hides it and resumes training the CURRENT trick.
 signal dismissed
 
+## An OWNED, non-active breed row was tapped — main.select the active breed (switch which dog runs).
+signal breed_chosen(id: String)
+## A BUYABLE (affordable, unowned) breed row was tapped — main spends the coins + adopts it. An
+## unaffordable (Locked) or already-active breed absorbs the tap and emits nothing (no debt, no switch).
+signal breed_adopt(id: String)
+
 ## Each known trick's standing in the collection. LOCKED covers both the owner-gated absent tricks and
 ## anything the loaded dog simply can't perform (the honest CC0 read) — neither is ever trainable.
 enum State { LEARNED, AVAILABLE, LOCKED }
+
+## Each breed's standing in the roster (079, P3-D3/P3-4). ACTIVE = the running dog (absorbs a tap);
+## OWNED = adopted but not active (tap → switch); BUYABLE = unowned + affordable (tap → adopt, spends
+## coins); LOCKED = unowned + can't-afford (absorbs a tap — priced, no debt). Only OWNED/BUYABLE emit.
+enum BreedState { ACTIVE, OWNED, BUYABLE, LOCKED }
 
 ## Player-facing names, keyed by the stable trick ids (the three wired tricks + the BUST-064 roadmap
 ## residual so the Locked rows read honestly). A new trick is a one-line add, mirroring TrickSelector.
@@ -53,6 +64,14 @@ const ROW_GAP := 8.0            ## gutter between rows
 const CLOSE_GAP := 16.0         ## gap above the close button
 const CLOSE_H := 54.0           ## the "Keep training" close button
 const RADIUS := 18.0            ## panel corner radius
+## The breeds section (079): a small "Breeds" subheading + one row per shipped breed, seated between the
+## trick rows and the close button. Zero-height when there are no breeds, so the trick-only geometry the
+## 072 tests pin is unchanged.
+const BREEDS_GAP := 18.0        ## gutter between the trick block and the breeds section
+const BREED_HEADER_H := 30.0    ## the "Breeds" subheading band
+const BREED_ROW_H := 54.0       ## one breed row (swatch + name + state/price)
+const BREED_ROW_GAP := 8.0      ## gutter between breed rows
+const SWATCH_R := 13.0          ## the honest coat-colour chip radius
 
 ## Type sizes.
 const TITLE_SIZE := 30
@@ -84,9 +103,27 @@ const CLOSE_BG := Color(1.0, 1.0, 1.0, 0.10)
 const CLOSE_TEXT := Color(1.0, 1.0, 1.0, 0.92)
 const SHADOW := Color(0.0, 0.0, 0.0, 0.9)
 
+## Breed-row palette + badges (079). ACTIVE reads gold like a learned trick; OWNED an available white;
+## BUYABLE the calm coin-gold ("adopt"); LOCKED greyed with its price so the cost reads honestly.
+const BREED_BADGE := {
+	BreedState.ACTIVE: "Active",
+	BreedState.OWNED: "Switch",
+	BreedState.BUYABLE: "Adopt",
+	BreedState.LOCKED: "Locked",
+}
+const BREED_NAME_ACTIVE := Color(1.0, 0.86, 0.30)     ## the running dog — gold
+const BREED_NAME_OWNED := Color(1.0, 1.0, 1.0)        ## owned, tap to switch — white
+const BREED_NAME_BUYABLE := Color(1.0, 1.0, 1.0)      ## affordable — white
+const BREED_NAME_LOCKED := Color(1.0, 1.0, 1.0, 0.34) ## can't afford — greyed
+const BREED_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)     ## the "Breeds" subheading
+const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)         ## a thin dark rim so a pale coat chip reads on the panel
+
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
 var _balance := 0
+## The breed rows main fed in (each {id, name, tint, state, price}) — empty until the roster wires them,
+## so the trick-only menu (072) is byte-for-byte unchanged when there are no breeds.
+var _breeds: Array = []
 
 func _init() -> void:
 	# Modal: the menu eats every tap while it is up (STOP), so a tap can never fall through to the BRA
@@ -109,6 +146,31 @@ static func classify(all_ids: Array, performable: Array, mastered: Dictionary, l
 static func is_selectable(state: int) -> bool:
 	return state == State.LEARNED or state == State.AVAILABLE
 
+## Classify each shipped breed for the menu (pure — the adopt/switch split is unit-locked). `catalog` is
+## the ordered breed list (each {id, name, tint}); `owned` the adopted ids; `active` the running breed;
+## `balance` the coins on hand; `price` the fixed adopt cost. Each row carries the price so the Locked /
+## Buyable badge can show the cost. Order follows the catalog so the roster reads the same every open.
+static func classify_breeds(catalog: Array, owned: Array, active: String, balance: int, price: int) -> Array:
+	var rows: Array = []
+	for entry in catalog:
+		var b: Dictionary = entry
+		var id: String = b.id
+		var st := BreedState.LOCKED
+		if id == active:
+			st = BreedState.ACTIVE
+		elif owned.has(id):
+			st = BreedState.OWNED
+		elif balance >= price:
+			st = BreedState.BUYABLE
+		rows.append({"id": id, "name": b.get("name", id), "tint": b.get("tint", Color(1, 1, 1)),
+			"state": st, "price": price})
+	return rows
+
+## Whether a breed row is tappable: OWNED switches to it, BUYABLE adopts it. ACTIVE (already running) and
+## LOCKED (unaffordable) absorb the tap — no switch, no debt.
+static func breed_is_selectable(state: int) -> bool:
+	return state == BreedState.OWNED or state == BreedState.BUYABLE
+
 ## The player-facing name for a trick id (pure). Unknown ids fall back to a capitalised id.
 static func display_name(id: String) -> String:
 	return LABELS.get(id, id.capitalize())
@@ -120,8 +182,35 @@ func set_rows(rows: Array, balance: int) -> void:
 	_balance = maxi(0, balance)
 	queue_redraw()
 
+## Set the breed rows to show (079) and request a redraw. Empty until the roster wires them; main rebuilds
+## these (via classify_breeds) each time it opens the menu, so the menu itself stays dumb.
+func set_breeds(breeds: Array) -> void:
+	_breeds = breeds
+	queue_redraw()
+
 func row_count() -> int:
 	return _rows.size()
+
+func breed_count() -> int:
+	return _breeds.size()
+
+## The i-th breed row's centre in this Control's local (viewport) coords, and its breed id (079). The
+## live e2e/Visual-Review capture reads these to land a REAL canvas tap on a specific breed row (the same
+## honest-tap proof the 072 menu capture uses for trick rows), rather than hard-coding fragile pixels.
+func breed_row_center(i: int) -> Vector2:
+	return _breed_row_rect(i).get_center()
+
+func breed_id(i: int) -> String:
+	return (_breeds[i] as Dictionary).id
+
+## The i-th trick row's centre + its id (079) — same purpose as the breed accessors above. The breeds
+## section makes the panel taller, so the 072-era hard-coded trick-row pixels no longer land; the capture
+## reads these instead so a real tap on "Ligg" / "Legg deg" is robust to the layout growing.
+func row_center(i: int) -> Vector2:
+	return _row_rect(i).get_center()
+
+func row_id(i: int) -> String:
+	return (_rows[i] as Dictionary).id
 
 ## The coin balance currently shown — the render-free predicate a test reads.
 func balance() -> int:
@@ -144,13 +233,40 @@ func _rows_block_h() -> float:
 		return 0.0
 	return n * ROW_H + (n - 1) * ROW_GAP
 
-## The centred modal panel rect for the current size + row count.
+## The breeds block height (079): the gutter + "Breeds" subheading + one row per breed. Zero when there
+## are no breeds, so the trick-only panel geometry (072) is unchanged.
+func _breeds_block_h() -> float:
+	var n := _breeds.size()
+	if n == 0:
+		return 0.0
+	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
+
+## The centred modal panel rect for the current size + row/breed counts.
 func _panel_rect() -> Rect2:
 	var pw := minf(size.x - 2.0 * PANEL_MARGIN_X, PANEL_MAX_W)
-	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + CLOSE_GAP + CLOSE_H + PANEL_PAD
+	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + CLOSE_H + PANEL_PAD
 	var px := (size.x - pw) * 0.5
 	var py := (size.y - ph) * 0.5
 	return Rect2(px, py, pw, ph)
+
+## The y where the breeds section (subheading) begins, just below the trick rows block.
+func _breeds_top() -> float:
+	var panel := _panel_rect()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + BREEDS_GAP
+
+## The i-th breed row rect inside the panel (below the "Breeds" subheading).
+func _breed_row_rect(i: int) -> Rect2:
+	var panel := _panel_rect()
+	var x := panel.position.x + PANEL_PAD
+	var y := _breeds_top() + BREED_HEADER_H + i * (BREED_ROW_H + BREED_ROW_GAP)
+	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, BREED_ROW_H)
+
+## The breed row index under a point, or -1 if none.
+func _breed_row_index_at(pos: Vector2) -> int:
+	for i in _breeds.size():
+		if _breed_row_rect(i).has_point(pos):
+			return i
+	return -1
 
 ## The i-th trick row rect inside the panel.
 func _row_rect(i: int) -> Rect2:
@@ -163,7 +279,7 @@ func _row_rect(i: int) -> Rect2:
 func _close_rect() -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + CLOSE_GAP
+	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, CLOSE_H)
 
 ## The row index under a point, or -1 if none.
@@ -195,6 +311,14 @@ func _gui_input(event: InputEvent) -> void:
 		if is_selectable(r.state):
 			trick_chosen.emit(r.id)
 		return  # a Locked row is absorbed — never a dismiss, never a switch
+	var bi := _breed_row_index_at(pos)
+	if bi >= 0:
+		var b: Dictionary = _breeds[bi]
+		match b.state:
+			BreedState.OWNED:   breed_chosen.emit(b.id)  # switch to an owned dog
+			BreedState.BUYABLE: breed_adopt.emit(b.id)   # spend coins to adopt it
+			# ACTIVE (already running) / LOCKED (can't afford) absorb the tap — no switch, no debt.
+		return
 	if _close_rect().has_point(pos) or not _panel_rect().has_point(pos):
 		dismissed.emit()
 
@@ -221,6 +345,13 @@ func _draw() -> void:
 	# The trick rows.
 	for i in _rows.size():
 		_draw_row(font, i)
+	# The breeds section (079): a subheading + one row per shipped breed (swatch, name, state/price).
+	if not _breeds.is_empty():
+		var sub_baseline := _breeds_top() + font.get_ascent(BADGE_SIZE)
+		_draw_text_outlined(font, Vector2(panel.position.x + PANEL_PAD, sub_baseline), "Breeds",
+			BADGE_SIZE, BREED_SUBHEAD)
+		for i in _breeds.size():
+			_draw_breed_row(font, i)
 	# The close ("Keep training") button.
 	var cr := _close_rect()
 	draw_rect(cr, CLOSE_BG, true)
@@ -273,6 +404,48 @@ func _draw_row(font: Font, i: int) -> void:
 		badge_col = BADGE_LEARNED
 	elif st == State.AVAILABLE:
 		badge_col = BADGE_AVAILABLE
+	var badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
+	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
+		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
+
+## One breed row (079): the honest coat-colour swatch chip on the left, the breed name beside it, and the
+## state badge on the right — with the adopt price appended for a Buyable/Locked row so the cost reads.
+func _draw_breed_row(font: Font, i: int) -> void:
+	var b: Dictionary = _breeds[i]
+	var rect := _breed_row_rect(i)
+	var st: int = b.state
+	var locked := st == BreedState.LOCKED
+	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
+	# The coat swatch chip — a filled disc of the real coat colour with a thin dark rim so a pale coat
+	# still reads on the panel. An honest colour chip, never a faked breed image.
+	var sc := Vector2(rect.position.x + 16.0 + SWATCH_R, rect.position.y + rect.size.y * 0.5)
+	var chip: Color = b.get("tint", Color(1, 1, 1))
+	if locked:
+		chip.a = 0.4  # dim an unaffordable breed's chip so it reads clearly not-yet-yours
+	draw_circle(sc, SWATCH_R + 1.0, SWATCH_RIM)
+	draw_circle(sc, SWATCH_R, chip)
+	# The breed name, to the right of the chip.
+	var name_col := BREED_NAME_LOCKED
+	if st == BreedState.ACTIVE:
+		name_col = BREED_NAME_ACTIVE
+	elif st == BreedState.OWNED:
+		name_col = BREED_NAME_OWNED
+	elif st == BreedState.BUYABLE:
+		name_col = BREED_NAME_BUYABLE
+	var name_x := sc.x + SWATCH_R + 12.0
+	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
+	_draw_text_outlined(font, Vector2(name_x, name_baseline), str(b.get("name", b.id)), NAME_SIZE, name_col)
+	# The state badge, right-aligned. Buyable/Locked append the coin price so the cost reads honestly.
+	var badge: String = BREED_BADGE[st]
+	if st == BreedState.BUYABLE or st == BreedState.LOCKED:
+		badge = "%s %d" % [badge, int(b.get("price", 0))]
+	var badge_col := BREED_NAME_LOCKED
+	if st == BreedState.ACTIVE:
+		badge_col = BADGE_LEARNED
+	elif st == BreedState.OWNED:
+		badge_col = BADGE_AVAILABLE
+	elif st == BreedState.BUYABLE:
+		badge_col = COIN_GOLD
 	var badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
 	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
