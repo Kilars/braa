@@ -157,7 +157,7 @@ var _current_trick := TRICK_ID_SITT
 ## SPENDS coins waits on the owner-gated extra breed models (BUST-068 residual), so no spend caller
 ## exists yet — CoinPurse.spend()/can_afford() are covered by unit tests, ready for that UI.
 var _purse := CoinPurse.new()
-var _coin_readout: Label
+var _coin_readout: CoinReadout
 const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks = 30 toward a breed)
 
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
@@ -532,7 +532,12 @@ const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
 ## the apex-tell marker keeps with the button). It floats in the clear sky, well above the centred
 ## dog's crown and far from the bottom BRA band, so it is never a second in-round verb (P2-1).
 const SELECTOR_MARGIN_X := 48.0
-const SELECTOR_OFFSET_TOP := 28.0
+## The coin readout (069) gets its OWN top line above the chips; the selector top is DERIVED from
+## the coin line's foot + a gap, so the coin count can never collide with the rightmost chip at any
+## roster size (PO Review 2026-07-01, bug 2). The ample sky of the 063 expand frame holds the coin
+## line + the whole selector/bar/readout stack above the centred dog.
+const COIN_READOUT_TOP := 10.0
+const SELECTOR_OFFSET_TOP := COIN_READOUT_TOP + CoinReadout.HEIGHT + 14.0  ## 64 — below the coin line
 const SELECTOR_HEIGHT := TrickSelector.HEIGHT       ## 52 — the selector's own preferred band height
 const SELECTOR_FOOT := SELECTOR_OFFSET_TOP + SELECTOR_HEIGHT
 
@@ -550,13 +555,12 @@ const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
 const READOUT_OFFSET_TOP := LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT + 16.0
 const READOUT_OFFSET_BOTTOM := READOUT_OFFSET_TOP + 124.0  ## 124 px band (unchanged height, 038)
-## Coin readout (068/P3-D3): a small, unobtrusive running balance tucked in the top-right corner —
-## clear of the centred selector chips and the learned bar, so the earned-coins feedback is visible
-## without disturbing the PO-signed Phase-2 top-band stack.
+## Coin readout (068, redrawn in 069/P3-D3): a small running balance tucked on its OWN top line in
+## the top-right corner (COIN_READOUT_TOP), above the selector chip row — so the earned-coins
+## feedback is visible without colliding with the rightmost chip (069, bug 2). The CoinReadout node
+## draws its own coin disc + digits + "coins" caption, so main only supplies the anchor box + width.
 const COIN_READOUT_MARGIN := 20.0
-const COIN_READOUT_WIDTH := 150.0
-const COIN_READOUT_HEIGHT := 40.0
-const COIN_READOUT_FONT := 30
+const COIN_READOUT_WIDTH := 170.0
 ## Confused-beat shape (045): a short damped yaw wobble on a bad tap, scaled by the reduced-
 ## motion factor so it dampens (never a hard snap) when motion is reduced (X-5).
 const CONFUSED_DURATION := 0.45
@@ -1016,25 +1020,18 @@ func _setup_learned_bar(ui: CanvasLayer) -> void:
 ## initial text reflects the balance already restored on boot by _load_coins (a returning player sees
 ## their coins immediately).
 func _setup_coin_readout(ui: CanvasLayer) -> void:
-	var label := Label.new()
-	label.name = "CoinReadout"
-	label.anchor_left = 1.0
-	label.anchor_right = 1.0
-	label.anchor_top = 0.0
-	label.anchor_bottom = 0.0
-	label.offset_left = -COIN_READOUT_MARGIN - COIN_READOUT_WIDTH
-	label.offset_right = -COIN_READOUT_MARGIN
-	label.offset_top = COIN_READOUT_MARGIN
-	label.offset_bottom = COIN_READOUT_MARGIN + COIN_READOUT_HEIGHT
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("font_size", COIN_READOUT_FONT)
-	label.add_theme_color_override("font_color", Color(1, 0.92, 0.45))  # warm coin-gold
-	label.add_theme_color_override("font_outline_color", Color(0.08, 0.06, 0.02))
-	label.add_theme_constant_override("outline_size", 10)
-	ui.add_child(label)
-	_coin_readout = label
+	var readout := CoinReadout.new()
+	readout.name = "CoinReadout"
+	readout.anchor_left = 1.0
+	readout.anchor_right = 1.0
+	readout.anchor_top = 0.0
+	readout.anchor_bottom = 0.0
+	readout.offset_left = -COIN_READOUT_MARGIN - COIN_READOUT_WIDTH
+	readout.offset_right = -COIN_READOUT_MARGIN
+	readout.offset_top = COIN_READOUT_TOP  # its own line above the chip row (069, bug 2)
+	readout.offset_bottom = COIN_READOUT_TOP + CoinReadout.HEIGHT
+	ui.add_child(readout)
+	_coin_readout = readout
 	_refresh_coins()  # seed with the balance restored on boot (_load_coins)
 
 ## The trick selector (066, P2-1): a chip row across the top of the HUD to pick which trick to train.
@@ -1228,7 +1225,7 @@ func _load_coins() -> void:
 ## Push the current coin balance onto the HUD readout (068/P3-D3). No-op before the readout mounts.
 func _refresh_coins() -> void:
 	if _coin_readout != null:
-		_coin_readout.text = "%d 🪙" % _purse.balance
+		_coin_readout.set_balance(_purse.balance)
 
 ## The celebratory beat when a trick reaches mastery (045/P2-4): reuse the dog's real joyful
 ## reaction (the same clip a PERFECT mark plays) as the one-shot celebration. A no-op on a dog
