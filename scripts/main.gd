@@ -1982,6 +1982,13 @@ func _notify_web_ready() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__appReady = true;", true)
 	print("[Bra!] scaffold ready")
+	# Positive telemetry gate (086, X-8/ADR-0007): print a console signal ONLY when a real project
+	# token is baked in (a CI web export with POSTHOG_TOKEN injected → is_enabled() true). Locally /
+	# on the CC0 build the committed token is empty → disabled → this stays silent, so verify's boot
+	# leg and normal play are untouched. The deploy's browser boot check --require's this exact
+	# substring, so a token that failed to bake fails the deploy closed (the live site stays stale).
+	if _telemetry != null and _telemetry.is_enabled():
+		print("[Bra!] telemetry enabled (anonymous PostHog capture)")
 
 ## Single choke-point for all telemetry calls in main (084, X-8). Routes every capture
 ## through the one _telemetry node; null-guards for headless paths that skip _ready().

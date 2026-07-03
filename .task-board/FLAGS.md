@@ -39,6 +39,22 @@ Entry format:
 
 ## Open
 
+### FLAG 2026-07-03 — Telemetry + feedback ship DORMANT until the owner sets `POSTHOG_TOKEN` (+ a PostHog EU project)
+- **Source:** tasks 084/085/086 (ADR-0007, X-8). The full loop is now wired end-to-end — the choke-point
+  emits `session_start` / `bra_tapped` / `trick_mastered` / `breed_adopted` / `session_end`, the in-menu
+  feedback form emits `feedback_submitted`, and the deploy CI-injects the token — but `PROJECT_TOKEN` is
+  empty by default, so **nothing is captured on the live site until the owner acts**.
+- **Decision needed (owner-only):** create a PostHog **EU** project and add its public project key
+  (`phc_…`) as the GitHub repo secret **`POSTHOG_TOKEN`**. (Optionally, for the deferred reporting cron,
+  `POSTHOG_API_KEY` + `POSTHOG_ID` — not needed for capture.) Only the owner can create the project and
+  add repo secrets.
+- **Why it's user-only:** external account creation + a repo secret + a privacy/data-collection choice —
+  not a technical fork the loop can resolve.
+- **Assumption made to keep going:** shipped DORMANT and fail-safe. With no secret, `is_configured()` is
+  false → the choke-point no-ops, the feedback form still works (just emits nothing), and the deploy still
+  publishes (the enabled-gate is skipped). The moment the owner sets `POSTHOG_TOKEN`, the next deploy bakes
+  it, the browser boot check asserts `telemetry enabled`, and capture goes live — **no code change needed**.
+
 ### FLAG 2026-07-01 — Phase 3 (breeds) asserted "owner-gated on breed assets" + unresolved owner-decisions P3-D1/D2/D4  ·  **busted 2026-07-01 (BUST-068) — economy/personality spine DE-GATED; only extra breed MODELS + the 3 decisions stay owner-gated**
 - **Source:** the board/memory assert "all Phase-3 stories sit on the owner-gated breed-asset block," and `phase3.md` marks **P3-D1** (lock the launch breed set), **P3-D2** (universal vs. signature tricks), **P3-D4** (per-breed clip coverage) as **unresolved owner-decisions** "to resolve before this phase is sliced." Phase 2 was just signed off (Phase 3 is now current), and this gate was **never raised as a flag** — so Iteration step 2's sweep would miss it, the exact anti-pattern that skipped the Phase-2 roster. Raised + busted here.
 - **The bust (against the raw asset inventory, NOT the running game — behavior ≠ inventory):** `ls assets/models/` + `assets/models/dog_licensed.clips.txt` show exactly **one** licensed model — the **Labrador** (every one of the 113 clips is `Arm_Labrador|…`). There is **no** Border Collie / French Bulldog / Husky glb on disk. So the breed-**appearance** half of P3-1 ("reads clearly as that real breed" — distinct silhouette/coat) and any breed-**exclusive** signature-trick clips (P3-2) are **genuinely owner-asset-gated** — they need models the pack doesn't ship.

@@ -222,6 +222,34 @@ jobs:
           cp -f webtpl/web_nothreads_release.zip "$DEST/web_nothreads_release.zip"
           echo "installed templates:"; ls -la "$DEST"
 
+      # Inject the PostHog project token into the export (086, ADR-0007 X-8). scripts/telemetry_config.gd
+      # ships PROJECT_TOKEN := "" so telemetry is DORMANT everywhere by default; the live web export
+      # substitutes the real phc_ token here (export-time only — the substituted file is NEVER committed,
+      # mirroring how the encryption key is CI-injected). The token is the PUBLIC project/ingestion key
+      # (ships in every client bundle regardless) so this is repo-hygiene, not a secret leak. If the
+      # POSTHOG_TOKEN secret is absent (forks / pre-setup) telemetry stays dormant — allowed — and the
+      # enabled-gate below is skipped so the deploy still publishes. Runs BEFORE --import so the packed
+      # script cache reflects the baked token.
+      - name: Inject PostHog project token into the export
+        if: steps.guard.outputs.has == 'true'
+        env:
+          POSTHOG_TOKEN: ${{ secrets.POSTHOG_TOKEN }}
+        run: |
+          set -euo pipefail
+          cfg="scripts/telemetry_config.gd"
+          if [ -z "${POSTHOG_TOKEN:-}" ]; then
+            echo "TELEMETRY_EXPECTED=false" >> "$GITHUB_ENV"
+            echo "::warning::POSTHOG_TOKEN secret is empty — shipping telemetry DISABLED (dormant, ADR-0007). This is allowed; the enabled-gate in the browser boot check is skipped."
+          else
+            # Scoped substitution of the ONE empty-token const line. '#' delimiter avoids clashing with
+            # the phc_ token chars. Assert BOTH that the empty const is gone and the token landed.
+            sed -i 's#^const PROJECT_TOKEN := ""#const PROJECT_TOKEN := "'"$POSTHOG_TOKEN"'"#' "$cfg"
+            grep -q '^const PROJECT_TOKEN := ""' "$cfg" && { echo "::error::PROJECT_TOKEN still empty after substitution"; exit 1; }
+            grep -qF "$POSTHOG_TOKEN" "$cfg" || { echo "::error::PostHog token did not land in $cfg"; exit 1; }
+            echo "TELEMETRY_EXPECTED=true" >> "$GITHUB_ENV"
+            echo "injected PostHog project token into $cfg (export-time only; not committed)"
+          fi
+
       - name: Import resources
         if: steps.guard.outputs.has == 'true'
         run: |
@@ -274,9 +302,15 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install --no-save playwright >/dev/null 2>&1
           npx playwright install --with-deps chromium
-          node tools/web_boot_check.mjs build/web-licensed \
-            --require "dog_licensed.glb" \
-            --require "dog can Sitt"
+          # Base proof: the encrypted pck decrypts and the LICENSED, Sitt-capable dog loaded.
+          req=(--require "dog_licensed.glb" --require "dog can Sitt")
+          # POSITIVE telemetry gate (086): when a token was injected, the real browser MUST print the
+          # "telemetry enabled" console signal (main only prints it when is_enabled() is true at runtime),
+          # proving the baked token actually took. No token → dormant is allowed → this require is skipped.
+          if [ "${TELEMETRY_EXPECTED:-false}" = "true" ]; then
+            req+=(--require "telemetry enabled")
+          fi
+          node tools/web_boot_check.mjs build/web-licensed "${req[@]}"
 
       - name: Upload licensed bundle artifact (for owner review)
         if: steps.guard.outputs.has == 'true'
