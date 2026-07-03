@@ -39,11 +39,24 @@ per-trick completion, quit-point, timing quality) become queryable once the toke
 
 ## Acceptance criteria
 
-- [ ] `main` owns one `Telemetry` node; every capture routes through it (grep: no other node calls PostHog).
-- [ ] TDD (RED→GREEN) proves each event fires with the correct name + props via the recording seam (no net).
-- [ ] Default local run still green + byte-identical play (telemetry disabled, no gameplay effect).
-- [ ] `session_end` reliability addressed (visibilitychange/beacon) or a `SPIKE-` filed if the flush is unknown.
-- [ ] Placeholder check clean. `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] `main` owns one `Telemetry` node; every capture routes through it (grep: no other node calls PostHog).
+- [x] TDD (RED→GREEN) proves each event fires with the correct name + props via the recording seam (no net).
+- [x] Default local run still green + byte-identical play (telemetry disabled, no gameplay effect).
+- [x] `session_end` reliability addressed (visibilitychange/beacon) or a `SPIKE-` filed if the flush is unknown.
+- [x] Placeholder check clean. `nix develop -c bash verify.sh` green (import·boot·test·export).
+
+## Resolution
+
+Files touched: `scripts/telemetry.gd` (recording sink: `captured` array, `_remember()`, `last()`),
+`scripts/sit_window.gd` (`bucket()` static classifier), `scripts/sit_session.gd` (`apex_offset()`),
+`scripts/main.gd` (`_telemetry` + `_attempts` fields; `_telem()` choke-point; session_start in
+`_ready()`; bra_tapped in `_on_bra_pressed()`; trick_mastered in `_apply_progress()`; breed_adopted
+in `_on_breed_adopt()`; `_notification()` + `_emit_session_end()` for session_end).
+
+session_end reliability decision: engine-native `NOTIFICATION_APPLICATION_PAUSED` (Page Visibility API
+"hidden" → backgrounded tab on web) + `NOTIFICATION_WM_CLOSE_REQUEST` (desktop close), both surfaced
+by Godot's standard notification system — no JavaScriptBridge or sendBeacon spike needed. Fire-and-forget
+posture tolerates a hard tab-kill dropping the final event (ADR-0007).
 
 ## Notes
 

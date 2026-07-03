@@ -47,3 +47,12 @@ func tap() -> SitWindow.Tier:
 	if _window == null:
 		return SitWindow.Tier.DEAD
 	return _window.score(_elapsed)
+
+## Signed seconds from the seated apex at the current tap (negative = early / before
+## apex, positive = late / after apex); 0.0 when no sit is open. Read alongside tap()
+## for telemetry — does NOT recompute the score, just exposes the raw offset the
+## scoring math already uses internally.
+func apex_offset() -> float:
+	if _window == null:
+		return 0.0
+	return _elapsed - _window.apex

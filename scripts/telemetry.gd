@@ -16,6 +16,12 @@ extends Node
 var _session_id: String
 var _session_start_us: int
 
+## Test-observable recording sink — stores every capture call BEFORE the
+## is_enabled() / is_inside_tree() guards, so wiring tests can assert event
+## name + props with no network (telemetry stays disabled in headless runs).
+## This array never touches PostHog; it is purely a test seam.
+var captured: Array = []
+
 func _init() -> void:
 	_session_id = _new_session_id()
 	_session_start_us = Time.get_ticks_usec()
@@ -42,12 +48,32 @@ func build_event(event: String, props := {}) -> Dictionary:
 	return TelemetryEvent.build(TelemetryConfig.PROJECT_TOKEN, event, _session_id, stamped)
 
 ## Route one event to PostHog. No-op when disabled or off-tree. Fire-and-forget.
+## Recording into `captured` happens FIRST (before any guard) so the test seam
+## works even while telemetry is disabled and off-tree — no network fires in tests.
 func capture(event: String, props := {}) -> void:
+	_remember(event, props)
 	if not is_enabled():
 		return
 	if not is_inside_tree():
 		return
 	_send(build_event(event, props))
+
+## Append one entry to the recording sink and keep at most 64 entries (drop the
+## oldest on overflow). Uses props.duplicate() so later mutations don't rewrite
+## history. Never touches the network.
+func _remember(event: String, props: Dictionary) -> void:
+	captured.append({"event": event, "props": props.duplicate()})
+	if captured.size() > 64:
+		captured.pop_front()
+
+## Return the most recent captured entry whose "event" matches `event`, or {} if
+## none is found. Iterates from the end so the latest hit is always returned first.
+func last(event: String) -> Dictionary:
+	for i in range(captured.size() - 1, -1, -1):
+		var entry := captured[i] as Dictionary
+		if entry.get("event", "") == event:
+			return entry
+	return {}
 
 func _send(payload: Dictionary) -> void:
 	var req := HTTPRequest.new()

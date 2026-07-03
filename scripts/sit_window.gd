@@ -106,3 +106,14 @@ static func tier_name(tier: Tier) -> String:
 		Tier.OK: return "OK"
 		Tier.MISS: return "MISS"
 		_: return "DEAD"
+
+## ADR-0007 telemetry vocabulary: perfect | good | early | late | miss.
+## A MISS splits into early/late by the sign of signed_offset (negative = the tap
+## was before the apex; positive = after). DEAD collapses to "miss". Pure, no
+## engine state — safe to call anywhere including headless tests.
+static func bucket(tier: Tier, signed_offset: float) -> String:
+	match tier:
+		Tier.PERFECT: return "perfect"
+		Tier.OK: return "good"
+		Tier.MISS: return "early" if signed_offset < 0.0 else "late"
+		_: return "miss"

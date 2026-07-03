@@ -197,6 +197,17 @@ const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick m
 ## explicitly picks a non-Normal mode. 081+ apply the bundle to resolve the read levers.
 var _difficulty := Difficulty.normal()
 
+## The ADR-0007 telemetry choke-point (084, X-8): the ONE Telemetry node for this scene.
+## Every capture routes through _telem() — a single audit point. Instantiated in _ready()
+## and kept so wiring tests can read _telemetry.captured (the recording sink). Null-guarded
+## in _telem() so headless paths that skip _ready() never throw.
+var _telemetry: Telemetry
+
+## Total accepted BRA taps this session (084, X-8): incremented once per accepted tap in
+## _on_bra_pressed (after the gate locks, so mash-swallowed taps are never counted). Reported
+## in the session_end event. Starts at 0 for every session.
+var _attempts := 0
+
 ## The procedural "confused beat" on a bad tap (045, P2-4) — the mirror of the joyful mark:
 ## the dog briefly recoils, then settles. It is PROCEDURAL (a damped yaw wobble restored
 ## exactly to the dog's rest transform), NOT a faked clip — the licensed pack carries no
@@ -264,6 +275,13 @@ func _ready() -> void:
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_difficulty = _resolve_difficulty()  # the GLOBAL difficulty: the persisted setting or the ?bra_difficulty= override (080/P4-1); dormant (defaults to Normal)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
+	# Mount the ADR-0007 telemetry choke-point (084, X-8): the one node all captures route through.
+	# Instantiated here, before any capture, so session_start is the first event this session.
+	# Fire-and-forget: disabled locally (empty token) — never blocks gameplay (X-7).
+	_telemetry = Telemetry.new()
+	add_child(_telemetry)
+	var _vp := get_viewport().get_visible_rect().size if get_viewport() != null else Vector2(720, 1280)
+	_telem("session_start", {"platform": OS.get_name(), "viewport": [_vp.x, _vp.y]})
 	_load_progress()         # restore saved learned progress BEFORE the bar is built (049/P2-5)
 	_load_coins()            # restore the saved coin balance BEFORE the readout is built (068/P3-D3)
 	_setup_environment()
@@ -1445,6 +1463,7 @@ func _on_breed_adopt(id: String) -> void:
 	if not _purse.spend(BREED_ADOPT_COST):
 		return  # unaffordable — no debt, breed not owned
 	_roster.adopt(id)
+	_telem("breed_adopted", {"breed": id})
 	_refresh_coins()     # debits the HUD + republishes balance/owned for the e2e hooks (079)
 	_refresh_trick_menu()
 	_save_progress()
@@ -1584,6 +1603,14 @@ func _on_bra_pressed() -> void:
 		return  # swallowed during the fixed lock — not scored, the gate's clock untouched (046/P2-7)
 	_tap_gate.lock()  # the fixed re-arm window starts on the ACCEPTED tap only — mashing can't extend it
 	var tier := _session.tap()
+	_attempts += 1
+	var _off := _session.apex_offset()
+	_telem("bra_tapped", {
+		"trick": _current_trick,
+		"bucket": SitWindow.bucket(tier, _off),
+		"latency_ms_from_apex": int(round(_off * 1000.0)),
+		"attempt_number": _attempts
+	})
 	marked.emit(tier)
 	_play_payoff(tier)
 	if _readout != null:
@@ -1605,6 +1632,7 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		if delta < 0.0:
 			_learned_bar.pulse_setback()
 	if _progress.just_mastered(delta):
+		_telem("trick_mastered", {"trick": _current_trick})
 		_play_mastery_beat()
 		_purse.earn(_difficulty.mastery_reward(COIN_REWARD_MASTERY))  # difficulty scales the payout (082, P4-3); Normal = identity
 		_refresh_coins()
@@ -1917,3 +1945,39 @@ func _notify_web_ready() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__appReady = true;", true)
 	print("[Bra!] scaffold ready")
+
+## Single choke-point for all telemetry calls in main (084, X-8). Routes every capture
+## through the one _telemetry node; null-guards for headless paths that skip _ready().
+## Fire-and-forget: if capture() throws nothing surfaces to gameplay (X-7).
+func _telem(event: String, props := {}) -> void:
+	if _telemetry != null:
+		_telemetry.capture(event, props)
+
+## Godot's web export raises NOTIFICATION_APPLICATION_PAUSED on the Page Visibility API
+## "hidden" transition (tab hidden / backgrounded) and NOTIFICATION_WM_CLOSE_REQUEST on
+## desktop close — the best-effort, engine-native flush point for session_end (ADR-0007).
+## No JavaScriptBridge needed: the engine surfaces both as standard Godot notifications.
+## Fire-and-forget: a hard tab-kill without a prior "hidden" may still drop the final
+## event, which ADR-0007's fire-and-forget posture explicitly tolerates.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_emit_session_end()
+
+## Emit session_end with a summary of the session: the last trick trained, the total
+## accepted tap count, the best single-trick progress value seen, and how many tricks
+## were mastered. Iterates _progress_by_trick so it is correct even if the player
+## switched tricks mid-session. Safe to call with an empty map (mastered_count = 0).
+func _emit_session_end() -> void:
+	var best := 0.0
+	var mastered := 0
+	for id in _progress_by_trick:
+		var p := _progress_by_trick[id] as TrickProgress
+		best = maxf(best, p.value)
+		if p.mastered:
+			mastered += 1
+	_telem("session_end", {
+		"last_trick": _current_trick,
+		"attempts": _attempts,
+		"best_progress": best,
+		"mastered_count": mastered
+	})
