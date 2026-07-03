@@ -112,3 +112,33 @@ TDD (RED first, per `.claude/skills/tdd/SKILL.md`):
       verdict that P3-2's divergence is owner-gated on a second real breed model + signature clips
       (P3-D1/D2/D4), and this task is closed as the flag route (not a self-certified stub).
 - [ ] `nix develop -c bash verify.sh` green.
+
+## Resolution (2026-07-03) — closed as ROUTE 2b (flag verdict, no stub shipped)
+
+**Outcome: the flag-bust drove the manifest's signature candidate live and REJECTED it on Phase-1
+quality — so no signature trick / breed divergence ships this task, and the gate is recorded as a
+narrowed owner-gate (`FLAGS.md`, 2026-07-03 "P3-2 per-breed trick DIVERGENCE" flag).**
+
+- **Flag-bust (adversarial, live-driven — acceptance #1 met):** `Digging_*` ("Grav") is the rig's only
+  clip with the (start, loop, end) shape a mark-timing trick needs *and* a distinct non-settle action.
+  It resolved cleanly and its apex ring fired (2154 gold px). But driven at a PERFECT apex on the
+  chocolate Lab (`?bra_trick=grav&bra_breed=chocolate`, `web_capture_apex.mjs` + `web_capture_frames.mjs`),
+  the dog digs **rear-to-camera at the scored apex and through the hold** — `.screenshots/088-grav-choc-07/08/09`
+  + `088-grav-apex-best` (reviewed by eye). That breaks the game's PO-enforced face-the-camera-at-apex
+  contract (061 / 077 / PO note 3). `Bark` has no hold-able apex; `Crouch_Idle` reads as Ligg; `Scratching`
+  is the 071 feint. **No on-rig clip clears the Phase-1 face-camera bar.**
+- **Fix attempted before flagging (not a premature flag):** a per-trick base-yaw bias of π
+  (`_trick_face_offset`) to let the clip's own rotation bring the apex back to camera. Re-exported +
+  re-captured (`088-grav-apex-fixed`, `f001/f015/f035`): **no effect** — `_begin_sit` already engages the
+  061 face-turn for every trick, so the base heading was right; the `Digging` clip drives the body's apex
+  orientation itself (root/hips sweep). Correcting it needs per-frame root-motion compensation — animation
+  surgery, disproportionate + high-risk, possibly non-convergent. Attempt reverted.
+- **Route 2b executed:** the 088 Grav wiring + per-breed `trick_list` divergence + the yaw-offset attempt
+  were **fully reverted** to the pre-088 tree — no rear-to-camera trick, no dead divergence seam. Both
+  breeds keep the shared, PO-signed Sitt / Ligg / Legg deg core. The per-breed-trick-list infra is a
+  bundle-add + label away (065/067 pattern) the moment the owner supplies a usable camera-facing signature.
+- **Placeholder check:** N/A — no product code shipped (net diff = the flag verdict + this task note).
+- **Gate:** `verify.sh` green on the reverted tree (455 tests, 0 failures).
+
+**P3-2's "non-identical trick lists" is DEFERRED to the owner asset (camera-facing signature clip /
+2nd breed model + P3-D1/D2/D4), NOT silently unmet — see the FLAGS.md verdict.**
