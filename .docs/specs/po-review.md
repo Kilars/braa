@@ -1,63 +1,70 @@
 **PO Review**
 
-### PO Review — 2026-07-02 (build HEAD `0506503` — chocolate-Lab + BreedPersonality drop)
+### PO Review — 2026-07-03 (build HEAD `e86d71b` — post-077/078/079 + telemetry drop)
 
-Played the local licensed bundle (`build/web`, rebuilt 14:38) at 390×844 phone-portrait in headless
-Chromium / SwiftShader (== the deployed GL Compatibility renderer). Boot log confirms the licensed
-Labrador + "can Sitt"; the `?bra_breed=chocolate` boot logs the tinted `chocolate_labrador` coat.
-**Zero** SCRIPT ERROR / pageerror across default, autotap, completion-menu and chocolate boots.
-Evidence frames under `.screenshots/po-p3/`.
+Rebuilt the local licensed bundle fresh from HEAD `e86d71b` (`verify.sh` green) and played it at
+390×844 phone-portrait in headless Chromium / SwiftShader (== the deployed GL Compatibility renderer).
+Drove the whole loop with **real canvas taps** — idle/wander, a PERFECT mark + its payoff burst, the
+completion menu, the adopt→switch→reload breed loop, and the feedback form. Zero SCRIPT ERROR /
+pageerror across the boots. Evidence frames: `.screenshots/po73-idle-*`, `.screenshots/po73-react-*`,
+`.screenshots/079-0*`, `.screenshots/085-feedback-01-form.png`.
 
 **Confirmed fixed / working — pruned from the directive list:**
-- **Completion menu (note 1 / 072) works.** Mastering Sitt pops a centred "Tricks" modal — Sitt
-  *Learned*, Ligg / Legg deg *Available*, Gi labb / Rull / Snurr *Locked*, a coin count, and a
-  "Keep training" button; the always-on chip row is gone. (`C-menu.png`)
-- **Framing / facing (note 3) holds in steady state** — between offers the dog stands centred and
-  faces the player, no long rear-on stretch. (`A-idle-00/04/08`)
-- **BreedPersonality spine (Improvement-4 / P3-3, 075) is built** — a `BreedPersonality` drives the
-  four levers, keyed to the Labrador as breed #1, with a distinct chocolate temperament. Not
-  observably broken in play, so pruned as a directive; its per-breed *feel* only becomes reviewable
-  once two breeds are trainable side by side (see the Change below).
-- **Chocolate Labrador (note 4 / 076) renders** as a distinctly darker-brown coat on the same rig —
-  an honest 2nd breed (a Lab coat-colour variant, not a faked breed). (`D-choc-00/02`)
+- **(Note 7) The post-BRA rear-spin is fixed.** On a PERFECT mark the dog now stays **seated and
+  facing the player** through the payoff (`po73-react-06` mark → `07`/`08` a small seated settle,
+  still facing) and only turns its body during the natural **between-offer wander/re-approach**
+  (`09`/`10`/`15`), then re-seats facing (`18`). No 180° butt-spin at the mark, no sub-150 ms pose
+  flick. The celebration reads as one coherent facing beat.
+- **(Note 6) The garden no longer reads as a flat green void.** The ground now has textured
+  (FBM-style) grass shading with relief, a graded horizon hedge band and a sun, and the dog is
+  grounded on it (`po73-idle-08`). It reads as a stylized garden, not a cutout on a fill.
+- **(Change) The collection loop is built and playable.** Master tricks → coins accrue → the
+  completion menu's **Breeds** section shows the chocolate Lab priced+locked at 10 coins
+  (`079-01`), flips to adopt-able at 30 (`079-02`); a real tap **adopts** it (spends 30 → 0),
+  a second tap **switches** the active breed and the running dog **re-tints to the chocolate coat**
+  (`079-04`), and the roster + active breed **persist across a reload**. Earned coins now buy
+  something and the two dogs meet in-game — all via real taps, no debug URL.
+- **(X-8 / ADR-0007) The choke-point + feedback entrypoint are present.** A "Give feedback" row in
+  the menu opens a tag + 1–5 rating + free-text form with an on-device-only privacy line
+  (`085-feedback-01-form.png`). Telemetry is dormant-by-design (no token) — not a sign-off gate.
 
-**Bugfixes**
-
-1. **(Note 7) The post-BRA reaction is chaotic and unnatural — it breaks the core payoff.** On a
-   PERFECT mark the seated, forward-facing dog **spins its rear to the camera with its tail straight
-   up**, then **snaps through a full side profile and back to facing** in ~4 frames (~0.3 s).
-   *Evidence:* `B-react-016` (seated, facing) → `018` (rear-to-camera, tail vertical — the PERFECT
-   reaction frame) → `020` (side crouch) → `021` (full left profile, standing) → `022` (facing
-   again). *Why it's wrong:* NS-1 / X-3 promise the payoff *lands on the beat* — this is the
-   most-repeated moment in the game and right now it reads as a glitchy butt-spin + pose flick, not a
-   celebration; the turn-to-face also flicks/jitters. *Good:* one coherent, readable celebration that
-   **stays facing the player** (a happy wiggle / tail-wag / small bounce), smoothly blended out of the
-   sit and eased back to idle — no 180° rear-spin, no sub-150 ms pose snaps.
-
-**Improvements**
-
-2. **(Note 6) The garden is a flat green void and does not cohere with the dog (X-4).** The ground is
-   a single mottled-green plane meeting a gradient sky at a hard horizon, with a sun blob and no props
-   or depth; the photoreal dog appears to float on it. *Evidence:* `A-idle-00`, `B-react-010`. *Why it
-   falls short:* X-4 requires stylized-realism throughout — the dog reads *and its world must read*.
-   *Good (buildable now):* give the ground real stylized-grass shading/texture and some depth (a graded
-   horizon, a fence line or bushes), and ground the dog with a contact shadow, so dog and garden read
-   as one stylized-real scene rather than a cutout on a fill.
+**Why Phase 3 is not signed off:** the plumbing above is genuinely good, but the phase *headline* —
+"dog breeds, each with its own tricks" — is not delivered yet. The only second "breed" is a coat
+recolor of the same Labrador rig, the two breeds share an **identical** trick list, and there is no
+screen that actually *shows off* the dogs. Two buildable shortfalls remain (plus owner-gated
+residuals). Signing off would flip a permanent gate on an undelivered headline.
 
 **Changes**
 
-3. **The collection loop is disconnected — Phase 3's whole point isn't playable yet
-   (P3-1 / P3-D3 / P3-4).** Coins accrue and persist (`trick_store` save schema holds coins + trick
-   progress), and a real 2nd breed (chocolate Lab, 076) now exists **with no owner asset** — but there
-   is **no in-game way to adopt or select a breed** (chocolate is reachable only via the `?bra_breed=`
-   debug URL), and the save persists **no owned-breeds roster**. So earned coins buy nothing and the
-   two dogs never meet in the running game. *Good (buildable now, no owner model — the pieces already
-   exist):* wire a minimal adopt + select spine — spend earned coins to **adopt the already-built
-   chocolate Lab**, persist an **owned-breeds roster** alongside the coins, and let the player **switch
-   which owned breed is active**, persisted across sessions. That turns the disconnected economy + 2nd
-   breed + menu into the actual collect-and-train loop. The **spotlit select-screen polish and any
-   *additional* breed models stay owner-gated** (P3-1 appearance / P3-D1 / D2) and remain flags, not
-   this directive.
+1. **(P3-4) There is no showcased, spotlit breed-select screen — the roster is invisible.** *What I
+   saw:* breeds are chosen from tiny text rows inside the Tricks menu, each marked only by a small
+   colour dot (`079-01`, `079-02`); nothing renders the dog. *Why it falls short:* P3-4 /
+   PO-Improvement-2 require the dog to be **"bright/spotlit, not buried in shadow"** on a select
+   screen so the roster "feels like collected units I'm proud of." A coloured dot showcases nothing.
+   *Good (buildable now, no owner asset):* a dedicated breed-select/showcase screen where each owned
+   breed is rendered as a **bright, spotlit dog** (the two Lab coats already exist and re-tint on the
+   live stage, so both can be shown), the active one highlighted — turning the persisted roster into
+   something you can see and be proud of.
+
+2. **(P3-2) The two breeds train an identical trick list.** *What I saw:* the yellow Lab and the
+   adopted chocolate Lab both expose exactly Sitt / Ligg / Legg deg — the trick list above the
+   Breeds section is shared, nothing distinguishes their move sets (`079-01`). *Why it falls short:*
+   P3-2 requires "each breed exposes a trick list that is **not identical** to every other breed's" —
+   collecting breeds is meant to be collecting moves; a recolor with the same tricks isn't that.
+   *Buildable path, then flag:* flag-bust `assets/models/dog_licensed.clips.txt` for a **real,
+   Phase-1-quality** clip that can serve as a per-breed **signature** trick, and wire it as one
+   breed's signature so the two lists diverge (a real clip only — no faked/stub trick to tick the
+   box). If the manifest has nothing usable at quality, P3-2 is genuinely **owner-gated** on a second
+   real breed model (P3-D1/D2/D4) — record that as the flag verdict rather than leaving P3-2 silently
+   unmet.
+
+**Owner-gated residuals (flags, not build-loop work — do not re-date these as busywork):**
+- A genuinely **distinct second breed** — different silhouette/proportions/coat per P3-1
+  (Border Collie / French Bulldog / Husky) — needs the licensed model pack (P3-D1/D2/D4). The
+  chocolate Lab is an honest coat variant, not a second-breed silhouette; it does not by itself
+  satisfy "collect and train **different breeds**."
+- Live telemetry needs the owner's `POSTHOG_TOKEN` secret; the warm human "Bra!" voice stays
+  owner-gated. Neither blocks the two buildable Changes above.
 
 ---
 
@@ -70,5 +77,3 @@ Evidence frames under `.screenshots/po-p3/`.
 5. The trick is hard to time, the circle apex makes users wanna swipe not tap. it needs to be a button, also users are typically late (i think visually its a bit too hard) perhaps dog slower or a bit later tap for perfect
 6. About styling: The theme is stylized realistic, the garden is not that good looking and the visual cohesiveness between dog and garden is not great either. Do some visual work in this phase as well.
 7. Behaviour bug. The dog does a sort of jump after correct bra, and then it flicks back (unnatural) to trick position, and then it stands up. Moves unnatural. Also sometimes when its turning it flicks / jitters. these unnatural flicks are unacceptable and really take away from the games flow and experince
-
-

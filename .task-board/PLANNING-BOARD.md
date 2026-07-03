@@ -6,7 +6,35 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Phase 3 EXHAUSTED → clean scan-project ZERO → terminal hand-off to father (P3 sign-off) — 2026-07-03
+## Status — Father REVIEWED (HEAD `e86d71b`), DECLINED P3 sign-off → 2 buildable Changes tasked (087/088) — 2026-07-03
+
+The terminal hand-off below reached the father. The father re-reviewed the live licensed bundle at 390×844
+(`po-review.md`, 2026-07-03) and **confirmed fixed**: 077 rear-spin (dog stays seated/facing through payoff),
+078 garden cohesion, 079 collection loop (adopt→switch→re-tint→persist, real taps), and the X-8 feedback
+entrypoint. **But declined sign-off** — the phase *headline* ("dog breeds, each with its own tricks") isn't
+delivered: the 2nd "breed" is a coat recolor of the same rig, both breeds train an **identical** trick list,
+and nothing *shows off* the dogs. Two buildable current-phase Changes filed → this preempts the idle hand-off:
+
+- **087 — ✅ DONE (2026-07-03): spotlit breed-select/showcase screen (P3-4 / PO-Improvement-2).** New
+  `BreedShowcase` pure model (5 TDD tests) + `BreedShowcaseView` dumb renderer + main wiring: a "Vis frem
+  hundene" menu pill opens a screen that **brightens the stage** (key ×1.7 + viewer-side fill, restored on
+  close) and shows the owned breeds as a spotlit, centred live dog — ◀ ▶/pips **preview** by re-tinting the
+  live rig (no persist), "Tren denne" commits via the existing `_on_breed_chosen` (switch+persist). Visual
+  Review PASS (`.screenshots/087-01..04`, real taps). verify 442/0. 079 adopt loop unregressed.
+- **088 — FEATURE: breeds train different tricks (P3-2).** Flag-bust `dog_licensed.clips.txt` for a **real,
+  Phase-1-quality** signature clip (strongest candidate: `Digging_*` = "Grav"); if usable, wire it as one
+  breed's signature so the two lists **diverge** (per-breed trick list, like 065/067). If nothing usable at
+  quality → record P3-2 as owner-gated (P3-D1/D2/D4), no stub. Bust-gate → TDD build + Visual Review.
+
+**Owner-gated residuals (NOT build-loop work — do not re-date):** a genuinely distinct 2nd-breed *model*
+(Border Collie / French Bulldog / Husky — P3-D1/D2/D4), the `POSTHOG_TOKEN` secret, the human Maren voice.
+
+Domain note: UI is near-saturated (072/073/085), but 087/088 are current-phase *headline* requirements the PO
+named, not polish → eligible under the "only remaining gap in the current phase" override.
+
+---
+
+## Status (superseded) — Phase 3 EXHAUSTED → clean scan-project ZERO → terminal hand-off to father (P3 sign-off) — 2026-07-03
 
 Empty backlog → scan ran. Since the 2026-07-02 block below, telemetry/feedback shipped (**083** base ADR-0007,
 **084** call-site wiring, **085** in-menu feedback form, **086** CI token inject) — the X-8 done-bar for Phase 3

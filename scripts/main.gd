@@ -153,6 +153,17 @@ var _menu: TrickMenu
 var _menu_open := false
 var _tricks_button: Button
 var _feedback: FeedbackFormView  ## The feedback form modal (085, X-8); mounted ABOVE the menu, hidden.
+## The spotlit breed-select / showcase screen (087, P3-4). `_showcase` is the dumb view (mounted above
+## the menu, hidden); `_showcase_model` is the pure cursor over the owned roster; `_sun_base_energy`
+## remembers the garden key-light level so the stage brighten is restored exactly on close.
+var _showcase: BreedShowcaseView
+var _showcase_model := BreedShowcase.new()
+var _showcase_fill: OmniLight3D
+var _sun_base_energy := -1.0
+## How much the showcase brightens the garden key light + the viewer-side fill it adds (087, P3-4).
+const SHOWCASE_LIGHT_BOOST := 1.7    ## key-light multiplier while the showcase is open
+const SHOWCASE_FILL_ENERGY := 2.2    ## the added camera-side OmniLight fill energy
+const SHOWCASE_FILL_RANGE := 24.0    ## its range (m) — comfortably covers the framed dog
 ## The genuinely-absent tricks (BUST-064 residual, owner-gated): the licensed Labrador ships no paw /
 ## roll / spin clip, so these are shown as display-only Locked roadmap rows — never selectable, never
 ## playing a faked clip. They wire as real tricks only once the owner supplies clips.
@@ -1231,6 +1242,7 @@ func _setup_bra_button() -> void:
 	_setup_coin_readout(ui)
 	_setup_trick_menu(ui)
 	_setup_feedback_form(ui)
+	_setup_breed_showcase(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -1350,6 +1362,7 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_menu.breed_chosen.connect(_on_breed_chosen)       # switch to an owned breed (079/P3-4)
 	_menu.breed_adopt.connect(_on_breed_adopt)         # spend coins to adopt a breed (079/P3-D3)
 	_menu.feedback_requested.connect(_on_feedback_requested)  # open the feedback form (085, X-8)
+	_menu.showcase_requested.connect(_on_showcase_requested)  # open the spotlit breed showcase (087, P3-4)
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
@@ -1384,6 +1397,125 @@ func _setup_feedback_form(ui: CanvasLayer) -> void:
 	_feedback = form
 	_feedback.submitted.connect(_on_feedback_submitted)
 	_feedback.cancelled.connect(func(): _feedback.hide())
+
+## Mount the spotlit breed showcase (087, P3-4) above the menu, hidden until _on_showcase_requested.
+## It does NOT dim the scene (its centre is clear) so the brightened live dog shows through. Signals:
+## prev/next/focus move the spotlight (main re-tints the live rig to preview), commit switches+persists,
+## dismissed closes without switching.
+func _setup_breed_showcase(ui: CanvasLayer) -> void:
+	var view := BreedShowcaseView.new()
+	view.name = "BreedShowcase"
+	view.anchor_right = 1.0
+	view.anchor_bottom = 1.0
+	view.hide()
+	ui.add_child(view)
+	_showcase = view
+	_showcase.prev_requested.connect(func(): _showcase_move(_showcase_model.prev()))
+	_showcase.next_requested.connect(func(): _showcase_move(_showcase_model.next()))
+	_showcase.focus_requested.connect(_on_showcase_focus)
+	_showcase.commit_requested.connect(_on_showcase_commit)
+	_showcase.dismissed.connect(_on_showcase_dismissed)
+
+## The "Vis frem hundene" row in TrickMenu was tapped (087): open the spotlit showcase. Hide the menu
+## panel (so the dog is unobstructed), point the model at the owned roster (active breed spotlit first),
+## brighten the stage, render, and show. `_menu_open` stays true so offers keep paused behind it.
+func _on_showcase_requested() -> void:
+	if _showcase == null:
+		return
+	_showcase_model.set_roster(_roster.owned, _roster.active)
+	if _menu != null:
+		_menu.hide()  # the showcase replaces the menu surface; the menu re-shows on Tilbake
+	_brighten_stage(true)
+	_render_showcase()
+	_showcase.show()
+	_publish_showcase()
+
+## Move the spotlight to `id` (from prev/next/focus): re-tint the LIVE rig to that breed's coat so what
+## the player sees IS the real coat — WITHOUT touching the roster or persisting (preview only). Then
+## re-render the chrome + publish the capture hook.
+func _showcase_move(id: String) -> void:
+	if id == "":
+		return
+	if _dog != null:
+		CoatTint.apply(_dog, BreedPersonality.by_id(id).coat_tint())  # preview tint (not persisted)
+	_render_showcase()
+	_publish_showcase()
+
+func _on_showcase_focus(id: String) -> void:
+	_showcase_model.focus(id)
+	_showcase_move(_showcase_model.spotlit_id())
+
+## Commit the spotlit breed (087): make it the active dog through the SAME switch+persist path a menu
+## switch uses (_on_breed_chosen re-tints, re-applies levers, persists, closes the menu). Then close the
+## showcase + restore the stage lighting, so training resumes as the newly-chosen dog.
+func _on_showcase_commit() -> void:
+	var id := _showcase_model.spotlit_id()
+	_close_showcase()
+	if id != "":
+		_on_breed_chosen(id)  # switch active + persist; also closes the (hidden) menu + resumes offers
+
+## Back out of the showcase without switching (087): re-tint the live rig back to the actually-active
+## breed (undo any preview), close the showcase + restore lighting, and re-show the trick menu the
+## player came from (offers stay paused until they dismiss the menu).
+func _on_showcase_dismissed() -> void:
+	if _dog != null:
+		CoatTint.apply(_dog, _breed.coat_tint())  # restore the real active-breed coat (undo the preview)
+	_close_showcase()
+	if _menu != null and _menu_open:
+		_menu.show()
+
+## Build the owned-breed entries [{id,name,tint}] (owned only — the showcase shows dogs you have) and
+## hand them + the spotlit/active ids to the dumb view.
+func _render_showcase() -> void:
+	if _showcase == null:
+		return
+	var entries: Array = []
+	for id in _roster.owned:
+		var bp := BreedPersonality.by_id(id)
+		entries.append({"id": id, "name": bp.display_name, "tint": bp.swatch_color()})
+	_showcase.render(entries, _showcase_model.spotlit_id(), _roster.active)
+
+## Hide the showcase view and restore the garden lighting (shared by commit + dismiss).
+func _close_showcase() -> void:
+	if _showcase != null:
+		_showcase.hide()
+	_brighten_stage(false)
+	_publish_showcase()
+
+## Brighten (on) / restore (off) the 3D stage so the showcased dog is spotlit, not buried in the garden
+## shadow (P3-4 / PO-Improvement-2). Raises the DirectionalLight3D key energy and adds a viewer-side fill
+## OmniLight (a light from the camera, so the visible side of the dog always pops); off restores the
+## saved key energy exactly and frees the fill. Guarded so it is a no-op if the scene has no Sun/camera.
+func _brighten_stage(on: bool) -> void:
+	var sun := get_node_or_null("Sun") as DirectionalLight3D
+	if on:
+		if sun != null:
+			if _sun_base_energy < 0.0:
+				_sun_base_energy = sun.light_energy
+			sun.light_energy = _sun_base_energy * SHOWCASE_LIGHT_BOOST
+		if _showcase_fill == null and _camera != null:
+			var fill := OmniLight3D.new()
+			fill.name = "ShowcaseFill"
+			fill.light_energy = SHOWCASE_FILL_ENERGY
+			fill.omni_range = SHOWCASE_FILL_RANGE
+			add_child(fill)
+			fill.global_position = _camera.global_position  # light from the viewer — lights the seen side
+			_showcase_fill = fill
+	else:
+		if sun != null and _sun_base_energy >= 0.0:
+			sun.light_energy = _sun_base_energy
+		if _showcase_fill != null:
+			_showcase_fill.queue_free()
+			_showcase_fill = null
+
+## Web-only e2e/capture hook (087): mirror the showcase open-state + spotlit breed onto window.* so a
+## live browser capture can wait for the showcase and prove the previewed breed re-tinted the live dog.
+## Mirrors __bra_menu_open / __bra_current_trick; a no-op off the web export, never read back in play.
+func _publish_showcase() -> void:
+	if OS.has_feature("web"):
+		var open := _showcase != null and _showcase.visible
+		JavaScriptBridge.eval("window.__bra_showcase_open = %s; window.__bra_showcase_spotlit = '%s';"
+			% [("true" if open else "false"), _showcase_model.spotlit_id()], true)
 
 ## The "Give feedback" row in TrickMenu was tapped (085, X-8): configure the form with the current
 ## game context and show it. Rating is shown when the active trick is mastered (one milestone per
@@ -1596,6 +1728,9 @@ func _publish_breed_rows() -> void:
 	# Publish the feedback row centre so the capture can tap "Give feedback" robustly (085, X-8).
 	var fc := _menu.feedback_row_center()
 	JavaScriptBridge.eval("window.__bra_feedback_row = [%f, %f];" % [fc.x, fc.y], true)
+	# Publish the "Vis frem hundene" showcase row centre so the capture can open the showcase (087).
+	var sc := _menu.showcase_row_center()
+	JavaScriptBridge.eval("window.__bra_showcase_row = [%f, %f];" % [sc.x, sc.y], true)
 
 ## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
 ## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are
@@ -1709,6 +1844,12 @@ func _save_progress() -> void:
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
 	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id)  # coins + roster + difficulty ride the same save file (068/079/080)
+	# Web-only e2e seam (087): mirror the active breed the save JUST wrote. Lets a capture prove a breed
+	# switch was PERSISTED to the save deterministically — the reload-restore is separately proven (079),
+	# but its IndexedDB flush is async/racy, so this hook is the deterministic write-side proof. No-op off
+	# the web export; never read back in play.
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__bra_last_saved_active = '%s';" % _roster.active, true)
 
 ## Restore the saved coin balance on boot (068/P3-D3). Runs before the coin readout is built so a
 ## returning player sees their earned coins immediately. First run / corrupt save -> 0 (TrickStore

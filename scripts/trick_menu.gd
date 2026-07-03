@@ -28,6 +28,10 @@ signal breed_adopt(id: String)
 ## The menu itself stays dumb: it only emits; main holds the form and routes the submit through _telem.
 signal feedback_requested
 
+## The "Vis frem hundene" (show off my dogs) row was tapped — main opens the spotlit BreedShowcaseView
+## over this menu (087, P3-4). Shown only when there are breeds; the menu stays dumb (only emits).
+signal showcase_requested
+
 ## Each known trick's standing in the collection. LOCKED covers both the owner-gated absent tricks and
 ## anything the loaded dog simply can't perform (the honest CC0 read) — neither is ever trainable.
 enum State { LEARNED, AVAILABLE, LOCKED }
@@ -66,6 +70,11 @@ const ROW_H := 58.0             ## one trick row
 const ROW_GAP := 8.0            ## gutter between rows
 const CLOSE_GAP := 16.0         ## gap above the close button
 const CLOSE_H := 54.0           ## the "Keep training" close button
+## The "Show off my dogs" row (087, P3-4) sits between the breeds section and the feedback row — it
+## opens the spotlit showcase. Shown only when there are breeds (zero-height otherwise), so the
+## trick-only menu (072) geometry is unchanged.
+const SHOWCASE_GAP := 14.0      ## gutter above the showcase pill
+const SHOWCASE_H := 48.0        ## the "Vis frem hundene" pill button height
 ## The "Give feedback" row sits just above the close button so it is always reachable (085, X-8).
 const FEEDBACK_GAP := 10.0      ## gutter between the feedback row and the close button
 const FEEDBACK_H := 48.0        ## the "Give feedback" pill button height
@@ -247,14 +256,37 @@ func _breeds_block_h() -> float:
 		return 0.0
 	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
 
+## The showcase pill's block height (087): the gutter + pill, only when there are breeds to show off.
+## Zero-height with no breeds, so the trick-only panel geometry (072) is unchanged.
+func _showcase_block_h() -> float:
+	return (SHOWCASE_GAP + SHOWCASE_H) if not _breeds.is_empty() else 0.0
+
 ## The centred modal panel rect for the current size + row/breed counts.
-## The feedback pill sits just above the close button, so the panel grows by FEEDBACK_H + FEEDBACK_GAP.
+## The showcase + feedback pills sit above the close button, so the panel grows to fit them.
 func _panel_rect() -> Rect2:
 	var pw := minf(size.x - 2.0 * PANEL_MARGIN_X, PANEL_MAX_W)
-	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
+	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
 	var px := (size.x - pw) * 0.5
 	var py := (size.y - ph) * 0.5
 	return Rect2(px, py, pw, ph)
+
+## The y just below the trick + breeds blocks — the top of the footer (showcase/feedback/close pills).
+func _foot_top() -> float:
+	var panel := _panel_rect()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h()
+
+## The "Vis frem hundene" showcase pill rect (087) — between the breeds section and the feedback row.
+## Zero-area (offscreen) when there are no breeds so it is never drawn or hit.
+func _showcase_rect() -> Rect2:
+	if _breeds.is_empty():
+		return Rect2()
+	var panel := _panel_rect()
+	return Rect2(panel.position.x + PANEL_PAD, _foot_top() + SHOWCASE_GAP,
+		panel.size.x - 2.0 * PANEL_PAD, SHOWCASE_H)
+
+## The centre of the showcase row in local coords — the live e2e/capture harness taps this (087).
+func showcase_row_center() -> Vector2:
+	return _showcase_rect().get_center()
 
 ## The y where the breeds section (subheading) begins, just below the trick rows block.
 func _breeds_top() -> float:
@@ -288,7 +320,7 @@ func _row_rect(i: int) -> Rect2:
 func _feedback_rect() -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP
+	var y := _foot_top() + _showcase_block_h() + CLOSE_GAP
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, FEEDBACK_H)
 
 ## The centre of the "Give feedback" row in this Control's local coords — the live e2e/capture
@@ -300,7 +332,7 @@ func feedback_row_center() -> Vector2:
 func _close_rect() -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP
+	var y := _foot_top() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, CLOSE_H)
 
 ## The row index under a point, or -1 if none.
@@ -340,6 +372,10 @@ func _gui_input(event: InputEvent) -> void:
 			BreedState.BUYABLE: breed_adopt.emit(b.id)   # spend coins to adopt it
 			# ACTIVE (already running) / LOCKED (can't afford) absorb the tap — no switch, no debt.
 		return
+	if not _breeds.is_empty() and _showcase_rect().has_point(pos):
+		showcase_requested.emit()
+		accept_event()
+		return
 	if _feedback_rect().has_point(pos):
 		feedback_requested.emit()
 		accept_event()
@@ -377,6 +413,14 @@ func _draw() -> void:
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(font, i)
+	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. A gold-tinted pill so it
+	# reads as the collection surface, distinct from the subtle secondary feedback/close pills below.
+	if not _breeds.is_empty():
+		var sr := _showcase_rect()
+		draw_rect(sr, Color(1.0, 0.86, 0.30, 0.16), true)
+		var sb := sr.position.y + sr.size.y * 0.5 + font.get_ascent(CLOSE_SIZE) * 0.5 - font.get_descent(CLOSE_SIZE) * 0.5
+		_draw_text_outlined(font, Vector2(sr.position.x, sb), "Vis frem hundene", CLOSE_SIZE,
+			Color(1.0, 0.90, 0.55, 0.95), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
 	# The "Give feedback" pill — subtle-but-present, distinct from trick/breed rows (085, X-8).
 	# Same full-width pill shape and draw style as the close button, but at a slightly lower alpha
 	# so it reads as secondary/optional (not competing with the trick/breed choices above it).
