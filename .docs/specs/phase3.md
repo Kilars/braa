@@ -6,6 +6,19 @@ tricks / signature behaviors** and its own feel.
 > ⚠️ Provisional. The owner-decision stories below must be resolved before this
 > phase is sliced for build.
 
+### Instrumentation — cohere to ADR-0007 (X-8)
+
+Phase 3 is where the telemetry **base** lands and is proven; cohering to
+[ADR-0007](../../adr/0007-telemetry-and-feedback.md) is part of Phase 3's done bar:
+
+- The `telemetry.gd` choke-point is live — anonymous, cookieless, fire-and-forget (X-8).
+- Phase-3 player surfaces emit through it: `session_start` / `session_end`,
+  `bra_tapped{latency_ms_from_apex, bucket}`, `trick_mastered`, `breed_adopted`, and
+  `feedback_submitted` from a reachable feedback entrypoint.
+- **Scope = capture + the choke-point only.** The reporting cron and Tier-1/Tier-2
+  loop integration stay **deferred** until there's a player base (ADR-0007) — not part
+  of the Phase-3 done bar.
+
 ### Player stories (provisional)
 
 - **P3-1 — Choose a breed.**

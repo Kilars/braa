@@ -100,6 +100,27 @@ their own files alongside it.
     local (Godot `user://`, IndexedDB-backed on web). No backend.
   - *How* this is achieved rides on the engine/PWA decision (ADR-0001).
 
+- **X-8 — Instrumented, anonymously ([ADR-0007](../../adr/0007-telemetry-and-feedback.md)).**
+  *As the product owner, I want every player-facing surface to emit anonymous,
+  cookieless telemetry through one choke-point, plus a reachable feedback
+  entrypoint, so that I can see where players struggle and read what they say —
+  without tracking anyone.*
+  Acceptance:
+  - All capture goes through the single `telemetry.gd` choke-point (ADR-0007); no
+    ad-hoc calls. **Fire-and-forget** — telemetry never blocks or breaks gameplay
+    (X-7 holds: a dropped event is fine offline, a stalled frame is not).
+  - **Anonymous + cookieless:** memory-only ephemeral session id, no persisted
+    visitor id, IP/geoip off, no cookie banner.
+  - **The phase that adds a surface instruments it** — new player-facing surfaces
+    are wired through the choke-point as part of that surface's own done, as they
+    ship. This is **forward-incremental, not a retroactive gate**: a surface that
+    predates the choke-point (Phase 1–2) or an odd missing capture is a low-priority
+    backlog/flag item — **never a phase blocker, a sign-off gate, or grounds to
+    preempt current-phase work.** No phase stalls on "instrumentation isn't complete."
+  - **Numbers never author features:** numeric signals justify only Tier-1 tuning
+    or a Tier-2 proposal; the spec stays PO-owned (ADR-0007). The reporting cron +
+    Tier-1/Tier-2 loop integration are **deferred until there is a player base**.
+
 ---
 
 ## Non-Goals (scope boundaries, not stories)

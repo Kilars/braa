@@ -23,3 +23,4 @@ durable decisions live in these ADRs; full history is on the `deprecated-game` b
 | [0004](0004-offline-capability.md) | Offline capability (PWA precache) | Accepted |
 | [0005](0005-repo-project-structure.md) | Repo & project structure | Accepted |
 | [0006](0006-licensed-asset-encryption.md) | Licensed asset encryption (public web) | Accepted |
+| [0007](0007-telemetry-and-feedback.md) | Anonymous telemetry & feedback (direct-HTTP) | Proposed |
