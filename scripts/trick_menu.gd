@@ -24,6 +24,9 @@ signal breed_chosen(id: String)
 ## A BUYABLE (affordable, unowned) breed row was tapped — main spends the coins + adopts it. An
 ## unaffordable (Locked) or already-active breed absorbs the tap and emits nothing (no debt, no switch).
 signal breed_adopt(id: String)
+## The "Give feedback" row was tapped — main opens the FeedbackFormView modal over this menu.
+## The menu itself stays dumb: it only emits; main holds the form and routes the submit through _telem.
+signal feedback_requested
 
 ## Each known trick's standing in the collection. LOCKED covers both the owner-gated absent tricks and
 ## anything the loaded dog simply can't perform (the honest CC0 read) — neither is ever trainable.
@@ -63,6 +66,9 @@ const ROW_H := 58.0             ## one trick row
 const ROW_GAP := 8.0            ## gutter between rows
 const CLOSE_GAP := 16.0         ## gap above the close button
 const CLOSE_H := 54.0           ## the "Keep training" close button
+## The "Give feedback" row sits just above the close button so it is always reachable (085, X-8).
+const FEEDBACK_GAP := 10.0      ## gutter between the feedback row and the close button
+const FEEDBACK_H := 48.0        ## the "Give feedback" pill button height
 const RADIUS := 18.0            ## panel corner radius
 ## The breeds section (079): a small "Breeds" subheading + one row per shipped breed, seated between the
 ## trick rows and the close button. Zero-height when there are no breeds, so the trick-only geometry the
@@ -242,9 +248,10 @@ func _breeds_block_h() -> float:
 	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
 
 ## The centred modal panel rect for the current size + row/breed counts.
+## The feedback pill sits just above the close button, so the panel grows by FEEDBACK_H + FEEDBACK_GAP.
 func _panel_rect() -> Rect2:
 	var pw := minf(size.x - 2.0 * PANEL_MARGIN_X, PANEL_MAX_W)
-	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + CLOSE_H + PANEL_PAD
+	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
 	var px := (size.x - pw) * 0.5
 	var py := (size.y - ph) * 0.5
 	return Rect2(px, py, pw, ph)
@@ -275,11 +282,25 @@ func _row_rect(i: int) -> Rect2:
 	var y := panel.position.y + PANEL_PAD + HEADER_H + i * (ROW_H + ROW_GAP)
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, ROW_H)
 
-## The close ("Keep training") button rect at the panel foot.
-func _close_rect() -> Rect2:
+## The "Give feedback" pill rect, just above the close button (085, X-8). Placed at the same
+## x/width as the close button so they read as a pair at the panel foot. The geometry is the
+## single home for this rect — _draw and _gui_input both read it here, never hard-coded.
+func _feedback_rect() -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
 	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP
+	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, FEEDBACK_H)
+
+## The centre of the "Give feedback" row in this Control's local coords — the live e2e/capture
+## harness reads this to land a REAL canvas tap on the row (same honest-tap proof as row_center).
+func feedback_row_center() -> Vector2:
+	return _feedback_rect().get_center()
+
+## The close ("Keep training") button rect at the panel foot, below the feedback row.
+func _close_rect() -> Rect2:
+	var panel := _panel_rect()
+	var x := panel.position.x + PANEL_PAD
+	var y := panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, CLOSE_H)
 
 ## The row index under a point, or -1 if none.
@@ -299,8 +320,8 @@ func id_at(pos: Vector2) -> String:
 	return r.id if is_selectable(r.state) else ""
 
 ## Pick on a left-press (press-only, once per tap — mirrors the BRA button + selector hygiene). A
-## selectable row → trick_chosen; the close button or a tap on the dimmed backdrop → dismissed; a tap
-## on a Locked row is absorbed (no signal — it stays put, never a faked switch).
+## selectable row → trick_chosen; the feedback row → feedback_requested; the close button or a tap
+## on the dimmed backdrop → dismissed; a Locked row is absorbed (no signal — never a faked switch).
 func _gui_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
@@ -318,6 +339,10 @@ func _gui_input(event: InputEvent) -> void:
 			BreedState.OWNED:   breed_chosen.emit(b.id)  # switch to an owned dog
 			BreedState.BUYABLE: breed_adopt.emit(b.id)   # spend coins to adopt it
 			# ACTIVE (already running) / LOCKED (can't afford) absorb the tap — no switch, no debt.
+		return
+	if _feedback_rect().has_point(pos):
+		feedback_requested.emit()
+		accept_event()
 		return
 	if _close_rect().has_point(pos) or not _panel_rect().has_point(pos):
 		dismissed.emit()
@@ -352,6 +377,14 @@ func _draw() -> void:
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(font, i)
+	# The "Give feedback" pill — subtle-but-present, distinct from trick/breed rows (085, X-8).
+	# Same full-width pill shape and draw style as the close button, but at a slightly lower alpha
+	# so it reads as secondary/optional (not competing with the trick/breed choices above it).
+	var fr := _feedback_rect()
+	draw_rect(fr, Color(1.0, 1.0, 1.0, 0.07), true)
+	var fb := fr.position.y + fr.size.y * 0.5 + font.get_ascent(CLOSE_SIZE) * 0.5 - font.get_descent(CLOSE_SIZE) * 0.5
+	_draw_text_outlined(font, Vector2(fr.position.x, fb), "Give feedback", CLOSE_SIZE, Color(1.0, 1.0, 1.0, 0.70),
+		HORIZONTAL_ALIGNMENT_CENTER, fr.size.x)
 	# The close ("Keep training") button.
 	var cr := _close_rect()
 	draw_rect(cr, CLOSE_BG, true)

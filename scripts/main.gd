@@ -152,6 +152,7 @@ var _learned_bar: LearnedBar
 var _menu: TrickMenu
 var _menu_open := false
 var _tricks_button: Button
+var _feedback: FeedbackFormView  ## The feedback form modal (085, X-8); mounted ABOVE the menu, hidden.
 ## The genuinely-absent tricks (BUST-064 residual, owner-gated): the licensed Labrador ships no paw /
 ## roll / spin clip, so these are shown as display-only Locked roadmap rows — never selectable, never
 ## playing a faked clip. They wire as real tricks only once the owner supplies clips.
@@ -1229,6 +1230,7 @@ func _setup_bra_button() -> void:
 	_setup_learned_bar(ui)
 	_setup_coin_readout(ui)
 	_setup_trick_menu(ui)
+	_setup_feedback_form(ui)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
@@ -1345,8 +1347,9 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_menu = menu
 	_menu.trick_chosen.connect(_on_trick_chosen)
 	_menu.dismissed.connect(_on_menu_dismissed)
-	_menu.breed_chosen.connect(_on_breed_chosen)  # switch to an owned breed (079/P3-4)
-	_menu.breed_adopt.connect(_on_breed_adopt)    # spend coins to adopt a breed (079/P3-D3)
+	_menu.breed_chosen.connect(_on_breed_chosen)       # switch to an owned breed (079/P3-4)
+	_menu.breed_adopt.connect(_on_breed_adopt)         # spend coins to adopt a breed (079/P3-D3)
+	_menu.feedback_requested.connect(_on_feedback_requested)  # open the feedback form (085, X-8)
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
@@ -1367,6 +1370,37 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_publish_current_trick()  # seed the web e2e hook with the initial trick (072, kept from 066)
 	_publish_menu_open()      # seed __bra_menu_open = false so a capture polls a defined value (072)
 	_publish_roster()         # seed the active breed + owned roster + balance for the 079 capture
+
+## Mount the feedback form modal (085, X-8) above the trick menu on the same CanvasLayer. Hidden until
+## _on_feedback_requested opens it. Signal routing: submitted → _on_feedback_submitted (→ _telem);
+## cancelled → hide. Rating is shown sparingly — only after the active trick is mastered (milestone).
+func _setup_feedback_form(ui: CanvasLayer) -> void:
+	var form := FeedbackFormView.new()
+	form.name = "FeedbackForm"
+	form.anchor_right = 1.0
+	form.anchor_bottom = 1.0
+	form.hide()
+	ui.add_child(form)
+	_feedback = form
+	_feedback.submitted.connect(_on_feedback_submitted)
+	_feedback.cancelled.connect(func(): _feedback.hide())
+
+## The "Give feedback" row in TrickMenu was tapped (085, X-8): configure the form with the current
+## game context and show it. Rating is shown when the active trick is mastered (one milestone per
+## session — avoids fatigue per ADR-0007).
+func _on_feedback_requested() -> void:
+	if _feedback == null:
+		return
+	_feedback.configure(
+		{"trick": _current_trick, "menu_open": _menu_open},
+		_progress.mastered  # show rating only on mastery milestone (sparse — ADR-0007)
+	)
+	_feedback.show()
+
+## The player submitted feedback (085, X-8): route through _telem (the ONE choke-point — grep
+## confirms no other PostHog path). The form already hid itself; the trick menu stays as-is.
+func _on_feedback_submitted(payload: Dictionary) -> void:
+	_telem("feedback_submitted", payload)
 
 ## The tricks the loaded dog can actually perform, in the canonical KNOWN_TRICKS order (065/067). The
 ## menu offers exactly these as Available/Learned — never a trick the dog can't perform (the never-fake
@@ -1559,6 +1593,9 @@ func _publish_breed_rows() -> void:
 		tricks.append({"id": _menu.row_id(i), "x": c.x, "y": c.y})
 	JavaScriptBridge.eval("window.__bra_trick_rows = %s;" % JSON.stringify(tricks), true)
 	JavaScriptBridge.eval("window.__bra_viewport = [%f, %f];" % [vp.x, vp.y], true)
+	# Publish the feedback row centre so the capture can tap "Give feedback" robustly (085, X-8).
+	var fc := _menu.feedback_row_center()
+	JavaScriptBridge.eval("window.__bra_feedback_row = [%f, %f];" % [fc.x, fc.y], true)
 
 ## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
 ## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are
