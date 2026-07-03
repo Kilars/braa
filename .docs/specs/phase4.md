@@ -1,4 +1,4 @@
-## Phase 4 — Difficulty
+## Phase 8 — Difficulty
 
 **Goal:** the player can change difficulty, trading challenge for reward.
 
