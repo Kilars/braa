@@ -7,6 +7,14 @@ build/
 # headless loop runtime (process/loop.sh)
 loop.err
 
+# Telemetry pull output (ADR-0007). Raw PostHog data incl. feedback FREE-TEXT that may
+# contain PII — this repo is PUBLIC (ADR-0005), so the raw pull NEVER lands here. The
+# analyst reads it locally and files summarised tasks/flags; only those are committed.
+.telemetry/
+# Local loop secrets (POSTHOG_API_KEY / POSTHOG_ID for the local telemetry pull). Sourced
+# by loop.sh if present; never committed.
+process/.env
+
 # review artifacts (regenerable)
 .screenshots/
 

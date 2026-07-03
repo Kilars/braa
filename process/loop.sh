@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ralph loop (external / headless). Each iteration is a fresh `claude -p` with a
-# clean context; state survives on disk via the task board. Two roles alternate:
+# clean context; state survives on disk via the task board. Three roles run:
 #
 #   MOTHER (mother_prompt.md) — the dev loop. Reads the board, scans for work,
 #     builds tasks test-first, runs the gate. Treats .docs/specs/ as read-only.
@@ -8,6 +8,9 @@
 #     game, is critical, and its ONLY output is PO notes appended to
 #     .docs/specs/po-review.md.
 #     The mother's scan-project then turns those notes into tasks.
+#   ANALYST (analyst_prompt.md) — the daily telemetry pass. Once per calendar day it
+#     pulls anonymous PostHog stats + raw feedback (tools/telemetry_pull.mjs) and files
+#     Tier-1 tuning tasks / Tier-2 proposal flags (ADR-0007). No-ops until there are players.
 #
 # The father runs every FATHER_EVERY iterations OR whenever an iteration creates
 # no new work (scan ran on an empty board and still left it empty). The loop only
@@ -31,6 +34,10 @@ cd "$SCRIPT_DIR/.." || exit 1
 # found regardless of the working directory we cd into above.
 MOTHER_PROMPT="$SCRIPT_DIR/mother_prompt.md"
 FATHER_PROMPT="$SCRIPT_DIR/father_prompt.md"
+ANALYST_PROMPT="$SCRIPT_DIR/analyst_prompt.md"
+# Local secrets for the daily telemetry pull (POSTHOG_API_KEY / POSTHOG_ID) — gitignored,
+# optional. Sourced if present; absent → the pull no-ops and the analyst simply skips.
+[[ -f "$SCRIPT_DIR/.env" ]] && { set -a; . "$SCRIPT_DIR/.env"; set +a; }
 MODEL="${MODEL:-opus}"   # driver model; override: MODEL=sonnet scripts/loop.sh
 MAX_ITER="${1:-0}"       # 0 = run until no work is left (auto-stop on "done") or a hard failure
 FATHER_EVERY="${FATHER_EVERY:-5}"  # run the PO review at least this often
@@ -289,6 +296,43 @@ report_run() {  # $1 = label
   fi
 }
 
+ANALYST_ENABLED="${ANALYST_ENABLED:-1}"        # 0 disables the daily telemetry pass entirely
+ANALYST_STATE=".telemetry/.last_analyst_day"   # gitignored; the YYYY-MM-DD we last pulled on
+PULL="$SCRIPT_DIR/../tools/telemetry_pull.mjs"
+
+# Daily telemetry pass (ADR-0007). At most ONCE per local calendar day: pull the day's PostHog
+# stats + raw feedback, and — only if there's data — hand it to a claude -p analyst pass that
+# files Tier-1 tuning tasks / Tier-2 proposal flags. No-ops silently when disabled, unconfigured
+# (no local POSTHOG_* creds), or there are no players yet. Called at the top of each iteration so
+# it fires on the first iteration of a new day; a signal it files becomes work the mother builds
+# this same iteration, which can keep an otherwise-idle loop alive. Honours STOP via run_claude.
+maybe_run_analyst() {
+  (( ANALYST_ENABLED == 1 )) || return 0
+  local today last report
+  today=$(date +%F)
+  last=$(cat "$ANALYST_STATE" 2>/dev/null || true)
+  [[ "$today" == "$last" ]] && return 0        # already pulled today
+  mkdir -p .telemetry/reports
+  report=".telemetry/reports/$today.json"
+  echo "--- telemetry: daily pull for $today ---" | tee -a "$LOG"
+  if ! node "$PULL" >"$report" 2>>"$ERRLOG"; then
+    echo "telemetry pull errored (see $ERRLOG) — skipping analyst; retry tomorrow." | tee -a "$LOG"
+    echo "$today" >"$ANALYST_STATE"            # stamp anyway so a broken pull isn't hammered all day
+    rm -f "$report"
+    return 0
+  fi
+  echo "$today" >"$ANALYST_STATE"              # pulled once today, data or not
+  if grep -q '"no_data": *true' "$report"; then
+    echo "telemetry: no player data yet — nothing to analyse (report discarded)." | tee -a "$LOG"
+    rm -f "$report"
+    return 0
+  fi
+  echo "--- analyst: telemetry review ($report) ---" | tee -a "$LOG"
+  run_claude "$ANALYST_PROMPT" analyst
+  (( STOP )) && return 0
+  report_run "iter $i (analyst)"
+}
+
 if (( MAX_ITER == 0 )); then iter_desc="unbounded (until no work is left, or a failure)"; else iter_desc="max $MAX_ITER iters"; fi
 echo "=== loop start $(date -u) — $iter_desc, PO review every $FATHER_EVERY (deferred until app runnable) ===" | tee -a "$LOG"
 [[ -t 0 ]] && echo "    press q to stop the loop and tear down claude + all subagents (Ctrl-C also works)" | tee -a "$LOG"
@@ -297,6 +341,11 @@ since_father=0
 for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
   if (( MAX_ITER == 0 )); then iter_label="$i"; else iter_label="$i/$MAX_ITER"; fi
   echo "=== iter $iter_label $(date -u) ===" | tee -a "$LOG"
+
+  # Daily telemetry: once per calendar day, pull PostHog + run the analyst pass (ADR-0007).
+  # No-ops until there are players; fires on the first iteration of each new day.
+  maybe_run_analyst
+  (( STOP )) && break
 
   # Snapshot the board BEFORE the iteration. Only an iteration that *starts*
   # empty runs scan-project (per mother_prompt.md step 2); we use this to tell

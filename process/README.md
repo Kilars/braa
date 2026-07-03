@@ -19,6 +19,13 @@ on the `deprecated-game` branch.)
   clean **and** no earlier signed-off phase has regressed (it replays them too), **signs it
   off** in the Phase Sign-off list — which is what advances the loop to the next phase.
 
+- [analyst_prompt.md](analyst_prompt.md) — one **daily telemetry** pass (ADR-0007). Once per local
+  calendar day the runner pulls anonymous PostHog stats + raw feedback via
+  [`tools/telemetry_pull.mjs`](../tools/telemetry_pull.mjs) and, only if there's data, hands it to
+  this pass, which files **Tier-1** tuning tasks (numeric, reversible) / **Tier-2** proposal flags
+  (feature ideas, owner-gated — with an adaptive support threshold). It **no-ops until there are
+  players** and never pastes raw feedback (possible PII) into the public board.
+
 - [loop.sh](loop.sh) — the **external runner** itself: a Bash "ralph" loop that fires a
   fresh headless `claude -p` per iteration, alternating mother (build) and father (PO
   review every `FATHER_EVERY` iters or whenever a pass creates no new work), with
@@ -77,6 +84,11 @@ What's wired for v2:
   owner). The loop then **exits on its own**. It also stops on a hard failure or when you press
   `q`. There is **no cumulative spend cap** — the per-invocation `--max-budget-usd`, `MAX_TURNS`,
   and `ITER_TIMEOUT` remain as single-iteration runaway guards.
+- **Telemetry (daily analyst)** — needs `POSTHOG_API_KEY` + `POSTHOG_ID` (the personal read key +
+  numeric project id) in a **gitignored `process/.env`** for the local pull; without them the pull
+  returns `no_data` and the analyst skips. The raw pull lands in gitignored `.telemetry/` (feedback
+  can contain PII — never committed). Disable the whole pass with `ANALYST_ENABLED=0`.
+
 - **Flags** — the loop never blocks on a prompt. When it hits a genuinely **user-only**
   decision and the orchestrator agrees it's material, it appends a non-blocking note to
   [`.task-board/FLAGS.md`](../.task-board/FLAGS.md) and keeps building on its best
