@@ -126,8 +126,8 @@ func _build_ui() -> void:
 	_pips.offset_bottom = -CONTROL_H + 58.0
 	add_child(_pips)
 
-	# ◀ / ▶ cycle buttons flank the pips.
-	_prev_btn = _make_button("◀", BTN_SECONDARY, BTN_SECONDARY_TEXT)
+	# ◀ / ▶ cycle buttons flank the pips — the arrow is a DRAWN chevron, not a font glyph (089).
+	_prev_btn = _make_cycle_button(-1)
 	_prev_btn.anchor_top = 1.0
 	_prev_btn.anchor_bottom = 1.0
 	_prev_btn.offset_left = 20.0
@@ -137,7 +137,7 @@ func _build_ui() -> void:
 	_prev_btn.pressed.connect(func(): prev_requested.emit())
 	add_child(_prev_btn)
 
-	_next_btn = _make_button("▶", BTN_SECONDARY, BTN_SECONDARY_TEXT)
+	_next_btn = _make_cycle_button(1)
 	_next_btn.anchor_left = 1.0
 	_next_btn.anchor_right = 1.0
 	_next_btn.anchor_top = 1.0
@@ -177,7 +177,7 @@ func _build_ui() -> void:
 	add_child(_back_btn)
 
 	_hint = Label.new()
-	_hint.text = "Bla med ◀ ▶ eller trykk en hund"
+	_hint.text = "Bla med pilene eller trykk en hund"
 	_hint.add_theme_color_override("font_color", SUBTLE)
 	_hint.add_theme_font_size_override("font_size", 13)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -207,6 +207,41 @@ func _make_button(text: String, bg: Color, fg: Color) -> Button:
 	for fc in ["font_color", "font_hover_color", "font_pressed_color"]:
 		b.add_theme_color_override(fc, fg)
 	return b
+
+## A ◀ / ▶ cycle button whose arrow is a DRAWN chevron, not a font glyph (089, PO 2026-07-03 Bugfix 1):
+## U+25C0/U+25B6 are absent from the project font and drew as tofu boxes on the deployed GL build — the
+## same missing-glyph class 069 fixed by *drawing* the coin. `dir` = -1 points the chevron left (prev),
+## +1 right (next). The button keeps its styled pill + real hit target (its centre is published for the
+## capture); the glyph text is empty and a mouse-ignoring `Chevron` child paints the arrow instead.
+func _make_cycle_button(dir: int) -> Button:
+	var b := _make_button("", BTN_SECONDARY, BTN_SECONDARY_TEXT)
+	var chevron := Chevron.new(dir, BTN_SECONDARY_TEXT)
+	chevron.name = "Chevron"
+	b.add_child(chevron)
+	return b
+
+## A single filled-triangle chevron centred in its rect — the tofu-free cycle arrow (089). Fills its
+## parent button and ignores mouse, so the button underneath still takes the tap.
+class Chevron extends Control:
+	var _dir := 1
+	var _color := Color(1, 1, 1, 0.9)
+	func _init(dir: int, color: Color) -> void:
+		_dir = -1 if dir < 0 else 1
+		_color = color
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+		resized.connect(queue_redraw)
+	func _draw() -> void:
+		var w := size.x * 0.24
+		var h := size.y * 0.30
+		var cx := size.x * 0.5
+		var cy := size.y * 0.5
+		var pts: PackedVector2Array
+		if _dir < 0:  # ◀ point-left
+			pts = PackedVector2Array([Vector2(cx - w, cy), Vector2(cx + w, cy - h), Vector2(cx + w, cy + h)])
+		else:         # ▶ point-right
+			pts = PackedVector2Array([Vector2(cx + w, cy), Vector2(cx - w, cy - h), Vector2(cx - w, cy + h)])
+		draw_colored_polygon(pts, _color)
 
 ## Rebuild the pip row + the spotlit name/colour from the current model state.
 func _refresh() -> void:

@@ -1,70 +1,73 @@
 **PO Review**
 
-### PO Review — 2026-07-03 (build HEAD `e86d71b` — post-077/078/079 + telemetry drop)
+### PO Review — 2026-07-03 (build HEAD `455f554` — post-087 showcase + 088 P3-2 flag-bust)
 
-Rebuilt the local licensed bundle fresh from HEAD `e86d71b` (`verify.sh` green) and played it at
-390×844 phone-portrait in headless Chromium / SwiftShader (== the deployed GL Compatibility renderer).
-Drove the whole loop with **real canvas taps** — idle/wander, a PERFECT mark + its payoff burst, the
-completion menu, the adopt→switch→reload breed loop, and the feedback form. Zero SCRIPT ERROR /
-pageerror across the boots. Evidence frames: `.screenshots/po73-idle-*`, `.screenshots/po73-react-*`,
-`.screenshots/079-0*`, `.screenshots/085-feedback-01-form.png`.
+Rebuilt the local licensed bundle fresh from HEAD `455f554` (`verify.sh` green, full `build/web/`)
+and played it at 390×844 phone-portrait in headless Chromium / SwiftShader (== the deployed GL
+Compatibility renderer), driving every surface with **real canvas taps**. New since the last pass:
+the spotlit breed-select **showcase** (087) and the **P3-2 signature-trick flag-bust** (088). Zero
+SCRIPT ERROR / pageerror across the boots. Evidence frames captured this pass:
+`.screenshots/087-01-showcase-yellow.png`, `087-02-showcase-chocolate.png`,
+`030-apex-tell-visible.png`, `088-grav-apex-best.png`, `088-grav-choc-08.png`, and the cropped
+`po-crop-showcase-bottom.png`.
 
 **Confirmed fixed / working — pruned from the directive list:**
-- **(Note 7) The post-BRA rear-spin is fixed.** On a PERFECT mark the dog now stays **seated and
-  facing the player** through the payoff (`po73-react-06` mark → `07`/`08` a small seated settle,
-  still facing) and only turns its body during the natural **between-offer wander/re-approach**
-  (`09`/`10`/`15`), then re-seats facing (`18`). No 180° butt-spin at the mark, no sub-150 ms pose
-  flick. The celebration reads as one coherent facing beat.
-- **(Note 6) The garden no longer reads as a flat green void.** The ground now has textured
-  (FBM-style) grass shading with relief, a graded horizon hedge band and a sun, and the dog is
-  grounded on it (`po73-idle-08`). It reads as a stylized garden, not a cutout on a fill.
-- **(Change) The collection loop is built and playable.** Master tricks → coins accrue → the
-  completion menu's **Breeds** section shows the chocolate Lab priced+locked at 10 coins
-  (`079-01`), flips to adopt-able at 30 (`079-02`); a real tap **adopts** it (spends 30 → 0),
-  a second tap **switches** the active breed and the running dog **re-tints to the chocolate coat**
-  (`079-04`), and the roster + active breed **persist across a reload**. Earned coins now buy
-  something and the two dogs meet in-game — all via real taps, no debug URL.
-- **(X-8 / ADR-0007) The choke-point + feedback entrypoint are present.** A "Give feedback" row in
-  the menu opens a tag + 1–5 rating + free-text form with an on-device-only privacy line
-  (`085-feedback-01-form.png`). Telemetry is dormant-by-design (no token) — not a sign-off gate.
+- **(Change 1 / P3-4 / PO-Improvement-2) The spotlit breed-select showcase now exists and hits the
+  goal.** A "Vis frem hundene" row opens a **"Mine hunder"** screen where the owned breed is rendered
+  as a **big, bright, centred, camera-facing dog** on a brightened stage (`087-01`), the active one
+  labelled "— aktiv" in gold; ▶ previews the next owned breed and the **live rig re-tints** to its
+  coat (yellow → deep-brown chocolate, `087-02`); "Tren denne" commits + persists. The roster is now
+  something you can *see and be proud of*, not a coloured dot — Change 1 is resolved.
+- **Core loop holds, no Phase-1/2 regression.** Dog centred and facing camera, **BRA is a clear round
+  button** framed by the gold apex ring (`030-apex-tell-visible.png`), the drawn coin readout shows
+  no tofu, and the garden has textured grass + horizon + sun. The earlier owner notes (one active
+  trick + completion menu, distraction/feint tuning, centering, timing-as-a-button, garden
+  stylization, the post-BRA rear-spin/flick fix) all read as landed in play.
 
-**Why Phase 3 is not signed off:** the plumbing above is genuinely good, but the phase *headline* —
-"dog breeds, each with its own tricks" — is not delivered yet. The only second "breed" is a coat
-recolor of the same Labrador rig, the two breeds share an **identical** trick list, and there is no
-screen that actually *shows off* the dogs. Two buildable shortfalls remain (plus owner-gated
-residuals). Signing off would flip a permanent gate on an undelivered headline.
+**Why Phase 3 is still not signed off:** two buildable **bugs on the brand-new showcase surface**
+(below), on top of the phase headline staying owner-gated (residuals). Signing off would flip a
+permanent gate over a showcase that renders broken glyphs and a leaked training button.
 
-**Changes**
+**Bugfixes**
 
-1. **(P3-4) There is no showcased, spotlit breed-select screen — the roster is invisible.** *What I
-   saw:* breeds are chosen from tiny text rows inside the Tricks menu, each marked only by a small
-   colour dot (`079-01`, `079-02`); nothing renders the dog. *Why it falls short:* P3-4 /
-   PO-Improvement-2 require the dog to be **"bright/spotlit, not buried in shadow"** on a select
-   screen so the roster "feels like collected units I'm proud of." A coloured dot showcases nothing.
-   *Good (buildable now, no owner asset):* a dedicated breed-select/showcase screen where each owned
-   breed is rendered as a **bright, spotlit dog** (the two Lab coats already exist and re-tint on the
-   live stage, so both can be shown), the active one highlighted — turning the persisted roster into
-   something you can see and be proud of.
+1. **The showcase's ◀ ▶ cycle controls render as tofu boxes.** *What I saw:* on the "Mine hunder"
+   screen the bottom-left/right cycle **buttons** and the hint line **"Bla med ◀ ▶ eller trykk en
+   hund"** both draw the arrow glyphs as broken missing-glyph boxes (`po-crop-showcase-bottom.png`,
+   cropped from `087-01`). *Why it's wrong:* `◀`/`▶` (U+25C0/U+25B6) aren't in the project font — the
+   exact tofu-box class as the old coin emoji (fixed in 069 by *drawing* the coin). On the one screen
+   whose whole job is to make the roster "feel like collected units I'm proud of", broken boxes read
+   as a bug and cheapen it (X-4 "looks the part"). *Good:* the prev/next affordance renders as a
+   clean, legible control on the deployed GL build — a **drawn** triangle/chevron (like the drawn
+   `CoinReadout`), a bundled font that carries the arrows, or plain words ("Forrige"/"Neste") — with
+   **no** tofu box anywhere, the hint line included.
 
-2. **(P3-2) The two breeds train an identical trick list.** *What I saw:* the yellow Lab and the
-   adopted chocolate Lab both expose exactly Sitt / Ligg / Legg deg — the trick list above the
-   Breeds section is shared, nothing distinguishes their move sets (`079-01`). *Why it falls short:*
-   P3-2 requires "each breed exposes a trick list that is **not identical** to every other breed's" —
-   collecting breeds is meant to be collecting moves; a recolor with the same tricks isn't that.
-   *Buildable path, then flag:* flag-bust `assets/models/dog_licensed.clips.txt` for a **real,
-   Phase-1-quality** clip that can serve as a per-breed **signature** trick, and wire it as one
-   breed's signature so the two lists diverge (a real clip only — no faked/stub trick to tick the
-   box). If the manifest has nothing usable at quality, P3-2 is genuinely **owner-gated** on a second
-   real breed model (P3-D1/D2/D4) — record that as the flag verdict rather than leaving P3-2 silently
-   unmet.
+2. **The training "BRA" button bleeds through the showcase's transparent centre.** *What I saw:* on
+   both showcase frames the underlying training HUD's big round **"BRA"** button is visible, ghosted,
+   floating over the spotlit dog (`087-01`, `087-02`, and the `po-crop-showcase-bottom.png` crop —
+   the pale "BRA" over the dog). *Why it's wrong:* the showcase deliberately keeps its centre clear so
+   the dog shows through, but the live BRA button leaks through that clear centre — a stray "BRA"
+   hovering over the showcased dog breaks the "here is my dog, shown off" read and looks like a
+   layering bug. *Good:* while the showcase is open, the training-HUD chrome that falls in the clear
+   centre (at minimum the BRA button) is hidden, so only the dog + the showcase's own title/control
+   bands are visible.
 
 **Owner-gated residuals (flags, not build-loop work — do not re-date these as busywork):**
-- A genuinely **distinct second breed** — different silhouette/proportions/coat per P3-1
-  (Border Collie / French Bulldog / Husky) — needs the licensed model pack (P3-D1/D2/D4). The
-  chocolate Lab is an honest coat variant, not a second-breed silhouette; it does not by itself
-  satisfy "collect and train **different breeds**."
+- **(P3-2) The two "breeds" still train an identical trick list — now confirmed genuinely
+  owner-gated.** The 088 flag-bust did the right thing: it grepped `dog_licensed.clips.txt`, found
+  **Digging** as the only signature-trick candidate, wired it, then **rejected** it with **no stub** —
+  the dig clip is **rear-to-camera** (the dog's back and tail face the player,
+  `088-grav-apex-best.png` / `088-grav-choc-08.png`), which fails the camera-facing / "reads first"
+  quality bar (X-4) that the whole apex-read game depends on. I confirmed the rejection in pixels.
+  Because both current "breeds" are the **same rig** (a coat recolor), no honest per-breed *signature*
+  trick exists without a real second breed model. P3-2 is therefore owner-gated on the licensed breed
+  pack shipping a camera-facing signature clip (P3-D2/D4) — not a build-loop shortfall, and not to be
+  faked with an artificial trick-list restriction.
+- **(P3-1) A genuinely distinct second breed** — different silhouette/proportions/coat (Border Collie
+  / French Bulldog / Husky) — needs the licensed model pack (P3-D1/D2/D4). The chocolate Lab is an
+  honest coat variant, not a second-breed silhouette; it does not by itself satisfy "collect and train
+  **different breeds**."
 - Live telemetry needs the owner's `POSTHOG_TOKEN` secret; the warm human "Bra!" voice stays
-  owner-gated. Neither blocks the two buildable Changes above.
+  owner-gated. Neither blocks the two Bugfixes above.
 
 ---
 
