@@ -6,6 +6,51 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — father RE-REVIEWED (HEAD `b7f8d51`), both showcase bugs FIXED (089/090) → no buildable directive → construction-audit CLEAN → terminal ZERO (2nd hand-off), blocked PURELY on owner — 2026-07-03
+
+Empty backlog → scan ran. The prior hand-off reached the father, who reviewed HEAD `455f554` (087 showcase +
+088 verdict) and filed **two buildable showcase bugs**; both were served and are now confirmed fixed:
+
+- **Bugfix 1 (tofu ◀▶ cycle controls) → FIXED by 089 (`ffce458`).** The showcase cycle arrows are now a
+  **drawn** `Chevron` (`draw_colored_polygon`, no font glyph) and the hint reads "Bla med pilene eller trykk
+  en hund" — no `◀`/`▶` (U+25C0/U+25B6) in any rendered string. Father confirmed in pixels
+  (`po-crop-showcase-bottom-091.png`).
+- **Bugfix 2 (BRA button bleeds through the showcase) → FIXED by 090 (`b7f8d51`).** `_set_training_hud_visible(false)`
+  hides all 7 training-HUD nodes (BRA button incl.) while the showcase is open and restores them on every close
+  path. Father confirmed the clean-centre read holds (`087-01`/`087-02`).
+
+**Father's fresh PO review (2026-07-03, HEAD `b7f8d51`, committed this pass) declined sign-off but filed NO new
+buildable directive** — every surface replays clean (core loop, 077 no-rear-spin, completion menu, feedback
+form; no Phase-1/2 regression). Phase 3 is now blocked **purely on the owner**: a genuinely distinct 2nd-breed
+**model** (P3-1/P3-D1/D2/D4 — the two "breeds" are one rig + a coat recolor), the per-breed **signature clip**
+(P3-2, proven owner-gated by the 088 flag-bust), the `POSTHOG_TOKEN` secret, and the human Maren voice.
+
+**This round's adversarial construction audit (cold, refute-first) covered the delta since the last audit
+(`e86d71b..HEAD` = 087/088/089/090) and returned CLEAN** across all 6 checks: showcase tests assert observable
+behaviour (not hollow); the 088 revert left **no** dead seam (grep-confirmed no grav/dig/trick_list symbols);
+no tofu glyph reaches any rendered string (drawn chevron verified); the HUD-hide is real + reversible on all
+three close paths; no placeholders / primitive stand-ins (showcase re-tints the real live rig); every shipped
+`[x]` is backed by present behaviour.
+
+**Idle ladder → clean ZERO (terminal hand-off):**
+1. *Current-phase buildable work* — none; both PO showcase bugs fixed + confirmed, father filed no new directive.
+2. *Flag-bust* — all 5 Open flags are `busted`-or-genuinely-owner-gated (breed **models** + P3-D1/D2/D4, the
+   P3-2 signature clip, the human **Maren** voice, the `POSTHOG_TOKEN` secret). No new info → not re-busted.
+3. *Asserted owner-gates* — every owner-gate the father's review names is already covered by an existing flag;
+   nothing un-flagged to raise.
+4. *Work-ahead* — the one block-independent slice (**Phase 9 Difficulty**) is already banked (080–082); Phases
+   5/6/8 each fail a guardrail (5 = owner-gated voice; 6 = restyles the reviewed training page, can't be
+   dormant + saturated; 8 = needs breed models + unbuilt Phase 6). The delta was all current-phase → **no new
+   eligible work-ahead.**
+
+So no current-phase work, no un-busted flag, no un-flagged owner-gate, no eligible work-ahead → **scan returns
+zero.** `verify.sh` re-run green (docs-only commit; code byte-identical to the last green gate at `b7f8d51`).
+Board left empty — a **legitimate terminal hand-off**. The father has now re-reviewed this exact HEAD and found
+nothing buildable; the next unchanged pass should end the run so the human can add the breed models / secrets /
+voice. Any PO reopen / new flag / regression preempts and re-opens current-phase work.
+
+---
+
 ## Status — both PO Changes served (087 built + 088 flag-busted) → construction-audit CLEAN → terminal ZERO, hand off to father for P3 sign-off — 2026-07-03
 
 Empty backlog → scan ran. The father's 2026-07-03 review (below) declined P3 sign-off with exactly **two
