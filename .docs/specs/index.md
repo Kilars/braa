@@ -37,14 +37,19 @@ This spec is split per phase. The always-true frame — North Star, Cross-cuttin
 Non-Goals — lives in this index; each phase, the parked backlog, and the PO log are
 their own files alongside it.
 
-- [Phase 1 — the perfect single mark](phase1.md) — **the whole current bet**
+- [Phase 1 — the perfect single mark](phase1.md)
 - [Phase 2 — more tricks, same quality bar](phase2.md)
-- [Phase 3 — dog breeds](phase3.md) *(provisional)*
-- [Phase 4 — difficulty](phase4.md)
+- [Phase 3 — dog breeds](phase3.md) *(current)*
 - [Phase 5 — better marker words](phase5.md)
-- [Phase 6 — play mode](phase6.md) *(provisional)*
-- [Phase 7 — training-page visual enhancement](phase7.md)
+- [Phase 6 — training-page visual enhancement (design system)](phase6.md)
+- [Phase 8 — kennel (browse-and-adopt roster)](phase8.md)
+- [Phase 9 — difficulty](phase9.md) *(after the kennel)*
+- [Phase 10 — play mode](phase10.md) *(deferred)*
 - [Beyond the phases](beyond.md) *(parked)*
+
+> Numbering has gaps (no 4/7) after a reorder: difficulty moved to **9** (after the kennel) and
+> the training-visual phase moved to **6**. The build loop resolves the current phase by the
+> lowest `phaseN.md` filename **not yet signed off**, so gaps are harmless.
 - [Product Owner Review](po-review.md) — PO play-test log; the build loop reads it
   for new directives and the PO pass appends here.
 

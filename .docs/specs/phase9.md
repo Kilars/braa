@@ -1,6 +1,9 @@
-## Phase 8 — Difficulty
+## Phase 9 — Difficulty
 
 **Goal:** the player can change difficulty, trading challenge for reward.
+
+> Sits **after the Kennel (Phase 8)** — special/kennel dogs can lock difficulty (see P4-1).
+> Story IDs stay **P4-\*** for traceability with the already-built dormant tasks 080–082.
 
 - **P4-1 — Difficulty based dogs, for normal dogs i want to be able to select difficulty. For special dogs difficulty should be locked (kennel later)**
   *As a player, I want to set Normal / Hard / Expert, so that the game matches my
