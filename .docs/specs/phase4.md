@@ -2,7 +2,7 @@
 
 **Goal:** the player can change difficulty, trading challenge for reward.
 
-- **P4-1 — Choose how hard.**
+- **P4-1 — Difficulty based dogs, for normal dogs i want to be able to select difficulty. For special dogs difficulty should be locked (kennel later)**
   *As a player, I want to set Normal / Hard / Expert, so that the game matches my
   skill.*
   Acceptance:
@@ -17,7 +17,8 @@
     (Difficulty, Mistakes, D7, D9)
   - The **learned-bar erosion rate** (P2-4 negative learning) scales with difficulty:
     gentle by default, harsher on higher modes — a mistimed / wrong-moment tap removes
-    more, up to an "unforgiving training" tier. More feints, too. (PO-Directive 2026-06-29)
+    more, up to an "unforgiving training" tier. More feints, too. More feints and less focus!! (PO-Directive 2026-06-29)
+    
 
 - **P4-3 — Pain pays.**
   *As a player, I want harder modes to reward more, so that opting into difficulty
