@@ -6,6 +6,44 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — Phase 3 EXHAUSTED → clean scan-project ZERO → terminal hand-off to father (P3 sign-off) — 2026-07-03
+
+Empty backlog → scan ran. Since the 2026-07-02 block below, telemetry/feedback shipped (**083** base ADR-0007,
+**084** call-site wiring, **085** in-menu feedback form, **086** CI token inject) — the X-8 done-bar for Phase 3
+is now met, dormant until the owner sets `POSTHOG_TOKEN`. HEAD `e86d71b`, tree clean.
+
+This round's **adversarial construction audit of Phase 3 returned CLEAN** (2nd independent pass): every P3 story
+built and honestly wired — coin economy, one-active-trick completion menu, chocolate-Lab recolor breed,
+BreedPersonality's 4 levers at real call-sites, JoyBeat celebration driven at **both** mark sites with
+`play_reaction` retired (no rear-spin), garden FBM grass + hedge + contact shadow, the adopt→switch→persist
+roster loop reachable in-game via the TrickMenu signals, and all **6 telemetry events** through the single
+`telemetry.gd` choke-point (fire-and-forget, anonymous/cookieless, no-op without a token). Difficulty work-ahead
+(080/081/082) confirmed truly dormant (Normal = identity on all levers). No construction findings.
+
+**Idle ladder resolved → clean ZERO (terminal hand-off), NOT more work-ahead:**
+1. *Current-phase buildable work* — none (audit clean).
+2. *Flag-bust* — all four Open flags are already `busted` or genuinely owner-gated (breed **models** +
+   P3-D1/D2/D4, the human **Maren** voice, and the `POSTHOG_TOKEN` secret). No new information since the last
+   bust → not re-busted (converge, don't spin).
+3. *Work-ahead* — the one clean, block-independent next-phase slice (**Phase 9 Difficulty**) is **already banked**
+   (080–082). Every *other* remaining unbuilt phase fails a hard work-ahead guardrail:
+   - **Phase 5 (marker words)** — the phase *is* the owner-gated **voice** (P5-1 "voiced line in the Maren
+     delivery"). Guardrail (d): don't build next-phase work that depends on the voice block. **Ineligible.**
+   - **Phase 6 (design system / training-page restyle)** — restyles *the training page*, the exact screen the
+     father reviews for P3 sign-off → cannot be dormant. Guardrail (b). (Also saturated visual domain.)
+     **Ineligible.**
+   - **Phase 8 (kennel)** — "Builds on the Phase 6 design system" (unbuilt) and needs the **8 breed models**
+     (owner-gated). Guardrail (d) + unbuilt prerequisite. **Ineligible.**
+
+So there is no current-phase work, no un-busted flag, and no *eligible* work-ahead → **the scan returns zero.**
+Per `mother_prompt.md` this empty board is a **legitimate terminal hand-off**, not a failure — the loop must not
+manufacture busywork to stay alive. Board left empty for the runner to hand off to the **father's PO
+Visual-Review pass** on HEAD `e86d71b` (which now includes 077/078/079 + the telemetry drop, none of which the
+father has reviewed since the `0506503` pass). Any PO reopen / new flag / regression preempts and re-opens
+current-phase work. No verify re-run this round: no code changed, tree byte-identical to the last green gate (086).
+
+---
+
 ## Status — Phase 3 EXHAUSTED (construction-clean) → WORK-AHEAD into Phase 4 (Difficulty) — 2026-07-02
 
 Empty backlog → scan ran. **077/078/079 all shipped** (post-BRA JoyBeat fix, garden cohesion, adopt/select/
