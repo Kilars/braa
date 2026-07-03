@@ -8,12 +8,17 @@ wiring) for the `capture` path.
 
 ## What it addresses
 
-A persistent, low-friction feedback entrypoint (not just on quit) so players can tell us *why*. ADR-0007
-treats raw quotes as the primary qualitative signal — the reporting step reads them verbatim.
+A low-friction feedback entrypoint so players can tell us *why*. ADR-0007 treats raw quotes as the primary
+qualitative signal — the reporting step reads them verbatim.
+
+**Placement (owner call, 2026-07-03):** a **"Give feedback" row inside the existing `TrickMenu`** — the
+post-game / post-mastery menu that already pops after a round and is reopenable any time via the top-left
+"Tricks" button. This lands it "in the menu after a game" *and* keeps it always-reachable (not just on quit),
+and it reuses the menu we already have rather than adding a floating corner icon.
 
 ## Technical approach
 
-- A small always-reachable feedback affordance (e.g. a corner icon, portrait-safe, X-1) that opens a form:
+- Add a **"Give feedback"** row to `TrickMenu` (portrait-safe, X-1) that opens a form:
   - **Free text** box (primary signal, required-ish).
   - Optional **quick-tag chips:** Bug / Idea / Too hard / Too easy / Confusing / Other.
   - Optional **1–5 rating**, shown **sparingly** (e.g. after a milestone, not every session — avoid fatigue).
@@ -21,19 +26,20 @@ treats raw quotes as the primary qualitative signal — the reporting step reads
     storage); no cookie banner, but be honest about retention (ADR-0007 Open items).
 - On submit → `_telemetry.capture("feedback_submitted", {text, tags, rating, screen_context, session_id})`.
   (session_id is stamped by the choke-point; screen_context = current trick/menu state.)
-- Keep the widget a **dumb renderer** fed by a pure form model (mirrors `TrickMenu`/`CoinReadout`): the
-  chip-set, validation, and the built payload are pure and unit-tested; layout/placement is Visual Review.
+- Keep the form a **dumb renderer** fed by a pure form model (same discipline as `TrickMenu`/`CoinReadout`):
+  the chip-set, validation, and the built payload are pure and unit-tested; layout/placement is Visual Review.
 
 ### TDD (RED first) + Visual Review
 
 - Pure form-model tests: tag toggle, the assembled `feedback_submitted` payload carries text + tags +
   optional rating + screen_context; rating omitted when not shown; empty text handled.
-- Visual Review: the icon is reachable and unobtrusive in portrait; the form opens/closes; nothing collides
-  with the HUD/coin line. Capture frames via a `tools/web_capture_*.mjs` real-tap flow.
+- Visual Review: the "Give feedback" row is reachable in the menu (after a round and via the "Tricks"
+  button); the form opens/closes over the menu; nothing collides with the menu rows / HUD / coin line.
+  Capture frames via a `tools/web_capture_*.mjs` real-tap flow (open menu → Give feedback → submit).
 
 ## Acceptance criteria
 
-- [ ] A persistent feedback entrypoint is reachable in normal play (portrait, X-1) and opens the form.
+- [ ] A "Give feedback" row in `TrickMenu` is reachable after a round and via the "Tricks" button, and opens the form.
 - [ ] Submit routes through `Telemetry.capture("feedback_submitted", …)` with the documented props.
 - [ ] Privacy note present near the form.
 - [ ] Pure form model is TDD'd; **Visual Review PASS** on placement/interaction (real canvas taps).
