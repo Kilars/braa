@@ -6,7 +6,45 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — Father REVIEWED (HEAD `e86d71b`), DECLINED P3 sign-off → 2 buildable Changes tasked (087/088) — 2026-07-03
+## Status — both PO Changes served (087 built + 088 flag-busted) → construction-audit CLEAN → terminal ZERO, hand off to father for P3 sign-off — 2026-07-03
+
+Empty backlog → scan ran. The father's 2026-07-03 review (below) declined P3 sign-off with exactly **two
+buildable Changes**; both are now served on HEAD `68d7641`:
+
+- **Change 1 (P3-4 spotlit breed-select showcase) → BUILT (087, `63528e5`).** `BreedShowcase` pure model
+  (5 TDD tests) + `BreedShowcaseView` renderer + main wiring — a menu pill opens a stage-brightened screen
+  showing owned breeds as a spotlit live dog, ◀▶/pips preview by re-tinting the live rig, "Tren denne"
+  commits via `_on_breed_chosen`. Visual Review PASS (`.screenshots/087-01..04`).
+- **Change 2 (P3-2 breed trick divergence) → FLAG-BUSTED to an owner-gate (088, `68d7641`).** Route 2b:
+  the rig's only start/loop/end action clip (`Digging`/"Grav") was driven **live** at a PERFECT apex and
+  plays **rear-to-camera** — it fails the PO-enforced face-camera-at-apex bar (061/077/note 3); a per-trick
+  yaw fix had no effect (the clip drives its own apex orientation). No on-rig clip clears the Phase-1 bar,
+  so **no stub trick shipped**; the Grav wiring was fully reverted (grep-confirmed: no grav/dig/trick_list
+  symbols remain). P3-2's divergence is recorded in `FLAGS.md` as owner-gated on a camera-facing signature
+  clip / a 2nd real breed model (P3-D1/D2/D4).
+
+**This round's adversarial construction audit (cold, refute-first, HEAD `68d7641`) returned CLEAN** — 087's
+showcase renders a real live re-tinted dog (not a coloured dot/primitive), prev/next traces to the real
+`CoatTint.apply` path, "Tren denne" reaches `_on_breed_chosen`, the stage brighten restores its lighting on
+close, all 5 tests assert observable behaviour, and 088 genuinely carries no divergence/stub code. `verify.sh`
+green (import·boot·test·export, 442/0). (Fixed two harmless doc artifacts in the 088 done file: unchecked
+acceptance boxes + a stale "455 tests" figure the revert dropped back to 442.)
+
+**Idle ladder → clean ZERO (terminal hand-off):**
+1. *Current-phase buildable work* — none; both PO Changes served (built / owner-gated verdict).
+2. *Flag-bust* — all Open flags are `busted`-or-owner-gated (breed **models** + P3-D1/D2/D4, the human
+   **Maren** voice, the `POSTHOG_TOKEN` secret, and now the P3-2 signature clip). No new info → not re-busted.
+3. *Work-ahead* — the one block-independent slice (**Phase 9 Difficulty**) is already banked (080–082);
+   Phases 5/6/8 each fail a guardrail (5 = owner-gated voice; 6 = restyles the reviewed training page, can't
+   be dormant + saturated; 8 = needs the 8 breed models + unbuilt Phase 6). **No eligible work-ahead.**
+
+So no current-phase work, no un-busted flag, no eligible work-ahead → **scan returns zero.** Board left empty
+for the runner to hand off to the **father's PO Visual-Review pass** on HEAD `68d7641` (now including the 087
+showcase + the 088 verdict). Any PO reopen / new flag / regression preempts and re-opens current-phase work.
+
+---
+
+## Status (superseded) — Father REVIEWED (HEAD `e86d71b`), DECLINED P3 sign-off → 2 buildable Changes tasked (087/088) — 2026-07-03
 
 The terminal hand-off below reached the father. The father re-reviewed the live licensed bundle at 390×844
 (`po-review.md`, 2026-07-03) and **confirmed fixed**: 077 rear-spin (dog stays seated/facing through payoff),

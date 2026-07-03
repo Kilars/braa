@@ -100,18 +100,17 @@ TDD (RED first, per `.claude/skills/tdd/SKILL.md`):
 
 ## Acceptance criteria
 
-- [ ] Flag-bust done: the manifest was checked **against live-driven frames** (not names), and the best
+- [x] Flag-bust done: the manifest was checked **against live-driven frames** (not names), and the best
       candidate is identified with frame evidence — or "none usable at Phase-1 quality" is documented.
-- [ ] **If a clip passed:** it is wired as a **real** signature trick (bundle + label + per-trick
-      progress, like 065/067), RED-first tests written before the code.
-- [ ] `labrador.trick_list() != chocolate.trick_list()` — the two breeds' offered/menu trick lists are
-      provably **non-identical** (P3-2 acceptance), and the signature is offered only for its breed.
-- [ ] No faked/stub trick shipped; placeholder check clean; the signature reads as a real trick at a
-      PERFECT apex in Visual Review (`.screenshots/088-*`), reviewed by eye.
-- [ ] **If nothing was usable:** no stub shipped; the orchestrator has recorded a narrowed `FLAGS.md`
+- [~] **If a clip passed:** it is wired as a **real** signature trick (bundle + label + per-trick
+      progress, like 065/067), RED-first tests written before the code. — **N/A (route 2b, no clip passed).**
+- [~] `labrador.trick_list() != chocolate.trick_list()` — the two breeds' offered/menu trick lists are
+      provably **non-identical** (P3-2 acceptance), and the signature is offered only for its breed. — **N/A (route 2b).**
+- [x] No faked/stub trick shipped; placeholder check clean. (Visual Review N/A — no trick built.)
+- [x] **If nothing was usable:** no stub shipped; the orchestrator has recorded a narrowed `FLAGS.md`
       verdict that P3-2's divergence is owner-gated on a second real breed model + signature clips
       (P3-D1/D2/D4), and this task is closed as the flag route (not a self-certified stub).
-- [ ] `nix develop -c bash verify.sh` green.
+- [x] `nix develop -c bash verify.sh` green.
 
 ## Resolution (2026-07-03) — closed as ROUTE 2b (flag verdict, no stub shipped)
 
@@ -138,7 +137,8 @@ narrowed owner-gate (`FLAGS.md`, 2026-07-03 "P3-2 per-breed trick DIVERGENCE" fl
   breeds keep the shared, PO-signed Sitt / Ligg / Legg deg core. The per-breed-trick-list infra is a
   bundle-add + label away (065/067 pattern) the moment the owner supplies a usable camera-facing signature.
 - **Placeholder check:** N/A — no product code shipped (net diff = the flag verdict + this task note).
-- **Gate:** `verify.sh` green on the reverted tree (455 tests, 0 failures).
+- **Gate:** `verify.sh` green on the reverted tree (442 tests, 0 failures — the 455 count was from the
+  pre-revert build that briefly carried the Grav divergence tests; the revert dropped it back to 442).
 
 **P3-2's "non-identical trick lists" is DEFERRED to the owner asset (camera-facing signature clip /
 2nd breed model + P3-D1/D2/D4), NOT silently unmet — see the FLAGS.md verdict.**
