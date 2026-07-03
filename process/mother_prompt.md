@@ -37,7 +37,10 @@ them consistent. **Do exactly one iteration, then exit; the runner repeats.**
    task *is* scaffolding: its definition of done is a runnable Godot skeleton that makes
    the verify gate exist and pass green. From the next iteration on, every iteration must
    end on a green gate.
-5. **Exit** — leave `.task-board/` consistent on disk. Stop.
+5. **Exit** — leave `.task-board/` consistent on disk. Stop. **An empty board after a clean
+   `scan-project` zero is a legitimate terminal hand-off, not a failure** — never manufacture
+   busywork to keep the loop alive. The runner hands off to the father; if the father also finds
+   nothing to change, the run **exits on its own** — that is the intended end state.
 
 ## Rules
 

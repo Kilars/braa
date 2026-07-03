@@ -16,7 +16,7 @@
 #   WARNING: runs with --dangerously-skip-permissions — claude can run ANY command
 #   with no gate. Only run this in a throwaway / sandboxed environment.
 #
-# Usage: process/loop.sh [max_iterations]   (0 / default = unbounded; see MAX_BUDGET caps)
+# Usage: process/loop.sh [max_iterations]   (0 / default = unbounded; runs until no work is left)
 #
 # Stopping: run it in the foreground of a terminal. Press q to stop cleanly — the
 # in-flight claude AND its whole subagent/tool subtree are torn down, then the loop
@@ -32,7 +32,7 @@ cd "$SCRIPT_DIR/.." || exit 1
 MOTHER_PROMPT="$SCRIPT_DIR/mother_prompt.md"
 FATHER_PROMPT="$SCRIPT_DIR/father_prompt.md"
 MODEL="${MODEL:-opus}"   # driver model; override: MODEL=sonnet scripts/loop.sh
-MAX_ITER="${1:-0}"       # 0 = run until the budget cap or a hard failure (no auto-stop on "done")
+MAX_ITER="${1:-0}"       # 0 = run until no work is left (auto-stop on "done") or a hard failure
 FATHER_EVERY="${FATHER_EVERY:-5}"  # run the PO review at least this often
 MAX_TURNS=600          # per-invocation turn cap (scan + implement + gate)
 SOFT_CTX_WARN=150000   # warn if any single turn's prompt exceeds this (context heavy)
@@ -42,9 +42,8 @@ SESSION_RETRY="${SESSION_RETRY:-1}"            # 1 = treat usage-limit / overloa
 SESSION_BACKOFF="${SESSION_BACKOFF:-300}"      # wait between session retries when no reset time is known (s)
 SESSION_MAX_WAIT="${SESSION_MAX_WAIT:-21600}"  # cap on a single session wait (s, 6h) — guards a bogus reset timestamp
 ITER_TIMEOUT="${ITER_TIMEOUT:-7200}"    # wall-clock cap per claude invocation (s, 2h) — HANG-GUARD ONLY. Money/turns are capped separately (MAX_BUDGET_USD/iter + MAX_TURNS), and usage-limit reset is handled by fast-fail + session-retry, independent of this. So this only kills a truly stuck iter; 1800s (30m) was too tight for heavy visual-diagnosis iters and caused 3-strike give-ups.
-MAX_BUDGET_USD="${MAX_BUDGET_USD:-15}"  # hard per-invocation API spend cap (claude --max-budget-usd)
-TOTAL_BUDGET_USD="${TOTAL_BUDGET_USD:-75}"  # cumulative spend cap across the whole run — stop the loop once exceeded
-TOTAL_SPENT=0                           # running sum of per-iteration cost (accumulated in report_run)
+MAX_BUDGET_USD="${MAX_BUDGET_USD:-15}"  # hard per-invocation API spend cap (claude --max-budget-usd) — runaway guard for ONE iteration
+TOTAL_SPENT=0                           # running sum of per-iteration cost — informational only (no cumulative cap; the loop stops on no-work)
 LOG="loop.log"
 ERRLOG="loop.err"      # claude stderr (API errors etc.) — the stdout JSON alone hides these
 
@@ -284,16 +283,13 @@ report_run() {  # $1 = label
         | sort -n | tail -1)
   ctx=${ctx:-0}
   TOTAL_SPENT=$(LC_ALL=C awk -v a="$TOTAL_SPENT" -v b="$cost" 'BEGIN{printf "%.4f", a + b}')
-  echo "$1: is_error=$is_err ctx_peak=$ctx cost=\$$cost (run total \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD)" | tee -a "$LOG"
+  echo "$1: is_error=$is_err ctx_peak=$ctx cost=\$$cost (run total \$$TOTAL_SPENT)" | tee -a "$LOG"
   if [[ "$ctx" =~ ^[0-9]+$ ]] && (( ctx > SOFT_CTX_WARN )); then
     echo "WARN: $1 peak turn used $ctx ctx (> $SOFT_CTX_WARN) — context getting heavy." | tee -a "$LOG"
   fi
 }
 
-# True (rc 0) once cumulative spend has reached the whole-run cap.
-over_budget() { LC_ALL=C awk -v s="$TOTAL_SPENT" -v c="$TOTAL_BUDGET_USD" 'BEGIN{exit !(s+0 >= c+0)}'; }
-
-if (( MAX_ITER == 0 )); then iter_desc="unbounded (until \$$TOTAL_BUDGET_USD budget or failure)"; else iter_desc="max $MAX_ITER iters"; fi
+if (( MAX_ITER == 0 )); then iter_desc="unbounded (until no work is left, or a failure)"; else iter_desc="max $MAX_ITER iters"; fi
 echo "=== loop start $(date -u) — $iter_desc, PO review every $FATHER_EVERY (deferred until app runnable) ===" | tee -a "$LOG"
 [[ -t 0 ]] && echo "    press q to stop the loop and tear down claude + all subagents (Ctrl-C also works)" | tee -a "$LOG"
 
@@ -318,11 +314,6 @@ for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
     echo "mother reported error — stopping." | tee -a "$LOG"
     break
   fi
-  if over_budget; then
-    echo "TOTAL_BUDGET_USD cap reached (spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD) — stopping." | tee -a "$LOG"
-    break
-  fi
-
   # --- Father: PO review on schedule or when the dev side is starved ---------
   # "No new work created" = scan ran on an empty board and still left it empty.
   # Either way the father play-tests the real game and writes PO notes into
@@ -348,17 +339,12 @@ for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
     report_run "iter $i (father)"
     after=$(spec_hash)
     since_father=0
-    if over_budget; then
-      echo "TOTAL_BUDGET_USD cap reached (spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD) — stopping." | tee -a "$LOG"
-      break
-    fi
-
-    # This loop is set to NOT auto-stop on "done" (see MAX_ITER=0). Previously the loop
-    # stopped here when the dev side had no work AND the PO left specs unchanged; now we
-    # only log that signal and keep going. Re-add a `break` here if you want the old
-    # "stop when the game matches the spec" behaviour back.
+    # Auto-stop on "done": the mother's scan found no work AND the father then play-tested and
+    # changed nothing — nothing left to build and the PO has no new direction. Exit cleanly and
+    # let the human take over (true completion, or the phase blocked purely on the owner).
     if (( no_work_created == 1 )) && [[ "$before" == "$after" ]]; then
-      echo "father play-tested and added no new PO notes — game matches the spec (no auto-stop; continuing)." | tee -a "$LOG"
+      echo "no work left and the PO changed nothing — game matches the spec (or is blocked on the owner). Exiting." | tee -a "$LOG"
+      break
     elif [[ "$before" == "$after" ]]; then
       echo "father review done — specs unchanged; resuming build loop." | tee -a "$LOG"
     else
@@ -370,7 +356,7 @@ for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
 done
 
 if (( STOP )); then
-  echo "=== loop stopped by user during iter $i — claude + subagents torn down; spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD $(date -u) ===" | tee -a "$LOG"
+  echo "=== loop stopped by user during iter $i — claude + subagents torn down; spent \$$TOTAL_SPENT $(date -u) ===" | tee -a "$LOG"
 else
-  echo "=== loop end $(date -u) — spent \$$TOTAL_SPENT / \$$TOTAL_BUDGET_USD ===" | tee -a "$LOG"
+  echo "=== loop end $(date -u) — spent \$$TOTAL_SPENT ===" | tee -a "$LOG"
 fi

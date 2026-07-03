@@ -83,10 +83,16 @@ below.
 **Never edit the Phase Sign-off list except to append a new sign-off** — it is permanent
 history, the loop's source of truth for which phase is current.
 
-**The stop signal:** only when **every phase is already in the Phase Sign-off list** and
-you find nothing to do, leave `po-review.md` **byte-for-byte unchanged** (append nothing,
-prune nothing). That unchanged file is the signal the whole game is complete. While any
-phase remains unsigned, you always either sign the current one off or file directives for
-it — so do not pad the log with filler to avoid an "unchanged" pass.
+**The stop signal — an unchanged pass now ENDS the run.** When the build side has no work and
+you leave `po-review.md` **byte-for-byte unchanged** (append nothing, prune nothing), the runner
+**exits**. Leaving it unchanged is therefore correct — and *only* correct — in one of two terminal
+states: **(a)** every phase is already signed off and nothing is wrong (the whole game is
+complete); or **(b)** the current phase **cannot be advanced by the build loop** — it is blocked
+**purely on the owner** (owner-gated assets, or acceptance can't yet be met so you can't sign it
+off) **and** there is no genuinely new, buildable directive to add. In case (b) do **not** re-add
+or re-date the same owner-gated notes to look busy — that would wrongly keep the loop spinning;
+leave the file unchanged so the run ends and the human takes over. Otherwise — while any phase is
+unsigned and still has buildable shortfalls — you **always** either sign it off or file directives
+for it; never pad the log with filler to avoid an "unchanged" pass.
 
 Then **exit**. The build loop runs next and turns your notes into work.

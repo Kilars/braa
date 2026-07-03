@@ -22,11 +22,11 @@ on the `deprecated-game` branch.)
 - [loop.sh](loop.sh) — the **external runner** itself: a Bash "ralph" loop that fires a
   fresh headless `claude -p` per iteration, alternating mother (build) and father (PO
   review every `FATHER_EVERY` iters or whenever a pass creates no new work), with
-  per-invocation and whole-run guards (`ITER_TIMEOUT`, `--max-budget-usd`,
-  `TOTAL_BUDGET_USD`, retries with backoff). The **done signal** is when *every* phase is
-  signed off and the PO play-tests and leaves `.docs/specs/po-review.md` byte-for-byte
-  unchanged; by default (`MAX_ITER=0`) the loop only logs that and keeps running until the
-  budget cap or a hard failure (see **No auto-stop** below).
+  per-invocation runaway guards (`ITER_TIMEOUT`, `--max-budget-usd`, `MAX_TURNS`, retries with
+  backoff — there is **no cumulative spend cap**). The **done signal** is when the mother's scan
+  finds no work AND the PO then play-tests and leaves `.docs/specs/po-review.md` byte-for-byte
+  unchanged (the whole game is complete, or it is blocked purely on the owner); by default
+  (`MAX_ITER=0`) the loop **exits on its own** on that signal (see **Auto-stop on no-work** below).
 
 An external runner alternated the two passes (build → review → build …), each in a fresh
 context with disk as the only shared memory.
@@ -36,8 +36,8 @@ context with disk as the only shared memory.
 `loop.sh` `cd`s to the repo root (its parent's parent) and drives the build from there:
 
 ```bash
-cd /home/larsski/Code/braa && ./process/loop.sh        # unbounded; stops only on the
-                                                        # budget cap, a hard failure, or you
+cd /home/larsski/Code/braa && ./process/loop.sh        # unbounded; stops on no-work,
+                                                        # a hard failure, or you
 ```
 
 ### Stopping it cleanly
@@ -71,9 +71,12 @@ What's wired for v2:
   review.
 - **Father (PO) is deferred** — the play-test pass needs a reviewable app, so `loop.sh`
   skips it until `project.godot` exists (see `app_runnable`).
-- **No auto-stop** — `MAX_ITER=0` (the default) runs until `TOTAL_BUDGET_USD` or a hard
-  failure. The old "stop when the game matches the spec" `break` is now just a log;
-  re-add it in the father block if you want that behaviour back.
+- **Auto-stop on no-work** — `MAX_ITER=0` (the default) runs until there's nothing left to do:
+  the mother's `scan-project` returns zero on an empty board **and** the father then play-tests
+  and leaves `.docs/specs/po-review.md` unchanged (true completion, or blocked purely on the
+  owner). The loop then **exits on its own**. It also stops on a hard failure or when you press
+  `q`. There is **no cumulative spend cap** — the per-invocation `--max-budget-usd`, `MAX_TURNS`,
+  and `ITER_TIMEOUT` remain as single-iteration runaway guards.
 - **Flags** — the loop never blocks on a prompt. When it hits a genuinely **user-only**
   decision and the orchestrator agrees it's material, it appends a non-blocking note to
   [`.task-board/FLAGS.md`](../.task-board/FLAGS.md) and keeps building on its best
