@@ -1425,6 +1425,7 @@ func _on_showcase_requested() -> void:
 	_showcase_model.set_roster(_roster.owned, _roster.active)
 	if _menu != null:
 		_menu.hide()  # the showcase replaces the menu surface; the menu re-shows on Tilbake
+	_set_training_hud_visible(false)  # the showcase centre is transparent — hide the chrome that would ghost through (090)
 	_brighten_stage(true)
 	_render_showcase()
 	_showcase.show()
@@ -1479,8 +1480,20 @@ func _render_showcase() -> void:
 func _close_showcase() -> void:
 	if _showcase != null:
 		_showcase.hide()
+	_set_training_hud_visible(true)  # restore the training chrome hidden on open (090)
 	_brighten_stage(false)
 	_publish_showcase()
+
+## Show/hide the training-HUD chrome as a unit (090, PO 2026-07-03 Bugfix 2). The trick menu is an opaque
+## panel that covers this chrome, but the breed showcase keeps its centre transparent so the spotlit dog
+## shows through — the always-on BRA button (plus its concentric ring markers, the coin readout, learned
+## bar, tier readout, and Tricks reopen button) would otherwise ghost through that clear centre. None of
+## these nodes self-set `.visible` (their _process/event drivers touch only `.disabled`/`.modulate`/
+## `.text`), so toggling visibility here is safe + sticky. Null-guarded — a no-op before the HUD is built.
+func _set_training_hud_visible(v: bool) -> void:
+	for n in [_bra_button, _tell_marker, _trainer_marker, _readout, _learned_bar, _coin_readout, _tricks_button]:
+		if n != null:
+			(n as CanvasItem).visible = v
 
 ## Brighten (on) / restore (off) the 3D stage so the showcased dog is spotlit, not buried in the garden
 ## shadow (P3-4 / PO-Improvement-2). Raises the DirectionalLight3D key energy and adds a viewer-side fill
