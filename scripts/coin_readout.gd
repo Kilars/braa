@@ -56,7 +56,10 @@ func _draw() -> void:
 	var pill_x := maxf(0.0, size.x - pill_w)
 	var pill_rect := Rect2(pill_x, 0.0, pill_w, pill_h)
 	# Draw PAPER pill background with DesignSystem radius + card shadow (097 design system).
+	# 100 (Phase 6): deepen the shadow (panel()'s default alpha .08 is too faint over the bright
+	# sun band) so the coin pill lifts off the sky and reads — the PO's "washes out" note.
 	var sb := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
+	sb.shadow_color = Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.20)
 	sb.draw(get_canvas_item(), pill_rect)
 	# Coin: gold face + darker rim + inner ring — no font glyph (069 lesson).
 	var cy := pill_h * 0.5

@@ -727,8 +727,16 @@ const COIN_READOUT_TOP := 10.0
 ## menu between rounds to switch trick — never a dead-end waiting on a mastery.
 const TRICKS_BTN_MARGIN := 20.0
 const TRICKS_BTN_TOP := COIN_READOUT_TOP
-const TRICKS_BTN_WIDTH := 112.0
+const TRICKS_BTN_WIDTH := 128.0   ## 100: a touch wider so the glyph + "Triks" both fit the pill
 const TRICKS_BTN_HEIGHT := 44.0
+## 100 (Phase 6): the drawn hamburger menu glyph on the Triks pill + the top-HUD legibility lift.
+const TRICKS_GLYPH_GAP := 8       ## px between the hamburger glyph and the "Triks" label
+const HAMBURGER_BAR_W := 20       ## px width of each of the three bars (baked into the icon image)
+const HAMBURGER_BAR_H := 2        ## px thickness of each bar
+const HAMBURGER_BAR_GAP := 4      ## px gap between bars
+## A deeper drop shadow than panel()'s default (alpha .08) for the top HUD pills, so a pale PAPER
+## pill lifts off the bright sun band instead of washing out (PO Phase-6 note #3).
+const HUD_PILL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.20)
 
 ## Learned bar (045, P2-4): a meter below the coin line holding the trick label + progress track.
 ## 097 (Phase 6): expanded to include the trick-name label row above the track itself. The label row
@@ -1725,15 +1733,23 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	btn.name = "TricksButton"
 	btn.text = "Triks"
 	# Design-system white pill (097, Phase 6): PAPER background with card shadow + slate
-	# Baloo 2 bold label. Matches the goal-screen top-left pill. No font-glyph icons —
-	# text-only to guarantee no tofu (lesson from 089).
+	# Baloo 2 bold label. Matches the goal-screen top-left pill. 100 (Phase 6): a DRAWN
+	# hamburger glyph (baked SLATE bars, never a "☰" font string → no tofu, lesson from 089)
+	# rides the button's native icon slot, left of the label, signalling "menu" like the goal.
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
 	btn.add_theme_color_override("font_color",         DesignSystem.SLATE)
 	btn.add_theme_color_override("font_pressed_color", DesignSystem.SLATE)
 	btn.add_theme_color_override("font_hover_color",   DesignSystem.SLATE)
+	btn.icon = _hamburger_texture()
+	btn.add_theme_constant_override("h_separation", TRICKS_GLYPH_GAP)  # space the glyph off the label
+	# 100: near-opaque PAPER fill (unchanged) + a STRONGER-than-default drop shadow so the pale
+	# pill lifts off the bright sun band (the PO's "washes out faint" note). panel()'s default card
+	# shadow (alpha .08) is too subtle over the bright sky, so deepen it just for the top HUD pills.
 	var tricks_normal := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
+	tricks_normal.shadow_color = HUD_PILL_SHADOW
 	var tricks_pressed := DesignSystem.panel(DesignSystem.CREAM, DesignSystem.R_PILL)
+	tricks_pressed.shadow_color = HUD_PILL_SHADOW
 	var tricks_empty := StyleBoxEmpty.new()
 	btn.add_theme_stylebox_override("normal",   tricks_normal)
 	btn.add_theme_stylebox_override("hover",    tricks_normal)
@@ -1755,6 +1771,23 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_publish_current_trick()  # seed the web e2e hook with the initial trick (072, kept from 066)
 	_publish_menu_open()      # seed __bra_menu_open = false so a capture polls a defined value (072)
 	_publish_roster()         # seed the active breed + owned roster + balance for the 079 capture
+
+## The Triks pill's hamburger menu glyph (100): three short SLATE bars baked into an RGBA Image
+## (never a "☰" font string — that risks tofu on the fallback font, per 089). Used as the button's
+## native icon so it sits left of the "Triks" label. Headless-safe (baked Image, no shader).
+func _hamburger_texture() -> ImageTexture:
+	var w := HAMBURGER_BAR_W + 4
+	var h := HAMBURGER_BAR_H * 3 + HAMBURGER_BAR_GAP * 2 + 4
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var x0 := 2
+	var y := 2
+	for _bar in 3:
+		for yy in range(y, y + HAMBURGER_BAR_H):
+			for xx in range(x0, x0 + HAMBURGER_BAR_W):
+				img.set_pixel(xx, yy, DesignSystem.SLATE)
+		y += HAMBURGER_BAR_H + HAMBURGER_BAR_GAP
+	return ImageTexture.create_from_image(img)
 
 ## Mount the feedback form modal (085, X-8) above the trick menu on the same CanvasLayer. Hidden until
 ## _on_feedback_requested opens it. Signal routing: submitted → _on_feedback_submitted (→ _telem);
