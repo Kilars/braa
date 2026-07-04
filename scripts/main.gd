@@ -1372,6 +1372,7 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_menu.breed_adopt.connect(_on_breed_adopt)         # spend coins to adopt a breed (079/P3-D3)
 	_menu.feedback_requested.connect(_on_feedback_requested)  # open the feedback form (085, X-8)
 	_menu.showcase_requested.connect(_on_showcase_requested)  # open the spotlit breed showcase (087, P3-4)
+	_menu.word_chosen.connect(_on_word_chosen)         # swap the active marker word (092/P5-4)
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
@@ -1581,11 +1582,12 @@ func _menu_rows() -> Array:
 		mastered[id] = p != null and p.mastered
 	return TrickMenu.classify(all_ids, _selectable_tricks(), mastered, ROADMAP_LOCKED_TRICKS)
 
-## Feed the current trick rows + breed rows + coin balance into the menu (called just before it shows).
+## Feed the current trick rows + breed rows + word rows + coin balance into the menu (called just before it shows).
 func _refresh_trick_menu() -> void:
 	if _menu != null:
 		_menu.set_rows(_menu_rows(), _purse.balance)
 		_menu.set_breeds(_breed_rows())  # the adopt/select breeds section (079)
+		_menu.set_words(_word_rows())    # the marker-word section (092/P5-4)
 		_publish_breed_rows()            # publish the breed-row centres for the live e2e capture (079)
 
 ## Build the completion-menu breed rows (079): the shipped-breed catalog classified against the owned
@@ -1597,6 +1599,12 @@ func _breed_rows() -> Array:
 		var bp := entry as BreedPersonality
 		cat.append({"id": bp.id, "name": bp.display_name, "tint": bp.swatch_color()})
 	return TrickMenu.classify_breeds(cat, _roster.owned, _roster.active, _purse.balance, BREED_ADOPT_COST)
+
+## Build the completion-menu word rows (092, P5-4): the catalog classified against the unlocked set +
+## the active word id, so each row reads Active / Unlocked / Locked. Order follows the catalog.
+func _word_rows() -> Array:
+	var d := _words.to_dict()
+	return TrickMenu.classify_words(MarkerWords.CATALOG, d.get("unlocked", []), d.get("active", MarkerWords.BASE_ID))
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
 ## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
@@ -1667,6 +1675,16 @@ func _on_breed_chosen(id: String) -> void:
 	_publish_roster()
 	_save_progress()
 	_close_trick_menu()  # reveal the switched dog + resume training (like choosing a trick, 072)
+
+## Swap the active marker word (092, P5-4). Mirrors _on_breed_chosen but keeps the menu OPEN so the
+## player sees the Active badge move and can confirm the switch before training. The menu is never
+## closed here (closing is only for trick-select, 072) — X-2 ("one verb, always") is preserved.
+func _on_word_chosen(id: String) -> void:
+	if not _words.set_active(id):
+		return  # locked or unknown id — no-op, no state change
+	_payoff.set_active_word(_words.active())
+	_refresh_trick_menu()   # reflect the new ACTIVE row immediately (Active badge moves)
+	_save_progress()        # persist the chosen word so a reload boots into the same selection
 
 ## Re-point the active breed onto the running dog (079): its coat tint (076) re-tints the coat atlas in
 ## place, and its four personality levers (075) re-apply — each trick's fill gains and the loop's feint
@@ -1746,6 +1764,14 @@ func _publish_breed_rows() -> void:
 		var c := _menu.row_center(i)
 		tricks.append({"id": _menu.row_id(i), "x": c.x, "y": c.y})
 	JavaScriptBridge.eval("window.__bra_trick_rows = %s;" % JSON.stringify(tricks), true)
+	# Publish the marker-word row centres + ids + the active word (092/P5-4) so the capture can land a
+	# REAL tap on a specific word row and assert the active-word swap — the same honest-tap proof.
+	var words: Array = []
+	for i in _menu.word_count():
+		var c := _menu.word_row_center(i)
+		words.append({"id": _menu.word_id(i), "x": c.x, "y": c.y})
+	JavaScriptBridge.eval("window.__bra_word_rows = %s;" % JSON.stringify(words), true)
+	JavaScriptBridge.eval("window.__bra_active_word = '%s';" % _words.active(), true)
 	JavaScriptBridge.eval("window.__bra_viewport = [%f, %f];" % [vp.x, vp.y], true)
 	# Publish the feedback row centre so the capture can tap "Give feedback" robustly (085, X-8).
 	var fc := _menu.feedback_row_center()

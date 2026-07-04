@@ -94,11 +94,20 @@ frames under `.screenshots/092-*`.
 
 ## Definition of done / Acceptance criteria
 
-- [ ] `TrickMenu` renders a "Marker words" section (subheading + one row per catalog word: ACTIVE / UNLOCKED / LOCKED), honest greying for locked, zero height when no words fed.
-- [ ] **TDD:** `classify_words` tested red→green (active/unlocked/locked partition, catalog order, non-empty assertions).
-- [ ] Tapping an unlocked non-active word emits `word_chosen(id)`; ACTIVE/LOCKED rows absorbed.
-- [ ] `main._on_word_chosen` swaps the active word, re-points the payoff clip, persists, refreshes the menu (stays open); no in-round button added (X-2 holds).
-- [ ] Selection persists across a same-origin reload (rides 091's `words` blob).
-- [ ] **Visual Review PASS** on the real build at 390×844 (frames `.screenshots/092-*`), verified by eye; existing Tricks/Breeds sections unregressed.
-- [ ] `nix develop -c bash verify.sh` green.
-- [ ] Placeholder-check clean (no un-allowlisted stub markers in the diff).
+- [x] `TrickMenu` renders a "Marker words" section (subheading + one row per catalog word: ACTIVE / UNLOCKED / LOCKED), honest greying for locked, zero height when no words fed.
+- [x] **TDD:** `classify_words` tested red→green (active/unlocked/locked partition, catalog order, non-empty assertions).
+- [x] Tapping an unlocked non-active word emits `word_chosen(id)`; ACTIVE/LOCKED rows absorbed.
+- [x] `main._on_word_chosen` swaps the active word, re-points the payoff clip, persists, refreshes the menu (stays open); no in-round button added (X-2 holds).
+- [x] Selection persists across a same-origin reload (rides 091's `words` blob).
+- [x] **Visual Review PASS** on the real build at 390×844 (frames `.screenshots/092-*`), verified by eye; existing Tricks/Breeds sections unregressed.
+
+  **Visual Review (orchestrator, 2026-07-04):** PASS. `tools/web_capture_words.mjs` (new) drove the real web
+  bundle in headless Chromium at 390×844 with all-real canvas taps: autotap mastered Sitt → the menu popped
+  with "dyktig" unlocked → the **Marker words** section renders correctly under Breeds, fully on-screen —
+  `Bra!` ACTIVE (gold), `Dyktig!` switchable, `Flink!/Super!/Kjempebra!` honestly greyed LOCKED
+  (`.screenshots/092-01`). A real tap on the Dyktig! row swapped active bra → dyktig (`__bra_active_word`
+  flipped), the ACTIVE highlight moved, `Bra!` became switchable, menu stayed open (`.screenshots/092-02`).
+  No layout regression. Added a `__bra_word_rows`/`__bra_active_word` capture seam + `word_count/word_row_center/word_id`
+  accessors (mirroring the breed seams) for the honest-tap proof.
+- [x] `nix develop -c bash verify.sh` green.
+- [x] Placeholder-check clean (no un-allowlisted stub markers in the diff).

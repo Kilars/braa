@@ -197,3 +197,68 @@ func _press(pos: Vector2) -> InputEventMouseButton:
 	ev.pressed = true
 	ev.position = pos
 	return ev
+
+# ---- marker words section: load/swap the active word (092, P5-4) -----------------------------------
+
+func test_classify_words_active_unlocked_locked() -> void:
+	# The active word reads ACTIVE; another unlocked word reads UNLOCKED (tap → switch); a catalog word
+	# not in `unlocked` reads LOCKED (greyed, never tappable). This mirrors the breed state partition.
+	# Base "bra" + dyktig + flink unlocked, dyktig active → dyktig ACTIVE, bra + flink UNLOCKED, super + kjempebra LOCKED.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra", "dyktig", "flink"], "dyktig")
+	assert_eq(rows[0].state, TrickMenu.WordState.UNLOCKED, "base 'bra' unlocked but not active reads UNLOCKED")
+	assert_eq(rows[1].state, TrickMenu.WordState.ACTIVE, "the active word 'dyktig' reads ACTIVE")
+	assert_eq(rows[2].state, TrickMenu.WordState.UNLOCKED, "unlocked 'flink' reads UNLOCKED")
+	assert_eq(rows[3].state, TrickMenu.WordState.LOCKED, "locked 'super' reads LOCKED")
+	assert_eq(rows[4].state, TrickMenu.WordState.LOCKED, "locked 'kjempebra' reads LOCKED")
+
+func test_classify_words_all_locked_when_only_base_active() -> void:
+	# When only base "bra" is unlocked and active, it reads ACTIVE; all other catalog words read LOCKED.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra"], "bra")
+	assert_eq(rows[0].state, TrickMenu.WordState.ACTIVE, "base 'bra' alone unlocked + active reads ACTIVE")
+	assert_eq(rows[1].state, TrickMenu.WordState.LOCKED, "'dyktig' not unlocked reads LOCKED")
+	assert_eq(rows[2].state, TrickMenu.WordState.LOCKED, "'flink' not unlocked reads LOCKED")
+	assert_eq(rows[3].state, TrickMenu.WordState.LOCKED, "'super' not unlocked reads LOCKED")
+	assert_eq(rows[4].state, TrickMenu.WordState.LOCKED, "'kjempebra' not unlocked reads LOCKED")
+
+func test_classify_words_order_follows_catalog() -> void:
+	# Row order matches the catalog order (bra, dyktig, flink, super, kjempebra), not the order of
+	# the `unlocked` array. This keeps the display consistent.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["flink", "bra", "super"], "super")
+	assert_eq(rows[0].id, "bra", "first row is 'bra' (first catalog entry)")
+	assert_eq(rows[1].id, "dyktig", "second row is 'dyktig' (second catalog entry)")
+	assert_eq(rows[2].id, "flink", "third row is 'flink' (third catalog entry)")
+	assert_eq(rows[3].id, "super", "fourth row is 'super' (fourth catalog entry)")
+	assert_eq(rows[4].id, "kjempebra", "fifth row is 'kjempebra' (fifth catalog entry)")
+
+func test_classify_words_display_matches_catalog() -> void:
+	# Each row's display field matches the catalog entry, e.g. "Dyktig!" not "dyktig".
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra", "dyktig", "flink"], "dyktig")
+	assert_eq(rows[0].display, "Bra!", "display matches catalog for 'bra'")
+	assert_eq(rows[1].display, "Dyktig!", "display matches catalog for 'dyktig'")
+	assert_eq(rows[2].display, "Flink!", "display matches catalog for 'flink'")
+	assert_eq(rows[3].display, "Super!", "display matches catalog for 'super'")
+	assert_eq(rows[4].display, "Kjempebra!", "display matches catalog for 'kjempebra'")
+
+func test_classify_words_all_unlocked() -> void:
+	# When all words are unlocked, the active word is ACTIVE; the rest are UNLOCKED (switchable).
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG,
+		["bra", "dyktig", "flink", "super", "kjempebra"], "kjempebra")
+	assert_eq(rows[0].state, TrickMenu.WordState.UNLOCKED, "unlocked 'bra' not active reads UNLOCKED")
+	assert_eq(rows[1].state, TrickMenu.WordState.UNLOCKED, "unlocked 'dyktig' not active reads UNLOCKED")
+	assert_eq(rows[2].state, TrickMenu.WordState.UNLOCKED, "unlocked 'flink' not active reads UNLOCKED")
+	assert_eq(rows[3].state, TrickMenu.WordState.UNLOCKED, "unlocked 'super' not active reads UNLOCKED")
+	assert_eq(rows[4].state, TrickMenu.WordState.ACTIVE, "active 'kjempebra' reads ACTIVE")
+
+func test_classify_words_edge_active_not_in_unlocked() -> void:
+	# Edge case: if the active word is NOT in the unlocked list, it should still appear in the
+	# partition (treated as LOCKED, since it's not unlocked). The partition is deterministic
+	# regardless of the active word's unlock status — no missing rows.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra", "dyktig"], "super")
+	assert_eq(rows.size(), 5, "all catalog entries are present (no rows dropped)")
+	assert_eq(rows[0].id, "bra", "first row is 'bra'")
+	assert_eq(rows[1].id, "dyktig", "second row is 'dyktig'")
+	# 'super' is in the catalog but not in `unlocked`, so it should read LOCKED even though
+	# the caller tried to set it active (a defensive edge case — in normal play, main ensures
+	# the active word is always unlocked via MarkerWords.set_active() guards).
+	assert_eq(rows[3].id, "super", "fourth row is 'super' (even though active was not in unlocked)")
+	assert_eq(rows[3].state, TrickMenu.WordState.LOCKED, "an active word not in unlocked reads LOCKED (edge case)")

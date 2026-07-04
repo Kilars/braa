@@ -24,6 +24,9 @@ signal breed_chosen(id: String)
 ## A BUYABLE (affordable, unowned) breed row was tapped — main spends the coins + adopts it. An
 ## unaffordable (Locked) or already-active breed absorbs the tap and emits nothing (no debt, no switch).
 signal breed_adopt(id: String)
+## An UNLOCKED, non-active marker word was tapped — main.set_active + re-point the payoff clip.
+## ACTIVE (already active) and LOCKED (not yet unlocked) rows absorb the tap and emit nothing.
+signal word_chosen(id: String)
 ## The "Give feedback" row was tapped — main opens the FeedbackFormView modal over this menu.
 ## The menu itself stays dumb: it only emits; main holds the form and routes the submit through _telem.
 signal feedback_requested
@@ -40,6 +43,12 @@ enum State { LEARNED, AVAILABLE, LOCKED }
 ## OWNED = adopted but not active (tap → switch); BUYABLE = unowned + affordable (tap → adopt, spends
 ## coins); LOCKED = unowned + can't-afford (absorbs a tap — priced, no debt). Only OWNED/BUYABLE emit.
 enum BreedState { ACTIVE, OWNED, BUYABLE, LOCKED }
+
+## Each marker word's standing in the player's collection (092, P5-4). ACTIVE = the word that fires
+## at the mark (absorbs a tap — already firing); UNLOCKED = unlocked by mastery, not yet active
+## (tap → switch the active word); LOCKED = not yet earned (greyed, absorbs a tap — no faked clip).
+## Only UNLOCKED rows emit word_chosen.
+enum WordState { ACTIVE, UNLOCKED, LOCKED }
 
 ## Player-facing names, keyed by the stable trick ids (the three wired tricks + the BUST-064 roadmap
 ## residual so the Locked rows read honestly). A new trick is a one-line add, mirroring TrickSelector.
@@ -88,6 +97,13 @@ const BREED_ROW_H := 54.0       ## one breed row (swatch + name + state/price)
 const BREED_ROW_GAP := 8.0      ## gutter between breed rows
 const SWATCH_R := 13.0          ## the honest coat-colour chip radius
 
+## The marker words section (092, P5-4): a small "Marker words" subheading + one row per catalog word,
+## seated between the breeds section and the showcase/footer pills. Zero-height when no words are fed.
+const WORDS_GAP := 18.0        ## gutter between the breeds section (or trick rows if no breeds) and the words section
+const WORD_HEADER_H := 30.0    ## the "Marker words" subheading band
+const WORD_ROW_H := 54.0       ## one word row (display text + state badge)
+const WORD_ROW_GAP := 8.0      ## gutter between word rows
+
 ## Type sizes.
 const TITLE_SIZE := 30
 const NUMBER_SIZE := 26
@@ -133,12 +149,27 @@ const BREED_NAME_LOCKED := Color(1.0, 1.0, 1.0, 0.34) ## can't afford — greyed
 const BREED_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)     ## the "Breeds" subheading
 const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)         ## a thin dark rim so a pale coat chip reads on the panel
 
+## Marker-word-row palette + badges (092). ACTIVE reads gold (the firing word); UNLOCKED white (tap
+## to switch); LOCKED greyed (not yet earned — never tappable, never a faked clip).
+const WORD_BADGE := {
+	WordState.ACTIVE:   "Active",
+	WordState.UNLOCKED: "Switch",
+	WordState.LOCKED:   "Locked",
+}
+const WORD_NAME_ACTIVE  := Color(1.0, 0.86, 0.30)      ## the firing word — gold
+const WORD_NAME_UNLOCKED := Color(1.0, 1.0, 1.0)       ## switchable — white
+const WORD_NAME_LOCKED  := Color(1.0, 1.0, 1.0, 0.34)  ## not yet earned — greyed
+const WORD_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)       ## the "Marker words" subheading
+
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
 var _balance := 0
 ## The breed rows main fed in (each {id, name, tint, state, price}) — empty until the roster wires them,
 ## so the trick-only menu (072) is byte-for-byte unchanged when there are no breeds.
 var _breeds: Array = []
+## The marker-word rows main fed in (each {id, display, state}) — empty until P5-4 wires them,
+## so the trick-only + breeds-only menu geometry is unchanged when no words are fed.
+var _words: Array = []
 
 func _init() -> void:
 	# Modal: the menu eats every tap while it is up (STOP), so a tap can never fall through to the BRA
@@ -186,6 +217,25 @@ static func classify_breeds(catalog: Array, owned: Array, active: String, balanc
 static func breed_is_selectable(state: int) -> bool:
 	return state == BreedState.OWNED or state == BreedState.BUYABLE
 
+## Classify each catalog word for the menu (pure — the active/unlocked/locked partition is unit-locked).
+## `catalog` is the ordered word list (each {id, display, …}); `unlocked` the ids the player has earned;
+## `active` the id currently firing at the mark. Each row: {id, display, state}. Order follows the catalog
+## so the display reads the same every open. ACTIVE (the firing word) and LOCKED absorb a tap; only an
+## UNLOCKED non-active word emits word_chosen (so the player can deliberately switch — P5-4, X-2 holds).
+static func classify_words(catalog: Array, unlocked: Array, active: String) -> Array:
+	var rows: Array = []
+	for entry in catalog:
+		var e: Dictionary = entry
+		var id: String = e.get("id", "")
+		var display: String = e.get("display", id)
+		var st := WordState.LOCKED
+		if id == active and unlocked.has(id):
+			st = WordState.ACTIVE
+		elif unlocked.has(id):
+			st = WordState.UNLOCKED
+		rows.append({"id": id, "display": display, "state": st})
+	return rows
+
 ## The player-facing name for a trick id (pure). Unknown ids fall back to a capitalised id.
 static func display_name(id: String) -> String:
 	return LABELS.get(id, id.capitalize())
@@ -201,6 +251,12 @@ func set_rows(rows: Array, balance: int) -> void:
 ## these (via classify_breeds) each time it opens the menu, so the menu itself stays dumb.
 func set_breeds(breeds: Array) -> void:
 	_breeds = breeds
+	queue_redraw()
+
+## Set the marker-word rows to show (092) and request a redraw. Empty until P5-4 wires them; main
+## rebuilds these (via classify_words) each time it opens the menu, so the menu stays dumb.
+func set_words(rows: Array) -> void:
+	_words = rows
 	queue_redraw()
 
 func row_count() -> int:
@@ -226,6 +282,17 @@ func row_center(i: int) -> Vector2:
 
 func row_id(i: int) -> String:
 	return (_rows[i] as Dictionary).id
+
+## The i-th marker-word row's centre + its id (092/P5-4) — same capture purpose as the breed/trick
+## accessors above, so the live e2e/Visual-Review capture can land a REAL tap on a specific word row.
+func word_count() -> int:
+	return _words.size()
+
+func word_row_center(i: int) -> Vector2:
+	return _word_row_rect(i).get_center()
+
+func word_id(i: int) -> String:
+	return (_words[i] as Dictionary).id
 
 ## The coin balance currently shown — the render-free predicate a test reads.
 func balance() -> int:
@@ -256,24 +323,53 @@ func _breeds_block_h() -> float:
 		return 0.0
 	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
 
+## The marker words block height (092): the gutter + "Marker words" subheading + one row per word.
+## Zero when no word rows are fed, so the trick-only panel geometry (072) and the breeds layout
+## (079) are both unchanged when the section is absent.
+func _words_block_h() -> float:
+	var n := _words.size()
+	if n == 0:
+		return 0.0
+	return WORDS_GAP + WORD_HEADER_H + n * WORD_ROW_H + (n - 1) * WORD_ROW_GAP
+
+## The y where the words section (subheading) begins — just below breeds, or just below trick rows
+## if there are no breeds.
+func _words_top() -> float:
+	var panel := _panel_rect()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + WORDS_GAP
+
+## The i-th word row rect inside the panel (below the "Marker words" subheading).
+func _word_row_rect(i: int) -> Rect2:
+	var panel := _panel_rect()
+	var x := panel.position.x + PANEL_PAD
+	var y := _words_top() + WORD_HEADER_H + i * (WORD_ROW_H + WORD_ROW_GAP)
+	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, WORD_ROW_H)
+
+## The word row index under a point, or -1 if none.
+func _word_row_index_at(pos: Vector2) -> int:
+	for i in _words.size():
+		if _word_row_rect(i).has_point(pos):
+			return i
+	return -1
+
 ## The showcase pill's block height (087): the gutter + pill, only when there are breeds to show off.
 ## Zero-height with no breeds, so the trick-only panel geometry (072) is unchanged.
 func _showcase_block_h() -> float:
 	return (SHOWCASE_GAP + SHOWCASE_H) if not _breeds.is_empty() else 0.0
 
-## The centred modal panel rect for the current size + row/breed counts.
+## The centred modal panel rect for the current size + row/breed/word counts.
 ## The showcase + feedback pills sit above the close button, so the panel grows to fit them.
 func _panel_rect() -> Rect2:
 	var pw := minf(size.x - 2.0 * PANEL_MARGIN_X, PANEL_MAX_W)
-	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
+	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _words_block_h() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
 	var px := (size.x - pw) * 0.5
 	var py := (size.y - ph) * 0.5
 	return Rect2(px, py, pw, ph)
 
-## The y just below the trick + breeds blocks — the top of the footer (showcase/feedback/close pills).
+## The y just below the trick + breeds + words blocks — the top of the footer (showcase/feedback/close pills).
 func _foot_top() -> float:
 	var panel := _panel_rect()
-	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _words_block_h()
 
 ## The "Vis frem hundene" showcase pill rect (087) — between the breeds section and the feedback row.
 ## Zero-area (offscreen) when there are no breeds so it is never drawn or hit.
@@ -372,6 +468,13 @@ func _gui_input(event: InputEvent) -> void:
 			BreedState.BUYABLE: breed_adopt.emit(b.id)   # spend coins to adopt it
 			# ACTIVE (already running) / LOCKED (can't afford) absorb the tap — no switch, no debt.
 		return
+	var wi := _word_row_index_at(pos)
+	if wi >= 0:
+		var w: Dictionary = _words[wi]
+		if w.state == WordState.UNLOCKED:
+			word_chosen.emit(w.id)  # switch the active marker word (non-active unlocked only)
+		# ACTIVE (already firing) / LOCKED (not earned) absorb the tap — no switch, no faked clip.
+		return
 	if not _breeds.is_empty() and _showcase_rect().has_point(pos):
 		showcase_requested.emit()
 		accept_event()
@@ -413,6 +516,14 @@ func _draw() -> void:
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(font, i)
+	# The marker words section (092): a subheading + one row per catalog word (Active/Unlocked/Locked).
+	# Zero-height when no words are fed, so the trick-only + breeds-only geometry (072/079) is unchanged.
+	if not _words.is_empty():
+		var word_sub_baseline := _words_top() + font.get_ascent(BADGE_SIZE)
+		_draw_text_outlined(font, Vector2(panel.position.x + PANEL_PAD, word_sub_baseline), "Marker words",
+			BADGE_SIZE, WORD_SUBHEAD)
+		for i in _words.size():
+			_draw_word_row(font, i)
 	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. A gold-tinted pill so it
 	# reads as the collection surface, distinct from the subtle secondary feedback/close pills below.
 	if not _breeds.is_empty():
@@ -525,4 +636,33 @@ func _draw_breed_row(font: Font, i: int) -> void:
 		badge_col = COIN_GOLD
 	var badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
 	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
+		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
+
+## One marker-word row (092): the display text on the left and the state badge on the right.
+## ACTIVE row highlighted gold (the firing word); UNLOCKED white (tap to switch); LOCKED greyed
+## (not yet earned — never tappable, never a faked clip). Mirrors _draw_breed_row.
+func _draw_word_row(font: Font, i: int) -> void:
+	var w: Dictionary = _words[i]
+	var rect := _word_row_rect(i)
+	var st: int = w.state
+	var locked := st == WordState.LOCKED
+	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
+	# The word display text (e.g. "Dyktig!"), left-aligned.
+	var name_col := WORD_NAME_LOCKED
+	if st == WordState.ACTIVE:
+		name_col = WORD_NAME_ACTIVE
+	elif st == WordState.UNLOCKED:
+		name_col = WORD_NAME_UNLOCKED
+	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
+	_draw_text_outlined(font, Vector2(rect.position.x + 14.0, name_baseline),
+		str(w.get("display", w.id)), NAME_SIZE, name_col)
+	# The state badge, right-aligned.
+	var word_badge: String = WORD_BADGE[st]
+	var word_badge_col := WORD_NAME_LOCKED
+	if st == WordState.ACTIVE:
+		word_badge_col = BADGE_LEARNED
+	elif st == WordState.UNLOCKED:
+		word_badge_col = BADGE_AVAILABLE
+	var word_badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
+	_draw_text_outlined(font, Vector2(rect.position.x, word_badge_baseline), word_badge, BADGE_SIZE, word_badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
