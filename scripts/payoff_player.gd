@@ -36,6 +36,13 @@ const CLICK_RANGE_DB := 6.0
 var _voice: AudioStreamPlayer
 var _click: AudioStreamPlayer
 
+## Word-id → AudioStream map (091, P5-1): pre-loaded from MarkerWords.CATALOG so set_active_word()
+## is a cheap dict lookup at play time (no ResourceLoader hit in the hot path). The base "bra" stream
+## is also _voice.stream by default — nothing regresses before a word is chosen. Each entry uses the
+## same ResourceLoader.exists() degrade-to-_voice_blip() fallback as VOICE_ASSET itself, so a missing
+## clip (e.g. CI without the WAV) silently falls back to the synth blip.
+var _word_streams: Dictionary = {}
+
 # Render-free introspection of the last play() — the tests assert the gate through
 # these without needing an audio device (mirrors ApexTellMarker.is_showing).
 var last_played: bool = false   ## did the most recent play() actually fire sound
@@ -48,10 +55,29 @@ func _init() -> void:
 	# lazily on the first real play(), when this node is fully in the tree (see below).
 	_voice = AudioStreamPlayer.new()
 	_voice.name = "Voice"
-	_voice.stream = _load_voice()
+	# Pre-load a stream for every catalog word (091, P5-1). Degrade per-clip: if the WAV
+	# is absent (public CI), fall back to the synth blip so audio never hard-depends on
+	# any single file — mirror _load_voice()'s ResourceLoader.exists guard.
+	for entry in MarkerWords.CATALOG:
+		var id: String = entry["id"]
+		var clip: String = entry["clip"]
+		if ResourceLoader.exists(clip):
+			_word_streams[id] = load(clip)
+		else:
+			_word_streams[id] = _voice_blip()
+	# Default active = "bra": set the voice stream to the base word so nothing regresses
+	# before a word is chosen via set_active_word().
+	_voice.stream = _word_streams.get(MarkerWords.BASE_ID, _load_voice())
 	_click = AudioStreamPlayer.new()
 	_click.name = "Click"
 	_click.stream = _click_blip()
+
+## Switch the active word's clip (091, P5-1). Re-points _voice.stream to the pre-loaded stream
+## for `id`. A no-op for unknown ids (the current stream stays). Safe to call at any time —
+## the stream is re-pointed immediately; any in-flight .play() drains on the old stream.
+func set_active_word(id: String) -> void:
+	if _word_streams.has(id):
+		_voice.stream = _word_streams[id]
 
 ## Play the reward for a scored mark. Silent unless MarkPayoff.plays() (a successful
 ## mark), so a MISS/DEAD tap provably makes no sound (P1-6). Loudness and pitch come

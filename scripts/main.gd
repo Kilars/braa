@@ -209,6 +209,13 @@ const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick m
 ## explicitly picks a non-Normal mode. 081+ apply the bundle to resolve the read levers.
 var _difficulty := Difficulty.normal()
 
+## The marker-word catalog + progressive unlock (091, P5-1). A pure value object: the set of
+## unlocked word ids + the one active word id, persisted alongside tricks/coins/roster/difficulty
+## in the ONE TrickStore save blob. Base "bra" is always unlocked; new words unlock as tricks are
+## mastered (mastered_count → unlock_up_to). The active word's clip is played by PayoffPlayer on
+## every successful mark. Defaults to "bra" only so pre-Phase-5 play is byte-identical.
+var _words := MarkerWords.new()
+
 ## The ADR-0007 telemetry choke-point (084, X-8): the ONE Telemetry node for this scene.
 ## Every capture routes through _telem() — a single audit point. Instantiated in _ready()
 ## and kept so wiring tests can read _telemetry.captured (the recording sink). Null-guarded
@@ -283,6 +290,7 @@ const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
 	_load_roster()                   # restore the owned-breeds roster + active breed BEFORE the dog loads (079/P3-4)
+	_words.restore(_store.load_words())  # restore the marker-word unlock state + active word (091/P5-1)
 	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
 	_difficulty = _resolve_difficulty()  # the GLOBAL difficulty: the persisted setting or the ?bra_difficulty= override (080/P4-1); dormant (defaults to Normal)
@@ -310,6 +318,7 @@ func _ready() -> void:
 		_fallback_camera()
 	_setup_bra_button()
 	_setup_payoff()
+	_payoff.set_active_word(_words.active())  # point the payoff player at the restored active word (091/P5-1)
 	_force_tell = _query_force_tell()        # deterministic apex-tell pixel proof (030, web-only seam)
 	_force_tier = _query_force_tier()        # deterministic readout-contrast pixel proof (033, web-only)
 	_autotap = _query_autotap()              # deterministic reaction-capture mark (034, web-only)
@@ -1821,6 +1830,8 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 		_play_mastery_beat()
 		_purse.earn(_difficulty.mastery_reward(COIN_REWARD_MASTERY))  # difficulty scales the payout (082, P4-3); Normal = identity
 		_refresh_coins()
+		var mastered_count := _count_mastered_tricks()  # how many tricks are now mastered (091/P5-1)
+		_words.unlock_up_to(mastered_count)             # unlock the next word(s) up to the mastered count
 		_open_trick_menu()  # the active trick is learned — pop the completion menu, pause offers (072/PO note 1)
 	elif not SitWindow.is_successful(tier):
 		_play_confused_beat()  # a mistimed / wrong-moment tap — the dog reads confused (P2-4)
@@ -1829,6 +1840,17 @@ func _apply_progress(tier: SitWindow.Tier) -> void:
 ## The tricks main holds a learned bar for (065). Each gets its own persisted TrickProgress, keyed by
 ## id in the save map, so per-trick progress never leaks across tricks. Grows as more tricks wire (067).
 const KNOWN_TRICKS := [TRICK_ID_SITT, TRICK_ID_LIGG, TRICK_ID_LEGG_DEG]
+
+## Count how many KNOWN tricks are currently mastered (091/P5-1). Used by the just_mastered hook to
+## decide which marker words to unlock: 1st mastered → dyktig, 2nd → flink, etc. Mirrors the
+## mastery-counting loop in _menu_rows so there is one source of truth for "mastered count".
+func _count_mastered_tricks() -> int:
+	var count := 0
+	for id in KNOWN_TRICKS:
+		var p: TrickProgress = _progress_by_trick.get(id)
+		if p != null and p.mastered:
+			count += 1
+	return count
 
 ## Load saved per-trick progress on boot (049/P2-5). Builds one TrickProgress per known trick, restores
 ## each from its own key in the save map, then points `_progress` at the current trick's model so
@@ -1856,7 +1878,7 @@ func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id)  # coins + roster + difficulty ride the same save file (068/079/080)
+	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id, _words.to_dict())  # coins + roster + difficulty + words ride the same save file (068/079/080/091)
 	# Web-only e2e seam (087): mirror the active breed the save JUST wrote. Lets a capture prove a breed
 	# switch was PERSISTED to the save deterministically — the reload-restore is separately proven (079),
 	# but its IndexedDB flush is async/racy, so this hook is the deterministic write-side proof. No-op off

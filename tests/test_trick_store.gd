@@ -193,3 +193,67 @@ func test_disk_round_trip_carries_difficulty() -> void:
 	var back_roster := reader.load_roster()
 	assert_eq(back_roster.get("active"), "labrador", "the roster still reads back alongside the difficulty")
 	_clear_save()
+
+# 10. Marker-words ride the same save blob (091, P5-1) — backward-compatible with 049/068/079/080.
+func test_marker_words_round_trip_through_codec() -> void:
+	var model := {"sitt": {"value": 0.5, "mastered": true}}
+	var roster := {"owned": ["labrador"], "active": "labrador"}
+	var words := {"unlocked": ["bra", "dyktig"], "active": "dyktig"}
+	var blob := TrickStore.encode(model, 25, roster, "normal", words)
+	assert_eq(TrickStore.decode_words(blob), words, "marker-words round-trip through encode/decode_words")
+	# The 049 tricks + 068 coins + 079 roster + 080 difficulty contracts are untouched by the added words.
+	assert_eq(TrickStore.decode_coins(blob), 25, "coins still round-trip alongside the words")
+	assert_true(TrickStore.decode(blob).has("sitt"), "the tricks map still round-trips alongside the words")
+	var back_roster := TrickStore.decode_roster(blob)
+	assert_eq(back_roster.get("active"), "labrador", "the roster still round-trips alongside the words")
+	assert_eq(TrickStore.decode_difficulty(blob), "normal", "difficulty still round-trips alongside the words")
+
+func test_legacy_save_defaults_to_base_words_only() -> void:
+	# A pre-091 blob with no "words" key (tricks + coins + roster + difficulty, no words) decodes to
+	# the base default {"unlocked": ["bra"], "active": "bra"}. A corrupt / empty / wrong-version blob
+	# also degrades the same way.
+	var old_blob := JSON.stringify({"version": TrickStore.SCHEMA_VERSION, "tricks": {}, "coins": 5, "roster": {"owned": ["labrador"], "active": "labrador"}, "difficulty": "normal"})
+	var back := TrickStore.decode_words(old_blob)
+	assert_eq(back.get("active"), "bra", "a pre-091 save's active word defaults to 'bra'")
+	var unlocked: Variant = back.get("unlocked")
+	assert_true(unlocked is Array, "the unlocked field is an array")
+	assert_eq((unlocked as Array).size(), 1, "only 'bra' is unlocked by default")
+	assert_true((unlocked as Array).has("bra"), "a pre-091 save has 'bra' unlocked")
+
+func test_corrupt_words_default_to_base() -> void:
+	# A corrupt / empty / wrong-version blob decodes words to the base default (safe degradation).
+	assert_eq(TrickStore.decode_words(""), {"unlocked": ["bra"], "active": "bra"}, "an empty save reads base words")
+	assert_eq(TrickStore.decode_words("{garbage"), {"unlocked": ["bra"], "active": "bra"}, "a corrupt save reads base words, no crash")
+	assert_eq(TrickStore.decode_words("[1,2,3]"), {"unlocked": ["bra"], "active": "bra"}, "a non-dictionary JSON reads base words")
+	var wrong_version := JSON.stringify({"version": 0, "tricks": {}, "words": {"unlocked": ["bra", "dyktig"], "active": "dyktig"}})
+	assert_eq(TrickStore.decode_words(wrong_version), {"unlocked": ["bra"], "active": "bra"}, "a wrong-version save reads base words (forward-compat)")
+
+func test_disk_round_trip_carries_words() -> void:
+	_clear_save()
+	var writer := TrickStore.new()
+	writer.save({"sitt": {"value": 0.2, "mastered": false}}, 10,
+		{"owned": ["labrador"], "active": "labrador"}, "normal", {"unlocked": ["bra", "dyktig", "flink"], "active": "flink"})
+	var reader := TrickStore.new()
+	var back := reader.load_words()
+	assert_eq(back.get("active"), "flink", "the active word reads back off user://")
+	var unlocked: Variant = back.get("unlocked")
+	assert_true((unlocked as Array).has("dyktig"), "unlocked words read back off user://")
+	assert_true((unlocked as Array).has("flink"), "unlocked words read back off user://")
+	# The other fields still work: tricks, coins, roster, difficulty.
+	assert_true(reader.load().has("sitt"), "the tricks map still reads back alongside the words")
+	assert_eq(reader.load_coins(), 10, "coins still read back alongside the words")
+	var back_roster := reader.load_roster()
+	assert_eq(back_roster.get("active"), "labrador", "the roster still reads back alongside the words")
+	assert_eq(reader.load_difficulty(), "normal", "difficulty still reads back alongside the words")
+	_clear_save()
+
+func test_encode_without_words_param_still_works() -> void:
+	# The default encode() call (4-arg or fewer) uses a default empty words dict, so pre-091 callers
+	# that don't pass a words param are unchanged (backward-compat).
+	var model := {"sitt": {"value": 0.4, "mastered": false}}
+	var blob := TrickStore.encode(model, 5, {}, "normal")  # no words arg — defaults to {}
+	var back := TrickStore.decode_words(blob)
+	assert_eq(back.get("active"), "bra", "encode() with no words arg defaults to base 'bra'")
+	var unlocked: Variant = back.get("unlocked")
+	assert_eq((unlocked as Array).size(), 1, "only 'bra' is in the default unlocked set")
+	assert_true((unlocked as Array).has("bra"), "the default unlocked set contains only 'bra'")

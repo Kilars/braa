@@ -104,14 +104,25 @@ Entry format:
   (`?bra_trick=ligg`, the same harness pattern as `?bra_force_lock`) until the P2-1 selector (066)
   lands; default gameplay stays Sitt so the PO-verified current experience is unregressed.
 
-### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated  ·  **busted 2026-06-30 (BUST-043) — scope narrowed**
+### FLAG 2026-06-29 — The warm *human* "Bra!" voice (and the Phase-5 praise words) is owner-gated  ·  **busted 2026-06-30 (BUST-043) — scope narrowed; extended 2026-07-04 (task 091) to name four new words**
 - **Source:** P1-6 mark payoff (`scripts/payoff_player.gd`); owner review 2026-06-29.
   De-gated by **BUST-043** (2026-06-30) — this flag was raised *whole* with **no spike**, the
   anti-pattern `mother_prompt.md` names; the flag bust found most of it was buildable.
 - **Narrowed decision needed (owner-only now):** supply a real, warm, **human "Bra!"** recording
   (the "Maren" delivery) — or any short Maren sample to clone from — to drop in under the stable
-  voice cue id; and later the Phase-5 praise words (*dyktig, flink, super, kjempebra*), each its
-  own voiced line. **Only the literal human voice remains owner-gated.**
+  voice cue id; and the Phase-5 praise words (*dyktig, flink, super, kjempebra*), each its own
+  **human Maren voiced line**. **Only the literal human voice remains owner-gated** for all five
+  words.
+- **Four new stand-ins shipped (task 091, 2026-07-04):** the Phase-5 words now each have a
+  genuine synthetic stand-in (Piper `sv_SE-alma-medium`, same pipeline as base "bra") under
+  stable asset paths — **no code change needed when the human recordings arrive**:
+  - `assets/audio/word_dyktig_placeholder.wav` → drops in with Maren "Dyktig!" recording
+  - `assets/audio/word_flink_placeholder.wav` → drops in with Maren "Flink!" recording
+  - `assets/audio/word_super_placeholder.wav` → drops in with Maren "Super!" recording
+  - `assets/audio/word_kjempebra_placeholder.wav` → drops in with Maren "Kjempebra!" recording
+  The `_placeholder` suffix is honest: the human Maren recording is what this flag gates. The
+  synthesised clips are a genuine attempt (intelligible Norwegian, correct word, matching timbre/
+  loudness to base "bra") — not a beep or tone.
 - **What the bust de-gated (no longer owner-gated):** a *warm, near-human* synthetic stand-in is
   buildable **offline with no owner action** — local **neural** TTS (**Piper**, `nb_NO`) replaces
   the robotic espeak clip under the same cue id, no code change. Routed to build task **044**.
@@ -126,8 +137,9 @@ Entry format:
   neutral `no_NO-talesyntese-medium` clip (f0 149 Hz → **227 Hz female**; centroid 811 → **1116 Hz
   brighter**), same cue id, **no code change**. Reproducible via `tools/gen_bra_voice.sh`. The
   clip is still drop-in replaced by your warm **human Maren** recording, also with no code change —
-  **that literal human voice is all this flag still gates.** (The timbre/gender is judged on the
-  owner's on-device listen of the live site; the owner said "just deploy," so it shipped.)
+  **that literal human voice is all this flag still gates** (for "bra" and the four Phase-5 words).
+  (The timbre/gender is judged on the owner's on-device listen of the live site; the owner said
+  "just deploy," so it shipped.)
 
 ## Resolved
 

@@ -21,9 +21,10 @@ const SCHEMA_VERSION := 1
 ## P3-D3) rides the SAME save file so a returning player restores tricks and coins atomically; it
 ## defaults to 0 so every pre-068 caller (which passes only a tricks map) is unchanged. `roster`
 ## (079, P3-4) rides the same blob. `difficulty` (080, P4-1) rides the same blob and defaults to
-## "normal" so every pre-080 caller is unchanged.
-static func encode(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal") -> String:
-	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins, "roster": roster, "difficulty": difficulty})
+## "normal" so every pre-080 caller is unchanged. `words` (091, P5-1) rides the same blob and
+## defaults to {} so every pre-091 caller is unchanged.
+static func encode(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}) -> String:
+	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins, "roster": roster, "difficulty": difficulty, "words": words})
 
 ## The owned-breeds roster a corrupt / empty / legacy (pre-079) save degrades to (079, P3-4): owning +
 ## active the starter Labrador, never empty — a broken save never strands the player with no dog. A
@@ -68,6 +69,26 @@ static func decode_roster(text: String) -> Dictionary:
 	var roster: Variant = parsed.get("roster")
 	return roster if typeof(roster) == TYPE_DICTIONARY and not (roster as Dictionary).is_empty() else _default_roster()
 
+## The marker-words state a corrupt / empty / legacy (pre-091) save degrades to (091, P5-1):
+## only the base "bra" unlocked and active — a broken save never strands the player without a
+## praise word. A fresh Dictionary each call (never a shared mutable).
+static func _default_words() -> Dictionary:
+	return {"unlocked": ["bra"], "active": "bra"}
+
+## Pure: JSON string -> the marker-words entry (091, P5-1). A missing (pre-091) / corrupt /
+## empty / wrong-version blob degrades to the base-only default, so a returning player always
+## at least has "bra". The invariants (bra always unlocked, active must be unlocked, only
+## known ids) are re-asserted by MarkerWords.restore — this just hands back the stored dict
+## or the safe default.
+static func decode_words(text: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return _default_words()
+	if parsed.get("version") != SCHEMA_VERSION:
+		return _default_words()
+	var words: Variant = parsed.get("words")
+	return words if typeof(words) == TYPE_DICTIONARY and not (words as Dictionary).is_empty() else _default_words()
+
 ## Pure: JSON string -> difficulty mode id (080, P4-1). A missing (pre-080) / corrupt /
 ## empty / wrong-version blob, or an unknown mode id, degrades to "normal" — the identity
 ## mode (no lever changes). So a legacy save or a corrupt setting always boots safely to Normal.
@@ -89,11 +110,12 @@ static func decode_difficulty(text: String) -> String:
 ## can't be opened we skip rather than crash mid-play — a momentarily lost save is never worth a
 ## runtime error, and the next progress change re-attempts the write. `coins` defaults to 0 so a
 ## pre-068 caller is unchanged. `roster` defaults to empty so a pre-079 caller is unchanged.
-## `difficulty` defaults to "normal" so a pre-080 caller is unchanged.
-func save(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal") -> void:
+## `difficulty` defaults to "normal" so a pre-080 caller is unchanged. `words` defaults to {} so
+## a pre-091 caller is unchanged.
+func save(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}) -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
-		f.store_string(encode(tricks, coins, roster, difficulty))
+		f.store_string(encode(tricks, coins, roster, difficulty, words))
 
 ## Read the saved model map back. First run (no file) -> {} clean zero state, never a crash; a
 ## present-but-corrupt file also degrades to {} via decode().
@@ -126,3 +148,12 @@ func load_difficulty() -> String:
 		return "normal"
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	return decode_difficulty(f.get_as_text()) if f != null else "normal"
+
+## Read the saved marker-words state back (091, P5-1). First run (no file) or any corrupt/legacy
+## save -> the base-only default {"unlocked": ["bra"], "active": "bra"}, never a crash and never
+## a wordless player.
+func load_words() -> Dictionary:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return _default_words()
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	return decode_words(f.get_as_text()) if f != null else _default_words()

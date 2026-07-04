@@ -6,7 +6,37 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — father RE-REVIEWED (HEAD `b7f8d51`), both showcase bugs FIXED (089/090) → no buildable directive → construction-audit CLEAN → terminal ZERO (2nd hand-off), blocked PURELY on owner — 2026-07-03
+## Status — PHASE 3 SIGNED OFF by owner (`b2041dc` → board `daef545`) → **PHASE 5 (better marker words) NOW CURRENT** → scan replenished 091/092/093 — 2026-07-04
+
+The owner (larssski) declared **Phase 3 done** and restored the append-only Phase Sign-off list
+(P1/P2/P3) in `po-review.md` (`daef545`). The current phase resolves to the lowest unsigned
+`phaseN.md` = **Phase 5 — better marker words** (numbering skips 4/7). The PO Review section is
+reset, awaiting the first Phase-5 play-test.
+
+Phase 5 is **greenfield** (repo-wide grep for `dyktig|flink|kjempebra|marker_word` = 0 hits; only
+`bra_tts_placeholder.wav` exists). This is NOT the prior terminal-zero idle state — it is a real
+phase transition with substantial buildable work. The voice gate is already busted (BUST-043): the
+four new words synthesize offline via the proven Piper pipeline (`tools/gen_bra_voice.sh`), the
+human Maren recording stays an honest open flag — same stance as base "bra".
+
+**Current top 3 (foundation-first, non-visual — visual domain is saturated this round, so P5-3
+word-pop is deferred):**
+1. **091 — FEATURE — P5-1 marker-word catalog + 4 voiced Piper lines + progressive unlock + payoff
+   plays the active word.** The spine: `MarkerWords` value object (mirrors `BreedRoster`), the four
+   `word_*_placeholder.wav` clips, persistence in the one save blob (new defaulted `words` key, no
+   schema bump), and `PayoffPlayer.set_active_word`. Audio + logic, TDD. Extend the voice flag.
+2. **092 — FEATURE — P5-4 load/swap the active word via a Marker-words section in `TrickMenu`**
+   (mirrors the Breeds section; chip/row route, NOT swipe — no in-round button, X-2 holds). Depends on 091.
+3. **093 — FEATURE — P5-2 stronger words = wider window/bonus but with a cooldown; base "bra" always
+   default, no cooldown.** Pure logic, TDD. Depends on 091 (+ reads best after 092).
+
+**Recently completed:** Phase 3 fully shipped + signed off (070–079/077, 080–082 work-ahead
+difficulty, 083–086 telemetry, 087–090 showcase). All owner-gated residuals (2nd breed model,
+P3-2 signature clip, POSTHOG_TOKEN, human Maren voice) remain open flags — do NOT re-bust.
+
+---
+
+## Status (superseded) — father RE-REVIEWED (HEAD `b7f8d51`), both showcase bugs FIXED (089/090) → no buildable directive → construction-audit CLEAN → terminal ZERO (2nd hand-off), blocked PURELY on owner — 2026-07-03
 
 Empty backlog → scan ran. The prior hand-off reached the father, who reviewed HEAD `455f554` (087 showcase +
 088 verdict) and filed **two buildable showcase bugs**; both were served and are now confirmed fixed:

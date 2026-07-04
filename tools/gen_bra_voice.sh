@@ -29,6 +29,7 @@ MIX_RATE=22050                               # == PayoffPlayer.MIX_RATE — no r
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${1:-$ROOT/assets/audio/bra_tts_placeholder.wav}"
+TEXT="${2:-Bra!}"                            # synth sentence; Phase-5 marker words pass their own word
 CACHE="${TMPDIR:-/tmp}/bra_voice_cache"
 mkdir -p "$CACHE"
 WORK="$(mktemp -d)"
@@ -45,10 +46,10 @@ for ext in onnx onnx.json; do
   fi
 done
 
-# 2. Synth "Bra!" (Piper emits 16-bit mono 22050 Hz natively).
-echo "rendering Bra! from $VOICE ..."
+# 2. Synth the word (Piper emits 16-bit mono 22050 Hz natively).
+echo "rendering $TEXT from $VOICE ..."
 env -u LD_LIBRARY_PATH nix shell nixpkgs#piper-tts -c bash -c \
-  "echo 'Bra!' | piper -m '$CACHE/$VOICE.onnx' --length-scale $LENGTH_SCALE --sentence-silence 0.0 -f '$WORK/raw.wav'" \
+  "echo '$TEXT' | piper -m '$CACHE/$VOICE.onnx' --length-scale $LENGTH_SCALE --sentence-silence 0.0 -f '$WORK/raw.wav'" \
   >/dev/null 2>&1
 
 # 3. Post: trim silence (keep 20 ms pre / 60 ms tail), +3 dB high-shelf brighten,
