@@ -64,7 +64,10 @@ below.
 2. **The current phase is clean — AND no earlier phase regressed.** A sign-off flips a
    permanent gate, so clear **both** before you append one:
    - **Current phase:** you really played it and every acceptance criterion — including its
-     Visual Review gate (e.g. P1-10) — holds.
+     Visual Review gate (e.g. P1-10) — holds, **or the only ones that don't are owner-gated** (a
+     missing asset / voice / model / decision that is tracked as an open flag, not something the
+     build loop can make). A built phase whose sole residuals are owner-gated is signed off **"as
+     complete as best as possible"** — exactly as Phases 1/2/3 were — never left to stall the loop.
    - **Earlier phases:** replay every phase already in the `## Phase Sign-off` list on the
      same running build and confirm none has regressed. Later work can break an earlier
      phase, and a signed-off phase is otherwise never re-checked. Focus on the visual / feel
@@ -83,16 +86,19 @@ below.
 **Never edit the Phase Sign-off list except to append a new sign-off** — it is permanent
 history, the loop's source of truth for which phase is current.
 
-**The stop signal — an unchanged pass now ENDS the run.** When the build side has no work and
-you leave `po-review.md` **byte-for-byte unchanged** (append nothing, prune nothing), the runner
-**exits**. Leaving it unchanged is therefore correct — and *only* correct — in one of two terminal
-states: **(a)** every phase is already signed off and nothing is wrong (the whole game is
-complete); or **(b)** the current phase **cannot be advanced by the build loop** — it is blocked
-**purely on the owner** (owner-gated assets, or acceptance can't yet be met so you can't sign it
-off) **and** there is no genuinely new, buildable directive to add. In case (b) do **not** re-add
-or re-date the same owner-gated notes to look busy — that would wrongly keep the loop spinning;
-leave the file unchanged so the run ends and the human takes over. Otherwise — while any phase is
-unsigned and still has buildable shortfalls — you **always** either sign it off or file directives
-for it; never pad the log with filler to avoid an "unchanged" pass.
+**Blocked purely on the owner is a SIGN-OFF, not a stop.** When the current phase's buildable
+stories are all done, it plays clean, and the *only* unmet acceptance is **owner-gated** (a missing
+asset / voice / model / decision tracked as an open flag), **sign the phase off "as complete as best
+as possible"** (outcome 2) — noting the owner-gated residuals as the reason — so the loop **advances
+to the next phase and keeps building future work.** Do **not** leave `po-review.md` unchanged to
+stall on an owner gate: a built-but-owner-blocked phase must move the loop forward, exactly as
+Phases 1/2/3 did. The owner closes those flags later; the loop does not wait.
+
+**The stop signal — an unchanged pass ENDS the run, so leave it unchanged in ONE case only:**
+**every phase is already in the Phase Sign-off list and nothing regressed** (the whole game is
+complete). While *any* phase is still unsigned you **always** do one of: **(a)** sign it off — a
+clean pass, or the "as complete as best as possible" owner-blocked sign-off above — or **(b)** file
+buildable directives for it. Never pad the log with filler, and never leave it byte-unchanged to
+stop the loop while a phase can still be signed off or built.
 
 Then **exit**. The build loop runs next and turns your notes into work.

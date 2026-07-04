@@ -61,6 +61,15 @@
   `POSTHOG_TOKEN` secret. All remain open flags for the owner to close later; none blocks the core
   loop. **Phase 5 is now current** (spec numbering skips 4/7 — difficulty moved to Phase 9).
 
+- **Phase 5 — SIGNED OFF 2026-07-04 (owner, larssski).** Marker-words phase accepted done. The
+  buildable stories shipped and verify green (tasks 091–095): unlockable stronger Norwegian marker
+  words with per-word timing window + cooldown, the menu showing each word's cost/rest **before**
+  loading, the fired word popping up from the BRA button on a successful mark, and a legible
+  resting/cooldown readout. Accepted **as complete as best as possible** — the only residual is
+  owner-gated: the warm **human "Bra!" / Maren voice** recordings for the alternative words ship
+  with honest synthetic stand-ins under the same cue ids (open flag), swappable with no code change.
+  **Phase 6 is now current.**
+
 ---
 
 ## Product Owner Review
