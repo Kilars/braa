@@ -19,20 +19,31 @@ phase transition with substantial buildable work. The voice gate is already bust
 four new words synthesize offline via the proven Piper pipeline (`tools/gen_bra_voice.sh`), the
 human Maren recording stays an honest open flag — same stance as base "bra".
 
-**Current top 3 (foundation-first, non-visual — visual domain is saturated this round, so P5-3
-word-pop is deferred):**
-1. **091 — FEATURE — P5-1 marker-word catalog + 4 voiced Piper lines + progressive unlock + payoff
-   plays the active word.** The spine: `MarkerWords` value object (mirrors `BreedRoster`), the four
-   `word_*_placeholder.wav` clips, persistence in the one save blob (new defaulted `words` key, no
-   schema bump), and `PayoffPlayer.set_active_word`. Audio + logic, TDD. Extend the voice flag.
-2. **092 — FEATURE — P5-4 load/swap the active word via a Marker-words section in `TrickMenu`**
-   (mirrors the Breeds section; chip/row route, NOT swipe — no in-round button, X-2 holds). Depends on 091.
-3. **093 — FEATURE — P5-2 stronger words = wider window/bonus but with a cooldown; base "bra" always
-   default, no cooldown.** Pure logic, TDD. Depends on 091 (+ reads best after 092).
+**This iteration SHIPPED the Phase-5 foundation slice (091/092/093 — all done, pushed, verify 488/0):**
+1. **091 — P5-1 marker-word catalog + 4 voiced Piper lines + progressive unlock — DONE (`_words` spine).**
+   `MarkerWords` value object (mirrors `BreedRoster`), four `word_*_placeholder.wav` clips synthesized via
+   the proven Piper pipeline (`tools/gen_marker_words.sh` + parameterised `gen_bra_voice.sh`), persistence
+   in the one save blob (defaulted `words` key, no schema bump), `PayoffPlayer.set_active_word`. Mastery
+   unlocks the next word; unlock does NOT auto-activate (orchestrator corrected the haiku test's drift —
+   base "bra" stays default per P5-2/P5-4). Voice flag extended to name the 4 human-Maren stand-ins.
+2. **092 — P5-4 load/swap the active word — DONE.** New "Marker words" section in `TrickMenu` (mirrors
+   Breeds; row route, no in-round button). Visual Review PASS on the real build (`.screenshots/092-01/02`):
+   real canvas tap swaps bra→dyktig, ACTIVE highlight moves, menu stays open. Added `__bra_word_rows`
+   capture seam + `tools/web_capture_words.mjs`.
+3. **093 — P5-2 stronger words trade wider window for a cooldown — DONE.** Per-word `window_scale`+`cooldown`
+   (bra identity 1.0/0 → play byte-identical); a stronger word widens PERFECT when available then rests N
+   successful marks, falling back to "bra" while cooling (no hard-fail); menu shows a "Hviler" badge. 10 TDD tests.
 
-**Recently completed:** Phase 3 fully shipped + signed off (070–079/077, 080–082 work-ahead
-difficulty, 083–086 telemetry, 087–090 showcase). All owner-gated residuals (2nd breed model,
-P3-2 signature clip, POSTHOG_TOKEN, human Maren voice) remain open flags — do NOT re-bust.
+**Backlog now EMPTY.** Next iteration runs `scan-project` for the remaining Phase-5 work:
+- **P5-3 (word pops/floats on screen on a mark)** — deferred THIS round by the visual-domain-saturation filter
+  (visual had 5 of last 15 done). `scripts/tier_readout.gd` is the ready template (fade-in/float-out, driven
+  from the same `_play_payoff` seam) — likely the next task once visual isn't saturated.
+- Tuning pass on the 093 window_scale/cooldown numbers (defensible starting values; refine under PO play-test).
+- Then hand the empty board to the father for the first Phase-5 Visual-Review sign-off.
+
+**Recently completed:** Phase 3 fully shipped + signed off by owner 2026-07-04 (070–079/077, 080–082 work-ahead
+difficulty, 083–086 telemetry, 087–090 showcase). All owner-gated residuals (2nd breed model, P3-2 signature
+clip, POSTHOG_TOKEN, human Maren voice) remain open flags — do NOT re-bust.
 
 ---
 
