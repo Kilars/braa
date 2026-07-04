@@ -1,64 +1,77 @@
 **PO Review**
 
-### PO Review — 2026-07-03 (build HEAD `b7f8d51` — post-089 drawn-chevrons + 090 HUD-hide)
+## Phase Sign-off
 
-Rebuilt the local licensed bundle fresh from HEAD `b7f8d51` (`verify.sh` green, full `build/web/`)
-and **replayed every surface** at 390×844 phone-portrait in headless Chromium / SwiftShader (== the
-deployed GL Compatibility renderer) with **real canvas taps**. Zero SCRIPT ERROR / pageerror across
-the boots. Evidence captured this pass: `.screenshots/087-01-showcase-yellow.png`,
-`087-02-showcase-chocolate.png`, `po-crop-showcase-bottom-091.png` (cropped control band),
-`072-menu-open.png`, `034-reaction-05.png` / `034-reaction-09.png`, `085-feedback-02-filled.png`.
+> **Permanent, append-only — never pruned.** One line per phase the PO has play-tested
+> **clean** on the real running build (its Visual Review gate, e.g. P1-10, passed). This is
+> the explicit done-gate: the build loop reads it to know which phase is current — the
+> **current phase is the lowest-numbered `phaseN.md` NOT listed here**. A phase is *not*
+> advanced just because its code compiles and tests are green; it advances only when it
+> appears below. (List empty ⇒ current phase is Phase 1.)
 
-**Both prior Bugfixes verified FIXED in pixels — pruned from the directive list:**
-- **(Bugfix 1 — tofu cycle controls) RESOLVED by 089.** On "Mine hunder" the bottom-left/right cycle
-  controls now draw as clean filled white triangles in dark rounded boxes — no missing-glyph boxes —
-  and the hint line reads **"Bla med pilene eller trykk en hund"**, reworded to name the arrows in
-  words so no `◀`/`▶` glyph is embedded anywhere (`po-crop-showcase-bottom-091.png`). Tofu gone.
-- **(Bugfix 2 — BRA button bleed-through) RESOLVED by 090.** Neither showcase frame shows the
-  training "BRA" button ghosted over the spotlit dog; the training-HUD chrome is hidden while the
-  showcase is open, so only the dog + the showcase's own title/control bands render (`087-01`,
-  `087-02`). The clean-centre "here is my dog, shown off" read now holds.
+- **Phase 1 — SIGNED OFF 2026-06-30 (owner, larssski).** Played the live deployed build
+  (https://kilars.github.io/braa/) at 390×844: licensed Labrador loads (no primitive flash),
+  centered + shadow-grounded, idle → sit → clear seated apex → honest apex tell → BRA tap →
+  joyful reaction → loop, all P1 stories (P1-0…P1-9) pass, logic is test-first, verify green.
+  Accepted **as complete as best as possible**: the two residual gaps are owner-gated polish,
+  not core-loop defects, and ship with honest stand-ins — the genuinely-spoken espeak "Bra!"
+  (warm human Maren recording drops in under the same cue id, no code change) and the coat
+  UV/tangent seam (a licensed-asset re-export, tracked as an open flag). Both remain open
+  flags for the owner to close later; neither blocks the core mark. **Phase 2 is now current.**
 
-**Everything else replayed clean — no new buildable shortfall found.** Core loop reads well (dog
-centred + camera-facing, **BRA a clear round button** inside the gold apex ring, drawn coin readout,
-textured garden); the post-BRA reaction is joyful and stays camera-facing with **no rear-spin/flick**
-(077 holds, `034-reaction-*`); the completion menu is legible with an honest learned / available /
-locked trick list + coins + a Breeds section (`072-menu-open.png`); the feedback form opens, fills,
-and renders cleanly (`085-feedback-02-filled.png`). No Phase-1 / Phase-2 regression.
+- **Phase 2 — Visual Review passed 2026-07-01 (PO, father pass).** Played the current HEAD
+  (`7a3f12f`) on a 390×844 phone-portrait viewport — both the local licensed bundle (`build/web`,
+  the 38 MB pck rebuilt 17:26, after the 066 commit at 17:21) served over http in headless Chromium
+  (SwiftShader == the deployed GL Compatibility renderer) **and** the **live Pages site**
+  (https://kilars.github.io/braa/). Zero console errors on every run. The prior pass's sole blocker
+  — "the roster is owner-gated, there is no second trick" — was a **behavior≠inventory error**: the
+  licensed Labrador already held **Ligg** (`Lie_*`) and **Legg deg** (`Lie_belly_*`), and they are now
+  wired as real, distinct tricks (065 / 067) behind a live **trick selector** (066), so the phase's
+  headline — *more tricks at the Sitt standard* — is genuinely delivered. Verified in my own pixels:
+  **P2-1** a top chip row (Sitt · Ligg · Legg deg), tapping a chip repoints the trick, the gold
+  highlight + per-trick learned pip follow, live on **both** builds; **P2-2 / P2-3** three visibly
+  **distinct** apex poses (Sitt = upright seated chest-high; Ligg = low sphinx lie; Legg deg = flatter
+  belly-settle, forelegs sprawled), each reading as its behaviour, each turning to face the camera at a
+  PERFECT apex (P2-11), no T-pose / foot-slide / snap, honest apex tell; **P2-4** PERFECT climbs the
+  bar → full-**gold mastery latch**, a mistimed tap **erodes** it (bar visibly drops ~40 %→30 % with a
+  brief **red setback wash** + the dog's confused beat), floors at 0, no hard-fail; **P2-5** the
+  mastered bar (the very latest marks) **persists** across a same-origin reload, per-trick isolated;
+  **P2-7** anti-mash lock swallows taps; **P2-8** the dog wanders varied headings on a 0.8–2.0 s
+  feinting cadence; **P2-9** the fading cyan approach ring lands on the apex, distinct from the gold
+  tell; **P2-10** the garden fills the phone, sun + sky + painterly grass, BRA over the grass, no
+  letterbox / cyan seam. Re-checked **Phase 1** on the same build — the Sitt core loop
+  (idle → wander → face-camera → seated apex → tell → PERFECT → joyful reaction → loop) is intact, no
+  regression. Accepted **as complete as best as possible**: the residuals are owner-gated, not core
+  defects, and ship honest — the **expansion** tricks *Gi labb / Rull / Snurr* have **no** clip in the
+  licensed asset (manifest-busted; a standing owner flag, and the P2-2 starter set Sitt/Ligg/Legg deg
+  *is* complete), and the Phase-1 human "Bra!" voice (Piper stand-in) + coat UV/tangent seam remain
+  open flags. None blocks the core mark. **Phase 3 is now current.**
 
-**Why Phase 3 still isn't signed off — now blocked PURELY on the owner (no buildable directive
-remains).** With both showcase bugs fixed, every remaining unmet acceptance criterion needs a real
-**second breed model** from the licensed pack, which the build loop cannot produce:
-- **(P3-1) A genuinely distinct second breed.** The two owned "breeds" are the same rig — a yellow
-  Lab and its chocolate recolor (`087-01` vs `087-02`): identical silhouette/proportions, only coat
-  colour differs. That is an honest coat variant, not a second-breed silhouette, so "collect and
-  train **different breeds**" is not yet met. Needs the licensed model pack (P3-D1/D2/D4).
-- **(P3-2) Breeds bring different tricks.** Both "breeds" still train the identical Sitt / Ligg /
-  Legg deg list — the acceptance criterion ("a trick list not identical to every other breed's") is
-  unmet. The 088 flag-bust already grepped `dog_licensed.clips.txt`, found only rear-to-camera
-  **Digging** as a signature candidate, and correctly **rejected** it (fails the camera-facing read,
-  X-4) with **no stub**. A real per-breed signature trick needs a second breed model with a
-  camera-facing signature clip — owner-gated, and not to be faked with an artificial restriction.
-- **(P3-3) Breeds feel different to train.** The `BreedPersonality` levers are built, but with only a
-  recolor there is no genuinely distinct breed for them to differentiate — this rides on the same
-  model gate.
-- Live telemetry still needs the owner's `POSTHOG_TOKEN` secret; the warm human "Bra!" voice stays
-  owner-gated. Neither is a Phase-3 sign-off gate (X-8).
-
-**Net:** Phase-3 buildable work is exhausted and green — the two showcase bugs are fixed and every
-other surface replays clean. The phase is blocked purely on the owner-gated licensed breed pack
-(P3-D1/D2/D4) plus the owner secrets/voice. There is **no new buildable directive to file**, and I
-will **not** re-date the owner-gated residuals as busywork — once the board confirms terminal-zero,
-the next unchanged pass should end the run so the human can add the breed models / secrets.
+- **Phase 3 — SIGNED OFF 2026-07-04 (owner, larssski).** Dog-breeds phase accepted done at HEAD
+  `b2041dc`. The buildable spine shipped and replays clean on the real build: coin economy + drawn
+  coin readout, one-active-trick completion menu (learned / available / locked + coins), centered
+  camera-facing dog with the scratch feint, late-biased PERFECT window + round BRA button,
+  `BreedPersonality` levers, chocolate-Labrador coat variant, the collect → adopt → switch → persist
+  roster, the spotlit breed-select showcase (drawn chevrons, training HUD hidden), the textured
+  garden, and the joy-beat reaction (no rear-spin / flick). All owner actionable notes (1–7) were
+  addressed (tasks 070–079 + 077) and the two showcase bugs are fixed (089 / 090). Accepted
+  **as complete as best as possible**: the residual gaps are owner-gated, not core-loop defects, and
+  ship with honest stand-ins — a genuinely **distinct second breed model** (P3-D1/D2/D4) and a
+  camera-facing **signature clip** (P3-2), the warm human "Bra!" voice, and the live-telemetry
+  `POSTHOG_TOKEN` secret. All remain open flags for the owner to close later; none blocks the core
+  loop. **Phase 5 is now current** (spec numbering skips 4/7 — difficulty moved to Phase 9).
 
 ---
 
-## Actionable notes
-1. Only one trick should be active at a time. Sitt for example. When completed a menu should popup where you see sitt is learned and other tricks are available. In this screen you also see currency and unavailable tricks
-2. The dog is TOO distracted, it should do SOME other stuff and feint, but 90% is just plain trick. 
-3. Its also out of the screen center and looking away too much, it should just not be completely static. Use the scratch as a feint, its funny.
+## Product Owner Review
 
-4. Do a flag bust for deciding if we can make a chocolate labrador available.
-5. The trick is hard to time, the circle apex makes users wanna swipe not tap. it needs to be a button, also users are typically late (i think visually its a bit too hard) perhaps dog slower or a bit later tap for perfect
-6. About styling: The theme is stylized realistic, the garden is not that good looking and the visual cohesiveness between dog and garden is not great either. Do some visual work in this phase as well.
-7. Behaviour bug. The dog does a sort of jump after correct bra, and then it flicks back (unnatural) to trick position, and then it stands up. Moves unnatural. Also sometimes when its turning it flicks / jitters. these unnatural flicks are unacceptable and really take away from the games flow and experince
+> Owner play-test notes from driving the **real running game** on a phone-portrait
+> viewport (390×844). Each pass replays the **current phase** (the lowest phase not yet in
+> Phase Sign-off above), prunes what is now fixed, and lists concrete, buildable
+> directives. The build loop turns these into tasks. **Prune-as-you-go applies to THIS
+> section only — never touch the Phase Sign-off list above except to append a new
+> sign-off.**
+
+_Phase 5 (better marker words) is now current — awaiting its first PO play-test on the running
+build. The prior Phase-3 review pass and the owner's actionable notes (1–7, all addressed via
+tasks 070–079 + 077) are archived in the Phase-3 sign-off above and in git history._
