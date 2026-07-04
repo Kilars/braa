@@ -6,6 +6,40 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — PHASE 5 CURRENT — father's first Phase-5 PO play-test (2026-07-04) DECLINED sign-off, filed 2 buildable directives → scan replenished 094/095 — 2026-07-04
+
+The father PO play-tested the Phase-5 foundation (091/092/093 on the live build) and **declined
+sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-04). Two of four stories are confirmed
+good — **P5-4** (load/swap in the menu) and **P5-1** (progressive unlock + voiced Piper lines) —
+but the phase is not sign-off ready:
+
+- **Improvement 1 (P5-3 — the word never appears on screen).** On a successful mark the only
+  on-screen text is the top-centre "PERFECT" verdict; nothing pops for the marker **word**.
+  Phase 5's headline (collectible words) is invisible in the one moment it should pay off →
+  loading Dyktig! changes only the audio, so play "reads as nothing changed."
+- **Improvement 2 (P5-2 — the stronger-word trade-off is imperceptible).** The cooldown cost is
+  invisible at the decision point (a stronger word's menu row shows only "Switch", no hint of the
+  wider-window/cooldown trade-off), and the resting badge has no count. A cost the player can't
+  see isn't a trade-off. PO: **ship this together with P5-3.**
+
+**Empty backlog → scan replenished 2 current-phase tasks (both direct PO directives, NOT work-ahead):**
+- **094 — FEATURE — P5-3 the marker word pops on screen at the mark.** New `WordPop` dumb renderer
+  (twin of `TierReadout`, driven from `main._process`): on every successful mark the **effective
+  fired word** (`_words.fire_active` → incl. the `Bra!` fallback while a stronger word cools) bursts
+  and floats up from the BRA button, distinct from the top-centre "PERFECT", X-5 dampens the float
+  not the word. TDD the pure node + Visual Review the burst. This also makes the P5-2 fallback
+  visible in play. **The headline blocker.**
+- **095 — FEATURE — P5-2 make the trade-off legible.** Add `MarkerWords.cooldown_remaining(id)`;
+  enrich `classify_words` rows with catalog `window_scale`+`cooldown` so a stronger word advertises
+  its **cost before loading**; resting badge reads **"Hviler (n)"** with the live count. Menu-only,
+  no in-round verb (X-2/P5-4 hold). TDD the accessor + classify, Visual Review the row. Ships with 094.
+
+Priority: 094 (headline) then 095. Both are current-phase; no un-busted flags (voice/telemetry/
+breed-model residuals stay genuinely owner-gated — do NOT re-bust). After both land + verify green,
+hand the board back to the father for the next Phase-5 Visual-Review pass.
+
+---
+
 ## Status — PHASE 3 SIGNED OFF by owner (`b2041dc` → board `daef545`) → **PHASE 5 (better marker words) NOW CURRENT** → scan replenished 091/092/093 — 2026-07-04
 
 The owner (larssski) declared **Phase 3 done** and restored the append-only Phase Sign-off list

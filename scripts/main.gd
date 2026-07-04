@@ -74,6 +74,12 @@ var _force_trainer := false
 ## nothing — so on the CC0 dog (every tap DEAD) it stays blank, matching the silent payoff.
 var _readout: TierReadout
 
+## The marker-word burst (094, P5-3): pops the effective fired word ("Dyktig!" / "Bra!" etc.)
+## on a successful mark, floats it up from the BRA button, and fades. Dumb renderer driven
+## from _process via advance(delta). Distinct from the top-centre TierReadout: it lives in the
+## lower band above the button, making the Phase-5 collection mechanic visible at the mark.
+var _word_pop: WordPop
+
 ## The mark payoff (024f, P1-6): voice + UI click on a successful mark, gated off the
 ## scored tier so a MISS/DEAD is silent. The dog's positive reaction runs through the
 ## director. On the CC0 dog every tap is DEAD, so the payoff never fires until the
@@ -531,6 +537,8 @@ func _process(delta: float) -> void:
 		if _force_tier >= 0:
 			_readout.display(_force_tier as SitWindow.Tier)  # pin tier for capture (033) — web-only
 		_readout.advance(delta)  # fade the last tier's flash (024g/P1-7)
+	if _word_pop != null:
+		_word_pop.advance(delta)  # float/fade the fired marker word (094/P5-3)
 	if _learned_bar != null:
 		_learned_bar.advance(delta)  # fade the setback wash (045/P2-4)
 	_drive_wander(delta)   # roam the patch + place the dog at its wander spot (050/P2-8)
@@ -732,6 +740,14 @@ const READOUT_OFFSET_LEFT := 24.0
 const READOUT_OFFSET_RIGHT := -24.0
 const READOUT_OFFSET_TOP := LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT + 16.0
 const READOUT_OFFSET_BOTTOM := READOUT_OFFSET_TOP + 124.0  ## 124 px band (unchanged height, 038)
+
+## Word-pop band (094, P5-3): anchored to the bottom, just ABOVE the BRA button top, so the
+## fired word floats up from the button into the clear lower-middle sky. Must not overlap the
+## top-centre TierReadout (which is in the upper third). 8 px gap + 120 px tall band.
+const WORD_POP_MARGIN_X := 24.0
+const WORD_POP_BAND_HEIGHT := 120.0
+const WORD_POP_OFFSET_BOTTOM := BRA_OFFSET_TOP - 8.0          ## just above the button top
+const WORD_POP_OFFSET_TOP := WORD_POP_OFFSET_BOTTOM - WORD_POP_BAND_HEIGHT
 ## Coin readout (068, redrawn in 069/P3-D3): a small running balance tucked on its OWN top line in
 ## the top-right corner (COIN_READOUT_TOP), clear of the top-left Tricks button — the earned-coins
 ## feedback is always visible in-round, and the completion menu (072) shows the same balance in its
@@ -1251,6 +1267,7 @@ func _setup_bra_button() -> void:
 	_setup_tell_marker(ui)
 	_setup_trainer_marker(ui)
 	_setup_readout(ui)
+	_setup_word_pop(ui)
 	_setup_learned_bar(ui)
 	_setup_coin_readout(ui)
 	_setup_trick_menu(ui)
@@ -1318,6 +1335,26 @@ func _setup_readout(ui: CanvasLayer) -> void:
 	readout.offset_bottom = READOUT_OFFSET_BOTTOM
 	ui.add_child(readout)
 	_readout = readout
+
+## The marker-word burst (094, P5-3): a wide band anchored to the bottom, just above the BRA
+## button, so the fired word floats up into the clear lower-middle sky on a successful mark.
+## Mouse-transparent (set in WordPop._init). Starts blank; driven by _play_payoff (pop) +
+## _process (advance/fade). Feed the same reduced-motion factor the tell uses.
+func _setup_word_pop(ui: CanvasLayer) -> void:
+	var wp := WordPop.new()
+	wp.name = "WordPop"
+	# Anchored to the bottom edge, centered, in a band above the BRA button.
+	wp.anchor_left = 0.0
+	wp.anchor_right = 1.0
+	wp.anchor_top = 1.0
+	wp.anchor_bottom = 1.0
+	wp.offset_left = WORD_POP_MARGIN_X
+	wp.offset_right = -WORD_POP_MARGIN_X
+	wp.offset_top = WORD_POP_OFFSET_TOP
+	wp.offset_bottom = WORD_POP_OFFSET_BOTTOM
+	ui.add_child(wp)
+	wp.set_motion_scale(_motion_scale)
+	_word_pop = wp
 
 ## The learned bar (045/P2-4): a thin meter across the top safe edge that fills as Sitt is
 ## learned and drops on a bad tap. Mouse-transparent so it never eats a tap. Starts at the
@@ -1505,7 +1542,7 @@ func _close_showcase() -> void:
 ## these nodes self-set `.visible` (their _process/event drivers touch only `.disabled`/`.modulate`/
 ## `.text`), so toggling visibility here is safe + sticky. Null-guarded — a no-op before the HUD is built.
 func _set_training_hud_visible(v: bool) -> void:
-	for n in [_bra_button, _tell_marker, _trainer_marker, _readout, _learned_bar, _coin_readout, _tricks_button]:
+	for n in [_bra_button, _tell_marker, _trainer_marker, _readout, _word_pop, _learned_bar, _coin_readout, _tricks_button]:
 		if n != null:
 			(n as CanvasItem).visible = v
 
@@ -2192,6 +2229,11 @@ func _play_payoff(tier: SitWindow.Tier) -> void:
 		# Base "bra" active always returns "bra" — byte-identical stream, no regression.
 		_payoff.set_active_word(fired)
 		_payoff.play(payoff)
+	# Pop the effective fired word on screen — shows the word that actually sounded, including the
+	# "Bra!" fallback while a stronger word is cooling (makes P5-2 legible in play). A MISS/DEAD
+	# (is_success=false) fires nothing: no pop, matching the silent payoff + blank TierReadout.
+	if payoff.is_success and _word_pop != null:
+		_word_pop.pop(_words.display_for(fired))
 	if payoff.reacts() and _director != null:
 		# The celebration is now a facing-preserving procedural bounce (077, PO Note 7), NOT the
 		# authored Jump_Place_IP hop — that hop rotated the dog rear-to-camera and snapped through a

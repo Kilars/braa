@@ -72,6 +72,59 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-_Phase 5 (better marker words) is now current — awaiting its first PO play-test on the running
-build. The prior Phase-3 review pass and the owner's actionable notes (1–7, all addressed via
-tasks 070–079 + 077) are archived in the Phase-3 sign-off above and in git history._
+### PO Review — 2026-07-04
+
+Played the fresh local build (`nix develop -c bash verify.sh` → `build/web`, served over http,
+headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer). Autotapped
+the mark loop (`?bra_autotap=1`, dense frame burst `.screenshots/po-p5-mark-06..18`) and drove the
+menu with real canvas taps (`092-01/02`). **Two of the four Phase-5 stories are genuinely in and
+good — P5-4 and P5-1 — but the phase is not sign-off ready:** the marker word has **no on-screen
+presence at all** (P5-3 is unbuilt), and the stronger-word trade-off (P5-2) is invisible in play.
+
+**What's working (do NOT re-task):**
+- **P5-4 — load/swap in the menu.** The "Marker words" section renders in the completion menu
+  (Bra! / Dyktig! / Flink! / Super! / Kjempebra!) with Active / Switch / Locked badges. A real tap
+  on an unlocked word swaps the active word (Bra! Active → Dyktig! Active, Bra! → Switch) and the
+  menu stays open — no extra in-round button, X-2 holds (`.screenshots/092-01-words-section.png`,
+  `092-02-dyktig-loaded.png`).
+- **P5-1 — progressive unlock + voiced lines.** Mastering a trick unlocks Dyktig!; the catalog
+  carries a per-word voiced clip (Piper stand-in). The warm human **Maren** delivery is the same
+  owner-gated voice flag as Phase 1 — an honest stand-in, not a blocker.
+
+**Improvements (buildable this phase):**
+
+1. **P5-3 — the marker word never appears on screen. Build the word pop.**
+   *What I saw:* on a successful mark the only on-screen text is the **"PERFECT"** timing verdict at
+   top-centre; the BRA button always reads "BRA"; nothing pops, floats, or bursts for the word
+   itself (frame `.screenshots/po-p5-mark-16.png` is a scored apex — "PERFECT" up top, ghosted
+   "BRA" button, no word). Loading Dyktig! changes only the audio — visually the mark is byte-identical
+   to base "bra."
+   *Why it's wrong:* Phase 5's whole headline is *collectible marker words*, and P5-3 requires a
+   "big, juicy, on-beat word burst … floats up from the BRA button." Right now the collection is
+   invisible in the one moment it should pay off — the player can't see which word fired, so
+   unlocking and loading a word has no on-screen reward. During actual play the phase reads as
+   "nothing changed."
+   *What good looks like:* on every successful mark, the **word that actually fired** (Bra! / Dyktig!
+   / Super! / Kjempebra!) bursts big and juicy on the beat — floating up from the BRA button and
+   fading — landing exactly with the voice + the dog's reaction. It must read as warm praise, be
+   visually **distinct from and not collide with** the "PERFECT" verdict already at top-centre, and
+   honour X-5 (reduced motion: dampen the float, never drop the word). Because it shows the word that
+   *actually fired*, it also makes the P5-2 cooldown legible (see 2): when a cooling stronger word
+   falls back to base, the pop reads "Bra!", so the fallback is visible instead of a silent swap.
+
+2. **P5-2 — the stronger-word trade-off is imperceptible; surface the cooldown.**
+   *What I saw:* loaded Dyktig! (window_scale 1.15, cooldown 2 marks). The menu word rows show only
+   Active / Switch / Locked — no resting/cooldown state (`092-02`); in play there is no cue that a
+   stronger word has gone on cooldown and is now firing base "bra" instead. The downside exists in
+   the logic but is invisible to the player.
+   *Why it's wrong:* P5-2 asks that loading a stronger word be "a genuine choice, not an obvious
+   upgrade." A cost the player can't see isn't a trade-off — right now a stronger word looks like a
+   pure win, and the rest that's supposed to balance it happens off-screen.
+   *What good looks like:* the cooldown is surfaced where the player decides. At minimum the menu
+   word row shows a "Resting (n)" / cooldown badge while a word is cooling, so the cost is readable
+   before loading; combined with the fallback pop from (1), the player both sees the stronger word
+   fire and sees it rest afterward. Ship this together with P5-3.
+
+_Not signing off: P5-3 is unbuilt and P5-2 is illegible in play. The prior Phase-3 review pass and
+the owner's actionable notes (1–7, tasks 070–079 + 077) are archived in the Phase-3 sign-off above
+and in git history._
