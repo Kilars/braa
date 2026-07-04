@@ -914,12 +914,15 @@ func _setup_ground_plane(dog: Node) -> void:
 ## +Z = near/bottom; the sun keys from the upper-right (_setup_light rot -30,-40).
 const GARDEN_HOUSE_DIST := 12.5        ## metres ahead (-Z) — between the fence (8.5) and hedge (17), near horizon
 const GARDEN_HOUSE_RIGHT := 2.3        ## metres right (+X) — upper-right of frame but ON-screen (the look-down cone is narrow)
-const GARDEN_HOUSE_WALL_SIZE := Vector3(1.6, 1.4, 1.4)  ## warm cottage walls, small in frame at ~12 m
-const GARDEN_HOUSE_ROOF_SIZE := Vector3(2.0, 0.85, 1.6) ## gable roof, slight eave overhang
-const GARDEN_HOUSE_WALL := Color(0.96, 0.94, 0.87)      ## warm off-white walls (DS-adjacent paper warmth)
-const GARDEN_PATH_NEAR_Z := 2.4        ## 101: +Z the ribbon's WIDE near end reaches — foreground, past the dog toward the bottom
-const GARDEN_PATH_WIDTH_NEAR := 1.0    ## 101: ribbon full-width at the foreground near end (widest, but leaves grass margin at the sides)
-const GARDEN_PATH_WIDTH_FAR := 0.55    ## 101: ribbon full-width at the far house end (narrows as it recedes)
+const GARDEN_HOUSE_WALL_SIZE := Vector3(2.0, 1.05, 1.4) ## 102: cottage walls — clearly WIDER than tall (was 1.6×1.4 → read as a tower)
+const GARDEN_HOUSE_ROOF_SIZE := Vector3(2.25, 0.7, 1.55) ## 102: lower, wider gable with eave overhang (was 2.0×0.85 → too tall/steep)
+const GARDEN_HOUSE_WALL := Color(0.85, 0.82, 0.72)      ## 102: warm CREAM walls — off near-white so the sun doesn't blow the face out (was 0.96,0.94,0.87)
+const GARDEN_HOUSE_DOOR := Color(DesignSystem.BLUE_DARK.r, DesignSystem.BLUE_DARK.g, DesignSystem.BLUE_DARK.b, 1.0)  ## 102: small blue door on the face
+const GARDEN_HOUSE_WINDOW := Color(DesignSystem.BLUE_LIGHT.r, DesignSystem.BLUE_LIGHT.g, DesignSystem.BLUE_LIGHT.b, 1.0)  ## 102: small light-blue window pane
+const GARDEN_PATH_NEAR_Z := 2.4        ## 101: +Z the ribbon's near end reaches — foreground, past the dog toward the bottom
+const GARDEN_PATH_NEAR_X := 0.6        ## 102: +X the near end sits — BESIDE the centred dog (right), so the dog stays on grass (was 0.0 = under the dog)
+const GARDEN_PATH_WIDTH_NEAR := 0.5    ## 102: SLIM near-end width — a ribbon, not the full-width dirt wedge the PO caught (was 1.0)
+const GARDEN_PATH_WIDTH_FAR := 0.32    ## 102: narrower far end (narrows as it recedes to the house)
 const GARDEN_PATH_TAN := Color(0.82, 0.71, 0.52)        ## medium warm tan, the goal's path colour (drawn unshaded so it reads flat + even)
 const GARDEN_PATH_LIFT := 0.012        ## metres above the grass plane so the path never z-fights
 const GARDEN_FENCE_DIST := 8.5         ## metres ahead (-Z) — the mid-ground line, between dog and house
@@ -934,7 +937,7 @@ const GARDEN_RAIL_D := 0.04            ## rail depth
 const GARDEN_RAIL_Y_LOW := 0.18        ## lower rail height off the foot plane
 const GARDEN_RAIL_Y_HIGH := 0.40       ## upper rail height off the foot plane
 const GARDEN_FENCE_WHITE := Color(0.95, 0.95, 0.92)     ## soft white pickets (not clinical pure white)
-const GARDEN_COIN_R := 0.16            ## 101: ambient ground-coin radius — small, so it reads as a coin on the grass, not an orb
+const GARDEN_COIN_R := 0.12            ## 102: ambient ground-coin radius (0.24 m disc). The camera sits ~1.2 m off the dog so it MAGNIFIES on-screen props — at R=0.18 the coins read as crowding orbs; 0.12 reads as small grounded coins. (101's coins vanished from being OFF-SCREEN at |x|=1.4-1.7, not from size.)
 const GARDEN_COIN_LIFT := 0.02         ## metres above the grass so a coin rests, doesn't sink
 
 ## A winding light-tan PATH curving from just in front of the dog back to a small HOUSE in the
@@ -951,15 +954,15 @@ func _setup_path_to_house(dog: Node) -> void:
 	var y := foot_y + GARDEN_PATH_LIFT
 	var house_x := c.x + GARDEN_HOUSE_RIGHT
 	var house_z := c.z - GARDEN_HOUSE_DIST
-	# 101: the path curve now RUNS FROM THE FOREGROUND back to the house — a continuous winding ribbon
-	# that emerges wide near the viewer (+Z, past/around the dog toward the bottom), passes near-centre
-	# through the fence gate, then sweeps right to the house door. This reads as real perspective
-	# (widest in front, narrowing as it recedes) instead of the old floating triangle that tapered to a
-	# point at the dog's chest. Curve3D.tessellate() adaptively samples it into points we ribbon between.
+	# 101/102: the path curve RUNS FROM THE FOREGROUND back to the house — a continuous winding ribbon.
+	# 102 fixes the over-correction: the near end is now SLIM and offset to the RIGHT (+X) of the centred
+	# dog, so it emerges beside the dog on the grass (not a full-width wedge under its feet), passes
+	# through the fence gate, then sweeps right to the house door. Real perspective (slim + narrowing as
+	# it recedes) with the dog left grounded on grass. Curve3D.tessellate() samples it into ribbon points.
 	var curve := Curve3D.new()
-	curve.add_point(Vector3(c.x + 0.0, y, c.z + GARDEN_PATH_NEAR_Z))                   # wide near end, foreground behind the dog
-	curve.add_point(Vector3(c.x + 0.15, y, c.z - 1.8))                                # threads just behind the dog, drifting right
-	curve.add_point(Vector3(c.x + GARDEN_FENCE_PATH_X, y, c.z - GARDEN_FENCE_DIST))    # threads the fence gate gap (near-centre)
+	curve.add_point(Vector3(c.x + GARDEN_PATH_NEAR_X, y, c.z + GARDEN_PATH_NEAR_Z))    # slim near end, foreground — BESIDE the dog (right)
+	curve.add_point(Vector3(c.x + GARDEN_PATH_NEAR_X, y, c.z - 1.8))                   # stays right of the dog as it passes it
+	curve.add_point(Vector3(c.x + GARDEN_FENCE_PATH_X, y, c.z - GARDEN_FENCE_DIST))    # threads the fence gate gap
 	curve.add_point(Vector3(house_x, y, house_z + 0.7))                               # ends at the house door
 	var pts := curve.tessellate(4, 2.0)
 	var st := SurfaceTool.new()
@@ -1047,6 +1050,32 @@ func _add_garden_house(base: Vector3) -> void:
 	roof.position = Vector3(0.0, GARDEN_HOUSE_WALL_SIZE.y + GARDEN_HOUSE_ROOF_SIZE.y * 0.5, 0.0)
 	roof.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	house.add_child(roof)
+	# 102: a small blue DOOR + WINDOW on the face toward the camera (+Z) so the box reads as a cozy home,
+	# not a blank silo. The wall box is centred at (0, wall_h/2, 0); its front face is at +wall_depth/2.
+	var face_z := GARDEN_HOUSE_WALL_SIZE.z * 0.5 + 0.03   # a hair proud of the wall so it never z-fights
+	var door := _house_face_detail("Door", GARDEN_HOUSE_DOOR, Vector2(0.34, 0.62),
+		Vector3(-0.42, 0.31, face_z))                      # door on the ground, left of centre
+	house.add_child(door)
+	var window := _house_face_detail("Window", GARDEN_HOUSE_WINDOW, Vector2(0.40, 0.34),
+		Vector3(0.44, 0.66, face_z))                       # window upper-right of the door
+	house.add_child(window)
+
+## A small flat detail (door/window) on the house's camera-facing wall (102): a thin BoxMesh panel,
+## its own solid DS-blue material. Node-local under the GardenHouse. GL-Compatibility-safe.
+func _house_face_detail(node_name: String, col: Color, size: Vector2, pos: Vector3) -> MeshInstance3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.roughness = 0.8
+	mat.metallic = 0.0
+	var panel := MeshInstance3D.new()
+	panel.name = node_name
+	var m := BoxMesh.new()
+	m.size = Vector3(size.x, size.y, 0.05)
+	panel.mesh = m
+	panel.material_override = mat
+	panel.position = pos
+	panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return panel
 
 ## A white PICKET FENCE across the mid-ground (099): a row of thin posts + two rails, with a GAP
 ## where the path passes through (a gate). Reads as the goal's fence separating the near-grass from
@@ -1166,15 +1195,16 @@ func _setup_ground_coins(dog: Node) -> void:
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED     # always face the camera → a clean disc
 	mat.billboard_keep_scale = true   # GL-Compat needs this true or the billboard collapses edge-on; smallness comes from GARDEN_COIN_R
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	# 101: [x, z] — small coins on the grass just BESIDE the dog (a touch behind it), two left + one
-	# right. The camera is only pitched ~17.6° down with a narrow FOV: props in the extreme foreground
-	# fall off the bottom/edges, and side props too close in |x| hide behind the big dog silhouette. At
-	# |x|≈1.4-1.5 and z a little behind the dog they clear the dog's sides yet stay on-screen, reading as
-	# small grounded coins on the grass — the fix for the PO's "oversized orbs floating at shoulder height".
+	# 102: [x, z] — grounded gold coins FLANKING the centred dog, two left + one right. Measured via an
+	# analytic 390×844 projection: the camera sits only ~1.2 m behind the dog, so the narrow portrait FOV
+	# only shows |x| < ~0.5 m at this depth — 101's coins at |x|=1.4-1.7 were entirely OFF-SCREEN (hence the
+	# PO's zero-gold scan; it was never a size problem). These sit just outside the dog's silhouette
+	# (|x|≈0.4-0.46) and a touch behind/beside it (-Z, low), landing at the left/right margins, low in the
+	# grass band, clear of the dog and the BRA button. Verified gold-visible in captured pixels, not just wired.
 	var spots := [
-		[c.x - 1.65, c.z - 0.4],
-		[c.x - 1.4, c.z + 0.6],
-		[c.x + 1.7, c.z - 0.3],
+		[c.x - 0.47, c.z - 0.55],
+		[c.x - 0.42, c.z - 0.15],
+		[c.x + 0.47, c.z - 0.35],
 	]
 	for sp in spots:
 		var coin := MeshInstance3D.new()

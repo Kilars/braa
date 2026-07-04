@@ -81,67 +81,73 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-04 (Phase 6 — design system + training-page ambiance)
+### PO Review — 2026-07-05 (Phase 6 — design system + training-page ambiance)
 
-Replayed the fresh local build at HEAD `63ee0ea` (`build/web` rebuilt tonight via `verify.sh`, gate
-green, after the 098/099/100 commits), served over http and driven in headless Chromium at 390×844 —
-SwiftShader == the deployed GL Compatibility renderer. Idle composition captured
-(`.screenshots/po-p6-idle-a/b/c.png`), the mark loop autotapped (`?bra_autotap=1`, dense burst
-`.screenshots/po-p6-mark-00..29.png`), the top HUD and BRA button zoomed at 3×
-(`.screenshots/po-p6-hud-zoom.png`, `po-p6-bra-zoom.png`), and the completion menu popped on mastery
-(`.screenshots/po-p6-menu.png`). **Zero console errors on every run.** Big progress this iteration:
-**two of the three prior directives are fixed and pruned** — the menu is now on the design system,
-and the "Triks" glyph + HUD legibility landed. **One directive remains:** the garden now has all the
-goal's *elements* but three of them read as **broken/unfinished**, so the composition still falls
-short of the goal screen. Not sign-off ready — but close.
+Replayed the fresh local build at HEAD `6096a41` (`build/web` rebuilt 00:42 via `verify.sh` after the
+101 commit), served over http and driven in headless Chromium at 390×844 — SwiftShader == the deployed
+GL Compatibility renderer. Idle composition captured (`.screenshots/po-p6-idle-a/b/c.png`), the mark
+loop autotapped (`?bra_autotap=1`, dense burst `.screenshots/po-p6-mark-00..29.png`), lower-third +
+house zoomed (`.screenshots/zz-coins.png`, `zz-house.png`), a gold-pixel + tan-coverage scan run, and
+the completion menu popped on mastery (`.screenshots/po-p6-menu.png`). **Zero console errors on every
+run.** Task 101 **fixed the fence** (pickets now read on both sides of the gate — pruned). But it
+**over-corrected the path** and the **coins still don't read**, so the garden composition still falls
+short of the goal — and in one respect (dog now sitting on dirt, not grass) it reads *worse* than the
+previous pass. Not sign-off ready.
 
 **What's working (do NOT re-task):**
 - **DS foundation (096) + training-page HUD/BRA (097).** Token vault + real OFL fonts + Godot Theme
-  live; white **"Triks"** + **coin** pills, slate **"Sitt"** label, learned bar with `%` readout
-  (`po-p6-hud-zoom.png`); big rounded **BLUE** BRA button with darker-blue bottom-lip depth
-  (`po-p6-bra-zoom.png`). Matches the goal HUD/button.
-- **Completion menu (098) — prior directive #1 RESOLVED.** Mastering Sitt now pops a **light DS PAPER
-  card** (`po-p6-menu.png`): slate **"Tricks"** heading, pale-pill rows for tricks / breeds / marker
-  words, **BLUE** for active/available accents, **GOLD** reserved to the coin only, hairline border +
-  soft card shadow + rounded corners. The three actions are now **one language** (Norwegian: "Vis
-  frem hundene" / "Gi tilbakemelding" / primary blue "Fortsett treningen"). It no longer reads as a
-  dark modal over a light page — the visual language holds. Pruned from the log.
-- **"Triks" glyph + HUD legibility (100) — prior directive #3 RESOLVED.** The Triks pill now carries
-  the **drawn 3-bar menu glyph** left of the label (no tofu), and both pills read cleanly over the
-  bright sun band at 3× (`po-p6-hud-zoom.png`). Pruned from the log.
-- **Core loop / word pop (P5 carry-over, no regression).** On a mark the fired word ("Bra!") pops and
-  floats up from the BRA button, distinct from the top-centre "PERFECT" (`po-p6-mark-14.png`); the
-  idle → sit → face-camera → apex → mark → PERFECT + word pop → joyful reaction → loop replays clean,
-  zero console errors — no earlier-phase regression.
+  live; white **"Triks"** + **coin** pills, slate **"Sitt"** label, learned bar with `%` readout; big
+  rounded **BLUE** BRA button with darker-blue bottom-lip depth (`po-p6-mark-14.png`). Matches the goal
+  HUD/button.
+- **Completion menu (098).** Mastering Sitt pops a **light DS PAPER card** (`po-p6-menu.png`): slate
+  **"Tricks"** heading, pale-pill rows for tricks / breeds / marker words, **BLUE** for active/available
+  accents, **GOLD** reserved to the coin only, hairline border + soft card shadow + rounded corners,
+  Norwegian actions ("Vis frem hundene" / "Gi tilbakemelding" / primary blue "Fortsett treningen"). The
+  visual language holds — no regression.
+- **"Triks" glyph + HUD legibility (100).** The Triks pill carries the **drawn 3-bar menu glyph** left
+  of the label (no tofu); both pills read over the bright sun band — no regression.
+- **Fence across both sides (101) — prior sub-directive RESOLVED.** The white picket fence now renders
+  as a line on **both** sides of the path with a gate gap for the path (`po-p6-idle-a/b/c.png`). Pruned.
+- **Core loop / word pop (P5 carry-over, no regression).** The idle → sit → face-camera → apex → mark →
+  PERFECT + word pop → joyful reaction → loop replays clean across the 30-frame burst, zero console
+  errors — no earlier-phase regression.
 
-**Improvement (buildable this phase — the one remaining blocker):**
+**Improvement (buildable this phase — the remaining blocker):**
 
-1. **The garden has the goal's elements but three of them read as broken — refine the composition.**
-   Task 099 genuinely added the horizon hedge, house, path, fence, coins, bushes and a firmer shadow,
-   and it is a big step up from the empty field. But played at 390×844 (`po-p6-idle-a/b/c.png`,
-   `po-p6-mark-14.png`, and the garden visible behind `po-p6-menu.png`) three elements land wrong and
-   pull the eye:
-   - **The path tapers to a sharp point in mid-field — perspective is inverted.** The tan path is
-     *wide near the house (far)* and *narrows to a floating point* at the dog's chest level, ending in
-     empty grass — the opposite of real perspective, so it reads as a floating triangle, not a path.
-     In the goal the path is a continuous winding ribbon, **widest in the foreground** (nearest the
-     viewer / BRA button) and narrowing as it recedes to the house. *Good:* widen the near end and run
-     the ribbon down past/around the dog toward the bottom so it clearly leads to the house — no
-     mid-field point.
-   - **The coins are oversized and float at the dog's shoulder height.** They read as big golden orbs
-     hovering in mid-field, not coins on the ground (`po-p6-idle-b.png`). In the goal the coins are
-     **small and sit low on the grass** near the corner bushes. *Good:* shrink them and drop them to
-     rest on the grass in the lower third, framing (not crowding) the centered dog.
-   - **The fence is on the left only.** The goal's white picket fence is a **line across the whole
-     mid-ground**, with a gate gap where the path passes; ours has a short segment left of the path
-     and nothing on the right (`po-p6-idle-a/b.png`). *Good:* extend the fence across the right side
-     too, keeping the gate gap for the path.
-   - **Minor:** the grounding shadow under the seated dog is still faint (`po-p6-mark-14.png`) and the
-     corner bushes read weakly next to the loud coins — firm the shadow ellipse a touch and let the
-     bushes register once the coins shrink.
+1. **The garden path over-corrected into a full-width dirt wedge — the dog no longer sits on grass.**
+   The previous "inverted-perspective, narrows-to-a-point" path is gone, but the fix swung too far: the
+   tan path is now so wide in the foreground that it **fills the whole lower half of the frame** — a
+   gold-pixel/coverage scan of the idle frame reads the **bottom 200 px band as 54 % tan**, and the dog
+   sits squarely on **dirt**, with green grass surviving only as thin slivers at the far left/right
+   edges (`po-p6-idle-a/b/c.png`, `zz-coins.png`). This loses the whole *garden* read — it looks like a
+   dog standing in the middle of a wide dirt road, not centered on a grassy lawn. In the goal
+   (`assets/goal-training-screen.png`) the dog is centered on **green grass**; the path is a **slim
+   winding ribbon** — roughly a quarter of the foreground width — that passes **to the side of** the dog
+   and recedes to the house top-right, never under the dog's feet. *Good:* shrink the near-end width
+   hard (the taper *direction* — wide-near → narrow-far — is now correct, it is simply far too wide) and
+   shift the ribbon so it runs **beside** the centered dog, leaving the dog grounded on green grass with
+   the path clearly a path, not the whole floor.
+2. **The coins still don't read as coins.** They were shrunk and repositioned, but a gold-pixel scan of
+   the idle frame finds **zero** coin-gold pixels anywhere on the grass — the only gold in the frame is
+   the HUD coin-pill icon (top-right). What survives in-world is a faint greenish-yellow tick floating
+   at mid-field on the left margin (`po-p6-idle-b.png`), which reads as a smudge, not a coin. In the
+   goal the coins are **small, unmistakably gold discs resting low on the green grass** in the lower
+   third, framing the dog. *Good:* make them read as actual gold coins on the ground — grounded low in
+   the lower third on grass (once the dog is back on grass), clearly gold, sized to read but not crowd
+   the dog. If the billboard is collapsing edge-on in GL-Compat, keep `billboard_keep_scale=true` and
+   size via the mesh (per the 101 note) — but verify in captured pixels that a gold coin is actually
+   visible, not just that the node exists.
+3. **Minor — the house reads as a blown-out tower.** At the path's end the house is a tall, narrow
+   cream box with a pyramidal blue roof, its face washed near-white by the sun bloom (`zz-house.png`).
+   It reads more like a silo/tower than the goal's cozy little **cottage** (wider than tall, a simple
+   gable roof, a small window/door). *Good:* soften the bloom on its face and give it cottage
+   proportions so it reads as a home at the end of the path. Once the dog is back on grass, re-confirm
+   the grounding shadow ellipse reads under the seated dog.
    Keep everything in the DS palette (sky/grass/BLUE/GOLD) so it coheres with the restyled HUD. Match
-   the goal's **layered composition + grounding**, not the exact pixels.
+   the goal's **layered composition + grounding** (dog on grass, slim path, grounded gold coins), not
+   the exact pixels.
 
-_Not signing off: the garden composition still reads as unfinished (floating path point, oversized
-floating coins, half-built fence) — buildable, not owner-gated. The menu-DS and HUD-glyph directives
-are resolved and pruned; the core loop and earlier phases replay clean with no regression._
+_Not signing off: the garden still reads as unfinished — the path over-corrected into a full-width
+dirt wedge (dog on dirt, 54 % of the foreground tan) and the coins render as zero visible gold on the
+grass. Both are buildable, not owner-gated. The fence sub-directive is resolved and pruned; the DS
+HUD/BRA/menu, core loop, and earlier phases replay clean with no regression._

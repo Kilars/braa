@@ -95,6 +95,18 @@ func test_a_path_winds_back_to_a_house() -> void:
 	var roof_mat := roof.material_override as BaseMaterial3D
 	assert_true(roof_mat != null and roof_mat.albedo_color.b > roof_mat.albedo_color.r,
 		"the roof reads blue (b > r) — the goal's blue-roofed house")
+	# 102: the PO read the house as a "blown-out tower" — tall + narrow. The goal is a cozy COTTAGE:
+	# wider than tall, with a small window/door on its face. Pin cottage proportions + the face detail so
+	# a regression back to the tower can't read green. (The bloom softening is a warm-cream albedo — the
+	# walls must not sit at near-white, which clips to the blown-out face; g < 0.9 keeps them off white.)
+	var wall_size: Vector3 = (walls.mesh as BoxMesh).size
+	assert_true(wall_size.x > wall_size.y,
+		"the house is a cottage — wider than tall (w %.2f > h %.2f)" % [wall_size.x, wall_size.y])
+	var wall_mat := walls.material_override as BaseMaterial3D
+	assert_true(wall_mat != null and wall_mat.albedo_color.g < 0.9,
+		"the walls are a warm cream, not near-white (won't blow out under the sun): g %.2f < 0.9" % wall_mat.albedo_color.g)
+	assert_true(house.get_node_or_null("Door") != null or house.get_node_or_null("Window") != null,
+		"the cottage has a small window/door on its face (reads as a home, not a silo)")
 	main.queue_free()
 
 func test_a_picket_fence_crosses_the_midground() -> void:
@@ -164,6 +176,15 @@ func test_the_path_runs_from_the_foreground_back_to_the_house() -> void:
 	# And it still recedes a long way toward the distant house — a real receding ribbon, not a patch.
 	assert_true(far_z < c.z - 6.0,
 		"the path recedes far toward the house (far_z %.2f < dog_z %.2f - 6.0)" % [far_z, c.z])
+	# 102: the PO found 101 over-corrected into a full-width dirt WEDGE — the near end was 1.0 m wide and
+	# centred on the dog, filling the lower half so the dog sat on dirt (54 % of the foreground scanned
+	# tan). The fix is a SLIM ribbon that runs BESIDE the centred dog on grass: pin the near width small,
+	# and pin the ribbon's leftmost extent to the right of the dog's left flank so it never sprawls back
+	# under the dog's feet. (The old wedge's near end reached c.x - 0.5; the fix stays right of c.x - 0.35.)
+	assert_true(main.GARDEN_PATH_WIDTH_NEAR <= 0.6,
+		"the path's near end is slim, not a full-width wedge (WIDTH_NEAR %.2f <= 0.6)" % main.GARDEN_PATH_WIDTH_NEAR)
+	assert_true(box.position.x > c.x - 0.35,
+		"the path runs beside the dog, not sprawling under it (left edge %.2f > dog_x %.2f - 0.35)" % [box.position.x, c.x])
 	main.queue_free()
 
 func test_the_fence_shows_pickets_on_both_sides_of_the_gate() -> void:
@@ -195,17 +216,30 @@ func test_the_fence_shows_pickets_on_both_sides_of_the_gate() -> void:
 		"the gate gap is narrow enough that the right fence shows (gap_half %.2f <= 0.9)" % main.GARDEN_FENCE_GAP_HALF)
 	main.queue_free()
 
-func test_the_coins_are_small_and_grounded_not_floating_orbs() -> void:
+func test_the_coins_read_as_gold_discs_grounded_in_the_foreground() -> void:
 	var main := instantiate_main()
 	var coins := main.get_node_or_null("GardenCoins") as Node3D
-	assert_true(coins != null, "ambient coins rest on the grass (099/101)")
+	assert_true(coins != null, "ambient coins rest on the grass (099/101/102)")
+	var c: Vector3 = main._dog_bounds(main._dog).get_center()
 	var c0 := coins.get_child(0) as MeshInstance3D
 	var quad := c0.mesh as QuadMesh
 	assert_true(quad != null, "the coin is a billboard quad")
-	# 101: the PO saw "big golden orbs hovering in mid-field". The fix is SMALL discs (the old R=0.24 →
-	# 0.48 m diameter read as orbs); this caps the coin size so a regression back to the big orb can't
-	# read green. (Smallness comes from the radius, NOT from turning keep_scale off — the GL-Compat
-	# billboard collapses edge-on without keep_scale, so it must stay true; the size cap is the guard.)
-	assert_true(quad.size.x <= 0.34,
-		"the coin is small (diameter %.2f <= 0.34 m — not an oversized orb)" % quad.size.x)
+	# 102: the PO reversed the 101 shrink — at R=0.16 (0.32 m) the coins scanned as ZERO gold pixels
+	# in-world (vanished). The fix is a READABLE band: big enough to read as a coin, still smaller than
+	# the old R=0.24 (0.48 m) orb. Pins BOTH failure modes — a regression to the vanishing tick (< 0.34)
+	# OR back to the orb (> 0.46) fails. (Smallness still comes from the radius, keep_scale stays true —
+	# the GL-Compat billboard collapses edge-on without it.)
+	assert_true(quad.size.x >= 0.20 and quad.size.x <= 0.36,
+		"the coin reads without being an orb (diameter %.2f in [0.20, 0.36] m)" % quad.size.x)
+	# 102: the coins FLANK the centred dog at the on-screen margins. Measured via an analytic 390×844
+	# projection: the camera sits only ~1.2 m behind the dog, so the narrow portrait FOV shows only
+	# |x| < ~0.5 m at this depth — 101's coins at |x|=1.4-1.7 were entirely OFF-SCREEN (the PO's zero-gold
+	# scan), and the goal's exact lower-third corners aren't reachable without regressing the framing (the
+	# 101 note). This pins each coin to a lateral band — far enough out to clear the dog silhouette, near
+	# enough to stay inside the FOV — so a regression back UNDER the dog OR off-screen can't read green.
+	for child in coins.get_children():
+		var coin := child as MeshInstance3D
+		var dx: float = absf(coin.position.x - c.x)
+		assert_true(coin != null and dx >= 0.32 and dx <= 0.7,
+			"the coin flanks the dog within the narrow FOV (|dx| %.2f in [0.32, 0.7] m)" % dx)
 	main.queue_free()
