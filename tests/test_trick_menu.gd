@@ -262,3 +262,36 @@ func test_classify_words_edge_active_not_in_unlocked() -> void:
 	# the active word is always unlocked via MarkerWords.set_active() guards).
 	assert_eq(rows[3].id, "super", "fourth row is 'super' (even though active was not in unlocked)")
 	assert_eq(rows[3].state, TrickMenu.WordState.LOCKED, "an active word not in unlocked reads LOCKED (edge case)")
+
+# ---- marker words trade-off cost: window_scale + cooldown in classify_words (095, P5-2) -----
+
+func test_classify_words_rows_carry_window_scale_and_cooldown() -> void:
+	# A stronger word's row must carry its catalog window_scale (> 1.0) and cooldown (> 0)
+	# so the menu can display the trade-off before the player loads it.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra", "dyktig"], "bra")
+	# Find the dyktig row (second in catalog order)
+	var dyktig_row: Dictionary = {}
+	for row in rows:
+		if row.id == "dyktig":
+			dyktig_row = row
+			break
+	assert_true(dyktig_row.has("window_scale"), "dyktig row has window_scale key")
+	assert_true(dyktig_row.has("cooldown"), "dyktig row has cooldown key")
+	# Verify the values match the catalog
+	var w := MarkerWords.new()
+	assert_eq(dyktig_row.window_scale, w.window_scale("dyktig"), "window_scale value matches catalog")
+	assert_true(dyktig_row.window_scale > 1.0, "dyktig window_scale > 1.0 (stronger word)")
+	assert_eq(dyktig_row.cooldown, w.cooldown("dyktig"), "cooldown value matches catalog")
+	assert_true(dyktig_row.cooldown > 0, "dyktig cooldown > 0 (has a cost)")
+
+func test_classify_words_base_word_has_identity_cost() -> void:
+	# Base "bra" carries window_scale == 1.0 and cooldown == 0 (no cost, always available).
+	# This reinforces that "bra" is the plain always-available default with no downside.
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, ["bra"], "bra")
+	# Find the bra row (always first in catalog order)
+	var bra_row: Dictionary = rows[0]
+	assert_eq(bra_row.id, "bra", "first row is 'bra'")
+	assert_true(bra_row.has("window_scale"), "bra row has window_scale key")
+	assert_true(bra_row.has("cooldown"), "bra row has cooldown key")
+	assert_eq(bra_row.window_scale, 1.0, "base 'bra' has window_scale 1.0 (identity)")
+	assert_eq(bra_row.cooldown, 0, "base 'bra' has cooldown 0 (never cools down)")

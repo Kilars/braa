@@ -1653,6 +1653,7 @@ func _word_rows() -> Array:
 	for row in rows:
 		var id: String = (row as Dictionary).get("id", "")
 		(row as Dictionary)["cooling"] = _words.is_on_cooldown(id)
+		(row as Dictionary)["remaining"] = _words.cooldown_remaining(id)
 	return rows
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current

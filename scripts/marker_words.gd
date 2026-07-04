@@ -182,6 +182,11 @@ func cooldown(id: String) -> int:
 func is_on_cooldown(id: String) -> bool:
 	return _cooldown_remaining.get(id, 0) > 0
 
+## Marks of rest still owed by `id` before it is available again (093/095, P5-2). 0 = available.
+## Pairs with is_on_cooldown for the menu's "Hviler (n)" count.
+func cooldown_remaining(id: String) -> int:
+	return maxi(0, _cooldown_remaining.get(id, 0))
+
 ## True iff the currently active word is NOT on cooldown, i.e. it will fire as itself on the
 ## next successful mark (093, P5-2). BASE_ID ("bra") is always available.
 func active_is_available() -> bool:

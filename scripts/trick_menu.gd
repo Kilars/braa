@@ -160,6 +160,7 @@ const WORD_NAME_ACTIVE  := Color(1.0, 0.86, 0.30)      ## the firing word — go
 const WORD_NAME_UNLOCKED := Color(1.0, 1.0, 1.0)       ## switchable — white
 const WORD_NAME_LOCKED  := Color(1.0, 1.0, 1.0, 0.34)  ## not yet earned — greyed
 const WORD_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)       ## the "Marker words" subheading
+const WORD_COST_HINT := Color(1.0, 1.0, 1.0, 0.42)     ## dimmed cost hint (095, P5-2) — secondary, never competes with name
 
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
@@ -233,7 +234,9 @@ static func classify_words(catalog: Array, unlocked: Array, active: String) -> A
 			st = WordState.ACTIVE
 		elif unlocked.has(id):
 			st = WordState.UNLOCKED
-		rows.append({"id": id, "display": display, "state": st})
+		rows.append({"id": id, "display": display, "state": st,
+			"window_scale": float(e.get("window_scale", 1.0)),
+			"cooldown": int(e.get("cooldown", 0))})
 	return rows
 
 ## The player-facing name for a trick id (pure). Unknown ids fall back to a capitalised id.
@@ -638,19 +641,39 @@ func _draw_breed_row(font: Font, i: int) -> void:
 	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
 
-## One marker-word row (092/093): the display text on the left and the state badge on the right.
+## One marker-word row (092/093/095): the display text on the left and the state badge on the right.
 ## ACTIVE row highlighted gold (the firing word); UNLOCKED white (tap to switch); LOCKED greyed
 ## (not yet earned — never tappable, never a faked clip). Mirrors _draw_breed_row.
-## When the ACTIVE word is on cooldown (093, P5-2) the badge reads "Hviler" (Norwegian: resting)
-## so the trade-off is legible — the player sees why the round just fell back to "bra".
-## Row dict shape: {id, display, state, cooling?}; cooling defaults to false if absent.
+## When the ACTIVE word is on cooldown (093, P5-2) the badge reads "Hviler (n)" with the live
+## remaining count (095, P5-2) so the size of the rest cost is legible.
+## For any UNLOCKED or ACTIVE stronger word (cooldown > 0) a small dimmed cost hint is shown
+## below the name so the player can weigh the trade-off before AND after loading (095, P5-2).
+## Row dict shape: {id, display, state, cooling?, remaining?, window_scale?, cooldown?}; all
+## optional keys use .get() with safe defaults so a row missing a key never errors.
 func _draw_word_row(font: Font, i: int) -> void:
 	var w: Dictionary = _words[i]
 	var rect := _word_row_rect(i)
 	var st: int = w.state
 	var cooling: bool = w.get("cooling", false)
+	var remaining: int = int(w.get("remaining", 0))
+	var w_cooldown: int = int(w.get("cooldown", 0))
+	var w_window_scale: float = float(w.get("window_scale", 1.0))
 	var locked := st == WordState.LOCKED
 	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
+	# Show a cost hint for any stronger word on UNLOCKED or ACTIVE rows (095, P5-2).
+	# Base "bra" (cooldown == 0) shows no hint — it's the plain free default.
+	# The hint is terse and dimmed so it reads secondary to the name/badge.
+	# Format: "+15% · hviler 2" (wider PERFECT window % · rest cost in marks).
+	var show_cost_hint := w_cooldown > 0 and (st == WordState.UNLOCKED or st == WordState.ACTIVE)
+	var cost_hint := ""
+	if show_cost_hint:
+		var pct: int = int(round((w_window_scale - 1.0) * 100.0))
+		cost_hint = "+%d%% · hviler %d" % [pct, w_cooldown]
+	# Lay out the name: if we have a cost hint, shift the name up slightly to leave room for
+	# the hint line below it, keeping everything within the row height.
+	var name_mid_y := rect.position.y + rect.size.y * 0.5
+	if show_cost_hint:
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - font.get_ascent(BADGE_SIZE) * 0.5 - 1.0
 	# The word display text (e.g. "Dyktig!"), left-aligned.
 	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
 	# so it reads as "loaded but unavailable this round" rather than fully locked.
@@ -659,16 +682,21 @@ func _draw_word_row(font: Font, i: int) -> void:
 		name_col = WORD_NAME_ACTIVE if not cooling else Color(1.0, 0.86, 0.30, 0.55)
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
-	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
+	var name_baseline := name_mid_y + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
 	_draw_text_outlined(font, Vector2(rect.position.x + 14.0, name_baseline),
 		str(w.get("display", w.id)), NAME_SIZE, name_col)
-	# The state badge, right-aligned. A cooling ACTIVE word shows "Hviler" (resting) so the
-	# trade-off is legible: the player knows the stronger word is on cooldown this round.
+	# Cost hint below the name (095, P5-2): dimmed secondary text for UNLOCKED/ACTIVE stronger words.
+	if show_cost_hint:
+		var hint_baseline := name_mid_y + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5 + font.get_ascent(BADGE_SIZE) + 2.0
+		_draw_text_outlined(font, Vector2(rect.position.x + 14.0, hint_baseline),
+			cost_hint, BADGE_SIZE, WORD_COST_HINT)
+	# The state badge, right-aligned. A cooling ACTIVE word shows "Hviler (n)" (resting, n marks
+	# left) so the size of the rest cost is legible — was a bare "Hviler" before 095.
 	var word_badge: String
 	var word_badge_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE and cooling:
-		word_badge = "Hviler"                              ## (Norwegian: resting) — on cooldown
-		word_badge_col = Color(1.0, 0.78, 0.20, 0.70)    ## dimmed gold: active but unavailable
+		word_badge = "Hviler (%d)" % remaining          ## (Norwegian: resting) — on cooldown, n marks left
+		word_badge_col = Color(1.0, 0.78, 0.20, 0.70)  ## dimmed gold: active but unavailable
 	elif st == WordState.ACTIVE:
 		word_badge = WORD_BADGE[WordState.ACTIVE]
 		word_badge_col = BADGE_LEARNED

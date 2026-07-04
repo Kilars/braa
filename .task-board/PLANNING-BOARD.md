@@ -22,21 +22,24 @@ but the phase is not sign-off ready:
   wider-window/cooldown trade-off), and the resting badge has no count. A cost the player can't
   see isn't a trade-off. PO: **ship this together with P5-3.**
 
-**Empty backlog → scan replenished 2 current-phase tasks (both direct PO directives, NOT work-ahead):**
-- **094 — FEATURE — P5-3 the marker word pops on screen at the mark.** New `WordPop` dumb renderer
-  (twin of `TierReadout`, driven from `main._process`): on every successful mark the **effective
-  fired word** (`_words.fire_active` → incl. the `Bra!` fallback while a stronger word cools) bursts
-  and floats up from the BRA button, distinct from the top-centre "PERFECT", X-5 dampens the float
-  not the word. TDD the pure node + Visual Review the burst. This also makes the P5-2 fallback
-  visible in play. **The headline blocker.**
-- **095 — FEATURE — P5-2 make the trade-off legible.** Add `MarkerWords.cooldown_remaining(id)`;
-  enrich `classify_words` rows with catalog `window_scale`+`cooldown` so a stronger word advertises
-  its **cost before loading**; resting badge reads **"Hviler (n)"** with the live count. Menu-only,
-  no in-round verb (X-2/P5-4 hold). TDD the accessor + classify, Visual Review the row. Ships with 094.
+**Empty backlog → scan replenished 2 current-phase tasks (both direct PO directives, NOT work-ahead) — BOTH NOW SHIPPED, pushed, verify 502/0:**
+- **094 — FEATURE — P5-3 marker word pops on the mark — DONE (`b77a133`).** New `WordPop` dumb renderer
+  (twin of `TierReadout`, driven from `main._process`, mounted above the BRA button). On every
+  successful mark `_play_payoff` pops the **effective fired word** (`_words.display_for(fired)` — incl.
+  the `Bra!` fallback while a stronger word cools); it floats up and fades, X-5 dampens the float not
+  the word. 7 TDD tests. Visual Review PASS (`094-pop-13`: "PERFECT" top-centre + "Bra!" above the
+  ghosted button — separated, no collision). Also makes the P5-2 fallback visible in play.
+- **095 — FEATURE — P5-2 trade-off made legible — DONE.** `MarkerWords.cooldown_remaining(id)` +
+  `classify_words` rows enriched with catalog `window_scale`+`cooldown` + `_word_rows` appends live
+  `remaining`. The menu now shows each stronger word's **cost before loading** (dimmed hint
+  "+15% · hviler 2" on UNLOCKED/ACTIVE rows; base "bra" none) and the cooling badge reads **"Hviler (n)"**
+  with the live count. 7 TDD tests. Visual Review PASS (`095-01`/`095-02`). No in-round verb (X-2/P5-4 hold).
 
-Priority: 094 (headline) then 095. Both are current-phase; no un-busted flags (voice/telemetry/
-breed-model residuals stay genuinely owner-gated — do NOT re-bust). After both land + verify green,
-hand the board back to the father for the next Phase-5 Visual-Review pass.
+**Backlog now EMPTY.** Both of the father's 2026-07-04 Phase-5 directives are served (the headline word
+pop + the legible cooldown), the pair the PO asked to "ship together." verify green (502/0), pushed. No
+un-busted flags (voice/telemetry/breed-model residuals stay genuinely owner-gated — do NOT re-bust).
+→ terminal hand-off to the father for the next Phase-5 Visual-Review sign-off pass (P5-1/P5-2/P5-3/P5-4
+now all in pixels). Any PO reopen / new flag / regression preempts.
 
 ---
 

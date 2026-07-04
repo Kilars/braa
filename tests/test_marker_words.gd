@@ -257,3 +257,65 @@ func test_switch_word_mid_cooldown_and_switch_back_preserves_cooldown_state() ->
 	assert_true(w.is_on_cooldown("dyktig"), "switching back to dyktig preserves its cooldown state")
 	var fired: String = w.fire_active(true)
 	assert_eq(fired, "bra", "dyktig is still cooling, so effective word is 'bra'")
+
+## TDD for task 095 (P5-2): cooldown_remaining accessor. The menu needs to show the
+## remaining rest count so the player can weigh the trade-off. cooldown_remaining(id)
+## exposes the magnitude of the rest — how many marks until the word is available again.
+
+func test_cooldown_remaining_zero_for_fresh_word() -> void:
+	var w := MarkerWords.new()
+	assert_eq(w.cooldown_remaining("dyktig"), 0, "a fresh unlocked word has 0 remaining marks")
+	assert_eq(w.cooldown_remaining("bra"), 0, "base 'bra' always has 0 remaining marks")
+
+func test_cooldown_remaining_set_after_firing_stronger_word() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.set_active("dyktig")
+	w.fire_active(true)  # arm cooldown
+	var cooldown_marks: int = w.cooldown("dyktig")
+	assert_eq(w.cooldown_remaining("dyktig"), cooldown_marks, "after firing a stronger word, remaining equals its catalog cooldown")
+	assert_true(w.is_on_cooldown("dyktig"), "is_on_cooldown confirms it is cooling")
+
+func test_cooldown_remaining_decrements_to_zero() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.set_active("dyktig")
+	var cooldown_marks: int = w.cooldown("dyktig")
+	w.fire_active(true)  # arm cooldown to cooldown_marks
+	# Record the sequence of remaining counts as we fire subsequent marks
+	var remaining_sequence: Array = []
+	for i in range(cooldown_marks + 1):
+		remaining_sequence.append(w.cooldown_remaining("dyktig"))
+		if i < cooldown_marks:
+			w.fire_active(true)  # decrement
+	# Sequence should be [N, N-1, N-2, ..., 0] where N = cooldown_marks
+	var expected: Array = []
+	for i in range(cooldown_marks + 1):
+		expected.append(cooldown_marks - i)
+	assert_eq(remaining_sequence, expected, "cooldown_remaining decrements by 1 per successful mark from N to 0")
+	# Final assertion: after the last successful mark, is_on_cooldown is false
+	assert_false(w.is_on_cooldown("dyktig"), "after exactly cooldown_marks decrements, is_on_cooldown is false")
+
+func test_cooldown_remaining_base_always_zero() -> void:
+	var w := MarkerWords.new()
+	w.set_active("bra")
+	for i in range(5):
+		assert_eq(w.cooldown_remaining("bra"), 0, "base 'bra' has 0 remaining after " + str(i) + " fires")
+		w.fire_active(true)
+
+func test_cooldown_remaining_consistent_with_is_on_cooldown() -> void:
+	var w := MarkerWords.new()
+	w.unlock("super")
+	w.set_active("super")
+	# Check invariant: is_on_cooldown(id) == (cooldown_remaining(id) > 0)
+	assert_eq(w.is_on_cooldown("super"), w.cooldown_remaining("super") > 0, "invariant at start: no cooldown")
+	w.fire_active(true)  # arm cooldown
+	assert_eq(w.is_on_cooldown("super"), w.cooldown_remaining("super") > 0, "invariant after arming: cooling")
+	# Decrement through the cooldown cycle
+	var cooldown_marks: int = w.cooldown("super")
+	for i in range(cooldown_marks):
+		w.fire_active(true)
+		assert_eq(w.is_on_cooldown("super"), w.cooldown_remaining("super") > 0, "invariant at decrement step " + str(i))
+	# After the cooldown is fully decremented
+	w.fire_active(true)
+	assert_eq(w.is_on_cooldown("super"), w.cooldown_remaining("super") > 0, "invariant when cooldown is fully expired")
