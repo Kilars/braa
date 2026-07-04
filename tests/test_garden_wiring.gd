@@ -67,4 +67,76 @@ func test_the_grass_is_painterly_not_a_flat_colour() -> void:
 	# grass had only a single albedo_color and no texture — that must no longer read green.
 	assert_true(mat.albedo_texture != null,
 		"the grass carries an albedo texture for painterly/mottled variation, not one flat colour")
+	# 099: depth still comes from a baked normal map even after the noise was softened — a
+	# regression that drops the relief (back to a flat lit fill) must not read green.
+	assert_true(mat.normal_enabled and mat.normal_texture != null,
+		"the grass keeps its baked normal-map depth (099 dialled the noise down but kept relief)")
+	main.queue_free()
+
+## 099 (Phase 6 — garden ambiance to the goal training screen). The composed garden is render glue
+## (Visual-Review-gated for the LOOK), but a regression back to the bare field — path/house/fence/
+## bushes/coins deleted — must not read green. These pin that each new layer's ingredients are wired.
+
+func test_a_path_winds_back_to_a_house() -> void:
+	var main := instantiate_main()
+	var path := main.get_node_or_null("GardenPath") as MeshInstance3D
+	assert_true(path != null, "a garden path is laid (099)")
+	assert_true(path.mesh != null and path.mesh.get_surface_count() > 0,
+		"the path is a real ribbon mesh with geometry, not an empty node")
+	var house := main.get_node_or_null("GardenHouse") as Node3D
+	assert_true(house != null, "a house sits at the end of the path (099)")
+	var walls := house.get_node_or_null("Walls") as MeshInstance3D
+	var roof := house.get_node_or_null("Roof") as MeshInstance3D
+	assert_true(walls != null and roof != null, "the house has walls and a gable roof")
+	# The house sits in the upper-right of the garden — right of centre (+X) and ahead (-Z, far).
+	assert_true(house.position.x > 0.0, "the house reads upper-RIGHT of the dog (+X)")
+	assert_true(house.position.z < 0.0, "the house reads in the DISTANCE ahead of the dog (-Z)")
+	# The roof is the goal's BLUE, not warm like the walls (b > r).
+	var roof_mat := roof.material_override as BaseMaterial3D
+	assert_true(roof_mat != null and roof_mat.albedo_color.b > roof_mat.albedo_color.r,
+		"the roof reads blue (b > r) — the goal's blue-roofed house")
+	main.queue_free()
+
+func test_a_picket_fence_crosses_the_midground() -> void:
+	var main := instantiate_main()
+	var fence := main.get_node_or_null("PicketFence") as Node3D
+	assert_true(fence != null, "a picket fence crosses the mid-ground (099)")
+	# Several pickets + rails — a real fence row, not one token post.
+	assert_true(fence.get_child_count() >= 8,
+		"the fence has many pickets + rails (got %d)" % fence.get_child_count())
+	# The pickets read white (the goal's white picket fence): every channel high.
+	var first := fence.get_child(0) as MeshInstance3D
+	var mat := first.material_override as BaseMaterial3D
+	assert_true(mat != null and mat.albedo_color.r > 0.8 and mat.albedo_color.g > 0.8 and mat.albedo_color.b > 0.8,
+		"the pickets read white")
+	main.queue_free()
+
+func test_border_bushes_frame_the_corners() -> void:
+	var main := instantiate_main()
+	var bushes := main.get_node_or_null("BorderBushes") as Node3D
+	assert_true(bushes != null, "low bushes frame the garden corners (099)")
+	assert_true(bushes.get_child_count() >= 3,
+		"a few bushes frame the corners (got %d)" % bushes.get_child_count())
+	# They read green (g leads r and b) and are squashed low domes (scaled down in Y).
+	var b0 := bushes.get_child(0) as MeshInstance3D
+	var mat := b0.material_override as BaseMaterial3D
+	assert_true(mat != null and mat.albedo_color.g > mat.albedo_color.r and mat.albedo_color.g > mat.albedo_color.b,
+		"the bushes read green (g leads)")
+	assert_true(b0.scale.y < b0.scale.x,
+		"the bushes are squashed low domes, not full spheres")
+	main.queue_free()
+
+func test_ambient_coins_rest_on_the_grass() -> void:
+	var main := instantiate_main()
+	var coins := main.get_node_or_null("GardenCoins") as Node3D
+	assert_true(coins != null, "ambient gold coins rest on the grass (099)")
+	assert_true(coins.get_child_count() >= 2,
+		"two or three ground coins (got %d)" % coins.get_child_count())
+	# Billboard discs carrying a gold gradient texture — they read as clean coins from the near-
+	# horizontal look-down camera (a flat ground disc would be edge-on and vanish).
+	var c0 := coins.get_child(0) as MeshInstance3D
+	var mat := c0.material_override as BaseMaterial3D
+	assert_true(mat != null and mat.billboard_mode != BaseMaterial3D.BILLBOARD_DISABLED,
+		"the coins billboard to the camera so they read as discs, not edge-on slivers")
+	assert_true(mat.albedo_texture != null, "the coins carry a gold gradient texture (the coin face)")
 	main.queue_free()

@@ -317,6 +317,10 @@ func _ready() -> void:
 		_start_dog(dog)
 		_frame_camera(dog)
 		_setup_ground_plane(dog)    # grass ground plane at the foot plane (047/P2-10)
+		_setup_path_to_house(dog)   # winding tan path curving back to a small house (099/Phase 6)
+		_setup_fence_line(dog)      # white picket fence across the mid-ground (099/Phase 6)
+		_setup_border_bushes(dog)   # low bushes framing the bottom corners (099/Phase 6)
+		_setup_ground_coins(dog)    # ambient gold coins resting on the grass (099/Phase 6)
 		_setup_hedge_band(dog)      # stylized hedge at the horizon for depth (078/Note-6)
 		_setup_contact_shadow(dog)  # blob shadow ON the grass (031/P1-1)
 		_setup_sun_disc(dog)        # explicit sun disc in the sky (047/P2-10)
@@ -841,16 +845,19 @@ func _setup_ground_plane(dog: Node) -> void:
 	# a finer blade-scale grain, so the lawn reads as textured grass rather than one smooth mottle.
 	var noise := FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	noise.frequency = 0.035            # large soft patches; octaves add the finer grain on top
+	noise.frequency = 0.032            # large soft patches; fewer octaves keep it painterly, not noisy
 	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-	noise.fractal_octaves = 4          # patch + blade-scale detail in one baked texture
-	noise.fractal_gain = 0.55
+	noise.fractal_octaves = 2          # 099: dialled from 4 → 2 so the lawn reads smooth, not pixel-noise
+	noise.fractal_gain = 0.45          # gentler octave falloff → softer mottle
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	# 099: a NARROWER tonal range than the old high-contrast ramp so the grass reads as smooth
+	# painterly green rather than patchy pixel noise (the PO's note) — depth still comes from the
+	# baked normal map below, not from albedo contrast.
 	ramp.colors = PackedColorArray([
-		Color(0.17, 0.39, 0.17),       # shadowed green (lifted so the lawn isn't rocky/patchy)
-		Color(0.28, 0.56, 0.24),       # mid grass
-		Color(0.46, 0.74, 0.35),       # light sunny green
+		Color(0.26, 0.48, 0.23),       # shadowed green (lifted, close to mid)
+		Color(0.32, 0.56, 0.28),       # mid grass
+		Color(0.40, 0.64, 0.33),       # light sunny green (pulled in from 0.46,0.74,0.35)
 	])
 	var grass_tex := NoiseTexture2D.new()
 	grass_tex.noise = noise
@@ -870,14 +877,14 @@ func _setup_ground_plane(dog: Node) -> void:
 	var grass_normal := NoiseTexture2D.new()
 	grass_normal.noise = relief
 	grass_normal.as_normal_map = true
-	grass_normal.bump_strength = 2.2   # soft dappled relief that reads at phone scale, not rubble
+	grass_normal.bump_strength = 1.3   # 099: softened (2.2 → 1.3) so relief reads gentle, not rubble
 	grass_normal.seamless = true
 	grass_normal.width = 256
 	grass_normal.height = 256
 	mat.normal_enabled = true
 	mat.normal_texture = grass_normal
 	mat.normal_scale = 1.0
-	mat.uv1_scale = Vector3(6.0, 6.0, 1.0)   # finer tiling so grain reads as blades, not big blobs
+	mat.uv1_scale = Vector3(3.5, 3.5, 1.0)   # 099: coarser tiling (6 → 3.5) → larger, softer painterly patches
 	mat.roughness = 0.9    # matte grass, a hint of sheen so the normal-map relief shows
 	mat.metallic = 0.0
 	# Allow the sun's directional shading to land on it naturally.
@@ -888,6 +895,293 @@ func _setup_ground_plane(dog: Node) -> void:
 	ground.material_override = mat
 	ground.position = foot_center
 	add_child(ground)
+
+## 099 garden ambiance (Phase 6): the running garden read as an empty field — the PO asked it to
+## match the goal training screen's LAYERED composition (a winding path to a small house, a picket
+## fence across the mid-ground, corner bushes, ambient coins, a firm grounding shadow). These layers
+## sit BEHIND / AROUND the centred dog so they never occlude its silhouette at the scored apex
+## (face-camera contract, 061/077). All node-local transforms off the dog bounds (skinned-AABB gotcha),
+## all GL-Compatibility-safe (StandardMaterial3D / baked Image, no shader, no Forward+-only feature).
+## Screen mapping: camera is behind the dog (+Z) looking toward -Z, so +X = right, -Z = far/up-in-frame,
+## +Z = near/bottom; the sun keys from the upper-right (_setup_light rot -30,-40).
+const GARDEN_HOUSE_DIST := 12.5        ## metres ahead (-Z) — between the fence (8.5) and hedge (17), near horizon
+const GARDEN_HOUSE_RIGHT := 2.3        ## metres right (+X) — upper-right of frame but ON-screen (the look-down cone is narrow)
+const GARDEN_HOUSE_WALL_SIZE := Vector3(1.6, 1.4, 1.4)  ## warm cottage walls, small in frame at ~12 m
+const GARDEN_HOUSE_ROOF_SIZE := Vector3(2.0, 0.85, 1.6) ## gable roof, slight eave overhang
+const GARDEN_HOUSE_WALL := Color(0.96, 0.94, 0.87)      ## warm off-white walls (DS-adjacent paper warmth)
+const GARDEN_PATH_WIDTH := 0.55        ## metres — a narrow winding garden path (not a road)
+const GARDEN_PATH_TAN := Color(0.82, 0.71, 0.52)        ## medium warm tan, the goal's path colour (drawn unshaded so it reads flat + even)
+const GARDEN_PATH_LIFT := 0.012        ## metres above the grass plane so the path never z-fights
+const GARDEN_FENCE_DIST := 8.5         ## metres ahead (-Z) — the mid-ground line, between dog and house
+const GARDEN_FENCE_HALF_SPAN := 9.0    ## metres each side of centre the fence runs
+const GARDEN_FENCE_PATH_X := 1.6       ## the path's X where it crosses the fence line (a gap opens here)
+const GARDEN_FENCE_GAP_HALF := 1.4     ## half-width of the gate gap the path passes through
+const GARDEN_PICKET_W := 0.06          ## picket post cross-section
+const GARDEN_PICKET_H := 0.55          ## picket post height
+const GARDEN_PICKET_SPACING := 0.42    ## gap between pickets
+const GARDEN_RAIL_H := 0.05            ## horizontal rail thickness
+const GARDEN_RAIL_D := 0.04            ## rail depth
+const GARDEN_RAIL_Y_LOW := 0.18        ## lower rail height off the foot plane
+const GARDEN_RAIL_Y_HIGH := 0.40       ## upper rail height off the foot plane
+const GARDEN_FENCE_WHITE := Color(0.95, 0.95, 0.92)     ## soft white pickets (not clinical pure white)
+const GARDEN_COIN_R := 0.24            ## ambient ground-coin radius
+const GARDEN_COIN_LIFT := 0.02         ## metres above the grass so a coin rests, doesn't sink
+
+## A winding light-tan PATH curving from just in front of the dog back to a small HOUSE in the
+## upper-right (099, goal directive #2). The path is a flat ribbon mesh laid on the grass (built
+## from a Curve3D so it genuinely winds, not a straight quad); the house is a warm box + a blue
+## gable roof at its far end. Both sit above the horizon-side of the grass and read as "home in the
+## distance", framing the composition without occluding the centred dog.
+func _setup_path_to_house(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		return
+	var c := box.get_center()
+	var foot_y := box.position.y
+	var y := foot_y + GARDEN_PATH_LIFT
+	var house_x := c.x + GARDEN_HOUSE_RIGHT
+	var house_z := c.z - GARDEN_HOUSE_DIST
+	# The path curve: starts just in front of the dog, sweeps right and back toward the house — a
+	# gentle S so it reads as "winding" rather than a ruler line. Curve3D.tessellate() adaptively
+	# samples it into points we ribbon between.
+	var curve := Curve3D.new()
+	curve.add_point(Vector3(c.x - 0.1, y, c.z - 0.6))                                  # emerges just behind the dog
+	curve.add_point(Vector3(c.x + 0.5, y, c.z - 3.6))
+	curve.add_point(Vector3(c.x + GARDEN_FENCE_PATH_X, y, c.z - GARDEN_FENCE_DIST))    # threads the fence gate gap
+	curve.add_point(Vector3(house_x, y, house_z + 0.7))                               # ends at the house door
+	var pts := curve.tessellate(4, 2.0)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var halfw := GARDEN_PATH_WIDTH * 0.5
+	for i in range(pts.size() - 1):
+		var a: Vector3 = pts[i]
+		var b: Vector3 = pts[i + 1]
+		var dir := b - a
+		dir.y = 0.0
+		if dir.length() < 0.0001:
+			continue
+		dir = dir.normalized()
+		var perp := Vector3(-dir.z, 0.0, dir.x) * halfw
+		var al := a - perp
+		var ar := a + perp
+		var bl := b - perp
+		var br := b + perp
+		st.set_normal(Vector3.UP)
+		st.add_vertex(al)
+		st.set_normal(Vector3.UP)
+		st.add_vertex(ar)
+		st.set_normal(Vector3.UP)
+		st.add_vertex(br)
+		st.set_normal(Vector3.UP)
+		st.add_vertex(al)
+		st.set_normal(Vector3.UP)
+		st.add_vertex(br)
+		st.set_normal(Vector3.UP)
+		st.add_vertex(bl)
+	var path_mat := StandardMaterial3D.new()
+	path_mat.albedo_color = GARDEN_PATH_TAN
+	# Unshaded: the ribbon reads as an even flat tan (like the goal's path) regardless of the sun
+	# angle or triangle winding — a shaded flat strip came out dark from the grazing sun.
+	path_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	path_mat.cull_mode = BaseMaterial3D.CULL_DISABLED  # ribbon is viewed top-down — never back-face cull it
+	var path := MeshInstance3D.new()
+	path.name = "GardenPath"
+	path.mesh = st.commit()
+	path.material_override = path_mat
+	path.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(path)
+	_add_garden_house(Vector3(house_x, foot_y, house_z))
+
+## The small stylized house at the far end of the path (099): a warm off-white box (walls) capped
+## with a blue PrismMesh gable roof. Node-local under a "GardenHouse" Node3D anchored at its foot,
+## so the walls sit ON the grass and the roof stacks above. Small in frame at 13 m — reads as a
+## cottage on the horizon, the goal's "home".
+func _add_garden_house(base: Vector3) -> void:
+	var house := Node3D.new()
+	house.name = "GardenHouse"
+	house.position = base
+	add_child(house)
+	var wall_mat := StandardMaterial3D.new()
+	wall_mat.albedo_color = GARDEN_HOUSE_WALL
+	wall_mat.roughness = 0.95
+	wall_mat.metallic = 0.0
+	var walls := MeshInstance3D.new()
+	walls.name = "Walls"
+	var wall_mesh := BoxMesh.new()
+	wall_mesh.size = GARDEN_HOUSE_WALL_SIZE
+	walls.mesh = wall_mesh
+	walls.material_override = wall_mat
+	walls.position = Vector3(0.0, GARDEN_HOUSE_WALL_SIZE.y * 0.5, 0.0)
+	walls.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	house.add_child(walls)
+	var roof_mat := StandardMaterial3D.new()
+	roof_mat.albedo_color = DesignSystem.BLUE   # the goal's blue roof — coheres with the DS BRA blue
+	roof_mat.roughness = 0.85
+	roof_mat.metallic = 0.0
+	var roof := MeshInstance3D.new()
+	roof.name = "Roof"
+	var roof_mesh := PrismMesh.new()
+	roof_mesh.size = GARDEN_HOUSE_ROOF_SIZE   # triangular cross-section in XY → a gable ridge
+	roof.mesh = roof_mesh
+	roof.material_override = roof_mat
+	roof.position = Vector3(0.0, GARDEN_HOUSE_WALL_SIZE.y + GARDEN_HOUSE_ROOF_SIZE.y * 0.5, 0.0)
+	roof.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	house.add_child(roof)
+
+## A white PICKET FENCE across the mid-ground (099): a row of thin posts + two rails, with a GAP
+## where the path passes through (a gate). Reads as the goal's fence separating the near-grass from
+## the path/house band. One "PicketFence" Node3D of small BoxMesh children sharing a white material —
+## static scenery, node-local, GL-Compatibility-safe.
+func _setup_fence_line(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		return
+	var c := box.get_center()
+	var foot_y := box.position.y
+	var z := c.z - GARDEN_FENCE_DIST
+	var fence := Node3D.new()
+	fence.name = "PicketFence"
+	add_child(fence)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = GARDEN_FENCE_WHITE
+	mat.roughness = 0.9
+	mat.metallic = 0.0
+	# Posts across the span, skipping the gate gap where the path crosses.
+	var gap_center := c.x + GARDEN_FENCE_PATH_X
+	var x := c.x - GARDEN_FENCE_HALF_SPAN
+	while x <= c.x + GARDEN_FENCE_HALF_SPAN + 0.01:
+		if absf(x - gap_center) > GARDEN_FENCE_GAP_HALF:
+			var post := MeshInstance3D.new()
+			var pm := BoxMesh.new()
+			pm.size = Vector3(GARDEN_PICKET_W, GARDEN_PICKET_H, GARDEN_PICKET_W)
+			post.mesh = pm
+			post.material_override = mat
+			post.position = Vector3(x, foot_y + GARDEN_PICKET_H * 0.5, z)
+			post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			fence.add_child(post)
+		x += GARDEN_PICKET_SPACING
+	# Two horizontal rails per segment (left of the gap, right of the gap).
+	_add_fence_rails(fence, mat, foot_y, z, c.x - GARDEN_FENCE_HALF_SPAN, gap_center - GARDEN_FENCE_GAP_HALF)
+	_add_fence_rails(fence, mat, foot_y, z, gap_center + GARDEN_FENCE_GAP_HALF, c.x + GARDEN_FENCE_HALF_SPAN)
+
+## Two horizontal rails spanning [x0, x1] at the fence line (099 helper).
+func _add_fence_rails(parent: Node3D, mat: Material, foot_y: float, z: float, x0: float, x1: float) -> void:
+	var length := x1 - x0
+	if length <= 0.05:
+		return
+	var cx := (x0 + x1) * 0.5
+	for ry in [GARDEN_RAIL_Y_LOW, GARDEN_RAIL_Y_HIGH]:
+		var rail := MeshInstance3D.new()
+		var rm := BoxMesh.new()
+		rm.size = Vector3(length, GARDEN_RAIL_H, GARDEN_RAIL_D)
+		rail.mesh = rm
+		rail.material_override = mat
+		rail.position = Vector3(cx, foot_y + ry, z)
+		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(rail)
+
+## Low rounded BUSHES framing the two bottom corners (099): squashed green spheres near the camera
+## so the centred dog is framed, not floating on an empty field. Slight size/tone variation per clump
+## so they read as foliage, not identical balls. One "BorderBushes" Node3D. Placed well to the sides
+## (|x| >= 3.3) and low, so they never occlude the centred dog or its apex silhouette.
+func _setup_border_bushes(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		return
+	var c := box.get_center()
+	var foot_y := box.position.y
+	var bushes := Node3D.new()
+	bushes.name = "BorderBushes"
+	add_child(bushes)
+	var dark := Color(0.18, 0.40, 0.17)   # shadowed foliage
+	var light := Color(0.30, 0.53, 0.24)  # sunlit foliage
+	# [x, z, radius, tone] — clumps flanking the path in the mid-ground. The look-down cone is narrow
+	# up close (near-camera props fall off the sides or hide behind the BRA button), so the bushes seat
+	# a few metres back (z ≈ -5.5) where the frame is wide enough to show them at the left/right, framing
+	# the path/house band — a believable garden border rather than off-screen corner blobs.
+	var specs := [
+		[c.x - 2.0, c.z - 5.4, 0.72, 0.15],
+		[c.x - 2.7, c.z - 6.2, 0.55, 0.55],
+		[c.x + 2.1, c.z - 5.4, 0.68, 0.30],
+		[c.x + 2.8, c.z - 6.2, 0.52, 0.60],
+	]
+	for s in specs:
+		var r: float = s[2]
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = dark.lerp(light, s[3])
+		mat.roughness = 1.0
+		mat.metallic = 0.0
+		var bush := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = r
+		sm.height = r * 2.0
+		bush.mesh = sm
+		bush.material_override = mat
+		# Squash to a low dome and seat its bottom on the foot plane.
+		bush.scale = Vector3(1.0, 0.62, 1.0)
+		bush.position = Vector3(s[0], foot_y + r * 0.62, s[1])
+		bush.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		bushes.add_child(bush)
+
+## Two or three ambient gold COINS on the grass near the dog (099): small BILLBOARD discs (a warm
+## radial gold gradient on a camera-facing quad), the same DS gold as the HUD coin, so the garden
+## carries the game's currency motif as framing juice. Billboarded because the look-down camera is
+## near-horizontal — a flat ground disc would be edge-on and vanish; a billboard reads as a clean
+## gold token from any angle. Ambient only — NOT collectible this task. One "GardenCoins" Node3D,
+## sat just above the grass beside the dog so it never occludes the dog. GL-Compatibility-safe.
+func _setup_ground_coins(dog: Node) -> void:
+	var box := _dog_bounds(dog)
+	if box.size == Vector3.ZERO:
+		return
+	var c := box.get_center()
+	var y := box.position.y + GARDEN_COIN_R + 0.04  # rest the disc just above the grass
+	var coins := Node3D.new()
+	coins.name = "GardenCoins"
+	add_child(coins)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = _coin_texture()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-even gold, not dimmed by the grazing sun
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA      # the round alpha edge IS the coin rim
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED     # always face the camera → a clean disc
+	mat.billboard_keep_scale = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# [x, z] — two left, one right, on the grass BESIDE/behind the dog so they read above the BRA band
+	# (the near foreground is hidden by the button), matching the goal's coins-near-the-dog scatter.
+	var spots := [
+		[c.x - 1.5, c.z - 3.9],
+		[c.x - 1.1, c.z - 4.6],
+		[c.x + 1.6, c.z - 4.1],
+	]
+	for sp in spots:
+		var coin := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(GARDEN_COIN_R * 2.0, GARDEN_COIN_R * 2.0)
+		coin.mesh = quad
+		coin.material_override = mat
+		coin.position = Vector3(sp[0], y, sp[1])
+		coin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		coins.add_child(coin)
+
+## The ambient coin's texture (099): a warm radial gold gradient baked to an Image — a bright core,
+## the DS GOLD body to a crisp edge, a GOLD_DARK rim ring, then a transparent surround so the quad
+## reads as a round coin. Headless-safe (baked Image, no shader).
+func _coin_texture() -> ImageTexture:
+	var d := 64
+	var img := Image.create(d, d, false, Image.FORMAT_RGBA8)
+	var mid := float(d) * 0.5
+	var core := DesignSystem.GOLD.lerp(Color(1, 1, 1), 0.35)  # bright warm highlight
+	for py in d:
+		for px in d:
+			var dist := Vector2(float(px) - mid, float(py) - mid).length() / mid  # 0 centre → 1 edge
+			var col: Color
+			if dist > 1.0:
+				col = Color(0, 0, 0, 0)                       # outside the disc — transparent
+			elif dist > 0.82:
+				col = DesignSystem.GOLD_DARK                  # the rim ring
+			else:
+				col = core.lerp(DesignSystem.GOLD, clampf(dist / 0.82, 0.0, 1.0))
+			img.set_pixel(px, py, col)
+	return ImageTexture.create_from_image(img)
 
 ## Stylized hedge band at the horizon (078/Note-6): the PO found the ground meets the sky at a
 ## HARD cutout line with no props or depth, so the photoreal dog reads as a floating cutout. A
@@ -1038,7 +1332,7 @@ func _setup_contact_shadow(dog: Node) -> void:
 	# 078/Note-6: a touch wider than the bare footprint disc so the darker core lands fully under
 	# the paws and the dog reads planted, not floating (the PO's "appears to float"). Position math
 	# (foot plane / centre — the tested contract) is untouched; only the visual disc grows.
-	var diameter := ContactShadow.radius(box) * 2.0 * 1.12
+	var diameter := ContactShadow.radius(box) * 2.0 * 1.45  # 099: wider soft ellipse — the PO's "faintest grounding" note
 	disc.size = Vector2(diameter, diameter)
 	blob.mesh = disc
 	blob.material_override = _contact_shadow_material()
@@ -1062,11 +1356,14 @@ func _setup_contact_shadow(dog: Node) -> void:
 func _contact_shadow_material() -> StandardMaterial3D:
 	# 078/Note-6: a darker, more SOLID core (a mid stop holds the shadow together before it falls
 	# off) so the dog reads planted at phone size instead of floating — the PO's grounding note.
+	# 099: a firmer, wider grounding than 078 — the PO still read the dog as barely grounded on the
+	# Phase-6 build. Push the dark core out (mid stop 0.55 → 0.62) so more of the ellipse holds shadow
+	# before the soft rim, so the dog reads planted on the grass.
 	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	grad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
 	grad.colors = PackedColorArray([
-		Color(0.0, 0.0, 0.0, 0.58),   # centre: a firm dark core under the paws
-		Color(0.0, 0.0, 0.0, 0.30),   # mid: soft falloff
+		Color(0.0, 0.0, 0.0, 0.62),   # centre: a firm dark core under the paws
+		Color(0.0, 0.0, 0.0, 0.34),   # mid: soft falloff
 		Color(0.0, 0.0, 0.0, 0.0),    # rim: fully transparent
 	])
 	var tex := GradientTexture2D.new()
