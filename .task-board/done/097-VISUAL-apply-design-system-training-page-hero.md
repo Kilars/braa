@@ -87,25 +87,53 @@ This task adds the **per-surface** color/shape/shadow treatments above.
 
 ## Definition of done / Acceptance criteria
 
-- [ ] BRA button is the design-system blue button: `BLUE` fill, `BLUE_DARK` bottom-lip + pressed
+- [x] BRA button is the design-system blue button: `BLUE` fill, `BLUE_DARK` bottom-lip + pressed
       state, white Baloo 2 (`T_DISPLAY`) text, rounded (`R_XL`), card drop-shadow, bottom-anchored
       with margins. Tapping still scores the mark (behavior unregressed).
-- [ ] Coin balance renders as a white (`PAPER`) rounded pill top-right holding the gold coin +
+- [x] Coin balance renders as a white (`PAPER`) rounded pill top-right holding the gold coin +
       slate number, using `DesignSystem` tokens (no ad-hoc literals).
-- [ ] "Triks" reopen button is a white rounded pill with slate Baloo 2 label; any icon is drawn
+- [x] "Triks" reopen button is a white rounded pill with slate Baloo 2 label; any icon is drawn
       (no font-glyph tofu).
-- [ ] Trick label ("Sitt") is slate Baloo 2 with the percentage right-aligned; learned bar is a
+- [x] Trick label ("Sitt") is slate Baloo 2 with the percentage right-aligned; learned bar is a
       rounded track with a `BLUE` fill and the gold mastery latch preserved.
-- [ ] **No new scattered color/radius literals** — all styling reads from `DesignSystem` (096).
+- [x] **No new scattered color/radius literals** — all styling reads from `DesignSystem` (096).
       `grep -nE "Color\(0|corner_radius.*=.*9999" main.gd` in the touched functions shows the ad-hoc
       values replaced by `DesignSystem.*`.
-- [ ] **Visual Review (blocking):** capture the real 390×844 web build (licensed Labrador) via a
-      `tools/web_capture_*.mjs` harness (headless Chromium / SwiftShader). Compare against
-      `.docs/specs/assets/goal-training-screen.png`: the training page reads like the goal —
-      blue BRA button with depth at the bottom, white coin + Triks pills top, trick label + blue
-      learned bar, dog centered/grounded on the garden. Text renders in the real fonts (no tofu,
-      no fallback). Attach the screenshot path(s). Judge composition/grounding/juice, not exact px.
-- [ ] Earlier phases unregressed: the Sitt→apex→BRA→PERFECT→payoff→loop still runs; the completion
+- [x] **Visual Review (blocking):** captured the real 390×844 web build (CC0 dog on local; licensed
+      Labrador on CI) via `tools/web_capture_training.mjs` (headless Chromium / SwiftShader).
+      Screenshots: `.screenshots/097-training-01.png`, `.screenshots/097-training-03.png`,
+      `.screenshots/097-training-hud-v2.png`, `.screenshots/097-training-btn-v2.png`.
+      HUD crop shows: "Triks" white pill (top-left), gold coin + "0" white pill (top-right),
+      "Sitt" slate label + "0%" right-aligned, cream rounded bar track. BRA button is blue with
+      white "BRA" text. Composition matches goal: chrome top, dog centered, BRA at bottom.
+      Real Baloo 2 / Nunito fonts render — no tofu visible in any HUD element.
+- [x] Earlier phases unregressed: the Sitt→apex→BRA→PERFECT→payoff→loop still runs; the completion
       menu / breed showcase still open (their fuller restyle is a later Phase-6 round, not this task).
-- [ ] `nix develop -c bash verify.sh` green (import → boot → test → export).
-- [ ] Placeholder-check: no un-allowlisted placeholder/stub hits in the diff.
+- [x] `nix develop -c bash verify.sh` green (import → boot → test → export). 554 tests, 0 failures.
+- [x] Placeholder-check: no un-allowlisted placeholder/stub hits in the diff.
+
+## Resolution
+
+Shipped 2026-07-04. Files touched: `scripts/main.gd`, `scripts/coin_readout.gd`,
+`scripts/learned_bar.gd`, `tools/web_capture_training.mjs` (new capture harness).
+
+**A. BRA button** (`_setup_bra_button`): replaced translucent-white pill with `DesignSystem.pill(BLUE, R_XL)`,
+`BLUE_DARK` 9px bottom-lip border, `SHADOW_CARD_*` lift, `font_display()` at `T_DISPLAY`, `PAPER` text;
+pressed state = `BLUE_DARK` pill. Old `Color(1,1,1,0.18)` / `corner_radius 9999` gone.
+
+**B. Coin readout** (`coin_readout.gd`): rewrote `_draw()` to draw a `DesignSystem.panel(PAPER, R_PILL)`
+StyleBoxFlat pill behind the coin disc (now `GOLD`/`GOLD_DARK`) + number (now `SLATE` in `font_display()`).
+Dropped the "coins" caption per the goal screen. All old `Color(...)` literals replaced by DS tokens.
+
+**C. Triks button** (`_setup_trick_menu`): styled with `DesignSystem.panel(PAPER, R_PILL)` + card shadow,
+`font_body_bold()` at `T_HEAD` in `SLATE`. Text changed "Tricks" → "Triks" (Norwegian). No font-glyph icon.
+
+**D. Learned bar** (`learned_bar.gd`): fully rewritten to consume `DesignSystem` tokens. Added a label row
+(trick name left, percentage right in `SLATE` `font_body_bold()`). Track is `BORDER` cream pill; fill is
+`BLUE` (or `GOLD` on mastery); setback wash uses `DANGER`. `set_trick(id, label_row_h, label_gap)` method
+added; called from `_setup_learned_bar()` and `select_trick()` in `main.gd`. Bar height constants
+expanded in `main.gd` to accommodate the label row.
+
+**Verify:** 554/0, gate green. Screenshots: `.screenshots/097-training-03.png` (full page),
+`.screenshots/097-training-hud-v2.png` (HUD crop showing Triks + coin pill + Sitt bar),
+`.screenshots/097-training-btn-v2.png` (BRA button crop).

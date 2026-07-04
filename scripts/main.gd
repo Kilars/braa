@@ -726,11 +726,15 @@ const TRICKS_BTN_TOP := COIN_READOUT_TOP
 const TRICKS_BTN_WIDTH := 112.0
 const TRICKS_BTN_HEIGHT := 44.0
 
-## Learned bar (045, P2-4): a thin persistent meter below the coin line, in the clear sky above the
-## dog. Full width inset like the button; the transient readout word flashes below it. Reads by FILL
-## LENGTH so it's legible under reduced motion. Anchored under the coin line now the chip row is gone.
-const LEARNED_BAR_OFFSET_TOP := COIN_READOUT_TOP + CoinReadout.HEIGHT + 14.0  ## 64 — below the coin line
-const LEARNED_BAR_HEIGHT := 16.0
+## Learned bar (045, P2-4): a meter below the coin line holding the trick label + progress track.
+## 097 (Phase 6): expanded to include the trick-name label row above the track itself. The label row
+## is T_TITLE (26px) + a small gap, so the total band is LABEL_ROW + gap + TRACK height.
+## LEARNED_BAR_HEIGHT covers the full band so READOUT_OFFSET_TOP stacks correctly below it.
+const LEARNED_BAR_OFFSET_TOP := COIN_READOUT_TOP + CoinReadout.HEIGHT + 10.0  ## below the coin pill
+const LEARNED_BAR_LABEL_ROW := 26.0   ## px height of the trick-name / percentage row
+const LEARNED_BAR_TRACK_HEIGHT := 12.0 ## px height of the actual bar track
+const LEARNED_BAR_LABEL_GAP := 4.0    ## gap between label row and track
+const LEARNED_BAR_HEIGHT := LEARNED_BAR_LABEL_ROW + LEARNED_BAR_LABEL_GAP + LEARNED_BAR_TRACK_HEIGHT
 const LEARNED_BAR_MARGIN_X := 48.0
 
 ## Timing readout: a band across the upper portrait area, clear of dog and button (024g). Stacked
@@ -1220,28 +1224,26 @@ func _setup_bra_button() -> void:
 	var bra := Button.new()
 	bra.name = "BraButton"
 	bra.text = "BRA"
-	bra.add_theme_font_size_override("font_size", 96)
-	# Subtle circular hit-target backdrop (073/PO note 5): the approach ring (trainer ring)
-	# converges on the button, and a plain transparent button reads as a swipe path.
-	# A semi-transparent rounded pill makes the target read unambiguously as "tap here."
-	# corner_radius 9999 forces a pill/capsule shape regardless of button size — the shorter
-	# dimension caps the rounding, so it's always a fully-rounded capsule on the 192 px-tall
-	# button band (BRA_OFFSET_TOP..BRA_OFFSET_BOTTOM = 280-88 = 192 px).
-	# The fill is a very soft warm white at 18% alpha — present over the grass without
-	# obscuring the dog or the approach ring above it (P2-10 float aesthetic preserved).
-	var normal_style := StyleBoxFlat.new()
-	normal_style.bg_color = Color(1.0, 1.0, 1.0, 0.18)
-	normal_style.corner_radius_top_left = 9999
-	normal_style.corner_radius_top_right = 9999
-	normal_style.corner_radius_bottom_left = 9999
-	normal_style.corner_radius_bottom_right = 9999
-	# Pressed state: slightly brighter fill gives tactile feedback on a finger-down.
-	var pressed_style := StyleBoxFlat.new()
-	pressed_style.bg_color = Color(1.0, 1.0, 1.0, 0.32)
-	pressed_style.corner_radius_top_left = 9999
-	pressed_style.corner_radius_top_right = 9999
-	pressed_style.corner_radius_bottom_left = 9999
-	pressed_style.corner_radius_bottom_right = 9999
+	# Design-system blue button (097, Phase 6): chunky BLUE pill with a BLUE_DARK bottom-lip
+	# for the 3D-pressable depth, white Baloo 2 display text, and a card drop-shadow so it
+	# lifts off the grass. Replaces the translucent-white pill (073/P2-10). Tap→score logic
+	# is unchanged — only the visual style is updated here.
+	bra.add_theme_font_override("font", DesignSystem.font_display())
+	bra.add_theme_font_size_override("font_size", DesignSystem.T_DISPLAY)
+	bra.add_theme_color_override("font_color",         DesignSystem.PAPER)
+	bra.add_theme_color_override("font_pressed_color", DesignSystem.PAPER)
+	bra.add_theme_color_override("font_hover_color",   DesignSystem.PAPER)
+	var normal_style := DesignSystem.pill(DesignSystem.BLUE, DesignSystem.R_XL)
+	normal_style.border_width_bottom = 9                   # darker bottom-lip — 3D pressable look
+	normal_style.border_color        = DesignSystem.BLUE_DARK
+	normal_style.shadow_color  = DesignSystem.SHADOW_CARD_COLOR
+	normal_style.shadow_size   = DesignSystem.SHADOW_CARD_SIZE
+	normal_style.shadow_offset = DesignSystem.SHADOW_CARD_OFFSET
+	# Pressed state: BLUE_DARK fill so the button appears to push down.
+	var pressed_style := DesignSystem.pill(DesignSystem.BLUE_DARK, DesignSystem.R_XL)
+	pressed_style.shadow_color  = DesignSystem.SHADOW_CARD_COLOR
+	pressed_style.shadow_size   = DesignSystem.SHADOW_CARD_SIZE
+	pressed_style.shadow_offset = DesignSystem.SHADOW_CARD_OFFSET
 	# Hover: same as normal on touch devices (hover = finger hovering, not meaningful);
 	# keep it identical so the style doesn't flash on desktop testing.
 	var empty := StyleBoxEmpty.new()
@@ -1273,11 +1275,10 @@ func _setup_bra_button() -> void:
 	_setup_trick_menu(ui)
 	_setup_feedback_form(ui)
 	_setup_breed_showcase(ui)
-	# Apply the Phase-6 design-system theme so the BRA Button (and any Control children
-	# of the CanvasLayer) render in the real bundled fonts (Nunito/Baloo 2) instead of
-	# the tofu-prone fallback. CanvasLayer itself cannot hold a theme (not a Control), so
-	# we set it on the BRA Button — the primary text-rendering Control on this layer.
-	# Full restyle of every surface is task 097's job. (096, Phase 6)
+	# Apply the Phase-6 design-system theme so all Control descendants (including the BRA
+	# Button, learned bar, coin readout) render in the real bundled fonts (Nunito/Baloo 2).
+	# CanvasLayer itself cannot hold a theme (not a Control), so we set it on the BRA Button
+	# — the root Control on this layer (096, Phase 6).
 	_bra_button.theme = DesignSystem.theme()
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
@@ -1378,6 +1379,8 @@ func _setup_learned_bar(ui: CanvasLayer) -> void:
 	bar.offset_bottom = LEARNED_BAR_OFFSET_TOP + LEARNED_BAR_HEIGHT
 	ui.add_child(bar)
 	_learned_bar = bar
+	# Seed the trick name (097 Phase 6): bar now shows label + percentage above the track.
+	_learned_bar.set_trick(_current_trick, LEARNED_BAR_LABEL_ROW, LEARNED_BAR_LABEL_GAP)
 	_learned_bar.set_value(_progress.value, _progress.mastered)
 
 ## The coin readout (068/P3-D3): a small balance label in the top-right corner. Shows the coins the
@@ -1423,8 +1426,23 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
-	btn.text = "Tricks"
-	btn.add_theme_font_size_override("font_size", 22)
+	btn.text = "Triks"
+	# Design-system white pill (097, Phase 6): PAPER background with card shadow + slate
+	# Baloo 2 bold label. Matches the goal-screen top-left pill. No font-glyph icons —
+	# text-only to guarantee no tofu (lesson from 089).
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
+	btn.add_theme_color_override("font_color",         DesignSystem.SLATE)
+	btn.add_theme_color_override("font_pressed_color", DesignSystem.SLATE)
+	btn.add_theme_color_override("font_hover_color",   DesignSystem.SLATE)
+	var tricks_normal := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
+	var tricks_pressed := DesignSystem.panel(DesignSystem.CREAM, DesignSystem.R_PILL)
+	var tricks_empty := StyleBoxEmpty.new()
+	btn.add_theme_stylebox_override("normal",   tricks_normal)
+	btn.add_theme_stylebox_override("hover",    tricks_normal)
+	btn.add_theme_stylebox_override("pressed",  tricks_pressed)
+	btn.add_theme_stylebox_override("disabled", tricks_normal)
+	btn.add_theme_stylebox_override("focus",    tricks_empty)
 	btn.anchor_left = 0.0
 	btn.anchor_right = 0.0
 	btn.anchor_top = 0.0
@@ -1779,6 +1797,7 @@ func select_trick(id: String) -> void:
 	_current_trick = id
 	_progress = _progress_by_trick[id]          # the whole scoring/erosion/bar path now reads the new trick's model
 	if _learned_bar != null:
+		_learned_bar.set_trick(_current_trick, LEARNED_BAR_LABEL_ROW, LEARNED_BAR_LABEL_GAP)  # 097: update label
 		_learned_bar.set_value(_progress.value, _progress.mastered)
 	_publish_current_trick()  # reflect the switch onto the web e2e hook (066/072)
 

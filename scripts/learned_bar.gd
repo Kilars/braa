@@ -1,9 +1,14 @@
 class_name LearnedBar
 extends Control
-## The on-screen learned bar (045, P2-4). A thin horizontal meter near the top of the
-## portrait frame that fills as a trick is learned and visibly DROPS on a bad tap. It is a
-## deliberately dumb renderer, the same split TierReadout uses: TrickProgress decides the
-## value, this node just draws it.
+## The on-screen learned bar (045, P2-4). A composite meter near the top of the portrait frame:
+## a trick-name label (left) + percentage (right) row, then a horizontal track that fills as the
+## trick is learned and visibly DROPS on a bad tap. It is a deliberately dumb renderer, the same
+## split TierReadout uses: TrickProgress decides the value, this node just draws it.
+##
+## 097 (Phase 6): restyled to consume DesignSystem tokens exclusively. The label row is drawn
+## above the track (label_row_h px, set from main's LEARNED_BAR_LABEL_ROW constant), the track
+## uses a BLUE fill on a light BORDER track (no ad-hoc literals), and the gold mastery latch is
+## kept via DesignSystem.GOLD.
 ##
 ## Reduced-motion-safe by construction (X-5 / P1-8): the learned amount reads off the FILL
 ## LENGTH, a static quantity — no motion is required to read it. The brief red setback flash
@@ -18,20 +23,30 @@ extends Control
 ## primary read; the wash just punctuates it).
 const FLASH_FADE := 0.45
 
-const TRACK_COLOR := Color(0.0, 0.0, 0.0, 0.35)        ## the empty channel
-const FILL_COLOR := Color(0.35, 0.78, 0.48)            ## learning — a calm confident green
-const MASTERED_COLOR := Color(1.0, 0.86, 0.30)         ## 100% — the triumphant gold (matches PERFECT)
-const SETBACK_COLOR := Color(0.92, 0.26, 0.22)         ## the red setback wash
-const BORDER_COLOR := Color(0.0, 0.0, 0.0, 0.5)        ## a dark edge so it reads on the bright sky
-const CORNER_INSET := 2.0                              ## fill sits just inside the track edge
+## Track radius — fully rounded ends, consistent with the pill language (097 design system).
+const TRACK_RADIUS := DesignSystem.R_PILL
+const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 
 var value: float = 0.0      ## learned fraction in [0, 1] — the fill length
 var mastered: bool = false  ## drawn as a full gold bar
 var _flash := 0.0           ## current setback-wash intensity in [0, 1]
 
+## Label-row geometry (set from main's constants so there is one source of truth).
+var _label_row_h := 24.0     ## height of the trick name + % row above the track
+var _label_gap   := 4.0      ## vertical gap between label row bottom and track top
+var _trick_id    := "sitt"   ## the trick id whose display name is shown left
+
 func _init() -> void:
 	# Float over the stage; never eat a tap meant for the BRA button below.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+## Feed the trick id and label-row geometry from main so the bar shows the right name.
+## Called from _setup_learned_bar() and select_trick() (097, Phase 6).
+func set_trick(id: String, label_row_h: float, label_gap: float) -> void:
+	_trick_id    = id
+	_label_row_h = label_row_h
+	_label_gap   = label_gap
+	queue_redraw()
 
 ## Set the learned fraction (and mastered state) and request a redraw. Clamped defensively
 ## so a caller can pass the raw model value without pre-clamping.
@@ -56,16 +71,52 @@ func advance(delta: float) -> void:
 func is_flashing() -> bool:
 	return _flash > 0.0
 
+## Map a trick id to its display name (Norwegian).
+static func _display_name(id: String) -> String:
+	match id:
+		"sitt":    return "Sitt"
+		"ligg":    return "Ligg"
+		"legg_deg": return "Legg deg"
+		_:         return id.capitalize()
+
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
-	var track := Rect2(0.0, 0.0, w, h)
-	draw_rect(track, TRACK_COLOR, true)
-	draw_rect(track, BORDER_COLOR, false, 2.0)
+	# ── Label row: trick name left, percentage right ──────────────────────────
+	var font_label := DesignSystem.font_body_bold()
+	var label_size := DesignSystem.T_HEAD  ## 18px — readable without eating too much height
+	var name_str   := _display_name(_trick_id)
+	var pct_str    := "%d%%" % roundi(value * 100.0)
+	if mastered:
+		pct_str = "100%"
+	# Vertically centre text in the label row.
+	var label_y := _label_row_h * 0.5 + font_label.get_ascent(label_size) * 0.5 - font_label.get_descent(label_size) * 0.5
+	draw_string(font_label, Vector2(0.0, label_y), name_str,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, DesignSystem.SLATE)
+	draw_string(font_label, Vector2(0.0, label_y), pct_str,
+		HORIZONTAL_ALIGNMENT_RIGHT, w, label_size, DesignSystem.SLATE_SOFT)
+	# ── Track: rounded rect, starts at label row bottom + gap ────────────────
+	var track_y := _label_row_h + _label_gap
+	var track_h := maxf(0.0, h - track_y)
+	if track_h <= 0.0:
+		return
+	var track := Rect2(0.0, track_y, w, track_h)
+	# Rounded background track — use StyleBoxFlat.draw() for rounded corners.
+	# BORDER at full opacity gives a warm cream-white track that reads against the sky
+	# without being harsh. The pill shape makes it look like a slider rail (097).
+	var track_color := Color(DesignSystem.BORDER.r, DesignSystem.BORDER.g, DesignSystem.BORDER.b, 0.9)
+	var track_sb := DesignSystem.pill(track_color, TRACK_RADIUS)
+	track_sb.draw(get_canvas_item(), track)
+	# Fill.
 	var fill_w := maxf(0.0, (w - 2.0 * CORNER_INSET) * value)
 	if fill_w > 0.0:
-		var fill := Rect2(CORNER_INSET, CORNER_INSET, fill_w, h - 2.0 * CORNER_INSET)
-		draw_rect(fill, MASTERED_COLOR if mastered else FILL_COLOR, true)
+		var fill := Rect2(CORNER_INSET, track_y + CORNER_INSET,
+			fill_w, track_h - 2.0 * CORNER_INSET)
+		var fill_color := DesignSystem.GOLD if mastered else DesignSystem.BLUE
+		var fill_sb := DesignSystem.pill(fill_color, TRACK_RADIUS)
+		fill_sb.draw(get_canvas_item(), fill)
+	# Setback wash.
 	if _flash > 0.0:
-		var wash := Color(SETBACK_COLOR.r, SETBACK_COLOR.g, SETBACK_COLOR.b, SETBACK_COLOR.a * _flash)
+		var wash := Color(DesignSystem.DANGER.r, DesignSystem.DANGER.g,
+			DesignSystem.DANGER.b, DesignSystem.DANGER.a * _flash)
 		draw_rect(track, wash, true)

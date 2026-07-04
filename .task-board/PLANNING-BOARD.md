@@ -32,11 +32,19 @@ shadow `0 6px 20px rgba(29,42,58,.08)`.
   pruned to free space). `DesignSystem.theme()` applied on `_bra_button` (CanvasLayer can't hold a
   theme → the Control child does; a real caller, no dead seam). 52 TDD tests; **verify green 554/0.**
   **Blocking dependency for the phase — now landed.**
-- **097 — VISUAL — apply the design system to the training-page hero surfaces.** Consumes 096:
-  chunky-blue BRA button with darker-blue bottom-lip + Baloo 2 white text, white rounded coin + Triks
-  pills, trick label ("Sitt") + percentage over a blue learned bar. Visual Review against the goal
-  screen (real 390×844 web capture). Chrome/HUD/button only — the garden (078) + contact shadow (031)
-  are already close; the completion-menu/badge restyle + finer components come in later Phase-6 rounds.
+- **097 — VISUAL — apply the design system to the training-page hero surfaces. ✅ DONE.** Consumes
+  096 across `main.gd` (BRA button + Triks button), `coin_readout.gd`, `learned_bar.gd`: chunky-blue
+  BRA button (`pill(BLUE,R_XL)` + `BLUE_DARK` bottom-lip + card shadow + white `font_display()` at
+  T_DISPLAY), white `PAPER` coin pill (gold disc + slate number) top-right, white `panel(PAPER)`
+  "Triks" pill top-left, trick label ("Sitt") + right-aligned percentage over a rounded learned bar
+  (BLUE fill, GOLD mastery latch, DANGER setback). New `tools/web_capture_training.mjs`. **Verify
+  green 554/0.** **Visual Review PASS — orchestrator-verified by eye** (`.screenshots/097-training-03`
+  full page, `097-training-hud-v2` HUD crop, `097-training-btn-v2` button crop): the training page
+  reads like the goal — white Triks + coin pills, "Sitt … 0%" over the rounded bar, dog centered on
+  the garden, blue BRA button with white Baloo-2 text at the bottom; real fonts, no tofu. (Bar shows
+  0% fill in the static capture — the blue fill appears as progress accrues; the live apex ring
+  overlapping the button is the expected in-play tell, not a style bug.) Chrome/HUD/button only — the
+  completion-menu/badge restyle + finer components + garden-vs-DS cohesion come in later Phase-6 rounds.
 
 No open flag needs busting for Phase 6 (its residuals — the human Maren voice, breed models,
 POSTHOG_TOKEN — are owner-gated carry-overs from earlier phases, unrelated to the design system, and
