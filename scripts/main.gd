@@ -1273,6 +1273,12 @@ func _setup_bra_button() -> void:
 	_setup_trick_menu(ui)
 	_setup_feedback_form(ui)
 	_setup_breed_showcase(ui)
+	# Apply the Phase-6 design-system theme so the BRA Button (and any Control children
+	# of the CanvasLayer) render in the real bundled fonts (Nunito/Baloo 2) instead of
+	# the tofu-prone fallback. CanvasLayer itself cannot hold a theme (not a Control), so
+	# we set it on the BRA Button — the primary text-rendering Control on this layer.
+	# Full restyle of every surface is task 097's job. (096, Phase 6)
+	_bra_button.theme = DesignSystem.theme()
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever

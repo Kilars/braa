@@ -6,7 +6,43 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASE 5 CURRENT — father's first Phase-5 PO play-test (2026-07-04) DECLINED sign-off, filed 2 buildable directives → scan replenished 094/095 — 2026-07-04
+## Status — PHASE 6 CURRENT (design system + training-page visuals) — Phase 5 SIGNED OFF 2026-07-04 (`7965b6f`); fresh-phase scan replenished 096/097 — 2026-07-04
+
+**Phase 5 signed off** (owner, `7965b6f`) → **Phase 6 is now current**: *implement the "Bra Design
+System" (`.docs/specs/Bra Design System.html`) IN GODOT so the UI is easy to keep building with it,
+and make the training page read like the goal screen* (`.docs/specs/assets/goal-training-screen.png`:
+white rounded Triks + coin pills, trick label + blue learned bar, dog centered/grounded on the
+garden, big chunky-blue BRA button bottom-anchored).
+
+Phase 6 is greenfield — **no** central styling exists: zero bundled fonts (everything falls back to
+`ThemeDB.fallback_font`, the root cause of the recurring tofu bugs), colors scattered as ad-hoc
+`Color(...)` literals across 7 UI scripts, no radius/spacing/shadow scale, BRA button styled inline
+(`main.gd:1216`). The design tokens (extracted from the HTML): primary blue `#4a90e2` / dark
+`#2f6fbf`, gold `#f5b841`, slate `#5a6b7d`, paper `#fbfbf7` / cream `#f4efe6`, danger `#ff7a85`;
+fonts Baloo 2 / Nunito / JetBrains Mono (all OFL, buildable offline); radius 18 primary; soft card
+shadow `0 6px 20px rgba(29,42,58,.08)`.
+
+**Empty backlog → fresh-phase scan replenished 2 sequenced current-phase tasks (blocking foundation → apply):**
+- **096 — FEATURE — design-system foundation (tokens + real OFL fonts + Godot Theme). ✅ DONE.**
+  New `scripts/design_system.gd` `DesignSystem` token vault (palette / radius / spacing / shadow /
+  type + `font_*()` / `panel()` / `pill()` / `theme()`). Real Baloo 2 / Nunito / JetBrains Mono `.ttf`
+  bundled under `assets/fonts/` (Baloo 2 + Nunito are variable fonts, wght axis via `FontVariation`;
+  fetched by the orchestrator from `nixpkgs#jetbrains-mono` + `nixpkgs#nunito` + the Baloo 2 OFL
+  source — google-fonts was too big for the 100%-full disk, so per-family; `build/` + `.screenshots/`
+  pruned to free space). `DesignSystem.theme()` applied on `_bra_button` (CanvasLayer can't hold a
+  theme → the Control child does; a real caller, no dead seam). 52 TDD tests; **verify green 554/0.**
+  **Blocking dependency for the phase — now landed.**
+- **097 — VISUAL — apply the design system to the training-page hero surfaces.** Consumes 096:
+  chunky-blue BRA button with darker-blue bottom-lip + Baloo 2 white text, white rounded coin + Triks
+  pills, trick label ("Sitt") + percentage over a blue learned bar. Visual Review against the goal
+  screen (real 390×844 web capture). Chrome/HUD/button only — the garden (078) + contact shadow (031)
+  are already close; the completion-menu/badge restyle + finer components come in later Phase-6 rounds.
+
+No open flag needs busting for Phase 6 (its residuals — the human Maren voice, breed models,
+POSTHOG_TOKEN — are owner-gated carry-overs from earlier phases, unrelated to the design system, and
+already flagged). No work-ahead: Phase 6 has abundant buildable current-phase work.
+
+### (previous status — Phase 5, archived) father's first Phase-5 PO play-test (2026-07-04) DECLINED sign-off, filed 2 buildable directives → scan replenished 094/095 — 2026-07-04
 
 The father PO play-tested the Phase-5 foundation (091/092/093 on the live build) and **declined
 sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-04). Two of four stories are confirmed
