@@ -1,0 +1,20 @@
+// Zoom captures for PO Phase-6 review: top HUD region + BRA button region at 3× scale.
+import { createServer } from "node:http";
+import { readFile, mkdir } from "node:fs/promises";
+import { extname, join, normalize } from "node:path";
+import { chromium } from "playwright";
+const bundleDir = process.argv[2];
+const MIME = { ".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".wasm":"application/wasm",".pck":"application/octet-stream",".json":"application/json",".png":"image/png",".svg":"image/svg+xml",".ico":"image/x-icon" };
+const server = createServer(async (req,res)=>{try{let p=decodeURIComponent(new URL(req.url,"http://localhost").pathname);if(p==="/")p="/index.html";const safe=normalize(p).replace(/^(\.\.[/\\])+/,"");const body=await readFile(join(bundleDir,safe));res.setHeader("Content-Type",MIME[extname(safe)]||"application/octet-stream");res.end(body);}catch{res.statusCode=404;res.end("not found");}});
+await new Promise(r=>server.listen(0,"127.0.0.1",r));
+const {port}=server.address();
+await mkdir(".screenshots",{recursive:true});
+const browser=await chromium.launch({args:["--no-sandbox","--disable-dev-shm-usage","--use-gl=swiftshader"]});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3});
+await page.goto(`http://127.0.0.1:${port}/index.html`,{waitUntil:"load",timeout:60000});
+await page.waitForFunction("window.__appReady === true",undefined,{timeout:120000});
+await page.waitForTimeout(3500);
+await page.screenshot({path:".screenshots/po-p6-hud-zoom.png", clip:{x:0,y:0,width:390,height:150}});
+await page.screenshot({path:".screenshots/po-p6-bra-zoom.png", clip:{x:0,y:690,width:390,height:154}});
+console.log("saved hud-zoom + bra-zoom");
+await browser.close();server.close();

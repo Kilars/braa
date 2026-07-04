@@ -81,59 +81,86 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-04
+### PO Review — 2026-07-04 (Phase 6 — design system + training-page ambiance)
 
-Played the fresh local build (`nix develop -c bash verify.sh` → `build/web`, served over http,
-headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer). Autotapped
-the mark loop (`?bra_autotap=1`, dense frame burst `.screenshots/po-p5-mark-06..18`) and drove the
-menu with real canvas taps (`092-01/02`). **Two of the four Phase-5 stories are genuinely in and
-good — P5-4 and P5-1 — but the phase is not sign-off ready:** the marker word has **no on-screen
-presence at all** (P5-3 is unbuilt), and the stronger-word trade-off (P5-2) is invisible in play.
+Played the fresh local build at HEAD `bf58a75` (the `build/web` pck rebuilt 21:16, after the 097
+commit at 21:15), served over http and driven in headless Chromium at 390×844 — SwiftShader == the
+deployed GL Compatibility renderer. Idle composition captured (`.screenshots/po-p6-idle-a/b/c.png`),
+the mark loop autotapped (`?bra_autotap=1`, dense burst `.screenshots/po-p6-mark-00..29.png`), the
+top HUD and BRA button zoomed at 3× (`.screenshots/po-p6-hud-zoom.png`, `po-p6-bra-zoom.png`), and
+the completion menu popped on mastery (`.screenshots/po-p6-menu.png`). **Zero console errors on
+every run.** The design-system **foundation** (096) and the **training-page HUD/BRA restyle** (097)
+are genuinely in and good — but Phase 6 promises the DS applied to **"all aspects of game, menu,
+training page visuals etc."** and the goal training screen, and two large surfaces still fall short:
+the **completion menu ignores the design system entirely**, and the **garden is nowhere near the
+goal composition**. Not sign-off ready.
 
 **What's working (do NOT re-task):**
-- **P5-4 — load/swap in the menu.** The "Marker words" section renders in the completion menu
-  (Bra! / Dyktig! / Flink! / Super! / Kjempebra!) with Active / Switch / Locked badges. A real tap
-  on an unlocked word swaps the active word (Bra! Active → Dyktig! Active, Bra! → Switch) and the
-  menu stays open — no extra in-round button, X-2 holds (`.screenshots/092-01-words-section.png`,
-  `092-02-dyktig-loaded.png`).
-- **P5-1 — progressive unlock + voiced lines.** Mastering a trick unlocks Dyktig!; the catalog
-  carries a per-word voiced clip (Piper stand-in). The warm human **Maren** delivery is the same
-  owner-gated voice flag as Phase 1 — an honest stand-in, not a blocker.
+- **DS foundation (096).** Token vault + real OFL fonts (Baloo 2 / Nunito / JetBrains Mono) + Godot
+  Theme are live — the training-page text now renders in the real display/body faces, not the
+  fallback. No scattered `Color(...)` literals in the restyled surfaces.
+- **Training-page HUD (097).** White rounded **"Triks"** pill top-left, white **coin** pill (gold
+  coin + count) top-right, slate **"Sitt"** trick label, and the learned bar with a right-aligned
+  `%` readout — all reading as the DS light aesthetic (`.screenshots/po-p6-hud-zoom.png`). Matches
+  the goal HUD's structure.
+- **BRA button.** Big rounded **BLUE** button anchored at the bottom with a darker-blue **bottom-lip
+  depth** and cream Baloo **"BRA"** display text (`.screenshots/po-p6-bra-zoom.png`) — the goal's
+  button, well delivered.
+- **Word pop (P5 carry-over).** On a successful mark the fired word ("Bra!") pops and floats up from
+  the BRA button, gold and distinct from the top-centre "PERFECT" verdict
+  (`.screenshots/po-p6-mark-12.png`). No regression from the Phase-5 sign-off; the core loop
+  (idle → sit → face-camera → apex → mark → PERFECT + word pop → joyful reaction → loop) replays
+  clean, no console errors — no earlier-phase regression.
 
-**Improvements (buildable this phase):**
+**Bugfix / Change (buildable this phase):**
 
-1. **P5-3 — the marker word never appears on screen. Build the word pop.**
-   *What I saw:* on a successful mark the only on-screen text is the **"PERFECT"** timing verdict at
-   top-centre; the BRA button always reads "BRA"; nothing pops, floats, or bursts for the word
-   itself (frame `.screenshots/po-p5-mark-16.png` is a scored apex — "PERFECT" up top, ghosted
-   "BRA" button, no word). Loading Dyktig! changes only the audio — visually the mark is byte-identical
-   to base "bra."
-   *Why it's wrong:* Phase 5's whole headline is *collectible marker words*, and P5-3 requires a
-   "big, juicy, on-beat word burst … floats up from the BRA button." Right now the collection is
-   invisible in the one moment it should pay off — the player can't see which word fired, so
-   unlocking and loading a word has no on-screen reward. During actual play the phase reads as
-   "nothing changed."
-   *What good looks like:* on every successful mark, the **word that actually fired** (Bra! / Dyktig!
-   / Super! / Kjempebra!) bursts big and juicy on the beat — floating up from the BRA button and
-   fading — landing exactly with the voice + the dog's reaction. It must read as warm praise, be
-   visually **distinct from and not collide with** the "PERFECT" verdict already at top-centre, and
-   honour X-5 (reduced motion: dampen the float, never drop the word). Because it shows the word that
-   *actually fired*, it also makes the P5-2 cooldown legible (see 2): when a cooling stronger word
-   falls back to base, the pop reads "Bra!", so the fallback is visible instead of a silent swap.
+1. **The completion menu ignores the design system — restyle it to the DS.**
+   *What I saw:* mastering Sitt pops the **Tricks** menu, and it is still the **old dark-navy panel
+   with a gold hairline border, gold section labels, and gold row badges** (`.screenshots/po-p6-menu.png`)
+   — the Phase-3/5 theme, untouched by 096/097. Its three action buttons even mix languages
+   ("Vis frem hundene" / "Give feedback" / "Keep training").
+   *Why it's wrong:* Phase 6 explicitly scopes the DS to **"menu … visuals etc."** The menu is the
+   single largest UI surface, and right next to the now-light training page it reads as **two
+   different apps** — a dark modal over a bright, paper-pill garden. The DS Theme (SLATE-on-light)
+   was clearly never applied here.
+   *What good looks like:* the menu is a **light PAPER card** built from the DS tokens — `panel()`
+   surface (PAPER bg, hairline BORDER, soft card shadow, `R_LG` corners), **SLATE** headings/body in
+   the Baloo/Nunito faces, **BLUE** for the active/primary accent (active trick, active word,
+   selected breed), **GOLD** reserved for the coin only, DS **pill** rows for tricks / breeds /
+   marker words, and the three actions as DS buttons (primary BLUE "Keep training", secondary paper
+   pills). Same information + interactions, DS skin — so opening the menu no longer breaks the visual
+   language. While here, make the three action buttons one language (Norwegian, to match the rows).
 
-2. **P5-2 — the stronger-word trade-off is imperceptible; surface the cooldown.**
-   *What I saw:* loaded Dyktig! (window_scale 1.15, cooldown 2 marks). The menu word rows show only
-   Active / Switch / Locked — no resting/cooldown state (`092-02`); in play there is no cue that a
-   stronger word has gone on cooldown and is now firing base "bra" instead. The downside exists in
-   the logic but is invisible to the player.
-   *Why it's wrong:* P5-2 asks that loading a stronger word be "a genuine choice, not an obvious
-   upgrade." A cost the player can't see isn't a trade-off — right now a stronger word looks like a
-   pure win, and the rest that's supposed to balance it happens off-screen.
-   *What good looks like:* the cooldown is surfaced where the player decides. At minimum the menu
-   word row shows a "Resting (n)" / cooldown badge while a word is cooling, so the cost is readable
-   before loading; combined with the fallback pop from (1), the player both sees the stronger word
-   fire and sees it rest afterward. Ship this together with P5-3.
+**Improvement (buildable this phase):**
 
-_Not signing off: P5-3 is unbuilt and P5-2 is illegible in play. The prior Phase-3 review pass and
-the owner's actionable notes (1–7, tasks 070–079 + 077) are archived in the Phase-3 sign-off above
-and in git history._
+2. **The garden composition falls well short of the goal training screen — build the ambiance.**
+   *What I saw:* the running garden is **noisy blocky FBM grass + a blurred sun/horizon and nothing
+   else** — no path, no house, no fence, no border bushes, no ground coins, and only the faintest
+   grounding under the dog (`.screenshots/po-p6-idle-a.png`, `-idle-c.png`, `-mark-14.png`). The dog
+   reads as **floating on an empty field**.
+   *Why it's wrong:* phase6.md names the goal screen (`.docs/specs/assets/goal-training-screen.png`)
+   as the visual target — *"match the composition, grounding, and juice, not the exact pixels."* The
+   goal garden is a **place**: a winding **path curving back to a small house** top-right, a **white
+   picket fence** line across the mid-ground, **low bushes** framing the corners, a couple of **gold
+   coins on the grass**, a clear **horizon hedge/hills**, and a soft **shadow ellipse grounding** the
+   dog. Ours has none of that layered depth, and the grass reads as pixel noise rather than the
+   goal's smoother painterly grass.
+   *What good looks like:* build the goal's stylized garden — horizon hedge/hills, the path-to-house,
+   the fence line, a few ambient bushes and ground coins framing the centered dog, and a real
+   grounding shadow — composed so the centered dog and the bottom BRA button sit in a believable,
+   juicy garden that reads at a glance. Not pixel-exact; match the **layered composition + grounding
+   + ambient juice**, in the DS palette (sky/grass/BLUE/GOLD) so it coheres with the restyled HUD.
+
+**Polish (buildable this phase, minor):**
+
+3. **Top HUD: add the "Triks" menu glyph and hold legibility over the bright sky.**
+   *What I saw:* the goal pill reads **"☰ Triks"**; ours is just **"Triks"** with no menu glyph, and
+   the whole top HUD washes out faint against the bright sun band at 1× (`.screenshots/po-p6-hud-zoom.png`,
+   `po-p6-idle-a.png`).
+   *Why it's wrong / good:* the hamburger signals "menu" and the goal shows it; the HUD must stay
+   legible over the sky. Add a **drawn** menu glyph (never a tofu/font-fallback box) to the Triks
+   pill and give the pills enough fill/opacity or a subtle shadow to read over the bright sky.
+
+_Not signing off: the completion menu is not on the design system and the garden is far from the goal
+composition — both buildable, neither owner-gated. Phase-5 directives are resolved and archived in the
+Phase-5 sign-off above and in git history._

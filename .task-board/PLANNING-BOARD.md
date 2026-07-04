@@ -6,6 +6,39 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — PHASE 6 CURRENT — father's FIRST Phase-6 PO play-test (2026-07-04, HEAD `bf58a75`) DECLINED sign-off, filed 3 buildable directives → scan replenished 098/099/100 — 2026-07-04
+
+The father PO play-tested the Phase-6 foundation+application (096/097 on the fresh local build) and
+**declined sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-04 — Phase 6). The DS foundation
+(096) + the training-page HUD/BRA restyle (097) are confirmed good, but Phase 6 promises the DS applied
+to **"all aspects of game, menu, training page visuals etc."** and two large surfaces still fall short.
+Three buildable, **non-owner-gated** directives filed → empty backlog → scan replenished 3 current-phase
+tasks (priority order: bugfix/change → improvement → minor polish):
+
+- **098 — VISUAL — restyle the completion menu to the Design System (Bugfix/Change #1). P1.** The
+  `trick_menu.gd` completion modal is still the old **dark-navy panel + gold hairline + gold badges**
+  (`.screenshots/po-p6-menu.png`) — untouched by 096/097, and its 3 action buttons mix languages. Next
+  to the light training page it reads as **two different apps**. Restyle to a light DS `panel(PAPER)` card:
+  SLATE-on-paper in the DS fonts, BLUE the active accent, GOLD only on the coin, DS `pill` rows, DS buttons,
+  all-Norwegian labels. Skin only — the pure classify/`id_at`/signal tests stay green unchanged.
+- **099 — VISUAL — build the garden ambiance to the goal training screen (Improvement #2). P1.** The
+  running garden is noisy FBM grass + a blurred sun/horizon and nothing else — the dog reads as **floating
+  on an empty field** (`.screenshots/po-p6-idle-a/c`). Build the goal's layered place: path curving to a
+  small house top-right, white picket-fence line, corner bushes, a few ground coins, clear horizon
+  hedge/hills, a real grounding shadow, and smoother painterly grass — in the DS palette. Match
+  composition+grounding+juice (not pixel-exact). Scenery must never occlude the centered dog / apex read.
+- **100 — VISUAL — Triks menu glyph + HUD legibility over the sky (Polish #3, minor). P2.** Add a **drawn**
+  hamburger glyph (SLATE bars, never `☰` tofu) to the Triks pill, and lift the top HUD pills (near-opaque
+  PAPER + DS card shadow) so they read over the bright sun band. Ship after 098/099.
+
+All three are current-phase VISUAL directives → Visual Review gated (orchestrator-verified frames), TDD-exempt
+for the pixels (any pure-logic change keeps tests green). No flag-bust / work-ahead applies: the phase has
+abundant buildable current-phase work; the DS residuals (Maren voice, breed models, POSTHOG_TOKEN) are
+owner-gated carry-overs already flagged, unrelated to these directives. Do NOT re-task 096/097 or re-add
+scattered `Color(...)` literals — all UI consumes `DesignSystem`.
+
+---
+
 ## Status — PHASE 6 CURRENT (design system + training-page visuals) — Phase 5 SIGNED OFF 2026-07-04 (`7965b6f`); fresh-phase scan replenished 096/097 — 2026-07-04
 
 **Phase 5 signed off** (owner, `7965b6f`) → **Phase 6 is now current**: *implement the "Bra Design

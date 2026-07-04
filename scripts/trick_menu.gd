@@ -111,56 +111,65 @@ const NAME_SIZE := 26
 const BADGE_SIZE := 18
 const CLOSE_SIZE := 22
 const COIN_R := 11.0
-const OUTLINE := 1.5
 
-## Palette — agrees with the rest of the HUD (mastery gold matches PERFECT / the coin gold; the fill
-## green matches LearnedBar).
-const BACKDROP := Color(0.0, 0.0, 0.0, 0.55)          ## the dimmed veil over the game
-const PANEL_BG := Color(0.10, 0.13, 0.18, 0.98)       ## the modal panel
-const PANEL_BORDER := Color(1.0, 0.86, 0.30, 0.85)    ## the triumphant gold edge
-const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
-const ROW_BG := Color(1.0, 1.0, 1.0, 0.06)            ## an available/learned row panel
-const ROW_BG_LOCKED := Color(1.0, 1.0, 1.0, 0.02)     ## a locked row — barely there
-const NAME_LEARNED := Color(1.0, 0.86, 0.30)          ## learned name — gold
-const NAME_AVAILABLE := Color(1.0, 1.0, 1.0)          ## available name — full white
-const NAME_LOCKED := Color(1.0, 1.0, 1.0, 0.32)       ## locked name — greyed, clearly not tappable
-const BADGE_LEARNED := Color(1.0, 0.86, 0.30)
-const BADGE_AVAILABLE := Color(0.55, 0.86, 0.62)      ## the calm learning green
-const BADGE_LOCKED := Color(1.0, 1.0, 1.0, 0.30)
-const COIN_GOLD := Color(1.0, 0.84, 0.29)
-const COIN_RIM := Color(0.72, 0.53, 0.10)
-const NUMBER_COLOR := Color(1.0, 0.92, 0.45)
-const CLOSE_BG := Color(1.0, 1.0, 1.0, 0.10)
-const CLOSE_TEXT := Color(1.0, 1.0, 1.0, 0.92)
-const SHADOW := Color(0.0, 0.0, 0.0, 0.9)
+## Palette — DS tokens (098, Phase 6). SLATE-on-PAPER, BLUE primary accent, GOLD reserved for coin.
+## BACKDROP: soft INK-based veil, not pure black.
+const BACKDROP := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.45)
+## Panel card: PAPER surface with hairline BORDER — drawn via DesignSystem.panel(PAPER, R_LG).
+const PANEL_BG := DesignSystem.PAPER
+const PANEL_BORDER := DesignSystem.BORDER
+const TITLE_COLOR := DesignSystem.SLATE
+## Row backgrounds: a light CREAM fill for active/available rows, a near-invisible tint for locked.
+const ROW_BG := DesignSystem.CREAM
+const ROW_BG_LOCKED := Color(DesignSystem.SLATE_SOFT.r, DesignSystem.SLATE_SOFT.g, DesignSystem.SLATE_SOFT.b, 0.08)
+## Trick name colours: BLUE for active/learned (primary accent), SLATE for available, SLATE_SOFT for locked.
+const NAME_LEARNED := DesignSystem.BLUE
+const NAME_AVAILABLE := DesignSystem.SLATE
+const NAME_LOCKED := DesignSystem.SLATE_SOFT
+## Badge colours: BLUE for learned/available, SLATE_SOFT for locked.
+const BADGE_LEARNED := DesignSystem.BLUE
+const BADGE_AVAILABLE := DesignSystem.BLUE
+const BADGE_LOCKED := DesignSystem.SLATE_SOFT
+## Coin: GOLD disc + GOLD_DARK rim; coin number in SLATE (legible on light panel).
+const COIN_GOLD := DesignSystem.GOLD
+const COIN_RIM := DesignSystem.GOLD_DARK
+const NUMBER_COLOR := DesignSystem.SLATE
+## Action button colours — primary (dismiss/continue) = BLUE; secondary = CREAM paper pill.
+const CLOSE_BG := DesignSystem.BLUE
+const CLOSE_TEXT := DesignSystem.PAPER
+const SECONDARY_BG := DesignSystem.CREAM
+const SECONDARY_TEXT := DesignSystem.SLATE
 
-## Breed-row palette + badges (079). ACTIVE reads gold like a learned trick; OWNED an available white;
-## BUYABLE the calm coin-gold ("adopt"); LOCKED greyed with its price so the cost reads honestly.
+## Action button labels — all Norwegian, homed as named consts (no scattered literals).
+const LABEL_SHOWCASE  := "Vis frem hundene"
+const LABEL_FEEDBACK  := "Gi tilbakemelding"
+const LABEL_CLOSE     := "Fortsett treningen"
+
+## Breed-row palette + badges (079, DS restyle 098).
 const BREED_BADGE := {
 	BreedState.ACTIVE: "Active",
 	BreedState.OWNED: "Switch",
 	BreedState.BUYABLE: "Adopt",
 	BreedState.LOCKED: "Locked",
 }
-const BREED_NAME_ACTIVE := Color(1.0, 0.86, 0.30)     ## the running dog — gold
-const BREED_NAME_OWNED := Color(1.0, 1.0, 1.0)        ## owned, tap to switch — white
-const BREED_NAME_BUYABLE := Color(1.0, 1.0, 1.0)      ## affordable — white
-const BREED_NAME_LOCKED := Color(1.0, 1.0, 1.0, 0.34) ## can't afford — greyed
-const BREED_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)     ## the "Breeds" subheading
-const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)         ## a thin dark rim so a pale coat chip reads on the panel
+const BREED_NAME_ACTIVE  := DesignSystem.BLUE        ## the running dog — primary accent
+const BREED_NAME_OWNED   := DesignSystem.SLATE       ## owned, tap to switch — slate body text
+const BREED_NAME_BUYABLE := DesignSystem.SLATE       ## affordable — slate body text
+const BREED_NAME_LOCKED  := DesignSystem.SLATE_SOFT  ## can't afford — greyed, clearly not tappable
+const BREED_SUBHEAD      := DesignSystem.SLATE_SOFT  ## the "Breeds" subheading — secondary
+const SWATCH_RIM         := DesignSystem.BORDER      ## hairline rim so a pale coat chip reads on paper
 
-## Marker-word-row palette + badges (092). ACTIVE reads gold (the firing word); UNLOCKED white (tap
-## to switch); LOCKED greyed (not yet earned — never tappable, never a faked clip).
+## Marker-word-row palette + badges (092, DS restyle 098).
 const WORD_BADGE := {
 	WordState.ACTIVE:   "Active",
 	WordState.UNLOCKED: "Switch",
 	WordState.LOCKED:   "Locked",
 }
-const WORD_NAME_ACTIVE  := Color(1.0, 0.86, 0.30)      ## the firing word — gold
-const WORD_NAME_UNLOCKED := Color(1.0, 1.0, 1.0)       ## switchable — white
-const WORD_NAME_LOCKED  := Color(1.0, 1.0, 1.0, 0.34)  ## not yet earned — greyed
-const WORD_SUBHEAD := Color(1.0, 1.0, 1.0, 0.66)       ## the "Marker words" subheading
-const WORD_COST_HINT := Color(1.0, 1.0, 1.0, 0.42)     ## dimmed cost hint (095, P5-2) — secondary, never competes with name
+const WORD_NAME_ACTIVE   := DesignSystem.BLUE        ## the firing word — primary accent
+const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
+const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
+const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
+const WORD_COST_HINT     := DesignSystem.SLATE_SOFT  ## dimmed cost hint (095, P5-2) — secondary
 
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
@@ -491,72 +500,80 @@ func _gui_input(event: InputEvent) -> void:
 
 # ---- rendering ------------------------------------------------------------------------------------
 
-func _draw_text_outlined(font: Font, pos: Vector2, text: String, fsize: int, color: Color,
+## Draw text crisp on the light PAPER surface — no heavy black halo (that was for dark-navy legibility).
+## On paper, text renders SLATE-on-paper; we use crisp draw_string only.
+func _draw_text(font: Font, pos: Vector2, text: String, fsize: int, color: Color,
 		align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
-	for o in [Vector2(-OUTLINE, 0), Vector2(OUTLINE, 0), Vector2(0, -OUTLINE), Vector2(0, OUTLINE)]:
-		draw_string(font, pos + o, text, align, width, fsize, SHADOW)
 	draw_string(font, pos, text, align, width, fsize, color)
 
+## Trim `text` to at most `max_w` pixels, appending "…" when it would overflow — so a long name
+## (e.g. "Chocolate Labrador") never runs under its right-aligned badge on the light DS card. Pure
+## measurement + string trim; no geometry change. Returns `text` unchanged when it already fits.
+func _elide(font: Font, text: String, fsize: int, max_w: float) -> String:
+	if max_w <= 0.0 or font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= max_w:
+		return text
+	var ell := "…"
+	var out := text
+	while out.length() > 1 and font.get_string_size(out + ell, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > max_w:
+		out = out.substr(0, out.length() - 1)
+	return out.strip_edges(false, true) + ell
+
 func _draw() -> void:
-	var font := ThemeDB.fallback_font
-	# The dimmed veil over the whole game, then the centred panel.
+	var f_display   := DesignSystem.font_display()
+	var f_bold      := DesignSystem.font_body_bold()
+	var f_body      := DesignSystem.font_body()
+	# The dimmed veil over the whole game, then the centred PAPER card.
 	draw_rect(Rect2(Vector2.ZERO, size), BACKDROP, true)
 	var panel := _panel_rect()
 	draw_style_box(_panel_box(), panel)
-	# Header: the "Tricks" title on the left, the drawn coin + balance on the right.
+	# Header: the "Tricks" title on the left (display font), the drawn coin + balance on the right.
 	var hx := panel.position.x + PANEL_PAD
 	var hy := panel.position.y + PANEL_PAD
-	var title_baseline := hy + font.get_ascent(TITLE_SIZE)
-	_draw_text_outlined(font, Vector2(hx, title_baseline), "Tricks", TITLE_SIZE, TITLE_COLOR)
-	_draw_coins(font, panel, hy)
+	var title_baseline := hy + f_display.get_ascent(TITLE_SIZE)
+	_draw_text(f_display, Vector2(hx, title_baseline), "Tricks", TITLE_SIZE, TITLE_COLOR)
+	_draw_coins(f_display, panel, hy)
 	# The trick rows.
 	for i in _rows.size():
-		_draw_row(font, i)
+		_draw_row(f_bold, f_body, i)
 	# The breeds section (079): a subheading + one row per shipped breed (swatch, name, state/price).
 	if not _breeds.is_empty():
-		var sub_baseline := _breeds_top() + font.get_ascent(BADGE_SIZE)
-		_draw_text_outlined(font, Vector2(panel.position.x + PANEL_PAD, sub_baseline), "Breeds",
+		var sub_baseline := _breeds_top() + f_bold.get_ascent(BADGE_SIZE)
+		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, sub_baseline), "Breeds",
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
-			_draw_breed_row(font, i)
+			_draw_breed_row(f_bold, f_body, i)
 	# The marker words section (092): a subheading + one row per catalog word (Active/Unlocked/Locked).
 	# Zero-height when no words are fed, so the trick-only + breeds-only geometry (072/079) is unchanged.
 	if not _words.is_empty():
-		var word_sub_baseline := _words_top() + font.get_ascent(BADGE_SIZE)
-		_draw_text_outlined(font, Vector2(panel.position.x + PANEL_PAD, word_sub_baseline), "Marker words",
+		var word_sub_baseline := _words_top() + f_bold.get_ascent(BADGE_SIZE)
+		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, word_sub_baseline), "Marker words",
 			BADGE_SIZE, WORD_SUBHEAD)
 		for i in _words.size():
-			_draw_word_row(font, i)
-	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. A gold-tinted pill so it
-	# reads as the collection surface, distinct from the subtle secondary feedback/close pills below.
+			_draw_word_row(f_bold, f_body, i)
+	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. Secondary paper pill
+	# so it reads as part of the DS footer, distinct from the primary BLUE close button.
 	if not _breeds.is_empty():
 		var sr := _showcase_rect()
-		draw_rect(sr, Color(1.0, 0.86, 0.30, 0.16), true)
-		var sb := sr.position.y + sr.size.y * 0.5 + font.get_ascent(CLOSE_SIZE) * 0.5 - font.get_descent(CLOSE_SIZE) * 0.5
-		_draw_text_outlined(font, Vector2(sr.position.x, sb), "Vis frem hundene", CLOSE_SIZE,
-			Color(1.0, 0.90, 0.55, 0.95), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
-	# The "Give feedback" pill — subtle-but-present, distinct from trick/breed rows (085, X-8).
-	# Same full-width pill shape and draw style as the close button, but at a slightly lower alpha
-	# so it reads as secondary/optional (not competing with the trick/breed choices above it).
+		draw_style_box(DesignSystem.pill(SECONDARY_BG, DesignSystem.R_MD), sr)
+		var sb := sr.position.y + sr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
+		_draw_text(f_bold, Vector2(sr.position.x, sb), LABEL_SHOWCASE, CLOSE_SIZE,
+			SECONDARY_TEXT, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
+	# The "Gi tilbakemelding" pill — secondary paper pill, always reachable above the close button (085, X-8).
 	var fr := _feedback_rect()
-	draw_rect(fr, Color(1.0, 1.0, 1.0, 0.07), true)
-	var fb := fr.position.y + fr.size.y * 0.5 + font.get_ascent(CLOSE_SIZE) * 0.5 - font.get_descent(CLOSE_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(fr.position.x, fb), "Give feedback", CLOSE_SIZE, Color(1.0, 1.0, 1.0, 0.70),
+	draw_style_box(DesignSystem.pill(SECONDARY_BG, DesignSystem.R_MD), fr)
+	var fb := fr.position.y + fr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
+	_draw_text(f_bold, Vector2(fr.position.x, fb), LABEL_FEEDBACK, CLOSE_SIZE, SECONDARY_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, fr.size.x)
-	# The close ("Keep training") button.
+	# The "Fortsett treningen" close button — primary BLUE pill (the main action).
 	var cr := _close_rect()
-	draw_rect(cr, CLOSE_BG, true)
-	var cb := cr.position.y + cr.size.y * 0.5 + font.get_ascent(CLOSE_SIZE) * 0.5 - font.get_descent(CLOSE_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(cr.position.x, cb), "Keep training", CLOSE_SIZE, CLOSE_TEXT,
+	draw_style_box(DesignSystem.pill(CLOSE_BG, DesignSystem.R_MD), cr)
+	var cb := cr.position.y + cr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
+	_draw_text(f_bold, Vector2(cr.position.x, cb), LABEL_CLOSE, CLOSE_SIZE, CLOSE_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
 
 func _panel_box() -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = PANEL_BG
-	box.set_corner_radius_all(int(RADIUS))
-	box.border_color = PANEL_BORDER
-	box.set_border_width_all(2)
-	return box
+	## PAPER card with hairline BORDER + card shadow via the DS builder (098, Phase 6).
+	return DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_LG)
 
 ## The drawn coin disc + balance, right-aligned in the header band (reuses the CoinReadout motif so no
 ## font-glyph tofu — bug 1 can never come back through this seam either).
@@ -572,22 +589,24 @@ func _draw_coins(font: Font, panel: Rect2, top: float) -> void:
 	draw_circle(cc, COIN_R - 2.0, COIN_GOLD)
 	draw_arc(cc, COIN_R * 0.55, 0.0, TAU, 20, COIN_RIM, 1.5)
 	var nb := cy + font.get_ascent(NUMBER_SIZE) * 0.5 - font.get_descent(NUMBER_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(num_x, nb), num, NUMBER_SIZE, NUMBER_COLOR)
+	_draw_text(font, Vector2(num_x, nb), num, NUMBER_SIZE, NUMBER_COLOR)
 
-func _draw_row(font: Font, i: int) -> void:
+func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var r: Dictionary = _rows[i]
 	var rect := _row_rect(i)
 	var st: int = r.state
 	var locked := st == State.LOCKED
-	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
+	# DS pill row background: CREAM for active/available, near-invisible SLATE_SOFT tint for locked.
+	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# Trick name, left; state badge, right.
 	var name_col := NAME_LOCKED
 	if st == State.LEARNED:
 		name_col = NAME_LEARNED
 	elif st == State.AVAILABLE:
 		name_col = NAME_AVAILABLE
-	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(rect.position.x + 14.0, name_baseline),
+	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
+	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
 		display_name(r.id), NAME_SIZE, name_col)
 	var badge: String = BADGE[st]
 	var badge_col := BADGE_LOCKED
@@ -595,20 +614,22 @@ func _draw_row(font: Font, i: int) -> void:
 		badge_col = BADGE_LEARNED
 	elif st == State.AVAILABLE:
 		badge_col = BADGE_AVAILABLE
-	var badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
+	var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
+	_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
 
 ## One breed row (079): the honest coat-colour swatch chip on the left, the breed name beside it, and the
 ## state badge on the right — with the adopt price appended for a Buyable/Locked row so the cost reads.
-func _draw_breed_row(font: Font, i: int) -> void:
+func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var b: Dictionary = _breeds[i]
 	var rect := _breed_row_rect(i)
 	var st: int = b.state
 	var locked := st == BreedState.LOCKED
-	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
-	# The coat swatch chip — a filled disc of the real coat colour with a thin dark rim so a pale coat
-	# still reads on the panel. An honest colour chip, never a faked breed image.
+	# DS pill row background: CREAM for active/available/owned, near-invisible tint for locked.
+	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
+	# The coat swatch chip — a filled disc of the real coat colour with a thin BORDER rim so a pale coat
+	# still reads on the paper panel. An honest colour chip, never a faked breed image.
 	var sc := Vector2(rect.position.x + 16.0 + SWATCH_R, rect.position.y + rect.size.y * 0.5)
 	var chip: Color = b.get("tint", Color(1, 1, 1))
 	if locked:
@@ -624,12 +645,15 @@ func _draw_breed_row(font: Font, i: int) -> void:
 	elif st == BreedState.BUYABLE:
 		name_col = BREED_NAME_BUYABLE
 	var name_x := sc.x + SWATCH_R + 12.0
-	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(name_x, name_baseline), str(b.get("name", b.id)), NAME_SIZE, name_col)
+	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
 	# The state badge, right-aligned. Buyable/Locked append the coin price so the cost reads honestly.
 	var badge: String = BREED_BADGE[st]
 	if st == BreedState.BUYABLE or st == BreedState.LOCKED:
 		badge = "%s %d" % [badge, int(b.get("price", 0))]
+	# Elide the name so a long breed ("Chocolate Labrador") never runs under the badge on the card.
+	var badge_w := f_badge.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_SIZE).x
+	var name_max_w := (rect.position.x + rect.size.x - 14.0 - badge_w) - name_x - 10.0
+	_draw_text(f_name, Vector2(name_x, name_baseline), _elide(f_name, str(b.get("name", b.id)), NAME_SIZE, name_max_w), NAME_SIZE, name_col)
 	var badge_col := BREED_NAME_LOCKED
 	if st == BreedState.ACTIVE:
 		badge_col = BADGE_LEARNED
@@ -637,20 +661,20 @@ func _draw_breed_row(font: Font, i: int) -> void:
 		badge_col = BADGE_AVAILABLE
 	elif st == BreedState.BUYABLE:
 		badge_col = COIN_GOLD
-	var badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
+	var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
+	_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
 
 ## One marker-word row (092/093/095): the display text on the left and the state badge on the right.
-## ACTIVE row highlighted gold (the firing word); UNLOCKED white (tap to switch); LOCKED greyed
-## (not yet earned — never tappable, never a faked clip). Mirrors _draw_breed_row.
+## ACTIVE row highlighted BLUE (the firing word — DS primary accent); UNLOCKED SLATE (tap to switch);
+## LOCKED SLATE_SOFT (not yet earned — never tappable, never a faked clip). Mirrors _draw_breed_row.
 ## When the ACTIVE word is on cooldown (093, P5-2) the badge reads "Hviler (n)" with the live
 ## remaining count (095, P5-2) so the size of the rest cost is legible.
 ## For any UNLOCKED or ACTIVE stronger word (cooldown > 0) a small dimmed cost hint is shown
 ## below the name so the player can weigh the trade-off before AND after loading (095, P5-2).
 ## Row dict shape: {id, display, state, cooling?, remaining?, window_scale?, cooldown?}; all
 ## optional keys use .get() with safe defaults so a row missing a key never errors.
-func _draw_word_row(font: Font, i: int) -> void:
+func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var w: Dictionary = _words[i]
 	var rect := _word_row_rect(i)
 	var st: int = w.state
@@ -659,10 +683,12 @@ func _draw_word_row(font: Font, i: int) -> void:
 	var w_cooldown: int = int(w.get("cooldown", 0))
 	var w_window_scale: float = float(w.get("window_scale", 1.0))
 	var locked := st == WordState.LOCKED
-	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
+	# DS pill row background: CREAM for active/unlocked, near-invisible tint for locked.
+	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# Show a cost hint for any stronger word on UNLOCKED or ACTIVE rows (095, P5-2).
 	# Base "bra" (cooldown == 0) shows no hint — it's the plain free default.
-	# The hint is terse and dimmed so it reads secondary to the name/badge.
+	# The hint is terse and dimmed (SLATE_SOFT) so it reads secondary to the name/badge.
 	# Format: "+15% · hviler 2" (wider PERFECT window % · rest cost in marks).
 	var show_cost_hint := w_cooldown > 0 and (st == WordState.UNLOCKED or st == WordState.ACTIVE)
 	var cost_hint := ""
@@ -673,30 +699,32 @@ func _draw_word_row(font: Font, i: int) -> void:
 	# the hint line below it, keeping everything within the row height.
 	var name_mid_y := rect.position.y + rect.size.y * 0.5
 	if show_cost_hint:
-		name_mid_y = rect.position.y + rect.size.y * 0.5 - font.get_ascent(BADGE_SIZE) * 0.5 - 1.0
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(BADGE_SIZE) * 0.5 - 1.0
 	# The word display text (e.g. "Dyktig!"), left-aligned.
 	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
 	# so it reads as "loaded but unavailable this round" rather than fully locked.
+	## Cooling: BLUE at 0.45 alpha — same hue as BLUE but clearly resting.
 	var name_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE:
-		name_col = WORD_NAME_ACTIVE if not cooling else Color(1.0, 0.86, 0.30, 0.55)
+		name_col = WORD_NAME_ACTIVE if not cooling else Color(DesignSystem.BLUE.r, DesignSystem.BLUE.g, DesignSystem.BLUE.b, 0.45)
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
-	var name_baseline := name_mid_y + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(rect.position.x + 14.0, name_baseline),
+	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
+	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
 		str(w.get("display", w.id)), NAME_SIZE, name_col)
-	# Cost hint below the name (095, P5-2): dimmed secondary text for UNLOCKED/ACTIVE stronger words.
+	# Cost hint below the name (095, P5-2): SLATE_SOFT secondary text for UNLOCKED/ACTIVE stronger words.
 	if show_cost_hint:
-		var hint_baseline := name_mid_y + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5 + font.get_ascent(BADGE_SIZE) + 2.0
-		_draw_text_outlined(font, Vector2(rect.position.x + 14.0, hint_baseline),
+		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(BADGE_SIZE) + 2.0
+		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
 			cost_hint, BADGE_SIZE, WORD_COST_HINT)
 	# The state badge, right-aligned. A cooling ACTIVE word shows "Hviler (n)" (resting, n marks
 	# left) so the size of the rest cost is legible — was a bare "Hviler" before 095.
+	## Cooling badge: SLATE_SOFT at 0.70 alpha — dimmed, same family as locked, distinct from active.
 	var word_badge: String
 	var word_badge_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE and cooling:
-		word_badge = "Hviler (%d)" % remaining          ## (Norwegian: resting) — on cooldown, n marks left
-		word_badge_col = Color(1.0, 0.78, 0.20, 0.70)  ## dimmed gold: active but unavailable
+		word_badge = "Hviler (%d)" % remaining
+		word_badge_col = Color(DesignSystem.SLATE_SOFT.r, DesignSystem.SLATE_SOFT.g, DesignSystem.SLATE_SOFT.b, 0.70)
 	elif st == WordState.ACTIVE:
 		word_badge = WORD_BADGE[WordState.ACTIVE]
 		word_badge_col = BADGE_LEARNED
@@ -705,6 +733,6 @@ func _draw_word_row(font: Font, i: int) -> void:
 		word_badge_col = BADGE_AVAILABLE
 	else:
 		word_badge = WORD_BADGE[st]
-	var word_badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
-	_draw_text_outlined(font, Vector2(rect.position.x, word_badge_baseline), word_badge, BADGE_SIZE, word_badge_col,
+	var word_badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
+	_draw_text(f_badge, Vector2(rect.position.x, word_badge_baseline), word_badge, BADGE_SIZE, word_badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
