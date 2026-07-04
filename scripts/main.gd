@@ -917,13 +917,15 @@ const GARDEN_HOUSE_RIGHT := 2.3        ## metres right (+X) — upper-right of f
 const GARDEN_HOUSE_WALL_SIZE := Vector3(1.6, 1.4, 1.4)  ## warm cottage walls, small in frame at ~12 m
 const GARDEN_HOUSE_ROOF_SIZE := Vector3(2.0, 0.85, 1.6) ## gable roof, slight eave overhang
 const GARDEN_HOUSE_WALL := Color(0.96, 0.94, 0.87)      ## warm off-white walls (DS-adjacent paper warmth)
-const GARDEN_PATH_WIDTH := 0.55        ## metres — a narrow winding garden path (not a road)
+const GARDEN_PATH_NEAR_Z := 2.4        ## 101: +Z the ribbon's WIDE near end reaches — foreground, past the dog toward the bottom
+const GARDEN_PATH_WIDTH_NEAR := 1.0    ## 101: ribbon full-width at the foreground near end (widest, but leaves grass margin at the sides)
+const GARDEN_PATH_WIDTH_FAR := 0.55    ## 101: ribbon full-width at the far house end (narrows as it recedes)
 const GARDEN_PATH_TAN := Color(0.82, 0.71, 0.52)        ## medium warm tan, the goal's path colour (drawn unshaded so it reads flat + even)
 const GARDEN_PATH_LIFT := 0.012        ## metres above the grass plane so the path never z-fights
 const GARDEN_FENCE_DIST := 8.5         ## metres ahead (-Z) — the mid-ground line, between dog and house
 const GARDEN_FENCE_HALF_SPAN := 9.0    ## metres each side of centre the fence runs
-const GARDEN_FENCE_PATH_X := 1.6       ## the path's X where it crosses the fence line (a gap opens here)
-const GARDEN_FENCE_GAP_HALF := 1.4     ## half-width of the gate gap the path passes through
+const GARDEN_FENCE_PATH_X := 0.8       ## 101: the path's X where it crosses the fence — near-centre so BOTH fence sides show
+const GARDEN_FENCE_GAP_HALF := 0.8     ## 101: half-width of the gate gap — narrow, so the right fence renders (was 1.4 → ate the right)
 const GARDEN_PICKET_W := 0.06          ## picket post cross-section
 const GARDEN_PICKET_H := 0.55          ## picket post height
 const GARDEN_PICKET_SPACING := 0.42    ## gap between pickets
@@ -932,7 +934,7 @@ const GARDEN_RAIL_D := 0.04            ## rail depth
 const GARDEN_RAIL_Y_LOW := 0.18        ## lower rail height off the foot plane
 const GARDEN_RAIL_Y_HIGH := 0.40       ## upper rail height off the foot plane
 const GARDEN_FENCE_WHITE := Color(0.95, 0.95, 0.92)     ## soft white pickets (not clinical pure white)
-const GARDEN_COIN_R := 0.24            ## ambient ground-coin radius
+const GARDEN_COIN_R := 0.16            ## 101: ambient ground-coin radius — small, so it reads as a coin on the grass, not an orb
 const GARDEN_COIN_LIFT := 0.02         ## metres above the grass so a coin rests, doesn't sink
 
 ## A winding light-tan PATH curving from just in front of the dog back to a small HOUSE in the
@@ -949,18 +951,24 @@ func _setup_path_to_house(dog: Node) -> void:
 	var y := foot_y + GARDEN_PATH_LIFT
 	var house_x := c.x + GARDEN_HOUSE_RIGHT
 	var house_z := c.z - GARDEN_HOUSE_DIST
-	# The path curve: starts just in front of the dog, sweeps right and back toward the house — a
-	# gentle S so it reads as "winding" rather than a ruler line. Curve3D.tessellate() adaptively
-	# samples it into points we ribbon between.
+	# 101: the path curve now RUNS FROM THE FOREGROUND back to the house — a continuous winding ribbon
+	# that emerges wide near the viewer (+Z, past/around the dog toward the bottom), passes near-centre
+	# through the fence gate, then sweeps right to the house door. This reads as real perspective
+	# (widest in front, narrowing as it recedes) instead of the old floating triangle that tapered to a
+	# point at the dog's chest. Curve3D.tessellate() adaptively samples it into points we ribbon between.
 	var curve := Curve3D.new()
-	curve.add_point(Vector3(c.x - 0.1, y, c.z - 0.6))                                  # emerges just behind the dog
-	curve.add_point(Vector3(c.x + 0.5, y, c.z - 3.6))
-	curve.add_point(Vector3(c.x + GARDEN_FENCE_PATH_X, y, c.z - GARDEN_FENCE_DIST))    # threads the fence gate gap
+	curve.add_point(Vector3(c.x + 0.0, y, c.z + GARDEN_PATH_NEAR_Z))                   # wide near end, foreground behind the dog
+	curve.add_point(Vector3(c.x + 0.15, y, c.z - 1.8))                                # threads just behind the dog, drifting right
+	curve.add_point(Vector3(c.x + GARDEN_FENCE_PATH_X, y, c.z - GARDEN_FENCE_DIST))    # threads the fence gate gap (near-centre)
 	curve.add_point(Vector3(house_x, y, house_z + 0.7))                               # ends at the house door
 	var pts := curve.tessellate(4, 2.0)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var halfw := GARDEN_PATH_WIDTH * 0.5
+	# Taper the ribbon half-width along its length: WIDE at the foreground near end (t=0) → NARROW at
+	# the far house end (t=1), so the constant-tan strip reads as a receding path, not an even band.
+	var near_half := GARDEN_PATH_WIDTH_NEAR * 0.5
+	var far_half := GARDEN_PATH_WIDTH_FAR * 0.5
+	var last := float(pts.size() - 1)
 	for i in range(pts.size() - 1):
 		var a: Vector3 = pts[i]
 		var b: Vector3 = pts[i + 1]
@@ -969,11 +977,15 @@ func _setup_path_to_house(dog: Node) -> void:
 		if dir.length() < 0.0001:
 			continue
 		dir = dir.normalized()
-		var perp := Vector3(-dir.z, 0.0, dir.x) * halfw
-		var al := a - perp
-		var ar := a + perp
-		var bl := b - perp
-		var br := b + perp
+		var half_a := lerpf(near_half, far_half, float(i) / last)
+		var half_b := lerpf(near_half, far_half, float(i + 1) / last)
+		var perp := Vector3(-dir.z, 0.0, dir.x)
+		var perp_a := perp * half_a
+		var perp_b := perp * half_b
+		var al := a - perp_a
+		var ar := a + perp_a
+		var bl := b - perp_b
+		var br := b + perp_b
 		st.set_normal(Vector3.UP)
 		st.add_vertex(al)
 		st.set_normal(Vector3.UP)
@@ -1103,15 +1115,16 @@ func _setup_border_bushes(dog: Node) -> void:
 	add_child(bushes)
 	var dark := Color(0.18, 0.40, 0.17)   # shadowed foliage
 	var light := Color(0.30, 0.53, 0.24)  # sunlit foliage
-	# [x, z, radius, tone] — clumps flanking the path in the mid-ground. The look-down cone is narrow
-	# up close (near-camera props fall off the sides or hide behind the BRA button), so the bushes seat
-	# a few metres back (z ≈ -5.5) where the frame is wide enough to show them at the left/right, framing
-	# the path/house band — a believable garden border rather than off-screen corner blobs.
+	# 101: [x, z, radius, tone] — clumps flanking the dog a couple of metres back (z ≈ -3), at |x|≈1.8-2.4.
+	# The camera's horizontal FOV is narrow, so true foreground-corner bushes (|x|>1.8 up close) fall
+	# off-frame; seated at mid-near depth the frustum is wide enough to show them at the left/right, low,
+	# framing the dog + the path/house band. Now that the coins shrank (101) they register as the garden
+	# border rather than being lost behind loud orbs. Low domes → they never occlude the dog or its apex.
 	var specs := [
-		[c.x - 2.0, c.z - 5.4, 0.72, 0.15],
-		[c.x - 2.7, c.z - 6.2, 0.55, 0.55],
-		[c.x + 2.1, c.z - 5.4, 0.68, 0.30],
-		[c.x + 2.8, c.z - 6.2, 0.52, 0.60],
+		[c.x - 1.75, c.z - 2.8, 0.62, 0.15],
+		[c.x - 2.2, c.z - 3.6, 0.50, 0.55],
+		[c.x + 1.85, c.z - 2.8, 0.60, 0.30],
+		[c.x + 2.35, c.z - 3.6, 0.48, 0.60],
 	]
 	for s in specs:
 		var r: float = s[2]
@@ -1151,14 +1164,17 @@ func _setup_ground_coins(dog: Node) -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-even gold, not dimmed by the grazing sun
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA      # the round alpha edge IS the coin rim
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED     # always face the camera → a clean disc
-	mat.billboard_keep_scale = true
+	mat.billboard_keep_scale = true   # GL-Compat needs this true or the billboard collapses edge-on; smallness comes from GARDEN_COIN_R
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	# [x, z] — two left, one right, on the grass BESIDE/behind the dog so they read above the BRA band
-	# (the near foreground is hidden by the button), matching the goal's coins-near-the-dog scatter.
+	# 101: [x, z] — small coins on the grass just BESIDE the dog (a touch behind it), two left + one
+	# right. The camera is only pitched ~17.6° down with a narrow FOV: props in the extreme foreground
+	# fall off the bottom/edges, and side props too close in |x| hide behind the big dog silhouette. At
+	# |x|≈1.4-1.5 and z a little behind the dog they clear the dog's sides yet stay on-screen, reading as
+	# small grounded coins on the grass — the fix for the PO's "oversized orbs floating at shoulder height".
 	var spots := [
-		[c.x - 1.5, c.z - 3.9],
-		[c.x - 1.1, c.z - 4.6],
-		[c.x + 1.6, c.z - 4.1],
+		[c.x - 1.65, c.z - 0.4],
+		[c.x - 1.4, c.z + 0.6],
+		[c.x + 1.7, c.z - 0.3],
 	]
 	for sp in spots:
 		var coin := MeshInstance3D.new()
@@ -1340,7 +1356,7 @@ func _setup_contact_shadow(dog: Node) -> void:
 	# 078/Note-6: a touch wider than the bare footprint disc so the darker core lands fully under
 	# the paws and the dog reads planted, not floating (the PO's "appears to float"). Position math
 	# (foot plane / centre — the tested contract) is untouched; only the visual disc grows.
-	var diameter := ContactShadow.radius(box) * 2.0 * 1.45  # 099: wider soft ellipse — the PO's "faintest grounding" note
+	var diameter := ContactShadow.radius(box) * 2.0 * 1.55  # 101: a touch wider still — the PO still read the grounding faint
 	disc.size = Vector2(diameter, diameter)
 	blob.mesh = disc
 	blob.material_override = _contact_shadow_material()
@@ -1364,14 +1380,14 @@ func _setup_contact_shadow(dog: Node) -> void:
 func _contact_shadow_material() -> StandardMaterial3D:
 	# 078/Note-6: a darker, more SOLID core (a mid stop holds the shadow together before it falls
 	# off) so the dog reads planted at phone size instead of floating — the PO's grounding note.
-	# 099: a firmer, wider grounding than 078 — the PO still read the dog as barely grounded on the
-	# Phase-6 build. Push the dark core out (mid stop 0.55 → 0.62) so more of the ellipse holds shadow
-	# before the soft rim, so the dog reads planted on the grass.
+	# 101: firmer again — the PO's Phase-6 re-review still read the seated dog's grounding as faint.
+	# A darker core (0.62 → 0.72) and a stronger mid (0.34 → 0.42), pushed a touch further out (mid stop
+	# 0.62 → 0.66), so more of the ellipse holds shadow before the soft rim → the dog reads planted.
 	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	grad.offsets = PackedFloat32Array([0.0, 0.66, 1.0])
 	grad.colors = PackedColorArray([
-		Color(0.0, 0.0, 0.0, 0.62),   # centre: a firm dark core under the paws
-		Color(0.0, 0.0, 0.0, 0.34),   # mid: soft falloff
+		Color(0.0, 0.0, 0.0, 0.72),   # centre: a firm dark core under the paws
+		Color(0.0, 0.0, 0.0, 0.42),   # mid: soft falloff
 		Color(0.0, 0.0, 0.0, 0.0),    # rim: fully transparent
 	])
 	var tex := GradientTexture2D.new()

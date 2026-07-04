@@ -83,84 +83,65 @@
 
 ### PO Review — 2026-07-04 (Phase 6 — design system + training-page ambiance)
 
-Played the fresh local build at HEAD `bf58a75` (the `build/web` pck rebuilt 21:16, after the 097
-commit at 21:15), served over http and driven in headless Chromium at 390×844 — SwiftShader == the
-deployed GL Compatibility renderer. Idle composition captured (`.screenshots/po-p6-idle-a/b/c.png`),
-the mark loop autotapped (`?bra_autotap=1`, dense burst `.screenshots/po-p6-mark-00..29.png`), the
-top HUD and BRA button zoomed at 3× (`.screenshots/po-p6-hud-zoom.png`, `po-p6-bra-zoom.png`), and
-the completion menu popped on mastery (`.screenshots/po-p6-menu.png`). **Zero console errors on
-every run.** The design-system **foundation** (096) and the **training-page HUD/BRA restyle** (097)
-are genuinely in and good — but Phase 6 promises the DS applied to **"all aspects of game, menu,
-training page visuals etc."** and the goal training screen, and two large surfaces still fall short:
-the **completion menu ignores the design system entirely**, and the **garden is nowhere near the
-goal composition**. Not sign-off ready.
+Replayed the fresh local build at HEAD `63ee0ea` (`build/web` rebuilt tonight via `verify.sh`, gate
+green, after the 098/099/100 commits), served over http and driven in headless Chromium at 390×844 —
+SwiftShader == the deployed GL Compatibility renderer. Idle composition captured
+(`.screenshots/po-p6-idle-a/b/c.png`), the mark loop autotapped (`?bra_autotap=1`, dense burst
+`.screenshots/po-p6-mark-00..29.png`), the top HUD and BRA button zoomed at 3×
+(`.screenshots/po-p6-hud-zoom.png`, `po-p6-bra-zoom.png`), and the completion menu popped on mastery
+(`.screenshots/po-p6-menu.png`). **Zero console errors on every run.** Big progress this iteration:
+**two of the three prior directives are fixed and pruned** — the menu is now on the design system,
+and the "Triks" glyph + HUD legibility landed. **One directive remains:** the garden now has all the
+goal's *elements* but three of them read as **broken/unfinished**, so the composition still falls
+short of the goal screen. Not sign-off ready — but close.
 
 **What's working (do NOT re-task):**
-- **DS foundation (096).** Token vault + real OFL fonts (Baloo 2 / Nunito / JetBrains Mono) + Godot
-  Theme are live — the training-page text now renders in the real display/body faces, not the
-  fallback. No scattered `Color(...)` literals in the restyled surfaces.
-- **Training-page HUD (097).** White rounded **"Triks"** pill top-left, white **coin** pill (gold
-  coin + count) top-right, slate **"Sitt"** trick label, and the learned bar with a right-aligned
-  `%` readout — all reading as the DS light aesthetic (`.screenshots/po-p6-hud-zoom.png`). Matches
-  the goal HUD's structure.
-- **BRA button.** Big rounded **BLUE** button anchored at the bottom with a darker-blue **bottom-lip
-  depth** and cream Baloo **"BRA"** display text (`.screenshots/po-p6-bra-zoom.png`) — the goal's
-  button, well delivered.
-- **Word pop (P5 carry-over).** On a successful mark the fired word ("Bra!") pops and floats up from
-  the BRA button, gold and distinct from the top-centre "PERFECT" verdict
-  (`.screenshots/po-p6-mark-12.png`). No regression from the Phase-5 sign-off; the core loop
-  (idle → sit → face-camera → apex → mark → PERFECT + word pop → joyful reaction → loop) replays
-  clean, no console errors — no earlier-phase regression.
+- **DS foundation (096) + training-page HUD/BRA (097).** Token vault + real OFL fonts + Godot Theme
+  live; white **"Triks"** + **coin** pills, slate **"Sitt"** label, learned bar with `%` readout
+  (`po-p6-hud-zoom.png`); big rounded **BLUE** BRA button with darker-blue bottom-lip depth
+  (`po-p6-bra-zoom.png`). Matches the goal HUD/button.
+- **Completion menu (098) — prior directive #1 RESOLVED.** Mastering Sitt now pops a **light DS PAPER
+  card** (`po-p6-menu.png`): slate **"Tricks"** heading, pale-pill rows for tricks / breeds / marker
+  words, **BLUE** for active/available accents, **GOLD** reserved to the coin only, hairline border +
+  soft card shadow + rounded corners. The three actions are now **one language** (Norwegian: "Vis
+  frem hundene" / "Gi tilbakemelding" / primary blue "Fortsett treningen"). It no longer reads as a
+  dark modal over a light page — the visual language holds. Pruned from the log.
+- **"Triks" glyph + HUD legibility (100) — prior directive #3 RESOLVED.** The Triks pill now carries
+  the **drawn 3-bar menu glyph** left of the label (no tofu), and both pills read cleanly over the
+  bright sun band at 3× (`po-p6-hud-zoom.png`). Pruned from the log.
+- **Core loop / word pop (P5 carry-over, no regression).** On a mark the fired word ("Bra!") pops and
+  floats up from the BRA button, distinct from the top-centre "PERFECT" (`po-p6-mark-14.png`); the
+  idle → sit → face-camera → apex → mark → PERFECT + word pop → joyful reaction → loop replays clean,
+  zero console errors — no earlier-phase regression.
 
-**Bugfix / Change (buildable this phase):**
+**Improvement (buildable this phase — the one remaining blocker):**
 
-1. **The completion menu ignores the design system — restyle it to the DS.**
-   *What I saw:* mastering Sitt pops the **Tricks** menu, and it is still the **old dark-navy panel
-   with a gold hairline border, gold section labels, and gold row badges** (`.screenshots/po-p6-menu.png`)
-   — the Phase-3/5 theme, untouched by 096/097. Its three action buttons even mix languages
-   ("Vis frem hundene" / "Give feedback" / "Keep training").
-   *Why it's wrong:* Phase 6 explicitly scopes the DS to **"menu … visuals etc."** The menu is the
-   single largest UI surface, and right next to the now-light training page it reads as **two
-   different apps** — a dark modal over a bright, paper-pill garden. The DS Theme (SLATE-on-light)
-   was clearly never applied here.
-   *What good looks like:* the menu is a **light PAPER card** built from the DS tokens — `panel()`
-   surface (PAPER bg, hairline BORDER, soft card shadow, `R_LG` corners), **SLATE** headings/body in
-   the Baloo/Nunito faces, **BLUE** for the active/primary accent (active trick, active word,
-   selected breed), **GOLD** reserved for the coin only, DS **pill** rows for tricks / breeds /
-   marker words, and the three actions as DS buttons (primary BLUE "Keep training", secondary paper
-   pills). Same information + interactions, DS skin — so opening the menu no longer breaks the visual
-   language. While here, make the three action buttons one language (Norwegian, to match the rows).
+1. **The garden has the goal's elements but three of them read as broken — refine the composition.**
+   Task 099 genuinely added the horizon hedge, house, path, fence, coins, bushes and a firmer shadow,
+   and it is a big step up from the empty field. But played at 390×844 (`po-p6-idle-a/b/c.png`,
+   `po-p6-mark-14.png`, and the garden visible behind `po-p6-menu.png`) three elements land wrong and
+   pull the eye:
+   - **The path tapers to a sharp point in mid-field — perspective is inverted.** The tan path is
+     *wide near the house (far)* and *narrows to a floating point* at the dog's chest level, ending in
+     empty grass — the opposite of real perspective, so it reads as a floating triangle, not a path.
+     In the goal the path is a continuous winding ribbon, **widest in the foreground** (nearest the
+     viewer / BRA button) and narrowing as it recedes to the house. *Good:* widen the near end and run
+     the ribbon down past/around the dog toward the bottom so it clearly leads to the house — no
+     mid-field point.
+   - **The coins are oversized and float at the dog's shoulder height.** They read as big golden orbs
+     hovering in mid-field, not coins on the ground (`po-p6-idle-b.png`). In the goal the coins are
+     **small and sit low on the grass** near the corner bushes. *Good:* shrink them and drop them to
+     rest on the grass in the lower third, framing (not crowding) the centered dog.
+   - **The fence is on the left only.** The goal's white picket fence is a **line across the whole
+     mid-ground**, with a gate gap where the path passes; ours has a short segment left of the path
+     and nothing on the right (`po-p6-idle-a/b.png`). *Good:* extend the fence across the right side
+     too, keeping the gate gap for the path.
+   - **Minor:** the grounding shadow under the seated dog is still faint (`po-p6-mark-14.png`) and the
+     corner bushes read weakly next to the loud coins — firm the shadow ellipse a touch and let the
+     bushes register once the coins shrink.
+   Keep everything in the DS palette (sky/grass/BLUE/GOLD) so it coheres with the restyled HUD. Match
+   the goal's **layered composition + grounding**, not the exact pixels.
 
-**Improvement (buildable this phase):**
-
-2. **The garden composition falls well short of the goal training screen — build the ambiance.**
-   *What I saw:* the running garden is **noisy blocky FBM grass + a blurred sun/horizon and nothing
-   else** — no path, no house, no fence, no border bushes, no ground coins, and only the faintest
-   grounding under the dog (`.screenshots/po-p6-idle-a.png`, `-idle-c.png`, `-mark-14.png`). The dog
-   reads as **floating on an empty field**.
-   *Why it's wrong:* phase6.md names the goal screen (`.docs/specs/assets/goal-training-screen.png`)
-   as the visual target — *"match the composition, grounding, and juice, not the exact pixels."* The
-   goal garden is a **place**: a winding **path curving back to a small house** top-right, a **white
-   picket fence** line across the mid-ground, **low bushes** framing the corners, a couple of **gold
-   coins on the grass**, a clear **horizon hedge/hills**, and a soft **shadow ellipse grounding** the
-   dog. Ours has none of that layered depth, and the grass reads as pixel noise rather than the
-   goal's smoother painterly grass.
-   *What good looks like:* build the goal's stylized garden — horizon hedge/hills, the path-to-house,
-   the fence line, a few ambient bushes and ground coins framing the centered dog, and a real
-   grounding shadow — composed so the centered dog and the bottom BRA button sit in a believable,
-   juicy garden that reads at a glance. Not pixel-exact; match the **layered composition + grounding
-   + ambient juice**, in the DS palette (sky/grass/BLUE/GOLD) so it coheres with the restyled HUD.
-
-**Polish (buildable this phase, minor):**
-
-3. **Top HUD: add the "Triks" menu glyph and hold legibility over the bright sky.**
-   *What I saw:* the goal pill reads **"☰ Triks"**; ours is just **"Triks"** with no menu glyph, and
-   the whole top HUD washes out faint against the bright sun band at 1× (`.screenshots/po-p6-hud-zoom.png`,
-   `po-p6-idle-a.png`).
-   *Why it's wrong / good:* the hamburger signals "menu" and the goal shows it; the HUD must stay
-   legible over the sky. Add a **drawn** menu glyph (never a tofu/font-fallback box) to the Triks
-   pill and give the pills enough fill/opacity or a subtle shadow to read over the bright sky.
-
-_Not signing off: the completion menu is not on the design system and the garden is far from the goal
-composition — both buildable, neither owner-gated. Phase-5 directives are resolved and archived in the
-Phase-5 sign-off above and in git history._
+_Not signing off: the garden composition still reads as unfinished (floating path point, oversized
+floating coins, half-built fence) — buildable, not owner-gated. The menu-DS and HUD-glyph directives
+are resolved and pruned; the core loop and earlier phases replay clean with no regression._

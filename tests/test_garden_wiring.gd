@@ -140,3 +140,72 @@ func test_ambient_coins_rest_on_the_grass() -> void:
 		"the coins billboard to the camera so they read as discs, not edge-on slivers")
 	assert_true(mat.albedo_texture != null, "the coins carry a gold gradient texture (the coin face)")
 	main.queue_free()
+
+## 101 (Phase 6 — refine the garden composition to the goal). The PO found three composed elements
+## reading as broken at 390×844: the path perspective was INVERTED (wide at the far house, tapering to
+## a floating point at the dog's chest — no foreground), the coins were oversized/screen-constant orbs
+## floating mid-field, and the fence's gate gap was so wide the right side never showed. These pin the
+## fixed invariants so a regression back to the broken composition can't read green. The LOOK stays
+## Visual-Review-gated; these asserts guard the structural ingredients of the fix.
+
+func test_the_path_runs_from_the_foreground_back_to_the_house() -> void:
+	var main := instantiate_main()
+	var path := main.get_node_or_null("GardenPath") as MeshInstance3D
+	assert_true(path != null, "the garden path is laid (099/101)")
+	var c: Vector3 = main._dog_bounds(main._dog).get_center()
+	var box := path.get_aabb()  # path node sits at origin → local AABB == world
+	var near_z := box.position.z + box.size.z  # the nearest (+Z / foreground) edge of the ribbon
+	var far_z := box.position.z                # the farthest (-Z / house) edge
+	# 101: the ribbon reaches into the FOREGROUND past the dog centre (runs down past/around the dog
+	# toward the bottom), not a stub that floats between the dog's chest and the house (the PO's
+	# "narrows to a floating point at the dog's chest").
+	assert_true(near_z > c.z + 0.8,
+		"the path's near end reaches the foreground past the dog (near_z %.2f > dog_z %.2f + 0.8)" % [near_z, c.z])
+	# And it still recedes a long way toward the distant house — a real receding ribbon, not a patch.
+	assert_true(far_z < c.z - 6.0,
+		"the path recedes far toward the house (far_z %.2f < dog_z %.2f - 6.0)" % [far_z, c.z])
+	main.queue_free()
+
+func test_the_fence_shows_pickets_on_both_sides_of_the_gate() -> void:
+	var main := instantiate_main()
+	var fence := main.get_node_or_null("PicketFence") as Node3D
+	assert_true(fence != null, "the picket fence crosses the mid-ground (099/101)")
+	var c: Vector3 = main._dog_bounds(main._dog).get_center()
+	var gate_x: float = c.x + main.GARDEN_FENCE_PATH_X
+	# Pickets are the square-footprint posts (BoxMesh size.x == picket width); the rails are wide.
+	var left := 0
+	var right := 0
+	for child in fence.get_children():
+		var mi := child as MeshInstance3D
+		if mi == null:
+			continue
+		var bm := mi.mesh as BoxMesh
+		if bm == null or absf(bm.size.x - main.GARDEN_PICKET_W) > 0.001:
+			continue  # skip the wide rails — count posts only
+		if mi.position.x < gate_x:
+			left += 1
+		else:
+			right += 1
+	# 101: the PO saw "a short segment left of the path and nothing on the right" — the gate gap was so
+	# wide it ate the whole visible right side. Both sides must carry real pickets, and the gate must be
+	# narrow enough that the right segment actually renders on-screen.
+	assert_true(left >= 3, "the fence has pickets LEFT of the gate (got %d)" % left)
+	assert_true(right >= 3, "the fence has pickets RIGHT of the gate (got %d)" % right)
+	assert_true(main.GARDEN_FENCE_GAP_HALF <= 0.9,
+		"the gate gap is narrow enough that the right fence shows (gap_half %.2f <= 0.9)" % main.GARDEN_FENCE_GAP_HALF)
+	main.queue_free()
+
+func test_the_coins_are_small_and_grounded_not_floating_orbs() -> void:
+	var main := instantiate_main()
+	var coins := main.get_node_or_null("GardenCoins") as Node3D
+	assert_true(coins != null, "ambient coins rest on the grass (099/101)")
+	var c0 := coins.get_child(0) as MeshInstance3D
+	var quad := c0.mesh as QuadMesh
+	assert_true(quad != null, "the coin is a billboard quad")
+	# 101: the PO saw "big golden orbs hovering in mid-field". The fix is SMALL discs (the old R=0.24 →
+	# 0.48 m diameter read as orbs); this caps the coin size so a regression back to the big orb can't
+	# read green. (Smallness comes from the radius, NOT from turning keep_scale off — the GL-Compat
+	# billboard collapses edge-on without keep_scale, so it must stay true; the size cap is the guard.)
+	assert_true(quad.size.x <= 0.34,
+		"the coin is small (diameter %.2f <= 0.34 m — not an oversized orb)" % quad.size.x)
+	main.queue_free()
