@@ -80,12 +80,41 @@ in-round button.
 
 ## Definition of done / Acceptance criteria
 
-- [ ] `MarkerWords` catalog carries per-word `window_scale` + `cooldown`; base "bra" is identity (1.0 / 0).
-- [ ] **TDD:** cooldown + effect behaviors in §B written red first in `tests/test_marker_words.gd` (or a new `tests/test_word_cooldown.gd`), then green; non-empty assertions.
-- [ ] Firing a stronger word widens the effective PERFECT window (composed with breed×difficulty) **only while not on cooldown**; base "bra" play is byte-identical to today.
-- [ ] A fired stronger word enters cooldown for its `cooldown` marks; during cooldown the mark falls back to base "bra" (no hard-fail, round still one tap).
-- [ ] Base "bra" never cools down and is always available as the default.
-- [ ] Cooldown state is surfaced honestly (menu row treatment and/or fired-word feedback) — no hidden mechanic, no in-round button.
-- [ ] Chosen tie-break rules (what decrements cooldown; switch-away behavior) are documented in the model and covered by a test.
-- [ ] `nix develop -c bash verify.sh` green.
-- [ ] Placeholder-check: the tuning numbers are defensible starting values documented as tunable — not un-attempted stubs; no un-allowlisted marker in the diff.
+- [x] `MarkerWords` catalog carries per-word `window_scale` + `cooldown`; base "bra" is identity (1.0 / 0).
+- [x] **TDD:** cooldown + effect behaviors in §B written red first in `tests/test_marker_words.gd`, then green; 10 new non-empty assertions (488 total / 0 failures).
+- [x] Firing a stronger word widens the effective PERFECT window (composed with breed×difficulty) **only while not on cooldown**; base "bra" play is byte-identical to today.
+- [x] A fired stronger word enters cooldown for its `cooldown` marks; during cooldown the mark falls back to base "bra" (no hard-fail, round still one tap).
+- [x] Base "bra" never cools down and is always available as the default.
+- [x] Cooldown state is surfaced honestly: menu word rows show "Hviler" (resting, dimmed gold) when the ACTIVE word is on cooldown; `_play_payoff` plays the effective (fallback) word's clip so the player hears "bra" while the stronger word rests.
+- [x] Chosen tie-break rules documented in `scripts/marker_words.gd` class comment and covered by tests: (1) cooldown decrements only on successful marks (fire_active(succeeded=true)); (2) switching away and back preserves per-word cooldown state (dict keyed by word id, not the active slot).
+- [x] `nix develop -c bash verify.sh` green (488/0).
+- [x] Placeholder-check: tuning values (bra 1.0/0, dyktig 1.15/2, flink 1.20/2, super 1.30/3, kjempebra 1.45/4) are documented as defensible starting values in the class comment with explicit tuning guidance; no un-allowlisted stubs in the diff.
+
+## Implementation notes
+
+**Tuning values chosen (tune under play-test):**
+- bra: window_scale 1.00, cooldown 0 — identity, always available (Phase-1/2/3 unchanged)
+- dyktig: window_scale 1.15, cooldown 2 — gentle +15% window, 2-mark rest
+- flink: window_scale 1.20, cooldown 2 — +20% window, 2-mark rest
+- super: window_scale 1.30, cooldown 3 — +30% window, 3-mark rest
+- kjempebra: window_scale 1.45, cooldown 4 — +45% window, 4-mark rest
+
+**Window composition seam** (`scripts/main.gd` `_begin_sit()`):
+```
+var _word_scale := _words.effective_window_scale()
+_window = _director.trick_window(_current_trick,
+    _difficulty.scale_radius(_breed.perfect_radius()) * _word_scale,
+    _difficulty.scale_radius(_breed.ok_radius()))
+```
+Only the PERFECT radius is widened; the OK radius is unchanged (the wider window is the reward for loading a stronger word). base "bra" → scale 1.0 → byte-identical.
+
+**Fired-word fallback seam** (`scripts/main.gd` `_play_payoff()`):
+```
+var fired := _words.fire_active(payoff.is_success)
+_payoff.set_active_word(fired)
+_payoff.play(payoff)
+```
+`fire_active(is_success)` returns the effective word id. While the active word is cooling, `fired == "bra"` and the base clip sounds. On a MISS/DEAD (is_success=false), no counter moves.
+
+**Menu cooldown hint** (`scripts/trick_menu.gd` `_draw_word_row()`):
+An ACTIVE word on cooldown shows "Hviler" (Norwegian: resting) as its badge in dimmed gold (Color(1.0, 0.78, 0.20, 0.70)) so the player sees the trade-off. The name also dims (gold at 0.55 alpha). No in-round button; purely informational in the menu.

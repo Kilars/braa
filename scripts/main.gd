@@ -566,8 +566,12 @@ func _begin_sit() -> void:
 	# forgiving temperament gives a touch more grace. Radii compose with 073's late_bias in SitWindow.
 	# Difficulty stacks on top (081, P4-2/P4-4): effective = breed_intrinsic × difficulty.window_scale.
 	# Normal is identity — no change to default play (dormancy).
+	# Marker-word widening stacks on top (093, P5-2): effective_window_scale() returns the active
+	# word's scale when it is available (not cooling), else 1.0. Base "bra" (scale 1.0) + Normal
+	# difficulty + Labrador = byte-identical to pre-093 play (all multipliers = 1.0 × identity).
+	var _word_scale := _words.effective_window_scale()
 	_window = _director.trick_window(_current_trick,
-		_difficulty.scale_radius(_breed.perfect_radius()),
+		_difficulty.scale_radius(_breed.perfect_radius()) * _word_scale,
 		_difficulty.scale_radius(_breed.ok_radius()))
 	_session.open(_window)
 	_engage_face_for_sit()  # turn to face the camera so the apex reads head-on (061, P2-11)
@@ -1602,9 +1606,17 @@ func _breed_rows() -> Array:
 
 ## Build the completion-menu word rows (092, P5-4): the catalog classified against the unlocked set +
 ## the active word id, so each row reads Active / Unlocked / Locked. Order follows the catalog.
+## Extends each row with a `cooling` bool (093, P5-2) so the menu can surface the trade-off
+## honestly: a stronger word that is currently on cooldown reads "Hviler" instead of "Active" so
+## the player sees why the effective word fell back to "bra" this round. This is the minimal legible
+## signal — the full per-round pop (P5-3) is deferred.
 func _word_rows() -> Array:
 	var d := _words.to_dict()
-	return TrickMenu.classify_words(MarkerWords.CATALOG, d.get("unlocked", []), d.get("active", MarkerWords.BASE_ID))
+	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, d.get("unlocked", []), d.get("active", MarkerWords.BASE_ID))
+	for row in rows:
+		var id: String = (row as Dictionary).get("id", "")
+		(row as Dictionary)["cooling"] = _words.is_on_cooldown(id)
+	return rows
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
 ## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
@@ -2162,9 +2174,23 @@ func _track_contact_shadow() -> void:
 ## single gate — on a MISS/DEAD nothing sounds and the dog doesn't react. On the CC0 dog
 ## every tap is DEAD, so this is provably silent; it lights up when 025 ships the
 ## sit-capable Labrador (whose pack also carries the reaction clip).
+##
+## Marker-word fallback (093, P5-2): on a successful mark, fire_active(true) returns the
+## EFFECTIVE word id — the active word itself when available, "bra" when it is cooling.
+## The payoff plays that effective word's clip so the player hears "bra" when the stronger
+## word is resting (never a hidden mechanic). On a MISS/DEAD fire_active(false) is called
+## so no cooldown is armed/decremented — a bad round doesn't tick the clock. Base "bra"
+## (scale 1.0, cooldown 0) leaves this path byte-identical to pre-093 play.
 func _play_payoff(tier: SitWindow.Tier) -> void:
 	var payoff := MarkPayoff.for_tier(tier)
+	# Fire the active word and get the effective id (093, P5-2). succeeded=true iff the tier
+	# is a real mark (PERFECT or OK); succeeded=false for MISS/DEAD (no arm, no decrement).
+	var fired := _words.fire_active(payoff.is_success)
 	if _payoff != null:
+		# Point the payoff player at the effective word's clip for this mark, then play.
+		# While the active word is cooling `fired` == "bra" and the base clip sounds.
+		# Base "bra" active always returns "bra" — byte-identical stream, no regression.
+		_payoff.set_active_word(fired)
 		_payoff.play(payoff)
 	if payoff.reacts() and _director != null:
 		# The celebration is now a facing-preserving procedural bounce (077, PO Note 7), NOT the

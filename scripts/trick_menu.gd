@@ -638,31 +638,45 @@ func _draw_breed_row(font: Font, i: int) -> void:
 	_draw_text_outlined(font, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
 
-## One marker-word row (092): the display text on the left and the state badge on the right.
+## One marker-word row (092/093): the display text on the left and the state badge on the right.
 ## ACTIVE row highlighted gold (the firing word); UNLOCKED white (tap to switch); LOCKED greyed
 ## (not yet earned — never tappable, never a faked clip). Mirrors _draw_breed_row.
+## When the ACTIVE word is on cooldown (093, P5-2) the badge reads "Hviler" (Norwegian: resting)
+## so the trade-off is legible — the player sees why the round just fell back to "bra".
+## Row dict shape: {id, display, state, cooling?}; cooling defaults to false if absent.
 func _draw_word_row(font: Font, i: int) -> void:
 	var w: Dictionary = _words[i]
 	var rect := _word_row_rect(i)
 	var st: int = w.state
+	var cooling: bool = w.get("cooling", false)
 	var locked := st == WordState.LOCKED
 	draw_rect(rect, ROW_BG_LOCKED if locked else ROW_BG, true)
 	# The word display text (e.g. "Dyktig!"), left-aligned.
+	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
+	# so it reads as "loaded but unavailable this round" rather than fully locked.
 	var name_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE:
-		name_col = WORD_NAME_ACTIVE
+		name_col = WORD_NAME_ACTIVE if not cooling else Color(1.0, 0.86, 0.30, 0.55)
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
 	var name_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(NAME_SIZE) * 0.5 - font.get_descent(NAME_SIZE) * 0.5
 	_draw_text_outlined(font, Vector2(rect.position.x + 14.0, name_baseline),
 		str(w.get("display", w.id)), NAME_SIZE, name_col)
-	# The state badge, right-aligned.
-	var word_badge: String = WORD_BADGE[st]
+	# The state badge, right-aligned. A cooling ACTIVE word shows "Hviler" (resting) so the
+	# trade-off is legible: the player knows the stronger word is on cooldown this round.
+	var word_badge: String
 	var word_badge_col := WORD_NAME_LOCKED
-	if st == WordState.ACTIVE:
+	if st == WordState.ACTIVE and cooling:
+		word_badge = "Hviler"                              ## (Norwegian: resting) — on cooldown
+		word_badge_col = Color(1.0, 0.78, 0.20, 0.70)    ## dimmed gold: active but unavailable
+	elif st == WordState.ACTIVE:
+		word_badge = WORD_BADGE[WordState.ACTIVE]
 		word_badge_col = BADGE_LEARNED
 	elif st == WordState.UNLOCKED:
+		word_badge = WORD_BADGE[WordState.UNLOCKED]
 		word_badge_col = BADGE_AVAILABLE
+	else:
+		word_badge = WORD_BADGE[st]
 	var word_badge_baseline := rect.position.y + rect.size.y * 0.5 + font.get_ascent(BADGE_SIZE) * 0.5 - font.get_descent(BADGE_SIZE) * 0.5
 	_draw_text_outlined(font, Vector2(rect.position.x, word_badge_baseline), word_badge, BADGE_SIZE, word_badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)

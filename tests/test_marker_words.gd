@@ -145,3 +145,115 @@ func test_restore_clamps_garbage_to_base_only() -> void:
 	assert_true(w.is_unlocked("bra"), "a garbage restore still has 'bra' unlocked")
 	assert_false(w.is_unlocked("dyktig"), "garbage never grants an unearned word")
 	assert_eq(w.active(), "bra", "a garbage active clamps to 'bra'")
+
+## TDD for task 093 (P5-2): per-word effect + cooldown model. Stronger words widen
+## the PERFECT window but carry a cooldown; base "bra" is the always-available default
+## with no window widening and no cooldown. The cooldown tracker ensures a stronger
+## word is not a free upgrade — it's a genuine choice with a downside.
+
+func test_bra_has_identity_window_scale_and_no_cooldown() -> void:
+	var w := MarkerWords.new()
+	assert_eq(w.window_scale("bra"), 1.0, "base 'bra' has window_scale 1.0 (identity)")
+	assert_eq(w.cooldown("bra"), 0, "base 'bra' has cooldown 0 (never cools down)")
+
+func test_stronger_word_has_widened_window_and_cooldown() -> void:
+	var w := MarkerWords.new()
+	w.unlock("kjempebra")
+	assert_true(w.window_scale("kjempebra") > 1.0, "'kjempebra' has window_scale > 1.0")
+	assert_true(w.cooldown("kjempebra") > 0, "'kjempebra' has cooldown > 0")
+
+func test_all_stronger_words_have_window_scale_and_cooldown() -> void:
+	var w := MarkerWords.new()
+	w.unlock_up_to(4)
+	for entry in MarkerWords.CATALOG:
+		var id: String = entry["id"]
+		if id != "bra":
+			assert_true(w.window_scale(id) > 1.0, id + " has window_scale > 1.0")
+			assert_true(w.cooldown(id) > 0, id + " has cooldown > 0")
+
+func test_bra_active_firing_never_enters_cooldown() -> void:
+	var w := MarkerWords.new()
+	assert_eq(w.active(), "bra", "start with bra active")
+	for i in range(5):
+		var fired: String = w.fire_active(true)
+		assert_eq(fired, "bra", "fired word is 'bra'")
+		assert_false(w.is_on_cooldown("bra"), "'bra' never enters cooldown (iteration " + str(i) + ")")
+	assert_eq(w.active_is_available(), true, "bra is always available")
+
+func test_bra_effective_window_scale_always_identity() -> void:
+	var w := MarkerWords.new()
+	w.set_active("bra")
+	for _i in range(3):
+		var ews: float = w.effective_window_scale()
+		assert_eq(ews, 1.0, "effective_window_scale is 1.0 for bra (identity)")
+		w.fire_active(true)
+
+func test_stronger_word_active_and_available_fires_and_arms_cooldown() -> void:
+	var w := MarkerWords.new()
+	w.unlock("kjempebra")
+	w.set_active("kjempebra")
+	assert_true(w.active_is_available(), "stronger word is available at start")
+	var fired: String = w.fire_active(true)
+	assert_eq(fired, "kjempebra", "fire_active returns the stronger word when not on cooldown")
+	assert_true(w.is_on_cooldown("kjempebra"), "kjempebra enters cooldown after firing")
+
+func test_while_stronger_word_on_cooldown_effective_word_falls_back_to_bra() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.set_active("dyktig")
+	w.fire_active(true)  # arm cooldown
+	assert_true(w.is_on_cooldown("dyktig"), "dyktig is on cooldown")
+	var fired: String = w.fire_active(true)
+	assert_eq(fired, "bra", "while on cooldown, the effective fired word is 'bra'")
+
+func test_while_stronger_word_on_cooldown_effective_window_scale_is_base() -> void:
+	var w := MarkerWords.new()
+	w.unlock("super")
+	w.set_active("super")
+	w.fire_active(true)  # arm cooldown
+	assert_eq(w.effective_window_scale(), 1.0, "while on cooldown, effective_window_scale is 1.0 (base)")
+
+func test_cooldown_decrements_only_on_successful_marks() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.set_active("dyktig")
+	var cooldown_count: int = w.cooldown("dyktig")
+	assert_true(cooldown_count > 0, "dyktig has a non-zero cooldown")
+	w.fire_active(true)  # arm cooldown
+	# Fire with succeeded=false; cooldown should NOT decrement
+	w.fire_active(false)
+	assert_true(w.is_on_cooldown("dyktig"), "cooldown persists after a failed mark (succeeded=false)")
+	# Fire with succeeded=true; cooldown should decrement by 1
+	w.fire_active(true)
+	assert_true(w.is_on_cooldown("dyktig"), "cooldown still active after one successful mark")
+
+func test_cooldown_decrements_by_one_per_successful_mark_until_available() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.set_active("dyktig")
+	var cooldown_count: int = w.cooldown("dyktig")
+	w.fire_active(true)  # arm cooldown for cooldown_count marks
+	# Exhaust the cooldown with successful marks
+	for i in range(cooldown_count):
+		assert_true(w.is_on_cooldown("dyktig"), "dyktig is on cooldown (iteration " + str(i) + ")")
+		w.fire_active(true)
+	# After exactly cooldown_count successful marks, it should be available
+	assert_false(w.is_on_cooldown("dyktig"), "after exactly cooldown_count marks, dyktig is available again")
+	var fired: String = w.fire_active(true)
+	assert_eq(fired, "dyktig", "now fire_active returns dyktig again (no longer cooling)")
+
+func test_switch_word_mid_cooldown_and_switch_back_preserves_cooldown_state() -> void:
+	var w := MarkerWords.new()
+	w.unlock("dyktig")
+	w.unlock("super")
+	w.set_active("dyktig")
+	w.fire_active(true)  # arm dyktig's cooldown
+	assert_true(w.is_on_cooldown("dyktig"), "dyktig is on cooldown")
+	w.set_active("super")  # switch to super
+	w.fire_active(true)  # arm super's cooldown too
+	assert_true(w.is_on_cooldown("super"), "super is on cooldown")
+	# Switch back to dyktig: its cooldown state should persist
+	w.set_active("dyktig")
+	assert_true(w.is_on_cooldown("dyktig"), "switching back to dyktig preserves its cooldown state")
+	var fired: String = w.fire_active(true)
+	assert_eq(fired, "bra", "dyktig is still cooling, so effective word is 'bra'")
