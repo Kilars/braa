@@ -176,62 +176,55 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-05 (owner, larssski) — training-page finish vs the design goal
+### PO Review — 2026-07-05 (PO, father pass) — training-page finish vs the design goal
 
 Phases 1–9 are signed off and Phase 10 (play mode) is current but unspecced. Before Phase-10
-scaffolding, the **training page** — the persistent surface every phase replays — does **not** match
-the design goal in *finish*, even though the Phase-6 design system passed sign-off. Compared the goal
-art `.docs/specs/assets/goal-training-screen.png` against the live render `.screenshots/PO9-04-training.png`
-at 390×844. Layout and palette are right (Triks pill, coin pill, progress, fence, path, cottage,
-centred dog, blue BRA pill); the *surface* is washed-out and unpolished. All buildable now with no
-owner asset — these **preempt** new-phase work per the cross-cutting quality bar (X-4).
+scaffolding, the **training page** — the persistent surface every phase replays — must match the
+design goal `.docs/specs/assets/goal-training-screen.png` in *finish*. Replayed the owner's six
+directives on a fresh local licensed bundle (`build/web` at HEAD `45f6939`, Sitt-capable Labrador)
+served over http in headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility
+renderer. Zero console errors. **Four of the six are fixed and pruned; two remain open.**
 
-**Bugfixes**
+**Replayed and confirmed FIXED (pruned):**
+- **Ring/BRA collision** (task 123): the cyan approach ring now encircles the dog well **above** the
+  BRA button — no overlap at any point of the sit-cycle burst (`.screenshots/PO10-train-06.png`).
+- **Glowing-orb coins** (task 124): the grass coins now read as **flat, solid, opaque gold discs**
+  grounded on the grass, not translucent blobs (`.screenshots/PO10-train-06.png`).
+- **Sun/bloom washout** (task 125): the scene is crisp and saturated — sky, grass, and HUD hold the
+  goal's contrast; the sun is a soft top-centre accent, not a scene-wide wash (`.screenshots/PO10-train-00.png`).
+- **Faint top HUD** (folded into 125): the Triks / Kennel / coin pills read clean and legible over the
+  sky band (`.screenshots/PO10-train-00.png`).
 
-1. **The apex timing ring collides with the BRA button.** The large thin timing ring overlaps and
-   sits on top of the blue BRA button (`PO9-04-training.png`), reading as a rendering accident rather
-   than intent. In the goal the button is clean with nothing crossing it. *Acceptance:* the approach /
-   apex ring never visually overlaps the BRA button at any point in its animation — reposition, scale,
-   or clip so the two are always clearly separated.
+**Improvements — still open**
 
-2. **The on-grass coins render as fat glowing translucent orbs, not coins.** They read as oversized
-   soft blobs flanking the dog, not the small flat gold coins in the goal art (task 101 shrank them
-   but the glow/translucency remains). *Acceptance:* the grass coins read as small, solid, flat gold
-   coins (opaque, crisp edge, sized like the mockup), grounded on the grass, clear of the dog
-   silhouette.
+1. **The BRA button is still pale and flat vs the goal's saturated blue 3D pill.** *What I saw:* the
+   current button (`.screenshots/PO10-train-00.png`) is a flat mid-blue with a thin/near-absent lower
+   edge; the goal art is a **deeper, more saturated** blue pill with a distinct **darker-blue 3D lower
+   drop-shadow** and bolder white "BRA". *Why it falls short:* it reads as a flat rectangle, not the
+   confident raised pill that anchors the goal composition. *Acceptance:* deepen the button blue to the
+   design-token blue and restore the crisp lower drop-shadow / bevel so it reads as the raised pill in
+   `goal-training-screen.png`; do **not** restyle the shared DS pill token that feeds the signed-off
+   completion menu — this is the BRA button only.
 
-**Improvements**
+**Menu (serious) — still open**
 
-3. **A blown-out sun/bloom washes the whole scene out.** A bright hazy sun glare top-centre flattens
-   contrast and mutes the sky, grass, and top HUD, so the page reads foggy/over-bright where the goal
-   is crisp and saturated. *Acceptance:* tone down the sun glare / atmospheric haze so sky, grass, and
-   HUD hold the goal's clean contrast and saturation; the sun may stay as a soft accent, not a
-   scene-wide wash.
+2. **[SERIOUS] The completion menu is information overload — reveal it as a story, not all at once.**
+   *What I saw:* `.screenshots/PO10-menu.png` — the menu stacks **every** system at full detail at the
+   same time: the six-row trick list (Sitt Learned / Ligg / Legg deg Available / Gi labb / Rull / Snurr
+   Locked), the Breeds section (Labrador / Chocolate), the five marker words (Bra! / Dyktig! / Flink! /
+   Super! / Kjempebra!), the Vanskelighet block (Normal / Hard / Expert), coins, and the actions — a
+   dense settings dump, not a reward moment. *Why it's wrong:* it breaks the North-Star "single
+   satisfying tap" calm and buries the sense of progression — a new player is hit with every
+   locked/future system at once. *Acceptance:* **progressive disclosure with a narrative through-line**
+   — do **not** reveal all elements at once. Sections and elements appear as the player earns their way
+   to them, so the menu *grows with the player* and tells a story of progression rather than dumping the
+   whole game up front. Concretely: hide or minimally tease systems the player hasn't reached yet (e.g.
+   the marker-words section only surfaces once the first alternate word is within reach; the breeds
+   section only once adoption is actually meaningful; locked rows are teased sparingly, not fully
+   enumerated). Turn the overload into a "silver lining" — each reveal is a small earned beat in the
+   game's story. This is a **serious** UX issue; treat it at high priority.
 
-4. **The BRA button is pale and flat vs the goal's saturated blue 3D pill.** *Acceptance:* deepen the
-   button blue to the design-token blue and restore the crisp lower drop-shadow so it reads as the
-   confident raised pill in `goal-training-screen.png`.
-
-5. **The top HUD reads cramped and faint under the bloom.** The Triks + coin pills lose legibility
-   against the washed sky. *Acceptance:* Triks pill and coin pill stay crisp and clearly legible over
-   the sky band (largely resolved by fixing #3; verify the pill contrast/shadow after).
-
-**Menu (serious)**
-
-6. **[SERIOUS] The completion menu is information overload — reveal it as a story, not all at once.**
-   *What I saw:* the menu now stacks every system at full detail at the same time — the trick list
-   (learned / available / locked), the marker-words collection, the breeds section, coins, and
-   difficulty — so it reads as a dense settings dump instead of a reward moment. *Why it's wrong:* it
-   breaks the North-Star "single satisfying tap" calm and buries the sense of progression — a new
-   player is hit with every locked/future system at once. *Acceptance:* **progressive disclosure with
-   a narrative through-line** — do **not** reveal all elements at once. Sections and elements appear as
-   the player earns their way to them, so the menu *grows with the player* and tells a story of
-   progression rather than dumping the whole game up front. Concretely: hide or minimally tease systems
-   the player hasn't reached yet (e.g. the marker-words section only surfaces once the first alternate
-   word is within reach; the breeds section only once adoption is actually meaningful; locked rows are
-   teased sparingly, not fully enumerated). Turn the overload into a "silver lining" — each reveal is a
-   small earned beat in the game's story. This is a **serious** UX issue; treat it at high priority.
-
-_(Phase 9 signed off 2026-07-05; its 121/122 directives were replayed and found fixed. Phase 10 is
-current but unspecced — these training-page + menu fixes come first.)_
+_(Phase 9 signed off 2026-07-05. Phase 10 is current but unspecced — these two training-page + menu
+fixes come first, per the cross-cutting quality bar X-4. Directives #1/#2/#3/#5 from the owner's
+2026-07-05 pass were replayed here and found fixed by tasks 123/124/125.)_
 
