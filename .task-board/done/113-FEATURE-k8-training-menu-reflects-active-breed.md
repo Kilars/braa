@@ -65,10 +65,10 @@ else returns `KNOWN_TRICKS`.
 - A trick in `trick_ids` the rig cannot perform is still filtered out (never-fake gate holds).
 
 ## Acceptance criteria
-- [ ] **TDD first:** the four cases above written RED, then GREEN.
-- [ ] `_selectable_tricks()` derives from the active kennel dog's `trick_ids`, gated by
+- [x] **TDD first:** the four cases above written RED, then GREEN.
+- [x] `_selectable_tricks()` derives from the active kennel dog's `trick_ids`, gated by
       `_director.has_trick`, with a `KNOWN_TRICKS` fallback — no per-breed content faked.
-- [ ] Default fresh-player behavior is byte-identical to today (Bella/core = Sitt·Ligg·Legg
+- [x] Default fresh-player behavior is byte-identical to today (Bella/core = Sitt·Ligg·Legg
       deg), so the signed-off training loop is unaffected.
-- [ ] No new flag: per-breed trick DIVERGENCE stays under the existing owner-gated P3-2.
-- [ ] `nix develop -c bash verify.sh` green.
+- [x] No new flag: per-breed trick DIVERGENCE stays under the existing owner-gated P3-2.
+- [x] `nix develop -c bash verify.sh` green.

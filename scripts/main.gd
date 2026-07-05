@@ -2280,15 +2280,29 @@ func _on_feedback_requested() -> void:
 func _on_feedback_submitted(payload: Dictionary) -> void:
 	_telem("feedback_submitted", payload)
 
-## The tricks the loaded dog can actually perform, in the canonical KNOWN_TRICKS order (065/067). The
-## menu offers exactly these as Available/Learned — never a trick the dog can't perform (the never-fake
-## gate): on the CC0 placeholder this is empty, on the licensed Labrador it is Sitt + Ligg + Legg deg.
+## The trick ids the ACTIVE kennel breed may train (K-8) — the active dog's OWN list, not a global
+## const, so which dog is active decides what can be trained. KennelDog.by_id resolves an empty/legacy/
+## breed id to a real dog (the starter's core), so this always yields a valid list on any save. Today
+## every dog shares core_tricks() == KNOWN_TRICKS, so the menu is unchanged; the list grows per breed
+## the moment an owner signature clip lands (owner-gated divergence stays under the P3-2 flag).
+func _active_trick_ids() -> Array:
+	return KennelDog.by_id(_kennel_roster.active).trick_ids
+
+## The tricks the loaded dog can actually perform, restricted to the ACTIVE breed's list, in that
+## list's order (065/067/K-8). The menu offers exactly these as Available/Learned — never a trick the
+## dog can't perform (the never-fake gate): on the CC0 placeholder this is empty, on the licensed
+## Labrador it is the active breed's core (Sitt + Ligg + Legg deg).
 func _selectable_tricks() -> Array:
-	var out: Array = []
 	if _director == null:
-		return out
-	for id in KNOWN_TRICKS:
-		if _director.has_trick(id):
+		return []
+	return _performable(_active_trick_ids(), _director)
+
+## Pure: keep only the `wanted` ids the loaded rig can actually perform, preserving `wanted` order —
+## never offers a trick the dog can't do (the never-fake gate). Static so it unit-tests without a scene.
+static func _performable(wanted: Array, director) -> Array:
+	var out: Array = []
+	for id in wanted:
+		if director != null and director.has_trick(id):
 			out.append(id)
 	return out
 
