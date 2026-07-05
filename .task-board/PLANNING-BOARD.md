@@ -6,7 +6,30 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASE 8 (KENNEL) CURRENT — father PO-reviewed the grid (103–105), DECLINED sign-off, filed 2 defects + the unbuilt spine → scan replenished 106/107/108 — 2026-07-05
+## Status — PHASE 8 (KENNEL) CURRENT — grid defects 106/107/108 shipped; scan replenished the deferred adopt/switch/persist spine as 109/110/111 — 2026-07-05
+
+106/107/108 (the father's grid defects + the K-2 inspect modal) are all in `done/`. The father's
+deferred remainder — **"the adopt/switch/persist spine + the roster↔kennel id-space reconciliation"**
+— was the only current-phase gap left, so scan (empty backlog) replenished **3 current-phase tasks**
+in PO priority order (spine keystone → payoff → capstone; NOT work-ahead — Phase 8 has abundant
+current-phase work). Built K-1/K-2/K-8; unbuilt K-3/K-4/K-5/K-6/K-7 is exactly this spine.
+
+- **109 — FEATURE — adopt spine: affordability gate (K-3) + adopt (K-4) + persistence (K-7 core).**
+  The keystone. New `KennelRoster` pure value object (twin of `BreedRoster`) persisted under a **new
+  `kennel` save key** (Phase-6 save stays byte-compatible) — this reconciles the KennelDog id-space
+  (`bella`…) with the breed id-space (`labrador`…), replacing the STARTER-only `_kennel_owned/active`
+  stubs. `_build_adopt_button` filled: «Adopter · N mynt», dim-when-unaffordable; adopt flow spends
+  coins + marks owned + positive feedback + no-double-spend guard. TDD the roster/persist/mutation.
+- **110 — FEATURE — switch which dog I train (K-5) + active persist (K-7).** «Tren med [navn]» sets
+  the dog active, closes the kennel, training loads it as a `CoatTint`-retinted shared-rig stand-in
+  (honest BUST-068, the 076 mechanism) + stat-driven levers; active persists, returning player restored.
+- **111 — FEATURE — easter free-adopt Trulte (K-6).** Coral ribbon + «Adopter gratis ♥» (`price==0`
+  branch of the 109 flow), star as 106 `_StarPip` geometry (no tofu); she becomes owned + trainable.
+
+Owner-gated residuals unchanged (distinct breed MODELS BUST-068, signature CLIPS P3-2). After
+109/110/111 the phase's spine is built → hand-off to the father for the Phase-8 sign-off pass.
+
+## Status (prior) — father DECLINED the grid (103–105), filed 2 defects + the unbuilt spine → 106/107/108 — 2026-07-05
 
 The father PO play-tested the freshly-shipped kennel grid (tasks 103–105, HEAD `eb5c59e`) at 390×844
 and **declined sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-05). The grid is a "good
