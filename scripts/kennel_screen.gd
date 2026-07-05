@@ -8,13 +8,16 @@ extends Control
 ## land in follow-up tasks). Cell tap emits dog_selected(id); closed emits from the back
 ## button and triggers main._close_kennel().
 ##
-## Dog band render (107, K-1): each cell shows a real dog silhouette behind the steel bars —
-## ONE greyscale portrait baked from the CC0 dog (assets/kennel/dog_portrait.png, produced by
-## tools/bake_kennel_portrait.mjs), shared across all 8 cells and `modulate`-tinted toward each
-## dog's band_tint (X-7: bake once, reuse 8×, zero runtime 3D). Distinct per-breed MODELS stay
-## owner-gated (BUST-068) — the shared tinted silhouette is the honest stand-in the flag already
-## names, not a stub. If the baked PNG is absent (e.g. a fresh tree before the bake ran) the band
-## degrades cleanly to tint-only — never a primitive stand-in.
+## Dog band render (116, K-1): each cell shows the game's ACTUAL dog behind the steel bars —
+## the stylized-realism licensed Labrador on deploy, the CC0 dog locally, framed face-on. ONE live
+## SubViewport renders that dog to a single ViewportTexture, shared across all 8 cells + the modal
+## header and `modulate`-tinted toward each dog's band_tint (X-7: render once, reuse 8×). The dog is
+## rendered at a neutral desaturated coat so the per-breed modulate reads cleanly, exactly as the old
+## baked mid-grey portrait did. Distinct per-breed MODELS stay owner-gated (BUST-068) — the shared
+## tinted Labrador is the honest stand-in the flag already names, not a stub. The SubViewport route
+## keeps the licensed dog's rendered pixels OUT of public git (no baked PNG) — the earlier baked-CC0
+## portrait (107) is retired. Headless-safe: the SubViewport is attached lazily (never in _init),
+## and if it can't render (missing model) the band degrades cleanly to tint-only, never a primitive.
 
 signal dog_selected(id: String)    ## cell was tapped → the detail modal task will consume this
 signal closed                       ## back/✕ was tapped → main restores the training HUD
@@ -64,8 +67,25 @@ const BAND_H         := 112.0   ## the tinted portrait band — the MINIMUM band
 const FOOTER_BLOCK_H := 72.0    ## the name+breed footer block below the band (cell_h − band_h)
 const GRID_COLS      := 2       ## the roster grid is 2-wide; rows = ceil(dogs / cols)
 const DESIGN_VP_H    := 1280.0  ## fallback logical viewport height (project.godot) when none is live
-const PORTRAIT_PATH  := "res://assets/kennel/dog_portrait.png"  ## baked CC0 dog silhouette (107, K-1)
 const DARK_BAND_LUM  := 0.42    ## below this band luminance, lighten the dog so it reads on a dark band
+
+# Live portrait SubViewport (116, K-1) — renders the game's actual dog once, shared 8× (X-7).
+const DOG_SCENE_PATH   := "res://assets/models/dog.glb"           ## CC0 dog (verify/local)
+const LICENSED_DOG_PATH := "res://assets/models/dog_licensed.glb" ## licensed Labrador (deploy) — same pick as main._dog_path()
+const PORTRAIT_VP_SIZE := Vector2i(384, 340)   ## portrait-ish render target, matches the old bake aspect
+## Neutral desaturated coat the dog is rendered at so the per-breed `modulate` reads cleanly. A mid
+## grey < 1.0 (like the old baked portrait's base) — the coat atlas is MULTIPLIED by this, killing the
+## CC0 brown / licensed yellow so each cell's band_tint modulate lands as a clean tinted silhouette.
+const NEUTRAL_COAT     := Color(0.62, 0.62, 0.62)
+## Front-quarter face-on view + fill, mirroring the retired bake so head/body/legs all read.
+const PORTRAIT_VIEW_DIR := Vector3(0.66, 0.24, 1.0)
+const PORTRAIT_FILL     := 0.78
+## The idle dog's rest pose faces its own default heading (side-on to the camera), so — unlike the
+## training scene, which turns the dog to face the camera for a trick (061, P2-11) — the kennel must
+## apply the SAME camera-facing yaw here, or the portrait reads as a broadside profile (PO 2026-07-05
+## "framed facing the viewer, not rear/side-slumped"). We rotate the dog to face the camera eye, then
+## add a small ¾ offset so the face reads toward the viewer without a foreshortened dead-on stance.
+const PORTRAIT_THREE_QUARTER := 0.42  ## radians (~24°) — front-¾, flattering, face clearly to camera
 const TAG_RADIUS     := 8.0
 const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
@@ -88,11 +108,14 @@ const MODAL_SECTION_SEP    := 10.0   ## vertical gap between modal sections
 var _rows: Array = []          ## last rows passed to render()
 var _balance: int = 0          ## last balance passed to render()
 
-## The ONE baked dog portrait, loaded once and shared (modulate-tinted) across all 8 cells (X-7).
-## null when the PNG is absent (fresh tree before the bake ran) → cells fall back to tint-only.
-## _portrait_loaded guards a repeated load attempt when the file is genuinely missing.
+## The ONE live portrait SubViewport (116) — renders the game's actual dog to a single
+## ViewportTexture shared (modulate-tinted) across all 8 cells + the modal header (X-7).
+## Built lazily the first time a portrait is needed (NEVER in _init — headless harness gotcha).
+## _portrait_built guards a repeated build attempt; _portrait_tex is null until the viewport is
+## in-tree and has rendered a frame, so consumers fall back to tint-only cleanly meanwhile.
+var _portrait_vp: SubViewport = null
 var _portrait_tex: Texture2D = null
-var _portrait_loaded: bool = false
+var _portrait_built: bool = false
 
 ## Live node refs (built once in _ready, updated per render())
 var _coin_label: Label
@@ -458,9 +481,9 @@ func _make_cell(row: Dictionary) -> Button:
 
 	return btn
 
-## The top portrait band: tinted background + steel-bar shader overlay + status tag (top-left)
-## + price chip (bottom-right). No dog silhouette this slice — the tint IS the visual identity
-## until the owner supplies distinct breed models (BUST-068 — already flagged, not a stub).
+## The top portrait band: tinted background + the shared live-SubViewport dog (116) behind the steel
+## bars + status tag (top-left) + price chip (bottom-right). Distinct per-breed models stay owner-
+## gated (BUST-068) — every cell shares the one stylized-realism Labrador, modulate-tinted per breed.
 func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 	var band := Control.new()
 	band.name = "Band"
@@ -477,9 +500,9 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bg)
 
-	# Dog silhouette (107, K-1): the shared baked portrait, bottom-anchored behind the bars,
-	# modulate-tinted toward this dog's band_tint so all 8 cells read as distinct tinted dogs.
-	# Skipped cleanly when the baked PNG is absent (tint-only fallback) — never a primitive.
+	# Dog portrait (116, K-1): the shared live-SubViewport dog, behind the bars, modulate-tinted
+	# toward this dog's band_tint so all 8 cells read as distinct tinted stylized-realism Labradors.
+	# Skipped cleanly when the SubViewport isn't renderable yet (tint-only fallback) — never a primitive.
 	var tex := _get_portrait_texture()
 	if tex != null:
 		var dog := TextureRect.new()
@@ -539,18 +562,127 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 
 	return band
 
-## Load the baked dog portrait once and cache it (shared across all 8 cells — X-7). Returns null
-## when the PNG is absent (fresh tree before tools/bake_kennel_portrait.mjs ran) so the band
-## degrades to tint-only rather than erroring. ResourceLoader.exists() avoids a load() error spam.
+## The ONE live portrait texture (116, X-7): the game's actual dog rendered face-on by a shared
+## SubViewport, fed to every cell + the modal header and modulate-tinted per breed. Lazily builds
+## the SubViewport on first call (never in _init — headless harness gotcha). Returns the
+## ViewportTexture, or null if the viewport can't be built yet / the model failed to load, so the
+## band degrades cleanly to tint-only rather than erroring. Cheap after the first build (cached).
 func _get_portrait_texture() -> Texture2D:
-	if not _portrait_loaded:
-		_portrait_loaded = true
-		if ResourceLoader.exists(PORTRAIT_PATH):
-			_portrait_tex = load(PORTRAIT_PATH) as Texture2D
+	if not _portrait_built:
+		_portrait_built = true
+		_build_portrait_viewport()
 	return _portrait_tex
 
-## The modulate tint for the dog silhouette in a given band. The baked portrait is a mid-grey
-## (base < 1.0), so on a LIGHT/mid band, band_tint renders the dog as a darker tinted silhouette
+## Build the shared portrait SubViewport: instance the game's dog (licensed on deploy, CC0 locally —
+## same pick as main._dog_path()), flatten + neutral-tint the coat, frame it face-on with a Camera3D
+## via DogBounds/DogFraming, and light it. The ViewportTexture is cached in _portrait_tex. Attached
+## as a child of this Control (headless-safe: SubViewports render off-screen; guarded .play()).
+func _build_portrait_viewport() -> void:
+	var path := _portrait_dog_path()
+	if not ResourceLoader.exists(path):
+		return  # no dog asset → tint-only fallback (never a primitive)
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return
+	var vp := SubViewport.new()
+	vp.name = "KennelPortraitViewport"
+	vp.size = PORTRAIT_VP_SIZE
+	vp.transparent_bg = true
+	vp.own_world_3d = true                        # isolated world — no bleed to/from the main scene
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # live idle → breathing portrait
+	add_child(vp)
+	_portrait_vp = vp
+
+	var dog: Node = packed.instantiate()
+	dog.name = "KennelPortraitDog"
+	vp.add_child(dog)
+	CoatOpaque.flatten(dog)                       # kill the translucent fur-mask panels (P1-1/P1-9)
+	CoatTint.apply(dog, NEUTRAL_COAT)             # neutral grey so the per-cell modulate reads cleanly
+
+	# The CC0 glb ships its OWN Camera3D (CLAUDE.md gotcha) — inside this isolated world it would stay
+	# `current` and frame the dog itself, overriding ours. Strip every bundled camera (main.gd:457).
+	for bundled in _find_all_cameras(dog):
+		(bundled as Camera3D).current = false
+		bundled.queue_free()
+
+	# Settle the idle to a natural standing frame (skinned pose snaps from rest on frame 0).
+	# Guard .play() on is_inside_tree() — the SubViewport child is in-tree here, but headless-safe.
+	var ap := DogClips.find_animation_player(dog)
+	if ap != null and ap.is_inside_tree():
+		var clips := DogClips.resolve(ap.get_animation_list())
+		if clips.idle != "":
+			ap.play(clips.idle)
+			ap.seek(0.6, true)
+
+	# Key + gentle fill so the coat reads as a rounded animal, not a flat cut-out.
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-34.0, -38.0, 0.0)
+	key.light_energy = 1.2
+	vp.add_child(key)
+	var fill := DirectionalLight3D.new()
+	fill.rotation_degrees = Vector3(-8.0, 145.0, 0.0)
+	fill.light_energy = 0.35
+	vp.add_child(fill)
+	# Ambient via the isolated world's own environment so the shadowed side isn't black.
+	var env := Environment.new()
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.72, 0.74, 0.78)
+	env.ambient_light_energy = 0.9
+	var we := WorldEnvironment.new()
+	we.environment = env
+	vp.add_child(we)
+
+	# Frame the dog face-on: measure its honest standing bounds, place a 3/4-front telephoto camera
+	# far enough that the whole bounding SPHERE fits at any angle (no clip). DogFraming.VIEW_DIR already
+	# faces the dog's front; we use the wider PORTRAIT_VIEW_DIR (more side/lift) for a flattering head-
+	# visible portrait, reusing the retired bake's proven framing math.
+	var box := DogBounds.measure(dog)
+	var cam := Camera3D.new()
+	cam.name = "KennelPortraitCam"
+	cam.fov = 30.0                                # telephoto: flattens perspective, clean silhouette
+	vp.add_child(cam)                             # in-tree before look_at (026 — no Transform3D error)
+	var aspect := float(PORTRAIT_VP_SIZE.x) / float(PORTRAIT_VP_SIZE.y)
+	var radius := maxf(maxf(box.size.x, box.size.y), box.size.z) * 0.5
+	var v_half := deg_to_rad(cam.fov) * 0.5
+	var h_half := atan(tan(v_half) * aspect)
+	var half_angle := minf(v_half, h_half)
+	var dist := radius / tan(half_angle) / PORTRAIT_FILL
+	var target := DogFraming.target(box)
+	var eye := target + PORTRAIT_VIEW_DIR.normalized() * dist
+	cam.look_at_from_position(eye, target, Vector3.UP)
+	cam.make_current()                            # scoped to this SubViewport's own world
+
+	# Turn the dog to FACE the camera (the raw idle rest pose is side-on). Same convention main.gd
+	# uses for the trick face-turn: heading = atan2(camX - dogX, camZ - dogZ) applied to the root
+	# basis about UP. A small ¾ offset keeps it a flattering front-¾, not a dead-on foreshortened
+	# stance. Done AFTER the sphere-fit distance (rotation about UP keeps the fit radius) so no clip.
+	if dog is Node3D:
+		var d3 := dog as Node3D
+		var to_cam := eye - d3.transform.origin
+		var heading := atan2(to_cam.x, to_cam.z) + PORTRAIT_THREE_QUARTER
+		d3.transform.basis = d3.transform.basis.rotated(Vector3.UP, heading)
+
+	_portrait_tex = vp.get_texture()
+
+## The dog to render in the kennel portrait: the licensed Labrador on deploy, the CC0 dog locally —
+## the SAME pick as main._dog_path() so the kennel shows the game's actual dog. (No debug override:
+## the kennel always mirrors whatever the running build renders in training.)
+func _portrait_dog_path() -> String:
+	if ResourceLoader.exists(LICENSED_DOG_PATH):
+		return LICENSED_DOG_PATH
+	return DOG_SCENE_PATH
+
+## Collect every Camera3D in a subtree (strip the CC0 dog's bundled camera — CLAUDE.md gotcha).
+func _find_all_cameras(n: Node) -> Array:
+	var out: Array = []
+	if n is Camera3D:
+		out.append(n)
+	for c in n.get_children():
+		out.append_array(_find_all_cameras(c))
+	return out
+
+## The modulate tint for the dog portrait in a given band. The dog renders at NEUTRAL_COAT (a mid-
+## grey base < 1.0), so on a LIGHT/mid band, band_tint renders the dog as a darker tinted silhouette
 ## that reads against its own band. On a DARK band (luminance < DARK_BAND_LUM) that would leave a
 ## near-black dog on a near-black band, so we lighten the tint toward white — a light silhouette
 ## on the dark band. Either way the dog carries the dog's colour and contrasts with the band bg.
@@ -820,6 +952,25 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	# ColorRect doesn't support per-corner radius — use a StyleBoxFlat on a Panel instead.
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bg)
+
+	# Shared dog portrait (116): the same live SubViewport texture as the grid cells, modulate-tinted
+	# toward this dog's band_tint so the modal header shows the same stylized-realism Labrador behind
+	# the bars. Skipped cleanly when the viewport isn't renderable yet (tint-only) — never a primitive.
+	var mtex := _get_portrait_texture()
+	if mtex != null:
+		var mdog := TextureRect.new()
+		mdog.name = "ModalDogPortrait"
+		mdog.texture = mtex
+		mdog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		mdog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		mdog.modulate = _band_dog_tint(detail["band_tint"])
+		mdog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mdog.set_anchors_preset(Control.PRESET_FULL_RECT)
+		mdog.offset_left   = 8.0
+		mdog.offset_right  = -8.0
+		mdog.offset_top    = 6.0
+		mdog.offset_bottom = -3.0
+		band.add_child(mdog)
 
 	# Steel-bar overlay (reuse _SteelBars for GL-Compat–safe rendering).
 	var bars := _SteelBars.new()
@@ -1332,9 +1483,9 @@ class _StatPip extends Control:
 # Repeating ~2px vertical stripes on ~29px pitch, C_STEEL @ 40% alpha, + 2px inset frame.
 # ---------------------------------------------------------------------------
 class _SteelBars extends Control:
-	const STRIPE_W  := 2.0    ## stripe width (px)
-	const PITCH     := 29.0   ## stripe centre-to-centre pitch (px)
-	const BAR_ALPHA := 0.40   ## bar opacity over the tint
+	const STRIPE_W  := 3.0    ## stripe width (px) — wider so the thin bars actually read (116)
+	const PITCH     := 26.0   ## stripe centre-to-centre pitch (px) — tighter for a denser cage
+	const BAR_ALPHA := 0.38   ## bar opacity over the tint — spec #788794 @ 32-40% (116)
 	const FRAME_W   := 2.0    ## inset frame width (px)
 
 	func _init() -> void:

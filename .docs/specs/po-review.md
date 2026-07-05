@@ -113,61 +113,67 @@
 
 ### PO Review — 2026-07-05
 
-Phase 8 (kennel) is current. Re-played the whole kennel spine on the freshly-shipped build (tasks
-106–114, HEAD `f5b8efb`) at 390×844 in headless Chromium against a fresh local `build/web` (rebuilt
-via `verify.sh`, gate green) served over http — SwiftShader == the deployed GL Compatibility renderer.
-**Zero console errors on every run** (browse, easter free-adopt, priced adopt at 1000 coins, switch,
-reload-persist, and a fresh autotap boot). **Every prior directive is now fixed and every K story is
-built and verified in my own pixels:**
+Phase 8 (kennel) is current. Re-played the whole kennel spine on the freshly-shipped build (task
+115, HEAD `d29c032`) at 390×844 in headless Chromium against a fresh local `build/web` (rebuilt via
+`verify.sh`, gate green) served over http — SwiftShader == the deployed GL Compatibility renderer.
+**Zero console errors on every run** (browse the full grid, open the inspect modal, close, and a
+fresh autotap boot). **The prior grid-fill blocker is fixed and the whole interactive spine is intact
+— but a new visual-quality shortfall, amplified by 115's enlargement, keeps the phase off sign-off.**
 
-- **K-1 grid — dog renders landed (prior Improvement #2 FIXED).** All 8 cells now show a
-  bottom-anchored, per-dog **tinted dog silhouette behind the steel bars**, not a flat rectangle
-  (`.screenshots/po-k-01-grid.png`; Nova reads dark-slate, Sol golden, Pontus/Sniff brown, etc.).
-  Names / breeds / prices / tags all correct; Bella «Din hund» owned, Trulte easter tag distinct; the
-  coin chip shows the live balance.
-- **K-6 star tofu — FIXED (prior Bugfix #1).** The Trulte ribbon renders a properly **drawn white ★**
-  in the coral pill — «★ Påskeegg — en hemmelig venn» — no missing-glyph box
-  (`po-zoom-trulte-ribbon.png`, 3× crop).
-- **K-2 inspect modal** opens on tap with the full panel: warm blurb, 4 stat rows (Læreevne / Energi /
-  Mot / Fokus, 5 pips, data-driven per dog — Nova 5·5·4·5, Trulte 3·2·1·2 both correct),
-  Raseegenskaper chips, the Unikt trekk card, and the **K-8 trick list before adopt**
-  («Kan lære: Sitt · Ligg · Legg deg») — `po-k-02-trulte-modal.png`, `po-adopt-B1-nova-affordable.png`.
-- **K-3 affordability gate:** at «0 mynter» Nova's «Adopter · 900 mynt» button is **dim and
-  non-tappable** — a real tap is a confirmed no-op (`po-adopt-A1-nova-gated.png`).
-- **K-4 adopt:** at 1000 coins the button is enabled; pressing it counts the coin chip **1000 → 100**,
-  flips Nova's cell to the green owned tag, and the button becomes green «Tren med Nova»; no
-  double-spend (`po-adopt-B1/B2`). K-6 free-adopt of Trulte works the same via «Adopter gratis ♥».
-- **K-5 switch:** «Tren med Nova» closes the kennel (`__bra_kennel_open=false`) and lands on training
-  with the switched dog **re-tinted to Nova's dark-slate coat** and `__bra_kennel_active=nova`
-  (`po-switch-training-nova.png`).
-- **K-7 persist:** after a **clean reload** (no coin override, IndexedDB flushed) Nova is still owned —
-  her modal shows «Tren med Nova», not «Adopter» (`po-persist-nova-after-reload.png`).
-- **No regression:** the Phase-6 training page and Phase-1/2 core mark loop replay intact after all
-  kennel operations — dog centred on grass, cyan approach ring, path/cottage/fence/coins/BLUE BRA all
-  present (`po-k-00-training.png`, `po-regression-nomark.png`).
+**Fixed / verified working in my own pixels:**
+
+- **Grid fill — FIXED (prior Improvement #1 resolved).** The 8 cells in 4 rows now span the full
+  844 px portrait; the dead grey lower half is gone (`.screenshots/105-kennel-01-grid.png`). Header
+  «Kennelen · Profesjonell fasilitet · 8 plasser» + coin chip up top, 4 rows of cells below, no empty
+  panel.
+- **K-2 inspect modal** opens on tap (cell centres re-published correctly after 115's resize) with the
+  full panel: warm blurb, 4 stat rows (Læreevne / Energi / Mot / Fokus, 5 pips, data-driven — Nova
+  5·5·4·5 correct), Raseegenskaper chips, the «Øyet» Unikt-trekk card, and the **K-8 trick list before
+  adopt** («Kan lære: Sitt · Ligg · Legg deg»); the dim gated adopt button sits below at 0 coins
+  (`108-kennel-modal.png`). Closes on ✕/backdrop, scroll preserved (`108-kennel-modal-closed.png`).
+- **Names / breeds / prices / tags** all correct at a glance; Bella «Din hund» owned + «Din» price,
+  Trulte «★ Påskeegg» coral tag + «Gratis», the rest priced gold. (K-3/K-4/K-5/K-6/K-7 adopt / gate /
+  switch / easter / persist were driven end-to-end clean in the prior pass at `f5b8efb`; 115 touched
+  only `kennel_screen.gd` cell-height layout, and the modal/tap path replays intact here.)
+- **No regression:** closing the kennel restores the Phase-6 training page and the Phase-1/2 core mark
+  loop intact — the polished licensed Labrador centred on grass, PERFECT + «Bra!», cyan ring,
+  path / cottage / fence / gold coins / BLUE BRA button all present (`105-kennel-03-closed.png`).
 
 **Improvements — one shortfall keeps the phase off the sign-off line**
 
-1. **The grid feels cut off — bottom ~40 % of the screen is dead grey (polish-pass gate not met).**
-   With 8 cells in 4 rows the roster fills only the top ~55 % of the 844 px screen; everything below
-   Trulte is a flat empty panel (`po-k-01-grid.png`). Adding the dog renders addressed *half* of the
-   prior minor note, but "*revisiting cell/band height so the roster fills the portrait*" was not done,
-   so a professional-facility screen still opens with its lower half blank — it reads as *unfinished /
-   content-failed-to-load*, not as a finished screen. Phase 8's own Visual-Review acceptance
-   explicitly requires *"the `polish` pass has been run and independent review confirms it on the
-   running build"* — that bar is not yet met. This is **not owner-gated** (pure layout). *Good* = run
-   the `/polish` pass on the kennel: size the cell/portrait-band height (and/or vertically balance the
-   grid) so 8 dogs in a 2-column grid **fill the portrait** with no large empty panel, keeping the
-   clean cool clinical read and the at-a-glance legibility; independent review then confirms it on the
-   running build.
+1. **The kennel dogs are blocky low-poly voxel models, not the stylized-realism Labrador — and 115
+   blew them up to dominate every cell (Visual-Review / X-4 bar not met).** Every cell and the modal
+   header render a single shared, chunky, Minecraft-like **CC0 voxel dog** (baked into
+   `assets/kennel/dog_portrait.png`, tinted per breed), framed side-/rear-on with the head turned
+   down — not a clean face-to-camera portrait (`105-kennel-01-grid.png`, 3× crop `zoom-bella.png`;
+   Bella is labelled «Labrador retriever» but reads as a block dog). Task 115 enlarged the portrait
+   («bigger dogs, keep-aspect no clip»), so 8 large blocky dogs are now the dominant feature of the
+   screen. Set directly against the signed-off training page — a warm, photorealistic-stylized
+   licensed Labrador facing camera (`105-kennel-03-closed.png`) — the kennel reads as *placeholder
+   art*, not a «bright, sterile, professional boarding kennel». This **fails X-4** («the dog always
+   reads as a real dog and as its breed» — a voxel dog reads as neither) and Phase 8's own
+   Visual-Review acceptance («reads as a clean, cool, professional facility … same Pokémon-GO
+   stylized-realism as training»). **This is not the owner gate.** Distinct per-breed *models* are
+   owner-gated (BUST-068 / P3-2) — which only justifies the 8 dogs *sharing one silhouette*, tinted —
+   but that silhouette should be the **same stylized-realism licensed Labrador the training page
+   already renders and coat-tints** (the chocolate variant proves the licensed rig tints per breed),
+   **not** a separate low-poly CC0 model. *Good* = the kennel dog render reads as that stylized-realism
+   Labrador (per-breed coat tint), framed **facing the viewer** as a flattering portrait (face/head
+   visible, not rear/side-slumped), behind the thin steel bars — so the kennel matches the training
+   page's quality; independent review then confirms it on the running build. (Committing a still baked
+   from the licensed asset may be a licensing question — if so, a runtime `SubViewport` render of the
+   licensed dog is an alternative the spec already sanctions for the modal; the build loop picks the
+   mechanism. The bars themselves render but sit very faint — worth nudging toward the spec's
+   `#788794` @ 32–40 % while the portrait is reworked.)
 
 **Owner-gated residual (honest, NOT a blocker to sign-off once #1 lands):** all 8 breeds are
-tinted-Labrador stand-ins, so every dog's trick list is the shared core (Sitt / Ligg / Legg deg) —
-distinct **breed models** and camera-facing **signature clips** are the long-standing owner gates
-(BUST-068 residual, P3-2), already flagged. K-8 is honest here: a breed only offers a trick its rig
-actually has a clean clip for (behaviour ≠ inventory), and no per-breed trick is faked.
+tinted stand-ins of the one available rig, so every dog's trick list is the shared core (Sitt / Ligg /
+Legg deg) — distinct **breed models** and camera-facing **signature clips** are the long-standing owner
+gates (BUST-068 residual, P3-2), already flagged. K-8 is honest here: a breed only offers a trick its
+rig actually has a clean clip for (behaviour ≠ inventory), and no per-breed trick is faked.
 
-**Not signed off** — the spine is complete and clean in pixels, but the grid must pass its `polish`
-gate (item 1) before the phase reads as finished. Once the portrait is filled and independent review
-confirms it, the phase is sign-off ready (its only other residuals are the already-flagged owner
-gates above).
+**Not signed off** — the spine is complete and clean in pixels and the grid now fills the portrait,
+but the dog renders must clear the X-4 / professional-facility Visual-Review bar (item 1) before the
+phase reads as finished. Once the kennel dogs read as the stylized-realism Labrador (tinted, facing
+the viewer) and independent review confirms it on the running build, the phase is sign-off ready (its
+only other residuals are the already-flagged owner gates above).
