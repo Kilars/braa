@@ -33,6 +33,10 @@ var _session := SitSession.new()
 ## gates on it and _process ticks it + reflects the locked state onto the button. Pure +
 ## tickable (scripts/tap_gate.gd); makes mashing never a strategy, input hygiene not penalty.
 var _tap_gate := TapGate.new()
+## Post-resume tap grace (120, P4-5): after the app resumes from background/lock, BRA taps within a
+## short window are swallowed so a stray resume-touch (a notification, a lock) never lands a false mark.
+## Armed on the focus-in notification, consulted at the top of _on_bra_pressed. Pure + clock-injected.
+var _grace := BackgroundGrace.new()
 ## The BRA button, kept so _process can dim + disable it while the gate is locked (046).
 var _bra_button: Button
 
@@ -2530,6 +2534,8 @@ func set_motion_scale(scale: float) -> void:
 ## land the payoff. A DEAD/MISS tap is silent and provokes no reaction (no penalty,
 ## P1-5/P1-6); the readout (024g) also consumes `marked`. Logs every tap for the boot gate.
 func _on_bra_pressed() -> void:
+	if _grace.is_grace_active(_now()):
+		return  # a stray resume-touch (120/P4-5) — ignore entirely: neither a mark nor a miss, no erosion
 	if not _tap_gate.is_armed():
 		return  # swallowed during the fixed lock — not scored, the gate's clock untouched (046/P2-7)
 	_tap_gate.lock()  # the fixed re-arm window starts on the ACCEPTED tap only — mashing can't extend it
@@ -3038,6 +3044,17 @@ func _telem(event: String, props := {}) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_emit_session_end()
+	# Resume-from-background (120, P4-5): arm the tap grace so the first stray resume-touch (a
+	# notification/lock delivering a phantom tap on the first frame) is swallowed, never a false mark.
+	# APPLICATION_FOCUS_IN fires on mobile resume; WM_WINDOW_FOCUS_IN gives desktop/web parity. Inert
+	# headless (no focus events fire), so the verify boot/test legs never arm it.
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		_grace.arm(_now())
+
+## The monotonic clock the tap grace reads (120, P4-5). Seconds since engine start — never wall-clock,
+## so it is immune to a device clock change. Injected in tests via _grace directly (no real timer).
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
 
 ## Emit session_end with a summary of the session: the last trick trained, the total
 ## accepted tap count, the best single-trick progress value seen, and how many tricks

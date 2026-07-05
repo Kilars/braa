@@ -59,11 +59,15 @@ right after resume. Confirm the constant reads fine in play; keep it a named con
 
 ## Acceptance criteria
 
-- [ ] RED first: `BackgroundGrace` — not armed → `is_grace_active` false; `arm(t)` then
+- [x] RED first: `BackgroundGrace` — not armed → `is_grace_active` false; `arm(t)` then
   a tap at `t + 0.1` → active (swallow); at `t + GRACE_S` and later → inactive (normal).
-- [ ] RED first: a `main`-level test that a BRA tap while grace is active neither scores
+- [x] RED first: a `main`-level test that a BRA tap while grace is active neither scores
   nor erodes (no mark, no miss); a tap after the grace window scores normally.
-- [ ] GREEN: resume-from-background arms the grace; the first stray tap inside the window
+- [x] GREEN: resume-from-background arms the grace; the first stray tap inside the window
   is swallowed; play resumes normally after.
-- [ ] Headless-safe: the notification hook does not error in the verify boot/test legs.
-- [ ] `nix develop -c bash verify.sh` green; placeholder check clean; committed + pushed.
+- [x] Headless-safe: the notification hook does not error in the verify boot/test legs.
+- [x] `nix develop -c bash verify.sh` green; placeholder check clean; committed + pushed.
+
+
+## Outcome
+SHIPPED. New scripts/background_grace.gd BackgroundGrace: pure, clock-injected (GRACE_S=0.35, arm(now)/is_grace_active(now), half-open window, -1 unarmed → never active). main: _grace var + _now() (Time.get_ticks_msec/1000, monotonic) + _notification arms on NOTIFICATION_APPLICATION_FOCUS_IN / WM_WINDOW_FOCUS_IN (mobile resume + desktop/web parity; inert headless) + _on_bra_pressed swallows a tap while grace is active BEFORE the tap-gate/scoring (neither mark nor miss, no erosion, _attempts untouched). TDD: test_background_grace.gd (arm/expire/re-arm/short-window) + test_background_grace_wiring.gd (swallowed-in-grace / processed-after / not-armed-on-boot). verify green 645/0. placeholder check clean. Dormant by default (no resume → never armed → byte-identical play).
