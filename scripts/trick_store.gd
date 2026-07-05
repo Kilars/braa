@@ -22,9 +22,11 @@ const SCHEMA_VERSION := 1
 ## defaults to 0 so every pre-068 caller (which passes only a tricks map) is unchanged. `roster`
 ## (079, P3-4) rides the same blob. `difficulty` (080, P4-1) rides the same blob and defaults to
 ## "normal" so every pre-080 caller is unchanged. `words` (091, P5-1) rides the same blob and
-## defaults to {} so every pre-091 caller is unchanged.
-static func encode(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}) -> String:
-	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins, "roster": roster, "difficulty": difficulty, "words": words})
+## defaults to {} so every pre-091 caller is unchanged. `kennel` (109, Phase 8 K-7) rides the same
+## blob and defaults to {} so every pre-109 caller is unchanged — a missing kennel key decodes to
+## the Bella-only default via decode_kennel, keeping all prior saves byte-compatible.
+static func encode(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}, kennel: Dictionary = {}) -> String:
+	return JSON.stringify({"version": SCHEMA_VERSION, "tricks": tricks, "coins": coins, "roster": roster, "difficulty": difficulty, "words": words, "kennel": kennel})
 
 ## The owned-breeds roster a corrupt / empty / legacy (pre-079) save degrades to (079, P3-4): owning +
 ## active the starter Labrador, never empty — a broken save never strands the player with no dog. A
@@ -106,16 +108,37 @@ static func decode_difficulty(text: String) -> String:
 		return mode_id
 	return "normal"
 
+## The kennel-dog roster a corrupt / empty / legacy (pre-109) save degrades to (109, Phase 8 K-7):
+## owning + active the starter Bella, never empty — a broken save never strands the player with no
+## kennel dog. A fresh Dictionary each call (never a shared mutable). The literal "bella" is
+## KennelRoster.STARTER / KennelDog.STARTER_ID; the store stays a dumb byte-carrier.
+static func _default_kennel() -> Dictionary:
+	return {"owned": ["bella"], "active": "bella"}
+
+## Pure: JSON string -> the owned kennel-dog roster entry (109, Phase 8 K-7). A missing (pre-109) /
+## corrupt / empty / wrong-version blob degrades to the starter-only default, so a returning player
+## always at least owns Bella. The invariants (starter always owned, active must be owned, only
+## known ids) are re-asserted by KennelRoster.restore — this just hands back the stored dict or
+## the safe default.
+func decode_kennel(text: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return _default_kennel()
+	if parsed.get("version") != SCHEMA_VERSION:
+		return _default_kennel()
+	var kennel: Variant = parsed.get("kennel")
+	return kennel if typeof(kennel) == TYPE_DICTIONARY and not (kennel as Dictionary).is_empty() else _default_kennel()
+
 ## Write the model map (+ coin balance) to user:// (IndexedDB on web). Best-effort: if the file
 ## can't be opened we skip rather than crash mid-play — a momentarily lost save is never worth a
 ## runtime error, and the next progress change re-attempts the write. `coins` defaults to 0 so a
 ## pre-068 caller is unchanged. `roster` defaults to empty so a pre-079 caller is unchanged.
 ## `difficulty` defaults to "normal" so a pre-080 caller is unchanged. `words` defaults to {} so
-## a pre-091 caller is unchanged.
-func save(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}) -> void:
+## a pre-091 caller is unchanged. `kennel` defaults to {} so a pre-109 caller is unchanged.
+func save(tricks: Dictionary, coins: int = 0, roster: Dictionary = {}, difficulty: String = "normal", words: Dictionary = {}, kennel: Dictionary = {}) -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
-		f.store_string(encode(tricks, coins, roster, difficulty, words))
+		f.store_string(encode(tricks, coins, roster, difficulty, words, kennel))
 
 ## Read the saved model map back. First run (no file) -> {} clean zero state, never a crash; a
 ## present-but-corrupt file also degrades to {} via decode().
@@ -157,3 +180,11 @@ func load_words() -> Dictionary:
 		return _default_words()
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	return decode_words(f.get_as_text()) if f != null else _default_words()
+
+## Read the saved kennel-dog roster back (109, Phase 8 K-7). First run (no file) or any
+## corrupt/legacy save -> the Bella-only default, never a crash and never a dog-less kennel.
+func load_kennel() -> Dictionary:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return _default_kennel()
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	return decode_kennel(f.get_as_text()) if f != null else _default_kennel()

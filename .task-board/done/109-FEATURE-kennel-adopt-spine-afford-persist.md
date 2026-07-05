@@ -115,18 +115,43 @@ func _on_kennel_adopt(id: String) -> void:
 
 ## Acceptance criteria
 
-- [ ] **TDD first:** `KennelRoster`, the `decode_kennel` persistence, and the adopt-mutation tests all
+- [x] **TDD first:** `KennelRoster`, the `decode_kennel` persistence, and the adopt-mutation tests all
       written RED, then GREEN (reference the `tdd` skill).
-- [ ] The coin balance shows live in the kennel header; every buyable cell + the modal button show the
+- [x] The coin balance shows live in the kennel header; every buyable cell + the modal button show the
       price; the modal adopt button reads «Adopter · N mynt» (K-3).
-- [ ] When `coins < price` the adopt button is visibly disabled (dim, non-tappable) — no error state (K-3).
-- [ ] Pressing an enabled adopt button deducts the price, marks the dog owned, gives positive feedback
+- [x] When `coins < price` the adopt button is visibly disabled (dim, non-tappable) — no error state (K-3).
+- [x] Pressing an enabled adopt button deducts the price, marks the dog owned, gives positive feedback
       (coin count-down + a small celebratory beat), and flips the cell/modal to the owned treatment (K-4).
-- [ ] No double-spend: an in-flight adopt can't fire twice (K-4).
-- [ ] Coins + the owned set persist to `user://` under a new `kennel` save key; a pre-109 (Phase-6) save
+- [x] No double-spend: an in-flight adopt can't fire twice (K-4).
+- [x] Coins + the owned set persist to `user://` under a new `kennel` save key; a pre-109 (Phase-6) save
       decodes to Bella-only, unchanged (K-7). No parallel store added.
-- [ ] `_kennel_owned()`/`_kennel_active()` now read the persisted `KennelRoster` (id-space reconciled).
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] `_kennel_owned()`/`_kennel_active()` now read the persisted `KennelRoster` (id-space reconciled).
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
 - [ ] Visual Review PASS (390×844, real canvas tap): open a dog's modal, adopt an affordable dog →
       balance counts down, cell flips to owned; open an unaffordable dog → button is dim/non-tappable;
       reload → the adoption persists. Training page intact.
+
+## Resolution
+
+**Shipped 2026-07-05.** All 16 RED TDD tests → GREEN (606 total, 0 failures). Verify gate green.
+
+**Files touched:**
+- `scripts/kennel_roster.gd` — NEW. `KennelRoster` pure value object mirroring `BreedRoster` in the
+  KennelDog id-space. `STARTER = "bella"`. `owns/adopt/set_active/to_dict/restore` with full
+  degrade-to-bella-only invariant on corrupt/empty/unknown-id input.
+- `scripts/trick_store.gd` — Extended `encode()` + `save()` with trailing `kennel: Dictionary = {}`
+  param (all existing callers byte-compatible via default `{}`). Added `_default_kennel()`,
+  `decode_kennel(text)` (same degrade-to-default pattern as `decode_roster`), `load_kennel()`.
+- `scripts/main.gd` — Added `var _kennel_roster := KennelRoster.new()` and `_kennel_adopt_busy`.
+  `_load_kennel_roster()` added to boot sequence. `_save_progress()` now threads
+  `_kennel_roster.to_dict()` as the 6th arg. `_kennel_owned()`/`_kennel_active()` stubs replaced to
+  read `_kennel_roster`. New `_on_kennel_adopt(id)` with K-3 gate + double-spend guard + joy beat +
+  re-render + re-open modal. `_kennel.adopt_requested` wired to `_on_kennel_adopt` in
+  `_setup_kennel_screen`.
+- `scripts/kennel_screen.gd` — Added `signal adopt_requested(id)`. `open_detail()` augments the
+  detail dict with `owned` and `affordable` from `_rows`/`_balance`. `_build_adopt_button()` replaced
+  with real K-4 implementation: full-width blue «Adopter · N mynt» button, dim+disabled when
+  unaffordable, null for owned dogs, emits `adopt_requested`.
+
+**Deferred to 110:** «Tren med [navn]» switch button for owned non-active dogs.
+**Deferred to 111:** Trulte's free «Adopter gratis» coral button (K-6 easter egg path).

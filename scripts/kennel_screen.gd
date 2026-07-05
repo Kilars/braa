@@ -16,9 +16,10 @@ extends Control
 ## names, not a stub. If the baked PNG is absent (e.g. a fresh tree before the bake ran) the band
 ## degrades cleanly to tint-only — never a primitive stand-in.
 
-signal dog_selected(id: String)   ## cell was tapped → the detail modal task will consume this
-signal closed                      ## back/✕ was tapped → main restores the training HUD
-signal detail_closed               ## the inspect modal was dismissed (optional hook for main)
+signal dog_selected(id: String)    ## cell was tapped → the detail modal task will consume this
+signal closed                       ## back/✕ was tapped → main restores the training HUD
+signal detail_closed                ## the inspect modal was dismissed (optional hook for main)
+signal adopt_requested(id: String)  ## the adopt button was pressed → main._on_kennel_adopt (109, K-4)
 
 # ---------------------------------------------------------------------------
 # Palette — cool/clinical kennel colours (phase8.md:114-118). Named constants,
@@ -135,6 +136,17 @@ func open_detail(id: String) -> void:
 		_build_ui()
 	close_detail()  # replace any existing modal cleanly
 	var detail := KennelDog.detail_for(id)
+	# Augment detail with economy state so _build_adopt_button can gate on affordability
+	# and render the correct label. These keys are NOT in KennelDog.detail_for (it stays
+	# economy-unaware) — we compute them here from the last rendered balance (_balance)
+	# and the classify rows if available, so the modal always reflects the live state.
+	var is_owned := false
+	for row in _rows:
+		if row.get("id") == id:
+			is_owned = row.get("owned", false)
+			break
+	detail["owned"] = is_owned
+	detail["affordable"] = is_owned or detail["price"] == 0 or _balance >= detail["price"]
 	_modal_overlay = _build_modal_overlay(detail)
 	add_child(_modal_overlay)
 	# Animate if inside the scene tree and not reduced-motion (X-5).
@@ -726,9 +738,8 @@ func _build_modal_overlay(detail: Dictionary) -> Control:
 	# 2e. Trick list (K-8): "Kan lære: Sitt · Ligg · Legg deg".
 	body.add_child(_build_modal_trick_list(detail))
 
-	# K-4 adopt button mounts here (next task).
-	# The _build_adopt_button() stub is defined below; it returns null in this slice
-	# so nothing is added — the modal is a complete inspect card with no dead button.
+	# K-4 adopt button (109): full-width blue «Adopter · N mynt» for unowned dogs; null for
+	# owned dogs (no dead button). Dim + disabled when unaffordable (K-3). Emits adopt_requested.
 	var adopt_node := _build_adopt_button(detail)
 	if adopt_node != null:
 		body.add_child(adopt_node)
@@ -967,13 +978,64 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
 
-## K-4 adopt button mount seam (next task). Returns null in this K-2 inspect slice —
-## no visible, dead or no-op button is rendered. The K-4 task replaces this stub with
-## the real adopt wiring (spend coins, roster mutation, close modal, persist save).
-## Allowlisted as "a stand-in an open task names" per CLAUDE.md placeholder rules.
-func _build_adopt_button(_detail: Dictionary) -> Control:
-	# K-4 adopt button mounts here (next task — wires economy/roster/save).
-	return null
+## K-4 adopt button (109). Returns null for an owned dog (no button — «Tren med [navn]» switch
+## label lands in task 110). For an unowned dog: a full-width blue button reading
+## «Adopter · N mynt» (Baloo 2, #4a90e2). When the dog is unaffordable the button is visually
+## dimmed and disabled (non-tappable) — no error state (K-3). On press emits adopt_requested(id)
+## which main._on_kennel_adopt wires into the real spend+roster mutation. Trulte's free-adopt
+## coral treatment is K-6 (task 111) — this task ships the priced blue path only.
+const C_ADOPT_BLUE := Color("4a90e2")    ## blue adopt button bg
+const C_ADOPT_DIM  := Color("b0c8e8")    ## dimmed blue when unaffordable
+
+func _build_adopt_button(detail: Dictionary) -> Control:
+	# Owned dog: no adopt button — switch label lands in task 110.
+	if detail.get("owned", false):
+		return null
+
+	var price: int = detail.get("price", 0)
+	var affordable: bool = detail.get("affordable", true)
+	var dog_id: String = detail.get("id", "")
+
+	# Button label: «Adopter · N mynt» (price in numerals — no emoji, no non-theme glyph).
+	var label_text := "Adopter  %d mynt" % price if price > 0 else "Adopter"
+
+	var btn := Button.new()
+	btn.name = "AdoptButton"
+	btn.text = label_text
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 0.75))
+	btn.add_theme_color_override("font_disabled_color", Color.WHITE)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var bg_color := C_ADOPT_BLUE if affordable else C_ADOPT_DIM
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg_color
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_left   = 0.0
+	sb.content_margin_right  = 0.0
+	sb.content_margin_top    = 14.0
+	sb.content_margin_bottom = 14.0
+	var sb_pressed := sb.duplicate() as StyleBoxFlat
+	sb_pressed.bg_color = bg_color.darkened(0.12)
+	for st in ["normal", "hover", "disabled"]:
+		btn.add_theme_stylebox_override(st, sb)
+	btn.add_theme_stylebox_override("pressed", sb_pressed)
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+	# K-3: unaffordable → dim + non-tappable.
+	btn.disabled = not affordable
+	if not affordable:
+		btn.modulate = Color(1.0, 1.0, 1.0, 0.55)
+
+	# On press emit the new adopt_requested signal — main wires to _on_kennel_adopt.
+	if affordable:
+		btn.pressed.connect(func(): adopt_requested.emit(dog_id))
+
+	return btn
 
 # ---------------------------------------------------------------------------
 # Web capture hook — publish cell centres for real-tap automation.

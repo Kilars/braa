@@ -177,6 +177,14 @@ var _kennel: KennelScreen
 ## The kennel entry button in the training HUD — a small top-area pill mirroring _tricks_button.
 ## Included in _set_training_hud_visible so it hides while the kennel itself is open.
 var _kennel_button: Button
+## The persisted kennel-dog owned roster (109, Phase 8 K-3/K-4/K-7). A pure value object —
+## the set of owned KennelDog ids + the one active id. Replaces the STARTER-only stubs
+## _kennel_owned()/_kennel_active() with a real persisted roster saved under the new "kennel"
+## key in the ONE TrickStore blob (byte-compatible: a pre-109 save decodes to Bella-only).
+var _kennel_roster := KennelRoster.new()
+## In-flight guard for _on_kennel_adopt (K-4): a second press mid-adopt is swallowed so
+## there is no double-spend. Mirrors the _menu_open / mastery-complete guard pattern.
+var _kennel_adopt_busy := false
 ## The genuinely-absent tricks (BUST-064 residual, owner-gated): the licensed Labrador ships no paw /
 ## roll / spin clip, so these are shown as display-only Locked roadmap rows — never selectable, never
 ## playing a faked clip. They wire as real tricks only once the owner supplies clips.
@@ -314,6 +322,7 @@ func _ready() -> void:
 		_bake_portrait()
 		return
 	_load_roster()                   # restore the owned-breeds roster + active breed BEFORE the dog loads (079/P3-4)
+	_load_kennel_roster()            # restore the kennel-dog owned roster (109, Phase 8 K-7)
 	_words.restore(_store.load_words())  # restore the marker-word unlock state + active word (091/P5-1)
 	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
@@ -2109,6 +2118,7 @@ func _setup_kennel_screen(ui: CanvasLayer) -> void:
 	_kennel = ks
 	_kennel.closed.connect(_close_kennel)
 	_kennel.dog_selected.connect(_on_kennel_dog_selected)
+	_kennel.adopt_requested.connect(_on_kennel_adopt)  # K-4 adopt wiring (109)
 
 	# The Kennel pill button: mirrors the Triks button on the top-left but sits to its right.
 	# Using the same HUD-pill style as _tricks_button (097/100, Phase 6).
@@ -2177,17 +2187,15 @@ func _on_kennel_dog_selected(id: String) -> void:
 	_kennel.open_detail(id)
 
 ## The set of dog ids the player currently owns, in kennel terms.
-## SEAM: for this browse-only slice, we always return [STARTER_ID] (Bella). The
-## roster→kennel-id migration that makes adopted dogs show as owned is deferred to the
-## adopt task (K-4/K-5) — it needs a new save key so the signed-off Phase-6 save is
-## not disturbed. This seam is the one place to update when that lands.
+## The set of owned kennel-dog ids — reads the persisted KennelRoster (109, Phase 8 K-7).
+## Replaces the STARTER-only stub from the browse-only 105 slice.
 func _kennel_owned() -> Array:
-	return [KennelDog.STARTER_ID]
+	return _kennel_roster.owned
 
-## The active dog id in kennel terms.
-## SEAM: same deferral as _kennel_owned() — returns STARTER_ID (Bella) for this slice.
+## The active kennel-dog id — reads the persisted KennelRoster (109, Phase 8 K-7).
+## Replaces the STARTER-only stub from the browse-only 105 slice.
 func _kennel_active() -> String:
-	return KennelDog.STARTER_ID
+	return _kennel_roster.active
 
 ## Show/hide the training-HUD chrome as a unit (090, PO 2026-07-03 Bugfix 2). The trick menu is an opaque
 ## panel that covers this chrome, but the breed showcase keeps its centre transparent so the spotlit dog
@@ -2609,7 +2617,7 @@ func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id, _words.to_dict())  # coins + roster + difficulty + words ride the same save file (068/079/080/091)
+	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id, _words.to_dict(), _kennel_roster.to_dict())  # coins + roster + difficulty + words + kennel ride the same save file (068/079/080/091/109)
 	# Web-only e2e seam (087): mirror the active breed the save JUST wrote. Lets a capture prove a breed
 	# switch was PERSISTED to the save deterministically — the reload-restore is separately proven (079),
 	# but its IndexedDB flush is async/racy, so this hook is the deterministic write-side proof. No-op off
@@ -2630,6 +2638,43 @@ func _load_coins() -> void:
 ## dog-less player and never a crash.
 func _load_roster() -> void:
 	_roster.restore(_store.load_roster())
+
+## Restore the kennel-dog owned roster on boot (109, Phase 8 K-7). Runs before the kennel screen
+## is shown so a returning player sees their adopted dogs. First run / corrupt / legacy save ->
+## owning just Bella (TrickStore + KennelRoster both degrade cleanly), never a dog-less kennel
+## and never a crash.
+func _load_kennel_roster() -> void:
+	_kennel_roster.restore(_store.load_kennel())
+
+## Adopt a kennel dog by spending coins (109, Phase 8 K-3/K-4). Guards:
+##   - In-flight: a second press while one adopt is mid-flight is swallowed (no double-spend).
+##   - Affordability: price > 0 and not enough coins → K-3 gate blocks the adopt.
+##   - Already-owned: KennelRoster.adopt is idempotent, but we also skip the spend if the dog
+##     is already owned (the caller's owns() guard keeps this a no-op).
+## On success: deducts the price, marks the dog owned, persists the whole blob, re-renders the
+## kennel grid, re-opens/refreshes the modal to the owned treatment, and plays a small joyful
+## beat (coin count-down via _refresh_coins + procedural bounce — reusing the 072/077 pattern).
+func _on_kennel_adopt(id: String) -> void:
+	if _kennel_adopt_busy:
+		return
+	if _kennel_roster.owns(id):
+		return  # already owned — no-op, no spend
+	var price := KennelDog.by_id(id).price
+	if price > 0 and not _purse.can_afford(price):
+		return  # K-3 affordability gate
+	_kennel_adopt_busy = true
+	_purse.spend(price)
+	_kennel_roster.adopt(id)
+	_save_progress()            # persist the whole blob (tricks + coins + roster + kennel)
+	_refresh_coins()            # update the HUD coin readout
+	# Re-render the kennel grid with the updated owned set.
+	if _kennel != null:
+		var rows := KennelDog.classify_kennel_dogs(_kennel_owned(), _kennel_active(), _purse.balance)
+		_kennel.render(rows, _purse.balance)
+		_kennel.open_detail(id)  # refresh the modal to the owned treatment
+	# Positive feedback: joyful beat (077 pattern — a facing-preserving bounce, not a clip).
+	_play_joy_beat()
+	_kennel_adopt_busy = false
 
 ## Push the current coin balance onto the HUD readout (068/P3-D3). No-op before the readout mounts.
 func _refresh_coins() -> void:
