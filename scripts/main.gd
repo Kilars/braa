@@ -703,7 +703,7 @@ func _setup_environment() -> void:
 	# peach/cream near-horizon — the Pokémon-GO warmth the owner asked for, and a richer grade than
 	# the old blue→flat-pale-yellow band. Peach means red leads green leads blue at the horizon.
 	sky_mat.sky_top_color = Color(0.24, 0.55, 0.92)       # bright, clear sky-blue zenith
-	sky_mat.sky_horizon_color = Color(0.99, 0.82, 0.62)   # warm peach/cream near-horizon glow
+	sky_mat.sky_horizon_color = Color(0.88, 0.68, 0.44)   # warm peach horizon — richer/less-white, holds saturation
 	sky_mat.sky_curve = 0.2                     # gentle grade — the warm band spreads up, not banded
 	# Ground half of the procedural sky (below horizon). The finite 40 m grass plane doesn't quite
 	# reach the true horizon, so a thin band of this shows between the plane's far edge and the sky.
@@ -726,7 +726,7 @@ func _setup_environment() -> void:
 	# Ambient from sky so the dog's unlit surfaces (belly, paws) stay readable, not pitch black.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 0.6   # mix: bright sky bounce, not blown out
-	env.ambient_light_energy = 0.8
+	env.ambient_light_energy = 0.6   # 125: trimmed from 0.8 — less sky wash, holds saturation
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
@@ -810,7 +810,8 @@ const HAMBURGER_BAR_H := 2        ## px thickness of each bar
 const HAMBURGER_BAR_GAP := 4      ## px gap between bars
 ## A deeper drop shadow than panel()'s default (alpha .08) for the top HUD pills, so a pale PAPER
 ## pill lifts off the bright sun band instead of washing out (PO Phase-6 note #3).
-const HUD_PILL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.20)
+## 125: bumped alpha 0.20 → 0.28 — extra lift for directive-5 HUD legibility after de-bloom.
+const HUD_PILL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.28)
 
 ## Learned bar (045, P2-4): a meter below the coin line holding the trick label + progress track.
 ## 097 (Phase 6): expanded to include the trick-name label row above the track itself. The label row
@@ -1415,12 +1416,16 @@ func _setup_sun_disc(dog: Node) -> void:
 	# old opaque low-poly sphere read as a hard EGG with no glow in SwiftShader. Baked to an Image
 	# (GradientTexture2D), so it renders in EVERY GL path including the local software renderer.
 	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.34, 0.40, 1.0])
+	# 125: tightened halo (solid→transparent faster) + cooled core away from near-white.
+	# Offsets: solid disc body ends at 0.45 (was 0.40) → less halo area; halo gone by 0.72
+	# (was 1.0 = full quad edge) → falloff covers ~40% less sky. Core pulled from near-white
+	# Color(1.0,0.99,0.90) → warm gold Color(1.0,0.93,0.70) so it reads accent not blown-out.
+	grad.offsets = PackedFloat32Array([0.0, 0.30, 0.45, 0.72])
 	grad.colors = PackedColorArray([
-		Color(1.0, 0.99, 0.90, 1.0),   # near-white warm core
-		Color(1.0, 0.90, 0.55, 1.0),   # golden disc body — solid to here (crisp edge)
-		Color(1.0, 0.84, 0.45, 0.55),  # halo begins: warm gold, alpha drops
-		Color(1.0, 0.80, 0.40, 0.0),   # halo fades fully out
+		Color(1.0, 0.93, 0.70, 1.0),   # warm gold core — not near-white (125 de-bloom)
+		Color(1.0, 0.88, 0.50, 1.0),   # golden disc body — solid to here (crisp edge)
+		Color(1.0, 0.82, 0.40, 0.45),  # halo begins: alpha already halved (faster fade)
+		Color(1.0, 0.78, 0.35, 0.0),   # halo fades fully out at 72% radius, not full edge
 	])
 	var grad_tex := GradientTexture2D.new()
 	grad_tex.gradient = grad
@@ -1430,10 +1435,11 @@ func _setup_sun_disc(dog: Node) -> void:
 	grad_tex.width = 256
 	grad_tex.height = 256
 	# A camera-facing quad: always a perfect round disc regardless of the look-down pitch (the
-	# low-poly sphere read as an egg). Sized so the SOLID core (~0.34 of radius) is ~0.8 m and the
-	# soft halo reaches ~2.4 m across.
+	# low-poly sphere read as an egg). 125: shrunk from 2.4×2.4 → 1.5×1.5 so the soft halo covers
+	# ~40% less sky area (halo also fades out at 0.72 radius so the effective wash is far smaller).
+	# Solid core (~0.30 of radius) is ~0.45 m, halo edge at 0.72×0.75 m ≈ 0.54 m radius.
 	var quad := QuadMesh.new()
-	quad.size = Vector2(2.4, 2.4)
+	quad.size = Vector2(1.5, 1.5)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = grad_tex
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-luminous, not lit by the scene

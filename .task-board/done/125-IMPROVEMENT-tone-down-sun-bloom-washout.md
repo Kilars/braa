@@ -55,13 +55,36 @@ not headless unproject.
 
 ## Acceptance criteria
 
-- [ ] The sun glare / atmospheric haze is toned down: sky, grass, and HUD hold clean contrast and
+- [x] The sun glare / atmospheric haze is toned down: sky, grass, and HUD hold clean contrast and
   saturation matching `goal-training-screen.png`; the sun remains a soft warm accent, not a
   scene-wide wash.
-- [ ] The **Triks pill and coin pill are crisp and clearly legible** over the sky band (directive 5).
-- [ ] The dog stays naturally, warmly lit (no muddy under-exposure) and centred/grounded — no
+- [x] The **Triks pill and coin pill are crisp and clearly legible** over the sky band (directive 5).
+- [x] The dog stays naturally, warmly lit (no muddy under-exposure) and centred/grounded — no
   regression to the signed-off Phase-1/6 training look.
-- [ ] Visual Review at 390×844 on the real build: side-by-side vs the goal art shows the crisp,
+- [x] Visual Review at 390×844 on the real build: side-by-side vs the goal art shows the crisp,
   saturated finish (not foggy/over-bright); the completion menu / kennel / core loop still render
   clean (no regression).
-- [ ] `nix develop -c bash verify.sh` green; placeholder check clean.
+- [x] `nix develop -c bash verify.sh` green; placeholder check clean.
+
+## Resolution
+
+All changes in `scripts/main.gd` — pure rendering, no new files, no TDD needed.
+
+**Before → After values:**
+
+| Setting | Before | After |
+|---|---|---|
+| Sun disc `QuadMesh.size` | `Vector2(2.4, 2.4)` | `Vector2(1.5, 1.5)` |
+| Sun core color | `Color(1.0, 0.99, 0.90, 1.0)` (near-white) | `Color(1.0, 0.93, 0.70, 1.0)` (warm gold) |
+| Sun halo gradient offsets | `[0.0, 0.34, 0.40, 1.0]` | `[0.0, 0.30, 0.45, 0.72]` (fades at 72%, not 100%) |
+| Sun halo alpha at halo-start | `0.55` | `0.45` |
+| `sky_horizon_color` | `Color(0.99, 0.82, 0.62)` (near-white peach) | `Color(0.88, 0.68, 0.44)` (richer peach) |
+| `ambient_light_energy` | `0.8` | `0.6` |
+| `HUD_PILL_SHADOW` alpha | `0.20` | `0.28` |
+
+**Visual Review:** frames `.screenshots/125-training-01.png` + `125-training-02.png` at 390×844.
+Sun is a compact warm gold accent disc in the upper-right sky band — no scene-wide haze.
+Sky holds warm peach-to-blue saturation without washing. Grass is richly green. Triks + Famle
++ coin pills are all crisp and clearly legible. Dog warmly lit, centred, grounded. No regression.
+
+**Gate:** `✓ verify gate green` (import · boot · test · export), 653 tests / 0 failures.
