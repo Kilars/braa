@@ -170,6 +170,13 @@ var _sun_base_energy := -1.0
 const SHOWCASE_LIGHT_BOOST := 1.7    ## key-light multiplier while the showcase is open
 const SHOWCASE_FILL_ENERGY := 2.2    ## the added camera-side OmniLight fill energy
 const SHOWCASE_FILL_RANGE := 24.0    ## its range (m) — comfortably covers the framed dog
+## The kennel browse-grid screen (105, Phase 8 K-1/K-3). A dumb renderer mounted on the
+## same CanvasLayer; opened by _open_kennel(), closed by _close_kennel(). Browse-only this
+## slice — no modal, no adopt, no economy mutation (those land with K-2/K-4/K-5).
+var _kennel: KennelScreen
+## The kennel entry button in the training HUD — a small top-area pill mirroring _tricks_button.
+## Included in _set_training_hud_visible so it hides while the kennel itself is open.
+var _kennel_button: Button
 ## The genuinely-absent tricks (BUST-064 residual, owner-gated): the licensed Labrador ships no paw /
 ## roll / spin clip, so these are shown as display-only Locked roadmap rows — never selectable, never
 ## playing a faked clip. They wire as real tricks only once the owner supplies clips.
@@ -1626,6 +1633,7 @@ func _setup_bra_button() -> void:
 	_setup_trick_menu(ui)
 	_setup_feedback_form(ui)
 	_setup_breed_showcase(ui)
+	_setup_kennel_screen(ui)
 	# Apply the Phase-6 design-system theme so all Control descendants (including the BRA
 	# Button, learned bar, coin readout) render in the real bundled fonts (Nunito/Baloo 2).
 	# CanvasLayer itself cannot hold a theme (not a Control), so we set it on the BRA Button
@@ -1935,6 +1943,104 @@ func _close_showcase() -> void:
 	_brighten_stage(false)
 	_publish_showcase()
 
+# ---------------------------------------------------------------------------
+# Kennel grid screen (105, Phase 8 K-1/K-3 — anchor visual slice)
+# ---------------------------------------------------------------------------
+
+## Mount the kennel screen on the CanvasLayer, hidden. Also mounts the top-area
+## «Kennel» pill button that opens it, positioned to the right of _tricks_button.
+## Called from _setup_bra_button near the other modal setups.
+func _setup_kennel_screen(ui: CanvasLayer) -> void:
+	# The dumb kennel renderer — full-screen, hidden until _open_kennel().
+	var ks := KennelScreen.new()
+	ks.name = "KennelScreen"
+	ks.anchor_right  = 1.0
+	ks.anchor_bottom = 1.0
+	ks.hide()
+	ui.add_child(ks)
+	_kennel = ks
+	_kennel.closed.connect(_close_kennel)
+	_kennel.dog_selected.connect(_on_kennel_dog_selected)
+
+	# The Kennel pill button: mirrors the Triks button on the top-left but sits to its right.
+	# Using the same HUD-pill style as _tricks_button (097/100, Phase 6).
+	var btn := Button.new()
+	btn.name = "KennelButton"
+	btn.text = "Kennel"
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
+	btn.add_theme_color_override("font_color",         DesignSystem.SLATE)
+	btn.add_theme_color_override("font_pressed_color", DesignSystem.SLATE)
+	btn.add_theme_color_override("font_hover_color",   DesignSystem.SLATE)
+	var k_normal := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
+	k_normal.shadow_color = HUD_PILL_SHADOW
+	var k_pressed := DesignSystem.panel(DesignSystem.CREAM, DesignSystem.R_PILL)
+	k_pressed.shadow_color = HUD_PILL_SHADOW
+	btn.add_theme_stylebox_override("normal",   k_normal)
+	btn.add_theme_stylebox_override("hover",    k_normal)
+	btn.add_theme_stylebox_override("pressed",  k_pressed)
+	btn.add_theme_stylebox_override("disabled", k_normal)
+	btn.add_theme_stylebox_override("focus",    StyleBoxEmpty.new())
+	# Position: same top row as Triks, directly to its right.
+	btn.anchor_left = 0.0
+	btn.anchor_right = 0.0
+	btn.anchor_top = 0.0
+	btn.anchor_bottom = 0.0
+	btn.offset_left   = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH + 8.0
+	btn.offset_top    = TRICKS_BTN_TOP
+	btn.offset_right  = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH + 8.0 + 96.0
+	btn.offset_bottom = TRICKS_BTN_TOP + TRICKS_BTN_HEIGHT
+	btn.focus_mode = Control.FOCUS_NONE
+	ui.add_child(btn)
+	btn.pressed.connect(_open_kennel)
+	_kennel_button = btn
+	_publish_kennel_btn()  # seed the capture hook for the Visual-Review script
+
+## Open the kennel: build rows from the current economy state, render, hide the training
+## HUD (task-090 pattern so the chrome doesn't ghost through the opaque kennel surface),
+## and show. The coin chip is seeded with the live balance — it stays static this slice
+## (balance only changes through training mastery which is paused while the kennel is open).
+func _open_kennel() -> void:
+	if _kennel == null:
+		return
+	var rows := KennelDog.classify_kennel_dogs(_kennel_owned(), _kennel_active(), _purse.balance)
+	_kennel.render(rows, _purse.balance)
+	_set_training_hud_visible(false)
+	_kennel.show()
+
+## Close the kennel and restore the training HUD. Called from the closed signal and from
+## the wiring test via _close_kennel().
+func _close_kennel() -> void:
+	if _kennel != null:
+		_kennel.hide()
+	_set_training_hud_visible(true)
+
+## Web-only e2e/capture hook (105): publish the Kennel button centre (viewport px) so the
+## Visual-Review capture script can land a REAL tap on it. Mirrors _publish_showcase().
+func _publish_kennel_btn() -> void:
+	if not OS.has_feature("web") or _kennel_button == null:
+		return
+	var c := _kennel_button.get_global_rect().get_center()
+	JavaScriptBridge.eval("window.__bra_kennel_btn = {x: %s, y: %s};" % [c.x, c.y], true)
+
+## dog_selected(id) from the kennel grid — this slice only logs it (the detail modal that
+## consumes it lands with K-2). No fake modal, no economy mutation.
+func _on_kennel_dog_selected(_id: String) -> void:
+	pass  # K-2 detail modal wires here in the next task
+
+## The set of dog ids the player currently owns, in kennel terms.
+## SEAM: for this browse-only slice, we always return [STARTER_ID] (Bella). The
+## roster→kennel-id migration that makes adopted dogs show as owned is deferred to the
+## adopt task (K-4/K-5) — it needs a new save key so the signed-off Phase-6 save is
+## not disturbed. This seam is the one place to update when that lands.
+func _kennel_owned() -> Array:
+	return [KennelDog.STARTER_ID]
+
+## The active dog id in kennel terms.
+## SEAM: same deferral as _kennel_owned() — returns STARTER_ID (Bella) for this slice.
+func _kennel_active() -> String:
+	return KennelDog.STARTER_ID
+
 ## Show/hide the training-HUD chrome as a unit (090, PO 2026-07-03 Bugfix 2). The trick menu is an opaque
 ## panel that covers this chrome, but the breed showcase keeps its centre transparent so the spotlit dog
 ## shows through — the always-on BRA button (plus its concentric ring markers, the coin readout, learned
@@ -1942,7 +2048,7 @@ func _close_showcase() -> void:
 ## these nodes self-set `.visible` (their _process/event drivers touch only `.disabled`/`.modulate`/
 ## `.text`), so toggling visibility here is safe + sticky. Null-guarded — a no-op before the HUD is built.
 func _set_training_hud_visible(v: bool) -> void:
-	for n in [_bra_button, _tell_marker, _trainer_marker, _readout, _word_pop, _learned_bar, _coin_readout, _tricks_button]:
+	for n in [_bra_button, _tell_marker, _trainer_marker, _readout, _word_pop, _learned_bar, _coin_readout, _tricks_button, _kennel_button]:
 		if n != null:
 			(n as CanvasItem).visible = v
 

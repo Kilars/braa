@@ -94,20 +94,36 @@ canvas taps to open the kennel). Confirm by eye:
 
 ## Acceptance criteria
 
-- [ ] `scripts/kennel_screen.gd` renders a header (title/subtitle + live coin chip) and a
+- [x] `scripts/kennel_screen.gd` renders a header (title/subtitle + live coin chip) and a
       `ScrollContainer › GridContainer(columns=2)` of 8 cells from `classify_kennel_dogs`.
-- [ ] Each cell shows: tinted band + steel bars, name (Baloo 2) + breed (Nunito muted), status tag
+- [x] Each cell shows: tinted band + steel bars, name (Baloo 2) + breed (Nunito muted), status tag
       (owned/secret/neutral), and price chip (gold/«Din»/«Gratis») — driven by the classify row.
-- [ ] Cool/clinical palette; warmth only in the coin chip + band tints; kennel greys are named
+- [x] Cool/clinical palette; warmth only in the coin chip + band tints; kennel greys are named
       constants, not scattered literals.
-- [ ] Dog band renders an **honest** tinted Labrador stand-in (or tint band) — no bare primitive,
+- [x] Dog band renders an **honest** tinted Labrador stand-in (or tint band) — no bare primitive,
       no faked distinct-breed silhouette (owner-gated MODELS residual, BUST-068, left flagged).
-- [ ] Entry from training opens the kennel (training HUD hidden, task-090 pattern); close returns to
+- [x] Entry from training opens the kennel (training HUD hidden, task-090 pattern); close returns to
       training with it intact; `dog_selected(id)` emitted on cell press.
-- [ ] Cell pressed-scale affordance + staggered pop-in; `ReducedMotion` honored (X-5).
-- [ ] `tests/test_kennel_screen_wiring.gd`: builds 8 cells, open hides / close restores the training
+- [x] Cell pressed-scale affordance + staggered pop-in; `ReducedMotion` honored (X-5).
+- [x] `tests/test_kennel_screen_wiring.gd`: builds 8 cells, open hides / close restores the training
       HUD, cell press emits `dog_selected` with the right id (RED→GREEN).
-- [ ] Visual Review PASS at 390×844 (screenshots kept); `polish` pass run; no earlier-phase regression.
-- [ ] No modal, no adopt, no economy/roster/save mutation this slice (deferred to K-2/K-4/K-5).
-- [ ] Placeholder check clean (allowlist the tint-band stand-in against the open BUST-068 residual);
+- [x] Visual Review PASS at 390×844 (screenshots kept); `polish` pass run; no earlier-phase regression.
+- [x] No modal, no adopt, no economy/roster/save mutation this slice (deferred to K-2/K-4/K-5).
+- [x] Placeholder check clean (allowlist the tint-band stand-in against the open BUST-068 residual);
       `nix develop -c bash verify.sh` green.
+
+## Resolution (2026-07-05)
+
+New `scripts/kennel_screen.gd` (dumb `KennelScreen` Control) + `main.gd` wiring (a «Kennel» pill in
+the top HUD row opens it; `_set_training_hud_visible(false/true)` on open/close, task-090 pattern) +
+`tests/test_kennel_screen_wiring.gd` (6 asserts) + `tools/web_capture_kennel.mjs`. Verify green
+(586/0). **Visual Review PASS** — the orchestrator (main agent) reviewed the real pixels at 390×844:
+`.screenshots/105-kennel-01-grid.png` shows the header («Kennelen» + subtitle + gold «0 mynter» chip +
+✕), all 8 cells in a cool/clinical 2-col grid (tinted band + steel bars + name/breed + status tag +
+price chip), Bella owned (green «Din hund»/«Din»), Trulte «★ Påskeegg»/«Gratis» coral; `03-closed.png`
+confirms the signed-off Phase-6 training page is intact behind the new «Kennel» pill (no regression).
+Dog render in the band = honest tinted band only this slice (per-dog baked portrait deferred, blessed
+by the task — not a stub). **Deferred polish notes (next rounds, not blockers):** rarity-accent
+price-chip colours (spec wants common grey / rare blue / epic gold — currently uniform gold), and a
+neutral «N dager her» status tag on unowned common/rare/epic cells. Adopt/switch/modal + roster→kennel
+id-migration remain the K-2/K-4/K-5 follow-ups.
