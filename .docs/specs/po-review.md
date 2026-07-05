@@ -181,50 +181,52 @@
 Phases 1–9 are signed off and Phase 10 (play mode) is current but unspecced. Before Phase-10
 scaffolding, the **training page** — the persistent surface every phase replays — must match the
 design goal `.docs/specs/assets/goal-training-screen.png` in *finish*. Replayed the owner's six
-directives on a fresh local licensed bundle (`build/web` at HEAD `45f6939`, Sitt-capable Labrador)
-served over http in headless Chromium at 390×844 — SwiftShader == the deployed GL Compatibility
-renderer. Zero console errors. **Four of the six are fixed and pruned; two remain open.**
+directives on a fresh local licensed bundle (`build/web` at HEAD `4fa22b5`, Sitt-capable Labrador,
+rebuilt via `verify.sh`, gate green) served over http in headless Chromium at 390×844 — SwiftShader ==
+the deployed GL Compatibility renderer. Zero console errors. **Five of the six are fixed and pruned;
+one narrowed menu residual remains.**
 
 **Replayed and confirmed FIXED (pruned):**
-- **Ring/BRA collision** (task 123): the cyan approach ring now encircles the dog well **above** the
-  BRA button — no overlap at any point of the sit-cycle burst (`.screenshots/PO10-train-06.png`).
-- **Glowing-orb coins** (task 124): the grass coins now read as **flat, solid, opaque gold discs**
-  grounded on the grass, not translucent blobs (`.screenshots/PO10-train-06.png`).
+- **Ring/BRA collision** (task 123): the cyan approach ring encircles the dog well **above** the BRA
+  button — no overlap across the sit-cycle burst.
+- **Glowing-orb coins** (task 124): the grass coins read as **flat, solid, opaque gold discs**
+  grounded on the grass, not translucent blobs (`.screenshots/PO10-train-00.png`).
 - **Sun/bloom washout** (task 125): the scene is crisp and saturated — sky, grass, and HUD hold the
   goal's contrast; the sun is a soft top-centre accent, not a scene-wide wash (`.screenshots/PO10-train-00.png`).
 - **Faint top HUD** (folded into 125): the Triks / Kennel / coin pills read clean and legible over the
   sky band (`.screenshots/PO10-train-00.png`).
+- **BRA button flat/pale vs the goal's saturated 3D pill** (task 126): **fixed.** The button now renders
+  as a **deep, saturated blue pill with a vertical gradient (bright top → deep bottom) and a distinct
+  darker-blue 3D lower lip / drop-shadow** — it reads as the confident raised pill that anchors the goal
+  composition, no longer a flat mid-blue rectangle (`.screenshots/PO10-train-00.png`, `PO10-menu.png` vs
+  `assets/goal-training-screen.png`). Confined to the BRA button; the shared DS pill token feeding the
+  completion menu is untouched.
 
-**Improvements — still open**
+**Menu (serious) — largely delivered, one narrowed residual still open**
 
-1. **The BRA button is still pale and flat vs the goal's saturated blue 3D pill.** *What I saw:* the
-   current button (`.screenshots/PO10-train-00.png`) is a flat mid-blue with a thin/near-absent lower
-   edge; the goal art is a **deeper, more saturated** blue pill with a distinct **darker-blue 3D lower
-   drop-shadow** and bolder white "BRA". *Why it falls short:* it reads as a flat rectangle, not the
-   confident raised pill that anchors the goal composition. *Acceptance:* deepen the button blue to the
-   design-token blue and restore the crisp lower drop-shadow / bevel so it reads as the raised pill in
-   `goal-training-screen.png`; do **not** restyle the shared DS pill token that feeds the signed-off
-   completion menu — this is the BRA button only.
+Task 127 delivered the core of the progressive-disclosure directive and it reads as a real win
+(`.screenshots/PO10-menu.png`): on a fresh mastery the completion menu **no longer dumps every system** —
+the **Breeds** and **Vanskelighet (difficulty)** sections are **hidden** for a new player (verified in
+`scripts/menu_reveal.gd` they are gated, not lost: difficulty surfaces at the 2nd mastery, breeds once
+adoption is affordable), and the trick roadmap **teases only the next locked row (Gi labb)** instead of
+all three. That is the earned-beat story the directive asked for. **One concrete sub-point of the
+directive is only half-applied and still open:**
 
-**Menu (serious) — still open**
+1. **[SERIOUS, narrowed] The marker-words section still fully enumerates its locked future words.**
+   *What I saw:* `.screenshots/PO10-menu.png` — once the marker-words section correctly surfaces (as the
+   reward for mastery #1), it lists **Bra! (Active) + Dyktig! (Switch)** *and* all three not-yet-reachable
+   words **Flink! / Super! / Kjempebra!** as fully-enumerated **Locked** rows. *Why it falls short:* the
+   directive's own acceptance says "locked rows are teased sparingly, not fully enumerated" — the tricks
+   section now honours this (`MenuReveal.teased_locked` caps the locked tease at 1), but the marker-words
+   section does not, re-creating a mini settings-dump of future systems inside an otherwise-earned beat.
+   *Acceptance:* apply the same sparing tease to the marker-words locked rows — show the base word + the
+   earned/switchable word + at most **the single next** locked word as a "coming soon" beat, and hide the
+   rest until they come within reach (mirror `MenuReveal.teased_locked`, keyed to the marker-word unlock
+   ladder). Keep the section's reveal gate (appears once the first alt word is unlocked) as-is. Still a
+   **serious** UX consistency issue; high priority.
 
-2. **[SERIOUS] The completion menu is information overload — reveal it as a story, not all at once.**
-   *What I saw:* `.screenshots/PO10-menu.png` — the menu stacks **every** system at full detail at the
-   same time: the six-row trick list (Sitt Learned / Ligg / Legg deg Available / Gi labb / Rull / Snurr
-   Locked), the Breeds section (Labrador / Chocolate), the five marker words (Bra! / Dyktig! / Flink! /
-   Super! / Kjempebra!), the Vanskelighet block (Normal / Hard / Expert), coins, and the actions — a
-   dense settings dump, not a reward moment. *Why it's wrong:* it breaks the North-Star "single
-   satisfying tap" calm and buries the sense of progression — a new player is hit with every
-   locked/future system at once. *Acceptance:* **progressive disclosure with a narrative through-line**
-   — do **not** reveal all elements at once. Sections and elements appear as the player earns their way
-   to them, so the menu *grows with the player* and tells a story of progression rather than dumping the
-   whole game up front. Concretely: hide or minimally tease systems the player hasn't reached yet (e.g.
-   the marker-words section only surfaces once the first alternate word is within reach; the breeds
-   section only once adoption is actually meaningful; locked rows are teased sparingly, not fully
-   enumerated). Turn the overload into a "silver lining" — each reveal is a small earned beat in the
-   game's story. This is a **serious** UX issue; treat it at high priority.
-
-_(Phase 9 signed off 2026-07-05. Phase 10 is current but unspecced — these two training-page + menu
-fixes come first, per the cross-cutting quality bar X-4. Directives #1/#2/#3/#5 from the owner's
-2026-07-05 pass were replayed here and found fixed by tasks 123/124/125.)_
+_(Phase 9 signed off 2026-07-05. Phase 10 is current but unspecced — this last training-page/menu finish
+item comes first, per the cross-cutting quality bar X-4. Owner directives #1/#2/#3/#5 fixed by tasks
+123/124/125; BRA-button directive fixed by task 126; menu overload substantially fixed by task 127, with
+the single marker-words-tease residual above remaining.)_
 
