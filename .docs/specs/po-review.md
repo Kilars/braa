@@ -133,6 +133,38 @@
   offers a trick its rig actually has a clean clip for; no per-breed trick is faked). None blocks the
   kennel experience. **Phase 9 is now current.**
 
+- **Phase 9 — Visual Review passed 2026-07-05 (PO, father pass).** Difficulty phase accepted done at
+  HEAD `5331e49`. Played the fresh local licensed bundle (`build/web`, rebuilt at this HEAD via
+  `verify.sh`, gate green — Sitt-capable Labrador) served over http and driven in headless Chromium at
+  390×844 (SwiftShader == the deployed GL Compatibility renderer). **Zero console errors on every run**
+  (fresh training boot, a `?bra_autotap=1` mastery burst, the completion menu on a normal dog and on a
+  special dog). The two Improvements that blocked the prior pass are both **fixed and verified in my own
+  pixels:** (1) the "Vanskelighet" rows now show the reward/challenge trade inline — Normal baseline / no
+  annotation, **Hard «×1.4 mynt · smalere vindu»**, **Expert «×2 mynt · mye smalere vindu»** — same
+  dimmed-subtitle treatment as the marker-word rows (Dyktig! «+15% · hviler 2»), derived from the
+  `Difficulty` model, so the trade is legible at the point of choice (`.screenshots/PO9-01-normal.png`);
+  (2) the special-dog lock now states the **reason** — on Nova (EPIC) the section carries the one-line
+  note **«Spesialhunder trener alltid på Hard»** under the Vanskelighet heading, Normal/Expert greyed and
+  Hard badged «Låst» (`.screenshots/PO9-03-locked.png`). **P4-1** a real canvas tap flips the global mode
+  on a normal dog (Normal → Expert, `window.__bra_difficulty` normal→expert, «Valgt» badge moves) and is
+  **swallowed** on a special dog (Nova stays Hard); **P4-2/P4-3/P4-4** the mode scales window radii, tell
+  intensity, feint chance, bar erosion **and** the mastery coin payout on top of the breed (effective =
+  breed × mode), wired + unit-tested; **P4-5** background grace is armed on the resume notification and
+  unit-tested (inert headless). Re-checked the earlier signed-off phases on the same build — **no
+  regression**: **Phase 1** the Sitt core loop (autotap mastered Sitt clean, licensed Labrador centred +
+  grounded facing camera on green grass, `.screenshots/PO9-04-training.png`); **Phase 2** the three-trick
+  roster (Sitt Learned / Ligg / Legg deg Available); **Phase 3** the coin economy + breeds (Labrador
+  Active / Chocolate Locked 30, coin chip); **Phase 5** the marker words (Bra! Active / Dyktig! Switch /
+  Flink! / Super! / Kjempebra! Locked); **Phase 6** the training page still pixel-matches the goal (tan
+  path → cottage, white picket fence, gold coins, blue BRA button, DS paper completion card); **Phase 8**
+  the kennel — the only kennel-code change since its sign-off is two **additive** pure lock predicates in
+  `kennel_dog.gd` (`locks_difficulty()` / `locked_difficulty_id()`), which don't touch the render / adopt
+  / modal path, and closing back to training restores the Phase-6 page. Accepted **as complete as best as
+  possible**: Phase 9's own stories are fully buildable and all delivered; the only residuals are the same
+  long-standing **owner-gated** flags carried from earlier phases (the warm human "Bra!" / Maren voice, the
+  coat UV/tangent re-export, distinct per-breed models), which ship with honest stand-ins and don't touch
+  the difficulty work. **Phase 10 (play mode) is now current.**
+
 ---
 
 ## Product Owner Review
@@ -144,40 +176,7 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-05
-
-Played the local licensed bundle (`build/web`, rebuilt at HEAD `4f03a6b` — Sitt-capable
-Labrador) served over http and driven in headless Chromium at 390×844, mastering Sitt via
-`?bra_autotap=1` to reach the completion menu, then landing real canvas taps on the
-difficulty rows. **Phase 9 is functionally complete and the mechanics are genuinely live**
-(not dormant): the "Vanskelighet" section shows Normal/Hard/Expert, a real tap flips the
-active mode and moves the «Valgt» badge (`.screenshots/118-02-menu-hard.png`); on a special
-dog (Nova, EPIC) the section greys out with Hard marked «Låst» and a tap on Normal is
-swallowed (`.screenshots/119-01-menu-locked.png`); and in code the mode scales window radii,
-tell intensity, feint chance, bar erosion **and** the mastery coin payout on top of the breed
-(`main.gd:649,656,1601,2574` — effective = breed × mode). Background grace (P4-5) is wired on
-the resume notification and unit-tested. One Improvement holds it back from sign-off:
-
-**Improvements**
-
-1. **The difficulty rows don't show the trade — so the trade is invisible.** In the completion
-   menu the Normal / Hard / Expert rows carry only a «Valgt» (or «Låst») badge and nothing else
-   (`.screenshots/118-01-menu-normal.png`). But the whole phase premise is *"trading challenge
-   for reward"* (phase9 goal) and P4-3 *"each mode is the rational choice at a different skill
-   level"* — and the model backs a real trade: Hard = ×1.4 coins / ×0.72 window, Expert = ×2.0
-   coins / ×0.5 window (`difficulty.gd:47,52`). A player picking Expert gets **zero** signal that
-   it doubles the payout and halves the timing window, so they can't make the trade knowingly and
-   have no reason to ever leave Normal — the feature is inert to their decision. This is exactly
-   the standard the PO required for marker words before Phase 5 sign-off (P5-2 / task 095: each
-   word shows its cost/rest *before* loading, e.g. «+15% · hviler 2»). **Good looks like:** each
-   difficulty row shows its trade-off inline before selecting, derived from the `Difficulty`
-   model — e.g. Normal: baseline / no annotation; Hard: «×1.4 mynt · smalere vindu · flere feint»;
-   Expert: «×2 mynt · mye smalere vindu». Same dimmed-subtitle treatment as the marker-word rows,
-   so the reward-for-challenge trade is legible at the point of choice.
-
-2. **The special-dog lock states the fact but not the reason.** On a special dog the section
-   correctly greys and marks Hard «Låst» (`.screenshots/119-01-menu-locked.png`), but nothing
-   tells the player *why* the challenge is fixed — a first-timer reads it as a bug, not a design
-   choice. **Good looks like:** a short one-line note on the locked section (e.g. «Spesialhunder
-   trener alltid på Hard») so the lock reads as intentional. Minor, but it removes the confusion.
+_(none — Phase 9 signed off 2026-07-05; the two 2026-07-05 directives, 121 difficulty-row trade
+subtitles and 122 locked-section reason note, were replayed and found fixed. Phase 10 is now current
+and awaits its first play-test.)_
 
