@@ -81,6 +81,20 @@ static func core_tricks() -> Array:
 func coat_tint() -> Color:
 	return Color(1, 1, 1) if id == STARTER_ID else band_tint
 
+## The warm cream/yellow of the real licensed yellow-Labrador coat — Bella's actual coat on the
+## signed-off training page. Used ONLY as her kennel-portrait modulate (below); NOT a training
+## re-tint (there she rides the untouched atlas via coat_tint()'s identity).
+const STARTER_PORTRAIT_TINT := Color(0.905, 0.760, 0.470)
+
+## The COAT modulate for the 116 kennel portrait (117, PO 2026-07-05). The portrait renders the
+## dog at a neutral grey coat, then modulates per breed — so this must be the dog's NATURAL coat
+## hue, DECOUPLED from `band_tint` (which is the rarity/ownership BAND background, not a coat
+## colour). The starter Bella sits on a BLUE owned-rarity band but is the real warm-cream yellow
+## Labrador, so her portrait reads her training coat, not blue. The other 7 dogs' band hues are
+## already plausible dog coats (warm browns / greys / tans), so their portrait tint = band_tint.
+func portrait_tint() -> Color:
+	return STARTER_PORTRAIT_TINT if id == STARTER_ID else band_tint
+
 ## Map a 1..5 stat to a difficulty-lever multiplier centred on 1.0 (stat 3 == neutral 1.0), reaching
 ## ±(span/2) at the extremes (stat 1 == 1-span/2, stat 5 == 1+span/2). Keeps every lever near 1.0 so a
 ## chosen dog stays inside the PO-signed feel band — a temperament delta, never a shake-up (cf. 075).
@@ -138,7 +152,7 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 		rows.append({
 			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
 			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,
-			"band_tint": d.band_tint, "trick_ids": d.trick_ids,
+			"band_tint": d.band_tint, "portrait_tint": d.portrait_tint(), "trick_ids": d.trick_ids,
 			"blurb": d.blurb, "traits": d.traits,
 			"owned": is_owned, "active": d.id == active, "secret": is_secret,
 			"affordable": affordable, "status_label": status_label, "price_label": price_label,
@@ -159,6 +173,7 @@ static func detail_for(id: String) -> Dictionary:
 		"stats": d.stats.duplicate(), "unique_trait": d.unique_trait,
 		"trick_ids": d.trick_ids.duplicate(), "blurb": d.blurb,
 		"traits": d.traits.duplicate(), "band_tint": d.band_tint,
+		"portrait_tint": d.portrait_tint(),
 		"secret": is_secret,
 	}
 

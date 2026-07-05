@@ -501,7 +501,8 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 	band.add_child(bg)
 
 	# Dog portrait (116, K-1): the shared live-SubViewport dog, behind the bars, modulate-tinted
-	# toward this dog's band_tint so all 8 cells read as distinct tinted stylized-realism Labradors.
+	# toward this dog's NATURAL COAT hue (portrait_tint, 117) — decoupled from the rarity band bg so
+	# Bella-the-Labrador reads warm cream, not her blue owned-band. All 8 read as tinted Labradors.
 	# Skipped cleanly when the SubViewport isn't renderable yet (tint-only fallback) — never a primitive.
 	var tex := _get_portrait_texture()
 	if tex != null:
@@ -510,7 +511,7 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 		dog.texture = tex
 		dog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		dog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		dog.modulate = _band_dog_tint(row.band_tint)
+		dog.modulate = _band_dog_tint(row.portrait_tint)
 		dog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Bottom-anchored, slightly inset from the band edges so the feet sit just above the
 		# bars' base frame and the silhouette doesn't touch the sides.
@@ -681,15 +682,16 @@ func _find_all_cameras(n: Node) -> Array:
 		out.append_array(_find_all_cameras(c))
 	return out
 
-## The modulate tint for the dog portrait in a given band. The dog renders at NEUTRAL_COAT (a mid-
-## grey base < 1.0), so on a LIGHT/mid band, band_tint renders the dog as a darker tinted silhouette
-## that reads against its own band. On a DARK band (luminance < DARK_BAND_LUM) that would leave a
-## near-black dog on a near-black band, so we lighten the tint toward white — a light silhouette
-## on the dark band. Either way the dog carries the dog's colour and contrasts with the band bg.
-func _band_dog_tint(band_tint: Color) -> Color:
-	if band_tint.get_luminance() < DARK_BAND_LUM:
-		return band_tint.lerp(Color.WHITE, 0.7)
-	return band_tint
+## The modulate for the dog portrait, given the dog's NATURAL COAT hue (portrait_tint, 117 — a
+## warm cream for Bella, each other dog its plausible band hue; DECOUPLED from the rarity band bg).
+## The dog renders at NEUTRAL_COAT (a mid-grey base < 1.0), so a LIGHT/mid coat renders the dog as a
+## warm tinted silhouette. A DARK coat (luminance < DARK_BAND_LUM) would leave a near-black dog, so
+## we lighten it toward white — a light silhouette that still reads. Either way the dog carries a
+## natural coat colour, never the raw band background.
+func _band_dog_tint(coat_hue: Color) -> Color:
+	if coat_hue.get_luminance() < DARK_BAND_LUM:
+		return coat_hue.lerp(Color.WHITE, 0.7)
+	return coat_hue
 
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
 ## For the secret/easter row a drawn _StarPip is prepended before the word label —
@@ -954,8 +956,9 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	band.add_child(bg)
 
 	# Shared dog portrait (116): the same live SubViewport texture as the grid cells, modulate-tinted
-	# toward this dog's band_tint so the modal header shows the same stylized-realism Labrador behind
-	# the bars. Skipped cleanly when the viewport isn't renderable yet (tint-only) — never a primitive.
+	# toward this dog's NATURAL COAT hue (portrait_tint, 117) — so the modal header shows the same
+	# stylized-realism Labrador (Bella warm cream, not blue) behind the bars.
+	# Skipped cleanly when the viewport isn't renderable yet (tint-only) — never a primitive.
 	var mtex := _get_portrait_texture()
 	if mtex != null:
 		var mdog := TextureRect.new()
@@ -963,7 +966,7 @@ func _build_modal_band(detail: Dictionary) -> Control:
 		mdog.texture = mtex
 		mdog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		mdog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		mdog.modulate = _band_dog_tint(detail["band_tint"])
+		mdog.modulate = _band_dog_tint(detail["portrait_tint"])
 		mdog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mdog.set_anchors_preset(Control.PRESET_FULL_RECT)
 		mdog.offset_left   = 8.0
@@ -980,7 +983,9 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bars)
 
-	# Dog name centred in the band (white, Baloo 2 display).
+	# Dog name along the band BOTTOM edge (white, Baloo 2 display) — clear of the portrait's
+	# face, which the live render turns toward the viewer in the upper band (117, PO 2026-07-05:
+	# the centred title previously overlapped the dog render). Bottom-aligned reads as a nameplate.
 	var name_lbl := Label.new()
 	name_lbl.name = "ModalDogName"
 	name_lbl.text = detail["name"]
@@ -988,9 +993,10 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	name_lbl.add_theme_font_size_override("font_size", DesignSystem.T_TITLE)
 	name_lbl.add_theme_color_override("font_color", Color.WHITE)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	name_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_BOTTOM
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	name_lbl.offset_bottom = -6.0
 	band.add_child(name_lbl)
 
 	# ✕ close button — top-right of the band. ASCII "x", no tofu.

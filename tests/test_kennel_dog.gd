@@ -289,3 +289,41 @@ func test_detail_for_unknown_id_falls_back_to_starter() -> void:
 	assert_true(detail is Dictionary, "detail_for unknown id still returns a Dictionary")
 	assert_eq(detail["id"], KennelDog.STARTER_ID,
 		"detail_for an unknown id falls back to the starter (Bella)")
+
+# ---------------------------------------------------------------------------
+## True iff KennelDog (the class) has a method with this name.
+func _kd_has(method_name: String) -> bool:
+	return KennelDog.new().has_method(method_name)
+
+# ---------------------------------------------------------------------------
+# portrait_tint() — the kennel-portrait coat modulate (117, PO 2026-07-05 Improvement #1).
+# The 116 portrait renders the dog at a neutral grey coat, then modulates per breed. That
+# modulate is the dog's NATURAL COAT hue — decoupled from the raw band_tint (which is the
+# rarity/ownership BAND background, not a coat colour). The starter Bella sits on a BLUE
+# owned-rarity band but is the real warm-cream yellow Labrador, so her portrait_tint must be
+# a warm coat (NOT her blue band). The other 7 dogs' bands are already plausible dog hues, so
+# their portrait_tint stays their band_tint.
+func test_portrait_tint_bella_is_a_warm_coat_not_her_blue_band() -> void:
+	assert_true(_kd_has("portrait_tint"), "KennelDog.portrait_tint() method must be implemented")
+	if not _kd_has("portrait_tint"):
+		return
+	var bella := KennelDog.by_id("bella")
+	var pt: Variant = bella.call("portrait_tint")
+	assert_true(pt is Color, "portrait_tint() returns a Color")
+	var c := pt as Color
+	# Warm coat: red the strongest channel, blue the weakest (the opposite of her blue band).
+	assert_true(c.r > c.g and c.g > c.b, "Bella portrait_tint is a warm coat (R>G>B)")
+	assert_true(c.b < 0.5, "Bella portrait_tint is not blue-dominant")
+	assert_false(c.is_equal_approx(bella.band_tint),
+		"Bella portrait_tint is decoupled from her blue band_tint")
+
+func test_portrait_tint_non_starter_dogs_track_their_band_hue() -> void:
+	assert_true(_kd_has("portrait_tint"), "KennelDog.portrait_tint() method must be implemented")
+	if not _kd_has("portrait_tint"):
+		return
+	for id in ["nova", "balder", "sol", "pontus", "lykke", "sniff", "trulte"]:
+		var d := KennelDog.by_id(id)
+		var pt: Variant = d.call("portrait_tint")
+		assert_true(pt is Color, "%s portrait_tint() returns a Color" % id)
+		assert_true((pt as Color).is_equal_approx(d.band_tint),
+			"%s portrait_tint tracks its (already plausible) band hue" % id)
