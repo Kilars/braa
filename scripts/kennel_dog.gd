@@ -70,6 +70,38 @@ const DOGS := [
 static func core_tricks() -> Array:
 	return [DogClips.TRICK_SITT, DogClips.TRICK_LIGG, DogClips.TRICK_LEGG_DEG]
 
+## The runtime coat recolor for this dog (110, K-5 honest stand-in). All 8 dogs share the ONE
+## licensed Labrador rig; a chosen dog re-tints that rig's baked coat atlas by multiplying it with
+## this Color via CoatTint (the exact 076 chocolate-Lab mechanism) — a genuine per-dog variant, NOT
+## a faked new model (BUST-068, already flagged). The STARTER (Bella) is the real yellow Labrador, so
+## her tint is the identity Color(1,1,1) — the atlas IS her coat, left untouched. Every other dog
+## re-tints toward its breed-representative band_tint (the warm browns / greys / tans the modal band
+## already shows), so «Tren med Nova» loads a visibly distinct dark-grey dog, «Tren med Pontus» a
+## deep-brown one, etc. Distinct per-breed MODELS stay owner-gated — the tint is the honest stand-in.
+func coat_tint() -> Color:
+	return Color(1, 1, 1) if id == STARTER_ID else band_tint
+
+## Map a 1..5 stat to a difficulty-lever multiplier centred on 1.0 (stat 3 == neutral 1.0), reaching
+## ±(span/2) at the extremes (stat 1 == 1-span/2, stat 5 == 1+span/2). Keeps every lever near 1.0 so a
+## chosen dog stays inside the PO-signed feel band — a temperament delta, never a shake-up (cf. 075).
+static func _stat_scale(stat: int, span: float) -> float:
+	return 1.0 + (clampi(stat, 1, 5) - 3) * (span * 0.5)
+
+## Map this dog's 4 stats [Læreevne, Energi, Mot, Fokus] onto the training-scene difficulty levers as a
+## BreedPersonality (110, K-5 stats apply) — the same lever object the Phase-3 breed switch drives, so
+## `_apply_active_kennel_dog` reuses the proven 075/079 path with no parallel system. Each stat drives
+## exactly one lever: Læreevne→learn_speed (fills the learned bar faster), Energi→energy (quicker
+## offers), Fokus→window_stability (a focused dog holds a steadier, more forgiving timing window), and
+## Mot→distractibility *inversely* (a bold dog resists distraction → fewer feints; a timid one fidgets
+## → more). The dog's coat_tint() rides along so the switch re-tints the coat too. Pure + unit-tested.
+func to_personality() -> BreedPersonality:
+	var s := stats if stats.size() >= 4 else [3, 3, 3, 3]
+	var learn := _stat_scale(s[0], 0.30)          # Læreevne → learn_speed  (stat5 ≈ 1.15, the Lab's feel)
+	var energ := _stat_scale(s[1], 0.20)          # Energi   → energy        (quicker/slower offers)
+	var distract := _stat_scale(6 - int(s[2]), 0.30)  # Mot inverse → distractibility (brave = steady)
+	var window := _stat_scale(s[3], 0.20)         # Fokus    → window_stability (tighter/looser timing)
+	return BreedPersonality.new(id, dog_name, learn, distract, window, energ, coat_tint())
+
 ## Build the 8-dog catalog (fresh instances each call — callers may mutate freely).
 static func catalog() -> Array:
 	var out: Array = []

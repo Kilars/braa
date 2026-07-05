@@ -353,6 +353,16 @@ func _ready() -> void:
 		_setup_sun_disc(dog)        # explicit sun disc in the sky (047/P2-10)
 	else:
 		_fallback_camera()
+	# K-7: boot into the active KENNEL dog — re-tint the shared rig to that dog's coat + apply its stat
+	# levers, so a returning player lands on the exact dog they last chose to train. Runs AFTER _start_dog
+	# (needs _loop + _dog + _progress_by_trick). Gated to when the player has actually DIVERGED the kennel
+	# from its starter (active != Bella): at the default we defer to the Phase-3 breed-roster boot (079) so
+	# that system + its ?bra_breed= capture seam stay unclobbered — and since kennel-Bella IS the yellow
+	# Labrador the breed default already boots, the visible dog is identical either way. So the kennel only
+	# takes over the boot once the player has chosen a kennel dog through it.
+	if _dog != null and _query_breed_id() == "" and _kennel_roster.active != KennelDog.STARTER_ID:
+		_apply_active_kennel_dog(_kennel_roster.active)
+	_publish_kennel_active()  # seed the capture/e2e hook with the booted active kennel dog
 	_setup_bra_button()
 	_setup_payoff()
 	_payoff.set_active_word(_words.active())  # point the payoff player at the restored active word (091/P5-1)
@@ -2119,6 +2129,7 @@ func _setup_kennel_screen(ui: CanvasLayer) -> void:
 	_kennel.closed.connect(_close_kennel)
 	_kennel.dog_selected.connect(_on_kennel_dog_selected)
 	_kennel.adopt_requested.connect(_on_kennel_adopt)  # K-4 adopt wiring (109)
+	_kennel.train_with_requested.connect(_on_kennel_train_with)  # K-5 switch-active wiring (110)
 
 	# The Kennel pill button: mirrors the Triks button on the top-left but sits to its right.
 	# Using the same HUD-pill style as _tricks_button (097/100, Phase 6).
@@ -2180,6 +2191,15 @@ func _publish_kennel_btn() -> void:
 		return
 	var c := _kennel_button.get_global_rect().get_center()
 	JavaScriptBridge.eval("window.__bra_kennel_btn = {x: %s, y: %s};" % [c.x, c.y], true)
+
+## Web-only capture/e2e hook (110, K-5/K-7): mirror the active kennel dog id onto window.* so a LIVE
+## browser capture can deterministically prove the switch — «Tren med Nova» flips it and a reload
+## restores it. Mirrors __bra_active_breed; a no-op off the web export, never read back in play.
+func _publish_kennel_active() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("window.__bra_kennel_active = '%s';" % _kennel_roster.active, true)
+	JavaScriptBridge.eval("window.__bra_kennel_owned = %s;" % JSON.stringify(_kennel_roster.owned), true)
 
 ## dog_selected(id) from the kennel grid — opens the K-2 inspect modal for that dog.
 ## No economy/roster/save mutation: inspect only (K-4 adopt wiring lands in the next task).
@@ -2403,13 +2423,30 @@ func _on_word_chosen(id: String) -> void:
 ## chance + offer cadence take the new temperament immediately; the timing-window radii apply on the next
 ## offer (read from _breed in _begin_sit). Dog-agnostic: a coatless/CC0 dog just isn't re-tinted.
 func _apply_active_breed() -> void:
-	_breed = BreedPersonality.by_id(_roster.active)
+	_apply_breed_personality(BreedPersonality.by_id(_roster.active))
+
+## Switch which KENNEL dog is trained (110, K-5). The active kennel dog (KennelDog) maps to the SAME
+## BreedPersonality lever object the Phase-3 breed switch drives (KennelDog.to_personality) — its coat
+## tint (076 seam) + its four stat-driven levers (075) re-apply to the live dog through the shared path
+## below. So «Tren med Nova» re-tints the shared Labrador rig to Nova's coat and gives her stats real
+## bite, the honest BUST-068 stand-in — no faked new model, no parallel apply-system. Dog-agnostic: a
+## coatless/CC0 dog just isn't re-tinted.
+func _apply_active_kennel_dog(id: String) -> void:
+	_apply_breed_personality(KennelDog.by_id(id).to_personality())
+
+## Re-point the running dog onto a resolved BreedPersonality (the shared body of both the Phase-3 breed
+## switch and the Phase-8 kennel switch): its coat tint (076) re-tints the coat atlas in place, and its
+## four personality levers (075) re-apply — each trick's fill gains and the loop's feint chance + offer
+## cadence take the new temperament immediately; the timing-window radii apply on the next offer (read
+## from _breed in _begin_sit). Dog-agnostic: a coatless/CC0 dog just isn't re-tinted.
+func _apply_breed_personality(bp: BreedPersonality) -> void:
+	_breed = bp
 	if _dog != null:
-		CoatTint.apply(_dog, _breed.coat_tint())  # re-tint the coat atlas for the chosen breed (076)
+		CoatTint.apply(_dog, _breed.coat_tint())  # re-tint the coat atlas for the chosen dog (076)
 	for tid in _progress_by_trick:
 		var tp := _progress_by_trick[tid] as TrickProgress
 		_breed.apply_gains_to(tp)  # learn_speed re-scales each bar's fill (075)
-		tp.set_erosion_scale(_difficulty.erosion_scale)  # difficulty erosion re-applied on breed switch (081, P4-2/P4-4)
+		tp.set_erosion_scale(_difficulty.erosion_scale)  # difficulty erosion re-applied on switch (081, P4-2/P4-4)
 	if _loop != null and not _force_scratch:  # _force_scratch pins every offer to a scratch (071) — don't clobber it
 		_loop.feint_chance = _difficulty.scale_feint(_breed.feint_chance())  # breed × difficulty (081, P4-2/P4-4)
 		_loop.min_gap = _breed.min_gap()
@@ -2624,6 +2661,10 @@ func _save_progress() -> void:
 	# the web export; never read back in play.
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__bra_last_saved_active = '%s';" % _roster.active, true)
+		# Same deterministic write-side proof for the ACTIVE KENNEL dog (110, K-7): a capture asserts the
+		# switch was PERSISTED the instant the save is written, independent of the async/racy IndexedDB
+		# flush that gates the reload-restore. No-op off web; never read back in play.
+		JavaScriptBridge.eval("window.__bra_last_saved_kennel_active = '%s';" % _kennel_roster.active, true)
 
 ## Restore the saved coin balance on boot (068/P3-D3). Runs before the coin readout is built so a
 ## returning player sees their earned coins immediately. First run / corrupt save -> 0 (TrickStore
@@ -2631,6 +2672,35 @@ func _save_progress() -> void:
 ## read from disk rather than recomputed, so coins are never re-awarded on load.
 func _load_coins() -> void:
 	_purse.restore({"balance": _store.load_coins()})
+	# Capture-harness seam (110): ?bra_coins=N grants a starting balance so the Visual-Review script can
+	# adopt a kennel dog then switch to it deterministically (a fresh player has 0 coins). Web-only, only
+	# GRANTS (never reduces), and only when the saved balance is below N — so it never fights a real save.
+	# Mirrors the ?bra_breed= / ?bra_difficulty= dev seams (a kept capture shortcut, dormant in real play).
+	var granted := _query_coins()
+	if granted > _purse.balance:
+		_purse.earn(granted - _purse.balance)
+
+## Capture seam (110): read ?bra_coins=N off the live web URL, returning N (or -1 for no override). Reads
+## a STRING (never a bare bool/int) to dodge the Web-export null-Variant marshalling that bit the apex
+## tell (036); a malformed value returns -1 (no grant). Web-only; desktop/headless never grant.
+func _query_coins() -> int:
+	if not OS.has_feature("web"):
+		return -1
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) != TYPE_STRING:
+		return -1
+	var s := search as String
+	var idx := s.find("bra_coins=")
+	if idx < 0:
+		return -1
+	var tail := s.substr(idx + "bra_coins=".length())
+	var digits := ""
+	for ch in tail:
+		if ch >= "0" and ch <= "9":
+			digits += ch
+		else:
+			break
+	return int(digits) if digits != "" else -1
 
 ## Restore the owned-breeds roster on boot (079/P3-4). Runs before the active breed is resolved so a
 ## returning player boots into their chosen dog with their adopted breeds. First run / corrupt / legacy
@@ -2675,6 +2745,21 @@ func _on_kennel_adopt(id: String) -> void:
 	# Positive feedback: joyful beat (077 pattern — a facing-preserving bounce, not a clip).
 	_play_joy_beat()
 	_kennel_adopt_busy = false
+
+## Switch which dog the player trains to an owned kennel dog (110, K-5/K-7). set_active refuses an
+## unowned id (a no-op returning false — the never-train-what-you-don't-own invariant), so a stray id
+## can never take over. On a real switch: re-tint the coat + re-apply the dog's stat levers to the live
+## dog (_apply_active_kennel_dog), persist the choice in the one save blob (so a returning player boots
+## straight into this dog, K-7), publish the e2e hook, then close the kennel so the player lands back on
+## the training scene with their chosen dog framed and ready — the payoff that makes adoption mean
+## something.
+func _on_kennel_train_with(id: String) -> void:
+	if not _kennel_roster.set_active(id):
+		return  # not owned — never switch to a dog the player doesn't own
+	_apply_active_kennel_dog(id)
+	_save_progress()            # persist the active kennel dog (K-7) in the one blob
+	_publish_kennel_active()    # keep the capture/e2e hook fresh
+	_close_kennel()             # reveal the switched dog + resume training
 
 ## Push the current coin balance onto the HUD readout (068/P3-D3). No-op before the readout mounts.
 func _refresh_coins() -> void:
@@ -2951,6 +3036,11 @@ func _play_payoff(tier: SitWindow.Tier) -> void:
 ## old web shell's window.__appReady. No-op off the web export.
 func _notify_web_ready() -> void:
 	if OS.has_feature("web"):
+		# Publish the real render viewport size at boot so every capture's tap-coordinate conversion is
+		# correct from the first tap (it was previously only set on a trick-menu refresh → UNSET for the
+		# kennel flow, so captures fell back to a stale 1280 height and every tap landed too low, 110).
+		var vp := get_viewport().get_visible_rect().size
+		JavaScriptBridge.eval("window.__bra_viewport = [%f, %f];" % [vp.x, vp.y], true)
 		JavaScriptBridge.eval("window.__appReady = true;", true)
 	print("[Bra!] scaffold ready")
 	# Positive telemetry gate (086, X-8/ADR-0007): print a console signal ONLY when a real project

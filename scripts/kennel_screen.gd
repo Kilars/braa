@@ -20,6 +20,7 @@ signal dog_selected(id: String)    ## cell was tapped → the detail modal task 
 signal closed                       ## back/✕ was tapped → main restores the training HUD
 signal detail_closed                ## the inspect modal was dismissed (optional hook for main)
 signal adopt_requested(id: String)  ## the adopt button was pressed → main._on_kennel_adopt (109, K-4)
+signal train_with_requested(id: String)  ## «Tren med [navn]» pressed → main._on_kennel_train_with (110, K-5)
 
 # ---------------------------------------------------------------------------
 # Palette — cool/clinical kennel colours (phase8.md:114-118). Named constants,
@@ -141,14 +142,22 @@ func open_detail(id: String) -> void:
 	# economy-unaware) — we compute them here from the last rendered balance (_balance)
 	# and the classify rows if available, so the modal always reflects the live state.
 	var is_owned := false
+	var is_active := false
 	for row in _rows:
 		if row.get("id") == id:
 			is_owned = row.get("owned", false)
+			is_active = row.get("active", false)
 			break
 	detail["owned"] = is_owned
+	detail["active"] = is_active
 	detail["affordable"] = is_owned or detail["price"] == 0 or _balance >= detail["price"]
 	_modal_overlay = _build_modal_overlay(detail)
 	add_child(_modal_overlay)
+	# Publish the modal's action-button centre for the Visual-Review capture (110) — after the layout
+	# has settled (containers resolve child rects over a couple of frames) so get_global_rect() is
+	# valid. Web-only, no-op elsewhere.
+	if OS.has_feature("web"):
+		_publish_modal_action()
 	# Animate if inside the scene tree and not reduced-motion (X-5).
 	if _modal_overlay.is_inside_tree() and not ReducedMotion.query():
 		_modal_overlay.modulate.a = 0.0
@@ -738,11 +747,12 @@ func _build_modal_overlay(detail: Dictionary) -> Control:
 	# 2e. Trick list (K-8): "Kan lære: Sitt · Ligg · Legg deg".
 	body.add_child(_build_modal_trick_list(detail))
 
-	# K-4 adopt button (109): full-width blue «Adopter · N mynt» for unowned dogs; null for
-	# owned dogs (no dead button). Dim + disabled when unaffordable (K-3). Emits adopt_requested.
-	var adopt_node := _build_adopt_button(detail)
-	if adopt_node != null:
-		body.add_child(adopt_node)
+	# Full-width action button (109 adopt + 110 switch): unowned → blue «Adopter · N mynt»;
+	# owned & not active → green «Tren med [navn]»; owned & active → a non-tappable «Trener nå»
+	# state (no dead button). Dispatched by _build_action_button.
+	var action_node := _build_action_button(detail)
+	if action_node != null:
+		body.add_child(action_node)
 
 	center.add_child(card)
 	return overlay
@@ -978,20 +988,80 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
 
-## K-4 adopt button (109). Returns null for an owned dog (no button — «Tren med [navn]» switch
-## label lands in task 110). For an unowned dog: a full-width blue button reading
-## «Adopter · N mynt» (Baloo 2, #4a90e2). When the dog is unaffordable the button is visually
-## dimmed and disabled (non-tappable) — no error state (K-3). On press emits adopt_requested(id)
-## which main._on_kennel_adopt wires into the real spend+roster mutation. Trulte's free-adopt
-## coral treatment is K-6 (task 111) — this task ships the priced blue path only.
+## Full-width action button dispatcher (109 adopt + 110 switch). Three states:
+##   - unowned            → the blue «Adopter · N mynt» adopt button (_build_adopt_button, K-4).
+##   - owned & NOT active  → the green «Tren med [navn]» switch button (_build_train_with_button, K-5).
+##   - owned & active      → a non-tappable «Trener nå» state (_build_active_state, no dead button, K-5).
+func _build_action_button(detail: Dictionary) -> Control:
+	if not detail.get("owned", false):
+		return _build_adopt_button(detail)
+	if detail.get("active", false):
+		return _build_active_state(detail)
+	return _build_train_with_button(detail)
+
+## K-5 switch button (110): a full-width GREEN «Tren med [navn]» button on an owned, non-active dog.
+## Pressing it emits train_with_requested(id) — main._on_kennel_train_with sets the dog active, re-tints
+## + re-levers the training scene to it, persists, and closes the kennel. The green owned treatment
+## (C_STATUS_OWNED) reads distinctly from the blue adopt button so «adopt» vs «train» never blur.
+func _build_train_with_button(detail: Dictionary) -> Control:
+	var dog_id: String = detail.get("id", "")
+	var dog_name: String = detail.get("name", "")
+	var btn := Button.new()
+	btn.name = "TrainWithButton"
+	btn.text = "Tren med %s" % dog_name
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 0.75))
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = C_STATUS_OWNED
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_top    = 14.0
+	sb.content_margin_bottom = 14.0
+	var sb_pressed := sb.duplicate() as StyleBoxFlat
+	sb_pressed.bg_color = C_STATUS_OWNED.darkened(0.12)
+	for st in ["normal", "hover", "disabled"]:
+		btn.add_theme_stylebox_override(st, sb)
+	btn.add_theme_stylebox_override("pressed", sb_pressed)
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	btn.pressed.connect(func(): train_with_requested.emit(dog_id))
+	return btn
+
+## K-5 active state (110): the dog the player already trains shows a non-tappable «Trener nå» pill —
+## a muted, disabled surface (no dead green button that looks pressable but does nothing). Communicates
+## "this is your current dog" without offering a redundant switch.
+func _build_active_state(_detail: Dictionary) -> Control:
+	var btn := Button.new()
+	btn.name = "ActiveState"
+	btn.text = "Trener nå"
+	btn.disabled = true
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	btn.add_theme_color_override("font_disabled_color", C_STATUS_OWNED)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(C_STATUS_OWNED.r, C_STATUS_OWNED.g, C_STATUS_OWNED.b, 0.14)
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_top    = 14.0
+	sb.content_margin_bottom = 14.0
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		btn.add_theme_stylebox_override(st, sb)
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	return btn
+
+## K-4 adopt button (109). For an unowned dog: a full-width blue button reading «Adopter · N mynt»
+## (Baloo 2, #4a90e2). When the dog is unaffordable the button is visually dimmed and disabled
+## (non-tappable) — no error state (K-3). On press emits adopt_requested(id) which
+## main._on_kennel_adopt wires into the real spend+roster mutation. Trulte's free-adopt coral
+## treatment is K-6 (task 111) — this task ships the priced blue path only.
 const C_ADOPT_BLUE := Color("4a90e2")    ## blue adopt button bg
 const C_ADOPT_DIM  := Color("b0c8e8")    ## dimmed blue when unaffordable
 
 func _build_adopt_button(detail: Dictionary) -> Control:
-	# Owned dog: no adopt button — switch label lands in task 110.
-	if detail.get("owned", false):
-		return null
-
 	var price: int = detail.get("price", 0)
 	var affordable: bool = detail.get("affordable", true)
 	var dog_id: String = detail.get("id", "")
@@ -1041,7 +1111,16 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 # Web capture hook — publish cell centres for real-tap automation.
 # ---------------------------------------------------------------------------
 func _publish_cells() -> void:
-	if not OS.has_feature("web") or _grid == null:
+	if not OS.has_feature("web"):
+		return
+	# The grid + ScrollContainer resolve child rects over a couple of frames after render()/show();
+	# publishing immediately on the visibility notification would read every cell at the container
+	# origin (all-same coords). Await the layout pass so each cell's global rect is real (110 fix —
+	# 108's scroll-preservation test never tapped a *specific* cell so it didn't surface this).
+	if is_inside_tree():
+		await get_tree().process_frame
+		await get_tree().process_frame
+	if _grid == null:
 		return
 	var cells: Array = []
 	for child in _grid.get_children():
@@ -1053,6 +1132,38 @@ func _publish_cells() -> void:
 		cells.append({"id": id, "x": centre.x, "y": centre.y})
 	JavaScriptBridge.eval("window.__bra_kennel_cells = %s;" % JSON.stringify(cells), true)
 	JavaScriptBridge.eval("window.__bra_kennel_open = true;", true)
+
+## Publish the currently-open modal's action button (Adopt / TrainWith) centre in viewport px so the
+## Visual-Review capture can land a REAL tap on it (110). Only the tappable buttons are published (the
+## disabled «Trener nå» active state is skipped — nothing to tap). Web-only; no-op when no modal is open.
+func _publish_modal_action() -> void:
+	if not OS.has_feature("web"):
+		return
+	# The modal opens with a 0.28s scale/fade tween (pivot-offset scaling shifts every child's global
+	# rect mid-flight), and the CenterContainer centres a content-sized card over several passes. Wait
+	# past the tween so the button's global rect is its final, tappable position before publishing.
+	if is_inside_tree():
+		await get_tree().create_timer(0.4).timeout
+	if _modal_overlay == null:
+		return
+	var payload := "null"
+	var found: Array = []
+	_collect_buttons(_modal_overlay, found)
+	for node in found:
+		var nm := (node as Control).name
+		if nm == "TrainWithButton" or nm == "AdoptButton":
+			var c := (node as Control).get_global_rect().get_center()
+			payload = "{id: '%s', x: %s, y: %s}" % [nm, c.x, c.y]
+			break
+	JavaScriptBridge.eval("window.__bra_kennel_action = %s;" % payload, true)
+
+## Recursively collect every Button under `n` into `out` (owner-independent — modal nodes are built by
+## code, so their `owner` is unset and find_child(owned=false) is the only reliable walk).
+func _collect_buttons(n: Node, out: Array) -> void:
+	if n is Button:
+		out.append(n)
+	for c in n.get_children():
+		_collect_buttons(c, out)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED:
