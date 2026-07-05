@@ -73,6 +73,26 @@ static func by_id(id: String) -> KennelDog:
 			return _from_row(row)
 	return _from_row(DOGS[0])
 
+## Classify the kennel dogs for display in the grid/modal. Each row carries all state both
+## the cell and the detail modal need, so neither renderer re-derives it. Takes the player's
+## live economy state (owned set + active dog + balance) and returns per-dog display rows.
+static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> Array:
+	var rows: Array = []
+	for d in catalog():
+		var is_owned: bool = owned.has(d.id)
+		var is_secret: bool = d.rarity == Rarity.SECRET
+		var affordable: bool = is_owned or d.price == 0 or balance >= d.price
+		var price_label := "Din" if is_owned else ("Gratis" if is_secret else str(d.price))
+		var status_label := "Din hund" if is_owned else ("★ Påskeegg" if is_secret else "")
+		rows.append({
+			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
+			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,
+			"band_tint": d.band_tint, "trick_ids": d.trick_ids,
+			"owned": is_owned, "active": d.id == active, "secret": is_secret,
+			"affordable": affordable, "status_label": status_label, "price_label": price_label,
+		})
+	return rows
+
 static func _from_row(row: Array) -> KennelDog:
 	var d := KennelDog.new()
 	d.id = row[0]

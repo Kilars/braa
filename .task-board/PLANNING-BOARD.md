@@ -28,12 +28,21 @@ save store. Buildable slices, in dependency order:
   REAL resolver. `price==0` covers Bella (OWNED) + Trulte (SECRET/gratis). 10 TDD tests (561→571/0).
   **Wired into NOTHING** so the just-signed-off Phase-6 completion menu stays byte-identical — the anchor
   slice, dodging the saturated visual domain (7 of the last ~15 tasks were rendering).
-- **NEXT (next scan round) — the kennel SCREEN slices (Visual Review):** (a) K-1/K-3 grid scaffold —
-  `Control` root + header coin chip + `ScrollContainer › GridContainer(columns=2)` of barred white cells
-  fed each `KennelDog`, steel-bar shader, affordability tag; (b) K-2/K-4/K-5/K-6 detail modal + adopt/
-  switch/gratis flows, threading per-dog `price` + reconciling the roster to the kennel id-space (test-first
-  for the adopt math per X-6). These render each dog as a **tinted Labrador stand-in** until owner models
-  arrive.
+- **104 — FEATURE (test-first) — `classify_kennel_dogs` display-state logic. TASKED (this scan).** A pure
+  static on `KennelDog` turning the catalog + live economy (owned/active/balance) into dumb-renderer rows
+  (owned/active/secret/affordable + status/price labels), mirroring `TrickMenu.classify_breeds`. The logic
+  half of the grid slice — unit-testable in isolation, zero render/save/roster change. Foundation the grid
+  (105) + the later modal both read.
+- **105 — VISUAL — Kennel grid screen (K-1/K-3), the anchor slice. TASKED (this scan).** New
+  `scripts/kennel_screen.gd`: `Control` root + header («Kennelen» + live coin chip) + `ScrollContainer ›
+  GridContainer(columns=2)` of 8 barred white cells fed each `classify_kennel_dogs` row (tinted band +
+  steel-bar shader + name/breed + status tag + price chip). Browse-only — entry/close from training, cell
+  tap emits `dog_selected(id)`. Renders each dog as a **tinted Labrador stand-in** (no faked breed
+  silhouette, BUST-068 residual). Visual Review at 390×844. **No modal/adopt/save mutation this slice.**
+- **LATER (next scan rounds) — K-2/K-4/K-5/K-6 detail modal + adopt/switch/gratis flows,** threading per-dog
+  `price` + reconciling the roster/save to the kennel id-space (test-first for the adopt math per X-6);
+  K-8 training-menu reflection of the active breed's trick list. Deferred so the delicate save-format
+  id-migration is done only when the adopt feature actually needs it, on top of a PO-reviewed grid.
 
 **Owner-gated residuals (already flagged — do NOT re-bust, do NOT fake):** the 7 distinct breed MODELS
 (BUST-068 residual) and any breed-specific **signature** trick clip (P3-2 flag; `Grav`/`Digging` proven

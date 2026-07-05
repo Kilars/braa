@@ -118,3 +118,123 @@ func test_trick_ids_are_independent_arrays() -> void:
 	(cat[0] as KennelDog).trick_ids.append("__scratch__")
 	assert_false((cat[1] as KennelDog).trick_ids.has("__scratch__"), "mutating one dog's list never leaks to another in the same catalog")
 	assert_false((KennelDog.catalog()[0] as KennelDog).trick_ids.has("__scratch__"), "a fresh catalog is unpolluted by an earlier mutation (trick_ids duplicated, not a shared const)")
+
+# --- classify_kennel_dogs tests (104, Phase 8 K-1/K-3 foundation) ---
+
+func test_bella_is_owned_by_default() -> void:
+	# K-1: Bella is the starter and is always in the owned array (owned == ["bella"]).
+	# Row should show owned == true, status_label == "Din hund", price_label == "Din".
+	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	assert_eq(rows.size(), 8, "classify returns exactly 8 rows")
+	var bella_row = rows[0]
+	assert_eq(bella_row["id"], "bella", "first row is Bella")
+	assert_true(bella_row["owned"], "Bella's owned == true when in the owned array")
+	assert_eq(bella_row["status_label"], "Din hund", "Bella's status_label is 'Din hund'")
+	assert_eq(bella_row["price_label"], "Din", "Bella's price_label is 'Din'")
+
+func test_adopted_dog_flips_to_owned() -> void:
+	# K-1/K-4: when Sol is added to the owned array, her row flips to owned treatment.
+	# owned should flip to true, price_label should show "Din", and affordable should be true
+	# regardless of balance (spec says owned overrides price).
+	var rows := KennelDog.classify_kennel_dogs(["bella", "sol"], "bella", 0)
+	assert_eq(rows.size(), 8, "classify returns exactly 8 rows")
+	var sol_row = rows[3]  # Sol is at index 3 in the catalog order
+	assert_eq(sol_row["id"], "sol", "row is Sol")
+	assert_true(sol_row["owned"], "Sol's owned == true when in the owned array")
+	assert_eq(sol_row["price_label"], "Din", "Sol's price_label is 'Din' (owned overrides rarity price)")
+	assert_true(sol_row["affordable"], "Sol is affordable == true even at balance 0 (owned are always affordable)")
+
+func test_active_flag_set_on_the_active_dog() -> void:
+	# K-1/K-5: the active dog (the one currently being trained) has active == true.
+	# With active == "bella", only Bella's row should have active == true.
+	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var bella_row = rows[0]
+	assert_true(bella_row["active"], "Bella row has active == true when active == 'bella'")
+	for i in range(1, rows.size()):
+		var row = rows[i]
+		assert_false(row["active"], "dog %d (%s) has active == false (only Bella active)" % [i, row["id"]])
+
+func test_affordability_gate_k3_nova_900_coins() -> void:
+	# K-3: Nova costs 900 coins. Test affordability at various balances.
+	# balance 100 → affordable == false
+	# balance 900 → affordable == true
+	# balance 1000 → affordable == true
+	var rows_100 := KennelDog.classify_kennel_dogs(["bella"], "bella", 100)
+	var nova_100 = rows_100[1]  # Nova is at index 1
+	assert_eq(nova_100["id"], "nova", "row is Nova")
+	assert_eq(nova_100["price"], 900, "Nova price is 900")
+	assert_false(nova_100["affordable"], "Nova is affordable == false at balance 100")
+
+	var rows_900 := KennelDog.classify_kennel_dogs(["bella"], "bella", 900)
+	var nova_900 = rows_900[1]
+	assert_true(nova_900["affordable"], "Nova is affordable == true at balance 900 (balance >= price)")
+
+	var rows_1000 := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var nova_1000 = rows_1000[1]
+	assert_true(nova_1000["affordable"], "Nova is affordable == true at balance 1000")
+
+func test_trulte_easter_egg_secret_rarity() -> void:
+	# K-6: Trulte is the easter-egg hidden dog. When unowned, she should show:
+	# secret == true, price == 0, price_label == "Gratis", status_label == "★ Påskeegg",
+	# and affordable == true (free) even at balance 0.
+	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 0)
+	var trulte_row = rows[7]  # Trulte is at index 7 (last)
+	assert_eq(trulte_row["id"], "trulte", "row is Trulte")
+	assert_true(trulte_row["secret"], "Trulte has secret == true (rarity == Rarity.SECRET)")
+	assert_eq(trulte_row["price"], 0, "Trulte price is 0")
+	assert_eq(trulte_row["price_label"], "Gratis", "Trulte price_label is 'Gratis'")
+	assert_eq(trulte_row["status_label"], "★ Påskeegg", "Trulte status_label is '★ Påskeegg'")
+	assert_true(trulte_row["affordable"], "Trulte is affordable == true even at balance 0 (free easter egg)")
+
+func test_row_count_and_catalog_order() -> void:
+	# K-1: the function returns exactly 8 rows in the same order as the catalog (Bella first).
+	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	assert_eq(rows.size(), 8, "returns exactly 8 rows")
+	var expected_ids := ["bella", "nova", "balder", "sol", "pontus", "lykke", "sniff", "trulte"]
+	for i in expected_ids.size():
+		assert_eq(rows[i]["id"], expected_ids[i], "row %d id is '%s' (catalog order)" % [i, expected_ids[i]])
+
+func test_purity_no_aliasing_into_dogs_const() -> void:
+	# The row's stats and band_tint arrays must be independent copies; mutating one call's
+	# returned row must not bleed into KennelDog.DOGS or a fresh classify() call.
+	var rows1 := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var bella_row1 = rows1[0]
+	var original_stats = KennelDog.DOGS[0][5].duplicate()  # DOGS[0] is Bella; [5] is the stats array
+
+	# Mutate the stats array in the returned row
+	(bella_row1["stats"] as Array).append(99)
+
+	# Check that KennelDog.DOGS[0][5] is unchanged
+	assert_eq(KennelDog.DOGS[0][5], original_stats, "mutating returned stats doesn't mutate KennelDog.DOGS")
+
+	# Get a fresh call and verify the stats are clean
+	var rows2 := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var bella_row2 = rows2[0]
+	assert_eq(bella_row2["stats"], original_stats, "a fresh classify() returns clean stats (no aliasing from the prior mutation)")
+	assert_eq((bella_row2["stats"] as Array).size(), 4, "fresh stats have 4 elements, not 5 from the mutated row")
+
+func test_two_calls_return_independent_arrays() -> void:
+	# Two separate calls should return independent arrays; mutating one doesn't affect the other.
+	var rows1 := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var rows2 := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+
+	# Mutate the first array
+	rows1.clear()
+
+	# Check that rows2 is unaffected
+	assert_eq(rows2.size(), 8, "second array unaffected by clearing the first")
+	assert_eq(rows2[0]["id"], "bella", "rows2 still has Bella at index 0")
+
+func test_unknown_owned_id_harmless() -> void:
+	# If the owned array contains an id like "ghost" that doesn't exist in the catalog,
+	# it should not crash and should not mark any real dog as owned.
+	# In particular, Bella should NOT be owned (the caller is responsible for seeding the starter).
+	var rows := KennelDog.classify_kennel_dogs(["ghost"], "bella", 1000)
+	assert_eq(rows.size(), 8, "classify doesn't crash with unknown owned id")
+	var bella_row = rows[0]
+	assert_false(bella_row["owned"], "Bella is not owned when owned array contains only 'ghost' (unknown id harmless)")
+	var all_owned := false
+	for row in rows:
+		if row["owned"]:
+			all_owned = true
+	assert_false(all_owned, "no dog is marked owned when owned array contains only unknown ids")
