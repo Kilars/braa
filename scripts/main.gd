@@ -1671,17 +1671,15 @@ func _setup_bra_button() -> void:
 	bra.add_theme_color_override("font_color",         DesignSystem.PAPER)
 	bra.add_theme_color_override("font_pressed_color", DesignSystem.PAPER)
 	bra.add_theme_color_override("font_hover_color",   DesignSystem.PAPER)
-	var normal_style := DesignSystem.pill(DesignSystem.BLUE, DesignSystem.R_XL)
-	normal_style.border_width_bottom = 9                   # darker bottom-lip — 3D pressable look
-	normal_style.border_color        = DesignSystem.BLUE_DARK
-	normal_style.shadow_color  = DesignSystem.SHADOW_CARD_COLOR
-	normal_style.shadow_size   = DesignSystem.SHADOW_CARD_SIZE
-	normal_style.shadow_offset = DesignSystem.SHADOW_CARD_OFFSET
-	# Pressed state: BLUE_DARK fill so the button appears to push down.
-	var pressed_style := DesignSystem.pill(DesignSystem.BLUE_DARK, DesignSystem.R_XL)
-	pressed_style.shadow_color  = DesignSystem.SHADOW_CARD_COLOR
-	pressed_style.shadow_size   = DesignSystem.SHADOW_CARD_SIZE
-	pressed_style.shadow_offset = DesignSystem.SHADOW_CARD_OFFSET
+	# 126 (PO Phase-10, Improvement #1): the goal art's BRA button is a DEEP glossy raised pill —
+	# a vertical gradient (bright top → deep bottom) over a distinct darker-blue 3D lower lip, with a
+	# real drop shadow lifting it off the grass. A StyleBoxFlat can carry only one border colour, so it
+	# cannot express the light-top→dark-bottom gradient; the honest match is a baked rounded-rect
+	# gradient texture (BRA button only — DesignSystem.BLUE / .pill() stay untouched so the signed-off
+	# completion-menu / kennel pills that consume the shared token don't move).
+	var normal_style := _make_bra_pill_stylebox()
+	# Pressed state: a flat BLUE_DARK pill (matching corner radius) so the button reads "pushed in".
+	var pressed_style := DesignSystem.pill(DesignSystem.BLUE_DARK, BRA_PILL_RADIUS)
 	# Hover: same as normal on touch devices (hover = finger hovering, not meaningful);
 	# keep it identical so the style doesn't flash on desktop testing.
 	var empty := StyleBoxEmpty.new()
@@ -1719,6 +1717,71 @@ func _setup_bra_button() -> void:
 	# CanvasLayer itself cannot hold a theme (not a Control), so we set it on the BRA Button
 	# — the root Control on this layer (096, Phase 6).
 	_bra_button.theme = DesignSystem.theme()
+
+# --- BRA button raised-pill bake (126, PO Phase-10 Improvement #1) ------------------------------
+## The button's content rect in design px (VIEWPORT_W 720 − 2·48 wide; the BRA band height), plus a
+## transparent pad on every side into which the drop shadow bleeds. The whole canvas scales uniformly
+## under the `expand` stretch, so a design-resolution bake scales to any screen without corner
+## distortion — the StyleBoxTexture's expand_margins map the pad 1:1 back outside the layout rect.
+const BRA_PILL_PAD := 56                                                          ## shadow/AA bleed
+const BRA_PILL_RADIUS := 46.0                                                     ## rounded-pill corner
+## Face gradient (goal art sample): bright top → deep bottom, over a darker-blue 3D lower lip.
+const BRA_PILL_TOP  := Color(0.475, 0.690, 0.980)   ## ~(121,176,250) — glossy top sheen
+const BRA_PILL_BOT  := Color(0.349, 0.553, 0.878)   ## ~(89,141,224)  — deep bottom
+const BRA_PILL_LIP  := Color(0.239, 0.424, 0.737)   ## ~(61,108,188)  — darker 3D lower lip
+const BRA_PILL_LIP_H := 14.0                          ## height of the lip band
+const BRA_PILL_SHADOW_DY := 14.0                      ## how far the shadow drops below the pill
+const BRA_PILL_SHADOW_BLUR := 30.0                    ## shadow softness (px)
+const BRA_PILL_SHADOW_MAX := 0.30                     ## shadow peak alpha over grass
+
+## Signed distance to a rounded rect (negative inside). Standard SDF — lets us anti-alias the pill
+## edge and soften the drop shadow with one cheap formula.
+static func _sdf_round_rect(p: Vector2, rect: Rect2, r: float) -> float:
+	var half := rect.size * 0.5
+	var q := (p - (rect.position + half)).abs() - (half - Vector2(r, r))
+	return Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - r
+
+## Bake the BRA button's normal StyleBox: a rounded-rect vertical-gradient face (bright top → deep
+## bottom) with a darker lower lip and a soft drop shadow baked into the transparent pad, wrapped in
+## a StyleBoxTexture whose expand_margins push the shadow outside the button's layout rect (126).
+func _make_bra_pill_stylebox() -> StyleBoxTexture:
+	# Content size derived from the button's own offsets (VIEWPORT_W − 2·48 wide; the BRA band tall),
+	# so the bake tracks the layout instead of drifting from a hard-coded literal.
+	var cw := int(VIEWPORT_W - BRA_OFFSET_LEFT + BRA_OFFSET_RIGHT)   ## 624
+	var ch := int(BRA_OFFSET_BOTTOM - BRA_OFFSET_TOP)                ## 192
+	var w := cw + BRA_PILL_PAD * 2
+	var h := ch + BRA_PILL_PAD * 2
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var face := Rect2(BRA_PILL_PAD, BRA_PILL_PAD, cw, ch)
+	var shadow_rect := Rect2(face.position + Vector2(0, BRA_PILL_SHADOW_DY), face.size)
+	var shadow_rgb := Vector3(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b)
+	for y in range(h):
+		for x in range(w):
+			var p := Vector2(x + 0.5, y + 0.5)
+			# Face colour: vertical gradient, with the bottom LIP_H band pulled toward the lip colour.
+			var t := clampf((p.y - face.position.y) / face.size.y, 0.0, 1.0)
+			var face_col := BRA_PILL_TOP.lerp(BRA_PILL_BOT, t)
+			var from_bottom := (face.position.y + face.size.y) - p.y
+			if from_bottom < BRA_PILL_LIP_H:
+				face_col = face_col.lerp(BRA_PILL_LIP, clampf(1.0 - from_bottom / BRA_PILL_LIP_H, 0.0, 1.0))
+			var f_a := clampf(0.5 - _sdf_round_rect(p, face, BRA_PILL_RADIUS), 0.0, 1.0)  # AA edge
+			# Soft drop shadow, only where the face doesn't already cover.
+			var sd := _sdf_round_rect(p, shadow_rect, BRA_PILL_RADIUS)
+			var sc := clampf(1.0 - sd / BRA_PILL_SHADOW_BLUR, 0.0, 1.0)
+			var s_a := BRA_PILL_SHADOW_MAX * sc * sc * (1.0 - f_a)
+			var out_a := f_a + s_a
+			if out_a <= 0.0:
+				continue
+			var rgb := (Vector3(face_col.r, face_col.g, face_col.b) * f_a + shadow_rgb * s_a) / out_a
+			img.set_pixel(x, y, Color(rgb.x, rgb.y, rgb.z, out_a))
+	var sb := StyleBoxTexture.new()
+	sb.texture = ImageTexture.create_from_image(img)
+	sb.expand_margin_left   = BRA_PILL_PAD
+	sb.expand_margin_right  = BRA_PILL_PAD
+	sb.expand_margin_top    = BRA_PILL_PAD
+	sb.expand_margin_bottom = BRA_PILL_PAD
+	return sb
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
