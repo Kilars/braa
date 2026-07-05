@@ -175,7 +175,8 @@ func test_affordability_gate_k3_nova_900_coins() -> void:
 
 func test_trulte_easter_egg_secret_rarity() -> void:
 	# K-6: Trulte is the easter-egg hidden dog. When unowned, she should show:
-	# secret == true, price == 0, price_label == "Gratis", status_label == "★ Påskeegg",
+	# secret == true, price == 0, price_label == "Gratis", status_label == "Påskeegg"
+	# (no U+2605 star glyph — the star is drawn as geometry in the view, task 106),
 	# and affordable == true (free) even at balance 0.
 	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 0)
 	var trulte_row = rows[7]  # Trulte is at index 7 (last)
@@ -183,8 +184,22 @@ func test_trulte_easter_egg_secret_rarity() -> void:
 	assert_true(trulte_row["secret"], "Trulte has secret == true (rarity == Rarity.SECRET)")
 	assert_eq(trulte_row["price"], 0, "Trulte price is 0")
 	assert_eq(trulte_row["price_label"], "Gratis", "Trulte price_label is 'Gratis'")
-	assert_eq(trulte_row["status_label"], "★ Påskeegg", "Trulte status_label is '★ Påskeegg'")
+	assert_eq(trulte_row["status_label"], "Påskeegg", "Trulte status_label is 'Påskeegg' (no star glyph, 106)")
 	assert_true(trulte_row["affordable"], "Trulte is affordable == true even at balance 0 (free easter egg)")
+
+func test_trulte_status_label_no_star_glyph() -> void:
+	# 106 — FIX: the U+2605 BLACK STAR has no glyph in Baloo 2 / Nunito and renders as a tofu
+	# box. The star must be drawn as geometry in the view; the data string must be clean.
+	# Asserts: status_label contains NO "★" (U+2605) AND still contains "Påskeegg".
+	var rows := KennelDog.classify_kennel_dogs([], "", 0)
+	var trulte_row: Dictionary = {}
+	for row in rows:
+		if row["id"] == "trulte":
+			trulte_row = row
+			break
+	assert_false(trulte_row.is_empty(), "trulte row found in classify result")
+	assert_true(not trulte_row["status_label"].contains("★"), "no U+2605 tofu char in easter status_label")
+	assert_true(trulte_row["status_label"].contains("Påskeegg"), "easter status_label still names Påskeegg")
 
 func test_row_count_and_catalog_order() -> void:
 	# K-1: the function returns exactly 8 rows in the same order as the catalog (Bella first).

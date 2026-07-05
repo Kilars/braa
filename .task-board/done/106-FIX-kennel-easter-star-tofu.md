@@ -75,13 +75,27 @@ Grep the diff for a literal `★` (U+2605) in any string that reaches a `Label.t
 
 ## Acceptance criteria
 
-- [ ] **TDD first:** add/extend a `tests/test_*` assert that `classify_kennel_dogs(...)` for the
+- [x] **TDD first:** add/extend a `tests/test_*` assert that `classify_kennel_dogs(...)` for the
       secret dog (Trulte) yields a `status_label` **containing no `★` (U+2605) character** (e.g.
       `assert(not row.status_label.contains("★"))` and that it still contains `Påskeegg`). Run it
       RED against the current `"★ Påskeegg"`, then make it pass.
-- [ ] The easter tag renders the word **Påskeegg** with a **coral star pip / dot drawn in code** —
+- [x] The easter tag renders the word **Påskeegg** with a **coral star pip / dot drawn in code** —
       no missing-glyph box, verified by eye on a 390×844 capture of the grid (Trulte cell).
-- [ ] No literal `★` character remains in any string that reaches a rendered `Label` (grep the diff).
-- [ ] Owned («Din hund») and neutral tags are unchanged.
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS: Trulte's tag reads as a special coral star tag, not broken.
+- [x] No literal `★` character remains in any string that reaches a rendered `Label` (grep the diff).
+- [x] Owned («Din hund») and neutral tags are unchanged.
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Visual Review PASS: Trulte's tag reads as a special coral star tag, not broken.
+
+## Resolution (2026-07-05)
+
+Dropped the `★` (U+2605) CHARACTER from `KennelDog.classify_kennel_dogs` (`status_label` → plain
+`"Påskeegg"` for the secret dog) and drew the star as **geometry** in the view: new inner class
+`_StarPip extends Control` in `kennel_screen.gd` whose `_draw()` fills a 10-point 5-point-star
+polygon (`draw_colored_polygon`, white, `_star_points()` alternating outer/inner vertices every 36°)
+— zero font dependency, GL-Compatibility-safe (089 `Chevron` precedent). `_make_tag()` prepends the
+pip before the label in an `HBoxContainer` for the secret row only; owned/neutral tags keep the plain
+Label. TDD: `test_trulte_status_label_no_star_glyph` (RED against `"★ Påskeegg"` → GREEN), and the
+existing `test_trulte_easter_egg_secret_rarity` expectation corrected to `"Påskeegg"`. verify green
+(587/0). **Visual Review PASS** — `.screenshots/105-kennel-01-grid.png` re-captured (real canvas
+taps): Trulte's coral tag reads as a white **star + Påskeegg**, no tofu box; grid otherwise intact
+(Bella owned-green, prices, all 8 cells). No `★` char survives in any rendered string (grep-clean).

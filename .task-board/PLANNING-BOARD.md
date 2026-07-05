@@ -15,11 +15,11 @@ foundation" — names/breeds/prices/tints correct, Bella-owned + Trulte-easter d
 backlog → scan replenished **3 current-phase tasks** (direct PO directives, priority order
 bugfix→improvement→first-spine-story; NOT work-ahead — Phase 8 has abundant current-phase work):
 
-- **106 — FIX — Trulte's «★ Påskeegg» easter tag renders the ★ (U+2605) as a tofu box (PO Bugfix 1).**
-  The star has no glyph in Baloo 2 / Nunito → missing-glyph box on the one cell meant to read
-  "special, not broken" (K-6). Same tofu class the project already fixed for the ◀▶ chevrons (089) +
-  coin emoji. Fix: drop the `★` character from the string (word becomes `Påskeegg`) and draw a coral
-  star pip in code (089 `_draw` precedent) — no tofu in any rendered string. TDD assert + Visual Review.
+- **106 — FIX — Trulte's «★ Påskeegg» easter tag rendered the ★ (U+2605) as a tofu box (PO Bugfix 1). ✅ DONE.**
+  Dropped the `★` char from `status_label` (→ plain `Påskeegg`) + drew a white 5-point star pip as
+  geometry (`_StarPip._draw` → `draw_colored_polygon`, 089 precedent) before the word in the coral
+  tag. TDD `test_trulte_status_label_no_star_glyph` RED→GREEN; verify 587/0; Visual Review PASS
+  (`.screenshots/105-kennel-01-grid.png` re-captured — star, no tofu). No `★` in any rendered string.
 - **107 — VISUAL — kennel cells have no dog render (PO Improvement 2, K-1).** All 8 portrait bands are
   flat tinted rectangles with zero dog behind the steel bars, so cells read as indistinguishable
   colour panels. NOT owner-gated (PO): bake the real licensed Labrador silhouette to one shared

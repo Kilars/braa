@@ -83,7 +83,7 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 		var is_secret: bool = d.rarity == Rarity.SECRET
 		var affordable: bool = is_owned or d.price == 0 or balance >= d.price
 		var price_label := "Din" if is_owned else ("Gratis" if is_secret else str(d.price))
-		var status_label := "Din hund" if is_owned else ("★ Påskeegg" if is_secret else "")
+		var status_label := "Din hund" if is_owned else ("Påskeegg" if is_secret else "")
 		rows.append({
 			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
 			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,

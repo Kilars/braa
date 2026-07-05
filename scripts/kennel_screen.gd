@@ -29,7 +29,7 @@ const C_STEEL        := Color("788794")   ## steel-bar tint (used at ~40% alpha 
 const C_INK          := Color("2b3742")   ## primary text ink
 const C_MUTED        := Color("9aa6b0")   ## muted / secondary text (breed, subtitle)
 const C_STATUS_OWNED := Color("57b85c")   ## «Din hund» green
-const C_STATUS_EGG   := Color("ff7a85")   ## «★ Påskeegg» coral
+const C_STATUS_EGG   := Color("ff7a85")   ## «Påskeegg» coral (star drawn as geometry — no U+2605 font glyph, 106)
 const C_STATUS_NEUTRAL := Color("9aa6b0") ## neutral «Ny» tag
 const C_PRICE_OWN    := Color("57b85c")   ## «Din» owned price chip
 const C_PRICE_GOLD   := Color("f5b841")   ## buyable price chip (gold)
@@ -387,7 +387,9 @@ func _make_band(row: Dictionary) -> Control:
 
 	return band
 
-## Status tag (Label in a PanelContainer pill): owned green, easter coral, neutral muted.
+## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
+## For the secret/easter row a drawn _StarPip is prepended before the word label —
+## no font glyph (U+2605 is absent in Baloo 2 / Nunito; task 106 / 089 precedent).
 func _make_tag(row: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = "StatusTag"
@@ -407,13 +409,34 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 	sb.content_margin_top    = 2.0
 	sb.content_margin_bottom = 2.0
 	panel.add_theme_stylebox_override("panel", sb)
-	var lbl := Label.new()
-	lbl.text = row.status_label
-	lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
-	lbl.add_theme_font_size_override("font_size", 10)
-	lbl.add_theme_color_override("font_color", Color.WHITE)
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(lbl)
+
+	if row.secret:
+		# Easter tag: [star pip][label] in an HBoxContainer — no U+2605 glyph anywhere.
+		var hbox := HBoxContainer.new()
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_theme_constant_override("separation", 3)
+		panel.add_child(hbox)
+		var pip := _StarPip.new()
+		pip.name = "StarPip"
+		pip.custom_minimum_size = Vector2(11.0, 11.0)
+		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(pip)
+		var lbl := Label.new()
+		lbl.text = row.status_label
+		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		lbl.add_theme_font_size_override("font_size", 10)
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(lbl)
+	else:
+		var lbl := Label.new()
+		lbl.text = row.status_label
+		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		lbl.add_theme_font_size_override("font_size", 10)
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(lbl)
+
 	return panel
 
 ## Price chip (Label in a PanelContainer pill): colour from rarity / ownership.
@@ -547,3 +570,32 @@ class _SteelBars extends Control:
 		draw_rect(Rect2(0.0, h - FRAME_W, w, FRAME_W), frame_color) # bottom
 		draw_rect(Rect2(0.0, 0.0, FRAME_W, h), frame_color)        # left
 		draw_rect(Rect2(w - FRAME_W, 0.0, FRAME_W, h), frame_color) # right
+
+
+# ---------------------------------------------------------------------------
+# Inner class: drawn 5-point star pip for the easter/secret tag (task 106).
+# Replaces the U+2605 BLACK STAR glyph which has no entry in Baloo 2 / Nunito.
+# Drawn as a filled polygon (draw_colored_polygon) — zero font dependency,
+# guaranteed to render on GL Compatibility (089 precedent / Chevron).
+# ---------------------------------------------------------------------------
+class _StarPip extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	## Compute the 10 points of a 5-point star (alternating outer/inner vertices, 36° apart,
+	## starting at the top). Returns a PackedVector2Array ready for draw_colored_polygon.
+	static func _star_points(cx: float, cy: float, outer_r: float, inner_r: float) -> PackedVector2Array:
+		var pts := PackedVector2Array()
+		for i in 10:
+			var angle := deg_to_rad(-90.0 + i * 36.0)
+			var r := outer_r if i % 2 == 0 else inner_r
+			pts.append(Vector2(cx + cos(angle) * r, cy + sin(angle) * r))
+		return pts
+
+	func _draw() -> void:
+		var cx := size.x * 0.5
+		var cy := size.y * 0.5
+		var outer_r := minf(cx, cy) * 0.95
+		var inner_r := outer_r * 0.44   ## ~0.44 gives a classic 5-point star silhouette
+		draw_colored_polygon(_star_points(cx, cy, outer_r, inner_r), Color.WHITE)
