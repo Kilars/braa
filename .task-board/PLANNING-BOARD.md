@@ -12,21 +12,31 @@ Phase 9 (difficulty) SIGNED OFF 2026-07-05 (`5331e49`). Phase 10 (play mode) is 
 **unspecced** — before scaffolding it, the owner play-tested the **training page** (the surface
 every phase replays) vs `.docs/specs/assets/goal-training-screen.png` and filed 5 buildable
 finish directives (commit `5d5ca1a`, no owner asset, X-4 preempts new-phase work). Top-3 tasked
-this round:
+and **ALL SHIPPED this round** (board now EMPTY, verify green, pushed):
 
-- **123 — BUGFIX — the apex/approach timing ring collides with the BRA button (Bugfix #1).** The
-  cyan approach ring (`TrainerRingMarker`, expands to ~259 px) is anchored concentric with the
-  button band and sweeps across the pill. Reposition/scale so no ring visually overlaps the button;
-  pure-geometry TDD + Visual Review.
-- **124 — BUGFIX — grass coins render as glowing translucent orbs, not flat coins (Bugfix #2).**
-  `_coin_texture()`'s radial gradient + bright core reads as a blob; flatten to a solid opaque
-  gold disc with a crisp rim. Visual Review.
-- **125 — IMPROVEMENT — tone down the sun bloom/haze washout (Improvement #3, resolves #5).** The
-  2.4 m unshaded sun disc halo + near-white horizon/ambient wash the scene; shrink/de-bloom the
-  disc and firm sky/ambient so contrast+saturation match the goal, then verify HUD pill legibility.
+- **123 — BUGFIX — apex/approach timing ring collides with the BRA button (Bugfix #1). DONE.** The
+  cyan approach ring was anchored concentric with the button band (expanded to ±259 px, sweeping
+  across the pill). Fixed: new `RING_CENTER_Y = -580` seats the ring band clear ABOVE the button top
+  (-280); geometry test (`test_ring_button_clearance.gd`) + Visual Review (`.screenshots/123-*`). Gold
+  apex tell left as-is (frames the verb inside the button, signed-off Phase-1/6 behaviour, no collision).
+- **124 — BUGFIX — grass coins render as glowing translucent orbs, not flat coins (Bugfix #2). DONE.**
+  `_coin_texture()` radial gradient + near-white blooming core read as blobs. Flattened to a solid
+  opaque GOLD face + crisp GOLD_DARK rim + hard alpha edge (faint opaque glint). Visual Review
+  (`.screenshots/124-*`): solid gold discs flanking the dog, still gold, no orb.
+- **125 — IMPROVEMENT — tone down the sun bloom/haze washout (Improvement #3, resolves #5). DONE.**
+  Sun disc quad 2.4→1.5, core near-white→warm gold, halo tightened; `sky_horizon_color`
+  0.99,0.82,0.62→0.88,0.68,0.44; `ambient_light_energy` 0.8→0.6; HUD pill shadow 0.20→0.28 for
+  legibility (dir 5). Visual Review (`.screenshots/125-*`): crisp+saturated vs goal, sun a soft accent,
+  dog still warmly lit, HUD pills legible.
 
-Deferred to next round (directive #4): deepen the BRA button blue + drop-shadow. Do NOT re-task
-118–122.
+**Remaining owner directive for the NEXT scan round: #4 — deepen the BRA button blue to the DS token +
+restore the crisp lower drop-shadow** (the button reads pale/flat vs the goal's saturated 3D pill).
+Note: the button already uses `DesignSystem.BLUE` + `BLUE_DARK` bottom-lip + card shadow — the fix
+likely deepens the BLUE token or the button's own fill/shadow WITHOUT restyling the shared DS pill
+token that feeds the signed-off completion menu. Do NOT re-task 118–125.
+
+Board EMPTY, verify green, all three pushed → terminal hand-off to the father for a training-page
+finish review (and to task directive #4 next round).
 
 ### (historical) PHASE 9 directives 121/122 — 2026-07-05
 
