@@ -101,3 +101,22 @@ func test_classify_difficulty_rows_retain_existing_keys() -> void:
 		assert_true(row.has("active"), "each row has 'active'")
 		assert_true(row.has("selectable"), "each row has 'selectable'")
 		assert_true(row.has("locked"), "each row has 'locked'")
+
+# ---- 122: the locked difficulty section states the reason, not just the fact ----
+
+func test_difficulty_section_locked_true_when_any_row_locked() -> void:
+	# A special dog fixes the mode → every row is locked → the section note should show.
+	var rows := TrickMenu.classify_difficulty(Difficulty.catalog(), "hard", true, "hard")
+	assert_true(TrickMenu.difficulty_section_locked(rows),
+		"a locked section (special dog) reports locked so the reason note shows")
+
+func test_difficulty_section_locked_false_for_normal_dog() -> void:
+	# A normal dog → every row selectable, none locked → no note.
+	var rows := TrickMenu.classify_difficulty(Difficulty.catalog(), "normal")
+	assert_false(TrickMenu.difficulty_section_locked(rows),
+		"an unlocked (normal-dog) section reports not-locked → no reason note")
+
+func test_difficulty_section_locked_false_for_empty_section() -> void:
+	# No difficulty rows fed → not locked (never a note on an unfed section).
+	assert_false(TrickMenu.difficulty_section_locked([]),
+		"an empty difficulty section is not locked")

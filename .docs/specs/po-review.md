@@ -144,3 +144,40 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
+### PO Review — 2026-07-05
+
+Played the local licensed bundle (`build/web`, rebuilt at HEAD `4f03a6b` — Sitt-capable
+Labrador) served over http and driven in headless Chromium at 390×844, mastering Sitt via
+`?bra_autotap=1` to reach the completion menu, then landing real canvas taps on the
+difficulty rows. **Phase 9 is functionally complete and the mechanics are genuinely live**
+(not dormant): the "Vanskelighet" section shows Normal/Hard/Expert, a real tap flips the
+active mode and moves the «Valgt» badge (`.screenshots/118-02-menu-hard.png`); on a special
+dog (Nova, EPIC) the section greys out with Hard marked «Låst» and a tap on Normal is
+swallowed (`.screenshots/119-01-menu-locked.png`); and in code the mode scales window radii,
+tell intensity, feint chance, bar erosion **and** the mastery coin payout on top of the breed
+(`main.gd:649,656,1601,2574` — effective = breed × mode). Background grace (P4-5) is wired on
+the resume notification and unit-tested. One Improvement holds it back from sign-off:
+
+**Improvements**
+
+1. **The difficulty rows don't show the trade — so the trade is invisible.** In the completion
+   menu the Normal / Hard / Expert rows carry only a «Valgt» (or «Låst») badge and nothing else
+   (`.screenshots/118-01-menu-normal.png`). But the whole phase premise is *"trading challenge
+   for reward"* (phase9 goal) and P4-3 *"each mode is the rational choice at a different skill
+   level"* — and the model backs a real trade: Hard = ×1.4 coins / ×0.72 window, Expert = ×2.0
+   coins / ×0.5 window (`difficulty.gd:47,52`). A player picking Expert gets **zero** signal that
+   it doubles the payout and halves the timing window, so they can't make the trade knowingly and
+   have no reason to ever leave Normal — the feature is inert to their decision. This is exactly
+   the standard the PO required for marker words before Phase 5 sign-off (P5-2 / task 095: each
+   word shows its cost/rest *before* loading, e.g. «+15% · hviler 2»). **Good looks like:** each
+   difficulty row shows its trade-off inline before selecting, derived from the `Difficulty`
+   model — e.g. Normal: baseline / no annotation; Hard: «×1.4 mynt · smalere vindu · flere feint»;
+   Expert: «×2 mynt · mye smalere vindu». Same dimmed-subtitle treatment as the marker-word rows,
+   so the reward-for-challenge trade is legible at the point of choice.
+
+2. **The special-dog lock states the fact but not the reason.** On a special dog the section
+   correctly greys and marks Hard «Låst» (`.screenshots/119-01-menu-locked.png`), but nothing
+   tells the player *why* the challenge is fixed — a first-timer reads it as a bug, not a design
+   choice. **Good looks like:** a short one-line note on the locked section (e.g. «Spesialhunder
+   trener alltid på Hard») so the lock reads as intentional. Minor, but it removes the confusion.
+

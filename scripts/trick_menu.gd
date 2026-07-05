@@ -117,6 +117,7 @@ const DIFFICULTY_GAP := 18.0    ## gutter above the "Vanskelighet" subheading
 const DIFFICULTY_HEADER_H := 30.0  ## the "Vanskelighet" subheading band
 const DIFFICULTY_ROW_H := 54.0  ## one difficulty row (name + active/locked badge)
 const DIFFICULTY_ROW_GAP := 8.0 ## gutter between difficulty rows
+const DIFFICULTY_NOTE_H := 22.0  ## the locked-section reason note band (122) — reserved only when locked
 
 ## Type sizes.
 const TITLE_SIZE := 30
@@ -201,6 +202,9 @@ const DIFF_WINDOW_VERY_TIGHT  := "mye smalere vindu" ## a strongly tightened win
 const DIFF_WINDOW_VERY_TIGHT_MAX := 0.6              ## window_scale below this reads as "mye smalere"
 ## The "Vanskelighet" (difficulty) subheading label — Norwegian, homed as a named const.
 const LABEL_DIFFICULTY   := "Vanskelighet"
+## The locked-section reason note (122): on a special dog the mode is fixed — this one-liner tells the
+## player it's by design, not a bug. Shown (dimmed) only when the section is locked; homed as a const.
+const DIFF_LOCKED_NOTE   := "Spesialhunder trener alltid på Hard"
 
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
@@ -324,6 +328,15 @@ static func difficulty_trade_label(reward_scale: float, window_scale: float) -> 
 ## the active mode is still "selectable" (tapping it is simply a no-op switch in main). Pure predicate.
 static func is_difficulty_selectable(row: Dictionary) -> bool:
 	return row.get("selectable", false)
+
+## Whether the fed difficulty section is locked (122): a special dog fixes the mode, so every row is
+## locked. Drives the one-line reason note that tells the player the challenge is fixed by design, not
+## broken. False for a normal dog (rows selectable) or an empty/unfed section. Pure predicate.
+static func difficulty_section_locked(rows: Array) -> bool:
+	for r in rows:
+		if (r as Dictionary).get("locked", false):
+			return true
+	return false
 
 ## The player-facing name for a trick id (pure). Unknown ids fall back to a capitalised id.
 static func display_name(id: String) -> String:
@@ -464,7 +477,14 @@ func _difficulty_block_h() -> float:
 	var n := _difficulties.size()
 	if n == 0:
 		return 0.0
-	return DIFFICULTY_GAP + DIFFICULTY_HEADER_H + n * DIFFICULTY_ROW_H + (n - 1) * DIFFICULTY_ROW_GAP
+	return DIFFICULTY_GAP + DIFFICULTY_HEADER_H + _difficulty_note_h() \
+		+ n * DIFFICULTY_ROW_H + (n - 1) * DIFFICULTY_ROW_GAP
+
+## The locked-section reason-note band height (122): DIFFICULTY_NOTE_H only when the section is locked
+## (a special dog), else 0 — so a normal-dog / unfed section's geometry is byte-identical. The note sits
+## between the "Vanskelighet" subheading and the first row.
+func _difficulty_note_h() -> float:
+	return DIFFICULTY_NOTE_H if difficulty_section_locked(_difficulties) else 0.0
 
 ## The y where the difficulty section (subheading) begins — just below the words block (or breeds/trick
 ## rows if those sections are absent, since each contributes 0 height when empty).
@@ -477,7 +497,7 @@ func _difficulty_top() -> float:
 func _difficulty_row_rect(i: int) -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := _difficulty_top() + DIFFICULTY_HEADER_H + i * (DIFFICULTY_ROW_H + DIFFICULTY_ROW_GAP)
+	var y := _difficulty_top() + DIFFICULTY_HEADER_H + _difficulty_note_h() + i * (DIFFICULTY_ROW_H + DIFFICULTY_ROW_GAP)
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, DIFFICULTY_ROW_H)
 
 ## The difficulty row index under a point, or -1 if none.
@@ -688,6 +708,13 @@ func _draw() -> void:
 		var diff_sub_baseline := _difficulty_top() + f_bold.get_ascent(BADGE_SIZE)
 		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, diff_sub_baseline), LABEL_DIFFICULTY,
 			BADGE_SIZE, DIFF_SUBHEAD)
+		# On a special dog the mode is locked (119) — a dimmed one-liner tells the player WHY (122), so
+		# the greyed section reads as intentional, not broken. Shown only when locked (height reserved
+		# only then, so a normal dog's layout is unchanged).
+		if difficulty_section_locked(_difficulties):
+			var note_baseline := _difficulty_top() + DIFFICULTY_HEADER_H + f_body.get_ascent(BADGE_SIZE)
+			_draw_text(f_body, Vector2(panel.position.x + PANEL_PAD, note_baseline), DIFF_LOCKED_NOTE,
+				BADGE_SIZE, DIFF_TRADE_HINT)
 		for i in _difficulties.size():
 			_draw_difficulty_row(f_bold, f_body, i)
 	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. Secondary paper pill
