@@ -192,6 +192,13 @@ const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active
 const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed
 const DIFF_BADGE_ACTIVE  := "Valgt"                  ## the chosen mode's badge
 const DIFF_BADGE_LOCKED  := "Låst"                   ## the fixed mode on a special dog (119)
+## Trade subtitle (121, P4-3): the reward/challenge trade made legible before selecting, dimmed like
+## the marker-word cost hint. WORD_COST_HINT SLATE_SOFT reused so the two hint styles read identical.
+const DIFF_TRADE_HINT    := WORD_COST_HINT           ## dimmed trade subtitle colour — secondary
+const DIFF_TRADE_COIN_WORD    := "mynt"              ## coin word in the trade string ("×1.4 mynt · …")
+const DIFF_WINDOW_TIGHT       := "smalere vindu"     ## a tightened timing window (window_scale < 1.0)
+const DIFF_WINDOW_VERY_TIGHT  := "mye smalere vindu" ## a strongly tightened window (window_scale < …_MAX)
+const DIFF_WINDOW_VERY_TIGHT_MAX := 0.6              ## window_scale below this reads as "mye smalere"
 ## The "Vanskelighet" (difficulty) subheading label — Norwegian, homed as a named const.
 const LABEL_DIFFICULTY   := "Vanskelighet"
 
@@ -292,8 +299,26 @@ static func classify_difficulty(catalog: Array, active_id: String, locked := fal
 			"active": mode.id == flagged,
 			"selectable": not locked,
 			"locked": locked,
+			"reward_scale": mode.reward_scale,
+			"window_scale": mode.window_scale,
 		})
 	return rows
+
+## The dimmed trade subtitle for a difficulty row (121, P4-3), derived from the Difficulty model —
+## the reward/challenge trade made legible at the point of choice (mirrors the marker-word cost hint,
+## 095). "" for the baseline (Normal / reward_scale == 1.0) → no subtitle. Otherwise
+## "×<reward> mynt · <window phrase>": the coin multiplier (trailing ".0" dropped so 2.0 reads "×2"),
+## then a window-tightening phrase bucketed by how much the timing window shrinks. Pure — unit-locked.
+static func difficulty_trade_label(reward_scale: float, window_scale: float) -> String:
+	if is_equal_approx(reward_scale, 1.0):
+		return ""
+	var reward_txt: String
+	if is_equal_approx(reward_scale, round(reward_scale)):
+		reward_txt = "×%d" % int(round(reward_scale))
+	else:
+		reward_txt = ("×%.1f" % reward_scale)
+	var window_txt := DIFF_WINDOW_TIGHT if window_scale >= DIFF_WINDOW_VERY_TIGHT_MAX else DIFF_WINDOW_VERY_TIGHT
+	return "%s %s · %s" % [reward_txt, DIFF_TRADE_COIN_WORD, window_txt]
 
 ## Whether a difficulty row may be tapped (118/119). A locked row (special dog) is never selectable;
 ## the active mode is still "selectable" (tapping it is simply a no-op switch in main). Pure predicate.
@@ -867,15 +892,29 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var dim := locked and not is_active
 	var row_bg := ROW_BG_LOCKED if dim else ROW_BG
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
-	# The mode name, left.
+	# The dimmed trade subtitle (121, P4-3): reward × / window-tightening derived from the model.
+	# "" for Normal (baseline) → no subtitle; Hard/Expert show the trade before selecting.
+	var trade := difficulty_trade_label(
+		float(d.get("reward_scale", 1.0)), float(d.get("window_scale", 1.0)))
+	var show_trade := trade != ""
+	# The mode name, left. With a trade hint, shift the name up to leave room for the hint below
+	# (same treatment as the marker-word cost hint, _draw_word_row).
 	var name_col := DIFF_NAME_IDLE
 	if locked:
 		name_col = DIFF_NAME_ACTIVE if is_active else DIFF_NAME_LOCKED
 	elif is_active:
 		name_col = DIFF_NAME_ACTIVE
-	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
+	var name_mid_y := rect.position.y + rect.size.y * 0.5
+	if show_trade:
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(BADGE_SIZE) * 0.5 - 1.0
+	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
 	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
 		str(d.get("name", d.id)), NAME_SIZE, name_col)
+	# Trade subtitle below the name (121): SLATE_SOFT secondary text for Hard/Expert.
+	if show_trade:
+		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(BADGE_SIZE) + 2.0
+		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
+			trade, BADGE_SIZE, DIFF_TRADE_HINT)
 	# The badge, right. Locked-active → "Låst"; unlocked-active → "Valgt"; other rows show no badge.
 	var badge := ""
 	var badge_col := DIFF_NAME_ACTIVE
