@@ -1290,24 +1290,31 @@ func _setup_ground_coins(dog: Node) -> void:
 		coin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		coins.add_child(coin)
 
-## The ambient coin's texture (099): a warm radial gold gradient baked to an Image — a bright core,
-## the DS GOLD body to a crisp edge, a GOLD_DARK rim ring, then a transparent surround so the quad
-## reads as a round coin. Headless-safe (baked Image, no shader).
+## The ambient coin's texture (099/124): a flat solid gold disc baked to an Image — opaque GOLD
+## face, crisp GOLD_DARK rim ring at dist>0.86, hard alpha edge at dist>1.0. No bright blooming
+## core, no soft radial falloff (owner directive 2026-07-05: coins must read as small flat gold
+## coins, not glowing translucent orbs). Optional subtle upper-left glint stays opaque.
+## Headless-safe (baked Image, no shader).
 func _coin_texture() -> ImageTexture:
 	var d := 64
 	var img := Image.create(d, d, false, Image.FORMAT_RGBA8)
 	var mid := float(d) * 0.5
-	var core := DesignSystem.GOLD.lerp(Color(1, 1, 1), 0.35)  # bright warm highlight
 	for py in d:
 		for px in d:
 			var dist := Vector2(float(px) - mid, float(py) - mid).length() / mid  # 0 centre → 1 edge
 			var col: Color
 			if dist > 1.0:
 				col = Color(0, 0, 0, 0)                       # outside the disc — transparent
-			elif dist > 0.82:
-				col = DesignSystem.GOLD_DARK                  # the rim ring
+			elif dist > 0.86:
+				col = DesignSystem.GOLD_DARK                  # crisp opaque rim ring
 			else:
-				col = core.lerp(DesignSystem.GOLD, clampf(dist / 0.82, 0.0, 1.0))
+				# Flat solid gold face — no soft gradient, no near-white blooming core.
+				# Subtle upper-left glint (opaque, not luminous) for a coin-face read.
+				var gx := float(px) - mid
+				var gy := float(py) - mid
+				var glint := clampf((-gx - gy) / (mid * 1.4), 0.0, 1.0)  # upper-left direction
+				col = DesignSystem.GOLD.lerp(DesignSystem.GOLD_DARK.lerp(DesignSystem.GOLD, 0.6), glint * 0.18)
+				col.a = 1.0
 			img.set_pixel(px, py, col)
 	return ImageTexture.create_from_image(img)
 

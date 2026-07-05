@@ -60,12 +60,32 @@ only if Visual Review shows they're still too big. Leave placement (102's flanki
 
 ## Acceptance criteria
 
-- [ ] The grass coins read as **small, solid, flat gold coins** — opaque, crisp edge, sized like
+- [x] The grass coins read as **small, solid, flat gold coins** — opaque, crisp edge, sized like
   the mockup — grounded on the grass, clear of the dog silhouette (no soft translucent glow, no
   bright blooming core).
-- [ ] Visual Review at 390×844 on the real build (fresh training boot): capture the training page;
+- [x] Visual Review at 390×844 on the real build (fresh training boot): capture the training page;
   a 3× zoom on a coin shows a solid gold disc with a crisp rim, matching `goal-training-screen.png`;
   an in-world gold-pixel scan still counts coin-gold flanking the dog (no regression to 102's
-  visibility fix).
-- [ ] The dog and BRA button are not occluded; the coins stay in the grass band.
-- [ ] `nix develop -c bash verify.sh` green; placeholder check clean.
+  visibility fix). Frames: `.screenshots/124-coins-01.png`, `124-coins-02.png`.
+- [x] The dog and BRA button are not occluded; the coins stay in the grass band.
+- [x] `nix develop -c bash verify.sh` green; placeholder check clean.
+
+## Resolution
+
+**Shipped 2026-07-05.** Reworked `_coin_texture()` in `scripts/main.gd`:
+
+- **Removed** the bright near-white blooming core (`GOLD.lerp(white, 0.35)`) and the wide soft
+  radial gradient (`core.lerp(GOLD, dist/0.82)`) that caused the glowing-orb read.
+- **Replaced** with a flat solid `DesignSystem.GOLD` fill for `dist <= 0.86`, a crisp opaque
+  `GOLD_DARK` rim ring for `dist 0.86–1.0`, and a hard transparent cutoff at `dist > 1.0`.
+- Added a subtle upper-left directional glint (opaque, 18% blend toward `GOLD_DARK` then back)
+  for coin-face legibility — stays fully opaque, not luminous.
+- Placement (`GARDEN_COIN_R = 0.12`, 102's flanking spots), `billboard_keep_scale = true`, and
+  `SHADING_MODE_UNSHADED` left untouched.
+
+Visual Review (`env -u LD_LIBRARY_PATH node tools/web_capture_training.mjs build/web .screenshots/124-coins`):
+frames `124-coins-01.png` and `124-coins-02.png` show solid, flat, gold discs with a crisp dark
+rim flanking the dog in the grass band — no glow, no translucency, no orb. Gold pixel presence
+retained (no regression). Dog and BRA button fully unoccluded.
+
+Gate: `✓ verify gate green` (import · boot · test · export). Placeholder check clean.
