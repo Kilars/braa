@@ -176,57 +176,45 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-05 (PO, father pass) — training-page finish vs the design goal
+### PO Review — 2026-07-05 (PO, father pass) — training-page/menu finish COMPLETE; Phase 10 owner-gated on its spec
 
-Phases 1–9 are signed off and Phase 10 (play mode) is current but unspecced. Before Phase-10
-scaffolding, the **training page** — the persistent surface every phase replays — must match the
-design goal `.docs/specs/assets/goal-training-screen.png` in *finish*. Replayed the owner's six
-directives on a fresh local licensed bundle (`build/web` at HEAD `4fa22b5`, Sitt-capable Labrador,
-rebuilt via `verify.sh`, gate green) served over http in headless Chromium at 390×844 — SwiftShader ==
-the deployed GL Compatibility renderer. Zero console errors. **Five of the six are fixed and pruned;
-one narrowed menu residual remains.**
+Replayed the whole training-page/menu finish arc on a fresh local licensed bundle (`build/web` at HEAD
+`60b2d67`, Sitt-capable Labrador, rebuilt via `verify.sh`, gate green) served over http in headless
+Chromium at 390×844 — SwiftShader == the deployed GL Compatibility renderer. **The one residual that
+blocked the prior pass is fixed; all six owner directives + the BRA-button + the menu-disclosure work
+(tasks 123–128) are now delivered and verified in my own pixels. Nothing on the persistent surfaces
+falls short of `assets/goal-training-screen.png` any more.**
 
-**Replayed and confirmed FIXED (pruned):**
-- **Ring/BRA collision** (task 123): the cyan approach ring encircles the dog well **above** the BRA
-  button — no overlap across the sit-cycle burst.
-- **Glowing-orb coins** (task 124): the grass coins read as **flat, solid, opaque gold discs**
-  grounded on the grass, not translucent blobs (`.screenshots/PO10-train-00.png`).
-- **Sun/bloom washout** (task 125): the scene is crisp and saturated — sky, grass, and HUD hold the
-  goal's contrast; the sun is a soft top-centre accent, not a scene-wide wash (`.screenshots/PO10-train-00.png`).
-- **Faint top HUD** (folded into 125): the Triks / Kennel / coin pills read clean and legible over the
-  sky band (`.screenshots/PO10-train-00.png`).
-- **BRA button flat/pale vs the goal's saturated 3D pill** (task 126): **fixed.** The button now renders
-  as a **deep, saturated blue pill with a vertical gradient (bright top → deep bottom) and a distinct
-  darker-blue 3D lower lip / drop-shadow** — it reads as the confident raised pill that anchors the goal
-  composition, no longer a flat mid-blue rectangle (`.screenshots/PO10-train-00.png`, `PO10-menu.png` vs
-  `assets/goal-training-screen.png`). Confined to the BRA button; the shared DS pill token feeding the
-  completion menu is untouched.
+**The prior pass's sole open residual is FIXED (pruned):**
+- **Marker-words section fully enumerated its locked words** (task 128): **fixed.** The completion menu
+  (`.screenshots/PO10-menu.png`) now teases the marker-words ladder sparingly — **Bra! (Active) ·
+  Dyktig! (Switch) · Flink! (Locked)**, the single next word only; **Super! / Kjempebra! are hidden**
+  until they come within reach. This mirrors the tricks roadmap's single-locked-tease (Gi labb), so the
+  mini settings-dump is gone and the section stays an earned beat. `MenuReveal.teased_words` drives it.
 
-**Menu (serious) — largely delivered, one narrowed residual still open**
+**Everything else on the persistent surfaces replays clean (already pruned, re-confirmed this pass):**
+- **123** cyan approach ring seated above the BRA button (no collision); **124** grass coins are flat,
+  solid, opaque gold discs; **125** scene crisp/saturated, sun a soft top accent, top HUD legible;
+  **126** BRA button is a deep saturated blue gradient 3D pill (bright top → deep bottom + darker lip),
+  the confident anchor of the goal composition; **127** progressive disclosure holds — at mastery #1 the
+  Breeds and Vanskelighet sections are correctly **hidden** (gated in `menu_reveal.gd`, not lost) and the
+  trick roadmap teases only the next locked row. All in `.screenshots/PO10-train-*.png` / `PO10-menu.png`.
+- **No regression in the signed-off phases** (same build): P1 core loop (cream Labrador centred/grounded
+  facing camera on green grass, seated apex, the gold **apex-tell** ring framing the BRA verb — intended
+  P1-4 behaviour, distinct from the P2-9 approach ring above the button), P2 three-trick roster, P3 coins,
+  P5 marker words, P6 garden (tan path → cottage, white picket fence, gold coins) + DS paper completion
+  card — all intact.
 
-Task 127 delivered the core of the progressive-disclosure directive and it reads as a real win
-(`.screenshots/PO10-menu.png`): on a fresh mastery the completion menu **no longer dumps every system** —
-the **Breeds** and **Vanskelighet (difficulty)** sections are **hidden** for a new player (verified in
-`scripts/menu_reveal.gd` they are gated, not lost: difficulty surfaces at the 2nd mastery, breeds once
-adoption is affordable), and the trick roadmap **teases only the next locked row (Gi labb)** instead of
-all three. That is the earned-beat story the directive asked for. **One concrete sub-point of the
-directive is only half-applied and still open:**
+**Phase 10 is blocked purely on the owner — no sign-off, no buildable directive this pass.**
+`.docs/specs/phase10.md` is **empty** and the index marks Phase 10 **"(deferred)"**. So there is nothing
+built to Visual-Review (I cannot sign it off), and there is no spec to build from (I cannot file buildable
+Phase-10 directives — authoring play-mode stories is the owner's job, not the PO's, and the spec is
+read-only to this pass). The training-page/menu finish work that legitimately carried the loop while
+Phase 10 sat unspecced (the X-4 quality bar, tasks 123–128) is now **exhausted and clean**.
 
-1. **[SERIOUS, narrowed] The marker-words section still fully enumerates its locked future words.**
-   *What I saw:* `.screenshots/PO10-menu.png` — once the marker-words section correctly surfaces (as the
-   reward for mastery #1), it lists **Bra! (Active) + Dyktig! (Switch)** *and* all three not-yet-reachable
-   words **Flink! / Super! / Kjempebra!** as fully-enumerated **Locked** rows. *Why it falls short:* the
-   directive's own acceptance says "locked rows are teased sparingly, not fully enumerated" — the tricks
-   section now honours this (`MenuReveal.teased_locked` caps the locked tease at 1), but the marker-words
-   section does not, re-creating a mini settings-dump of future systems inside an otherwise-earned beat.
-   *Acceptance:* apply the same sparing tease to the marker-words locked rows — show the base word + the
-   earned/switchable word + at most **the single next** locked word as a "coming soon" beat, and hide the
-   rest until they come within reach (mirror `MenuReveal.teased_locked`, keyed to the marker-word unlock
-   ladder). Keep the section's reveal gate (appears once the first alt word is unlocked) as-is. Still a
-   **serious** UX consistency issue; high priority.
-
-_(Phase 9 signed off 2026-07-05. Phase 10 is current but unspecced — this last training-page/menu finish
-item comes first, per the cross-cutting quality bar X-4. Owner directives #1/#2/#3/#5 fixed by tasks
-123/124/125; BRA-button directive fixed by task 126; menu overload substantially fixed by task 127, with
-the single marker-words-tease residual above remaining.)_
+**Terminal hand-off:** Phases 1–9 are signed off and hold; the whole *specified* game is complete and
+polished to the goal. The loop has nothing more to build until the **owner authors `phase10.md`**
+(what "play mode" is: its stories + acceptance criteria). Once the spec exists, the build loop can pick
+it up and a later PO pass can review it. Until then this is the owner-gated terminal state — an unchanged
+next pass ends the run.
 
