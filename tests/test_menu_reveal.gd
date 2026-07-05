@@ -47,3 +47,35 @@ func test_teased_locked_shows_exactly_one() -> void:
 func test_teased_locked_never_exceeds_list() -> void:
 	assert_eq(MenuReveal.teased_locked([]).size(), 0, "nothing to tease from an empty roadmap")
 	assert_eq(MenuReveal.teased_locked(["only"]).size(), 1, "a single-entry roadmap teases that one")
+
+# ---- marker-words locked rows: same sparing tease (128, PO Phase-10 narrowed residual) ----
+# The word rows carry a `state` (TrickMenu.WordState: ACTIVE/UNLOCKED/LOCKED). Keep every
+# unlocked row (Active/Switch) + at most one LOCKED row as a single "coming soon" beat.
+
+const _LOCKED := TrickMenu.WordState.LOCKED  # 2
+
+func _word_row(id: String, state: int) -> Dictionary:
+	return {"id": id, "state": state}
+
+func test_teased_words_keeps_unlocked_plus_one_locked() -> void:
+	# bra Active, dyktig Switch, then flink/super/kjempebra Locked → only flink teased.
+	var rows := [
+		_word_row("bra", TrickMenu.WordState.ACTIVE),
+		_word_row("dyktig", TrickMenu.WordState.UNLOCKED),
+		_word_row("flink", _LOCKED),
+		_word_row("super", _LOCKED),
+		_word_row("kjempebra", _LOCKED),
+	]
+	var teased := MenuReveal.teased_words(rows, _LOCKED)
+	assert_eq(teased.size(), 3, "two unlocked rows + exactly one teased locked row")
+	assert_eq(teased[2]["id"], "flink", "the NEXT locked word is the one teased (order preserved)")
+
+func test_teased_words_all_unlocked_unchanged() -> void:
+	var rows := [
+		_word_row("bra", TrickMenu.WordState.ACTIVE),
+		_word_row("dyktig", TrickMenu.WordState.UNLOCKED),
+	]
+	assert_eq(MenuReveal.teased_words(rows, _LOCKED).size(), 2, "no locked rows → nothing to trim")
+
+func test_teased_words_empty() -> void:
+	assert_eq(MenuReveal.teased_words([], _LOCKED).size(), 0, "empty rows → empty")

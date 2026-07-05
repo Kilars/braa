@@ -2344,7 +2344,9 @@ func _word_rows() -> Array:
 		var id: String = (row as Dictionary).get("id", "")
 		(row as Dictionary)["cooling"] = _words.is_on_cooldown(id)
 		(row as Dictionary)["remaining"] = _words.cooldown_remaining(id)
-	return rows
+	# Progressive disclosure (128, PO Phase-10 narrowed residual): tease just the NEXT locked word,
+	# not all three future words — mirror MenuReveal.teased_locked on the tricks roadmap.
+	return MenuReveal.teased_words(rows, TrickMenu.WordState.LOCKED)
 
 ## Build the completion-menu difficulty rows (118, P4-1): the shipped modes (Normal/Hard/Expert)
 ## classified against the active mode id, so the section shows one row per mode with the active one

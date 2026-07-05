@@ -30,3 +30,20 @@ static func reveal_breeds(balance: int, owned_count: int, adopt_cost: int) -> bo
 ## enumerated — show just the next one as a "coming soon" beat instead of dumping every future system.
 static func teased_locked(all_locked: Array, max_tease := 1) -> Array:
 	return all_locked.slice(0, min(max_tease, all_locked.size()))
+
+## Marker-words rows (128, PO Phase-10 narrowed residual): the same sparing tease as the locked
+## tricks, keyed to the unlock ladder. Keep every already-unlocked row (Active/Switch) and at most
+## `max_tease` of the not-yet-unlocked (`locked_state`) rows as a single "coming soon" beat — hide
+## the rest until they come within reach. `rows` is the ordered word catalog classified into
+## {..., "state": ...}; because the catalog is ordered by the unlock ladder and unlocked words are
+## always a prefix, the first kept locked row IS the next word. Order preserved.
+static func teased_words(rows: Array, locked_state: int, max_tease := 1) -> Array:
+	var out: Array = []
+	var teased := 0
+	for row in rows:
+		if int((row as Dictionary).get("state", locked_state)) == locked_state:
+			if teased >= max_tease:
+				continue
+			teased += 1
+		out.append(row)
+	return out
