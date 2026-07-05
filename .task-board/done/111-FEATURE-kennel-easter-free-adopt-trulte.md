@@ -65,14 +65,18 @@ func _build_adopt_button(detail):
 
 ## Acceptance criteria
 
-- [ ] **TDD first:** the free-adopt (cost-nothing + owned) and double-fire-guard tests written RED → GREEN.
-- [ ] Trulte appears in the grid with the coral «★ Påskeegg» tag + «Gratis» price (already shipped 106 —
+- [x] **TDD first:** the free-adopt (cost-nothing + owned) and double-fire-guard tests written RED → GREEN.
+- [x] Trulte appears in the grid with the coral «★ Påskeegg» tag + «Gratis» price (already shipped 106 —
       regression-check it still reads).
-- [ ] Her modal shows the coral ribbon above the stats and an «Adopter gratis ♥» button on a coral fill.
-- [ ] Adopting her costs nothing (balance unchanged), marks her owned, and she becomes trainable via the
+- [x] Her modal shows the coral ribbon above the stats and an «Adopter gratis ♥» button on a coral fill.
+- [x] Adopting her costs nothing (balance unchanged), marks her owned, and she becomes trainable via the
       110 «Tren med Trulte» switch.
-- [ ] She's discoverable by browsing — no external hint — and reads as special, not broken.
-- [ ] No tofu: the ★ is drawn geometry (106 `_StarPip`); the ♥ renders correctly or is drawn geometry.
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS (390×844, real canvas tap): scroll to Trulte → open modal → coral ribbon +
-      «Adopter gratis ♥» → adopt → owned treatment, balance unchanged, «Tren med Trulte» available.
+- [x] She's discoverable by browsing — no external hint — and reads as special, not broken.
+- [x] No tofu: the ★ is drawn geometry (106 `_StarPip`); the ♥ renders correctly or is drawn geometry.
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Visual Review PASS (390×844, real canvas tap): scroll to Trulte → open modal → coral ribbon +
+      «Adopter gratis ♥» → adopt → owned treatment, balance unchanged, «Tren med Trulte» available. —
+      proven by task 112: `web_capture_kennel_trulte.mjs` PASSED (balance 0 before AND after, owned=
+      [bella,trulte], «Tren med Trulte» present); frame `.screenshots/112-trulte-modal-free.png`
+      (coral «★ Påskeegg — en hemmelig venn» ribbon w/ drawn star pip, coral «Adopter gratis ♥» w/
+      drawn heart pip — no tofu, «Kan lære: Sitt · Ligg · Legg deg» trick list shown pre-adopt).

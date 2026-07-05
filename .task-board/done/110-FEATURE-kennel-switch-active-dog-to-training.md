@@ -83,14 +83,16 @@ func _on_kennel_train_with(id: String) -> void:
 
 ## Acceptance criteria
 
-- [ ] **TDD first:** the active-switch, save round-trip, and tint/stats-resolve tests written RED → GREEN.
-- [ ] An owned, non-active dog's modal shows «Tren med [navn]»; pressing it sets that dog active and
+- [x] **TDD first:** the active-switch, save round-trip, and tint/stats-resolve tests written RED → GREEN.
+- [x] An owned, non-active dog's modal shows «Tren med [navn]»; pressing it sets that dog active and
       returns to the training scene with the dog loaded (K-5).
-- [ ] The training scene's model (coat tint) + stats reflect the chosen dog — via the `CoatTint` retint
+- [x] The training scene's model (coat tint) + stats reflect the chosen dog — via the `CoatTint` retint
       of the shared rig (honest BUST-068 stand-in) + stat-driven levers, no faked new model.
-- [ ] The active dog shows a non-tappable active state in its modal (no dead button).
-- [ ] The active dog persists across a reload under the `kennel` save key; a returning player boots into
+- [x] The active dog shows a non-tappable active state in its modal (no dead button).
+- [x] The active dog persists across a reload under the `kennel` save key; a returning player boots into
       their chosen dog (K-7). No parallel store.
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS (390×844, real canvas tap): adopt a dog → «Tren med [navn]» → kennel closes,
-      training shows the re-tinted dog; reload → still that dog. Bella round-trips too.
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Visual Review PASS (390×844, real canvas tap): adopt a dog → «Tren med [navn]» → kennel closes,
+      training shows the re-tinted dog; reload → still that dog. Bella round-trips too. — proven by
+      task 112: `web_capture_kennel_switch.mjs` PASSED (active=sol, save wrote active=sol, reload
+      restored active=sol + owned=[bella,sol]); frame `.screenshots/112-switch-training-sol.png`.

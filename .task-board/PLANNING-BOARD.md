@@ -6,6 +6,27 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — PHASE 8 (KENNEL) CURRENT — spine 109/110/111 shipped; construction audit surfaced 3 tasks (112/113/114) — 2026-07-05
+
+The adopt/switch/persist/free-adopt spine (109/110/111) is in `done/` and `verify.sh` is green.
+Before handing the empty board to the father, the scan ran the **adversarial construction audit**
+of the completed Phase-8 kennel work — it was **NOT clean** (3 findings → 3 tasks, in priority order):
+
+- **112 — VERIFY/BUGFIX — end-to-end Visual Review of the kennel spine (K-4/K-5/K-6/K-7).** Tasks
+  109/110/111 were moved to done with **every** Visual-Review box unchecked, and the build memory
+  shows the kennel e2e captures ended mid-debug ("button press not registering") with no recorded
+  PASS. Unit gate is green but the **browser-level** adopt→switch→persist→free-adopt flow is
+  pixel-unconfirmed. Run the real-canvas-tap capture; fix any break; record PASS. Highest priority.
+- **113 — FEATURE — training menu reflects the ACTIVE breed's trick list (K-8).** `_selectable_tricks()`
+  reads the static `KNOWN_TRICKS` const, never the active kennel dog's `trick_ids`. Correct only by
+  coincidence today (all dogs share the core). Make K-8 true by construction; per-breed divergence
+  stays owner-gated under P3-2. TDD, fallback keeps today byte-identical.
+- **114 — QUALITY — harden two weak kennel tests.** The unaffordable-adopt test documents the guard
+  in comments instead of exercising the real seam; `CHROME_NODES` under-covers the HUD hide
+  (`_word_pop`/`_kennel_button`). Test-honesty fixes.
+
+After 112/113/114 the phase's spine is built + audited → hand-off to the father for the Phase-8 sign-off pass.
+
 ## Status — PHASE 8 (KENNEL) CURRENT — grid defects 106/107/108 shipped; scan replenished the deferred adopt/switch/persist spine as 109/110/111 — 2026-07-05
 
 106/107/108 (the father's grid defects + the K-2 inspect modal) are all in `done/`. The father's

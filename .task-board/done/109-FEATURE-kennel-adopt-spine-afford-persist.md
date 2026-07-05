@@ -127,9 +127,11 @@ func _on_kennel_adopt(id: String) -> void:
       decodes to Bella-only, unchanged (K-7). No parallel store added.
 - [x] `_kennel_owned()`/`_kennel_active()` now read the persisted `KennelRoster` (id-space reconciled).
 - [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS (390×844, real canvas tap): open a dog's modal, adopt an affordable dog →
+- [x] Visual Review PASS (390×844, real canvas tap): open a dog's modal, adopt an affordable dog →
       balance counts down, cell flips to owned; open an unaffordable dog → button is dim/non-tappable;
-      reload → the adoption persists. Training page intact.
+      reload → the adoption persists. Training page intact. — proven by task 112:
+      `web_capture_kennel_switch.mjs` (Sol 500 adopt: balance 700→200, «Adopter»→«Tren med Sol»),
+      frames `.screenshots/112-adopt-modal.png` + `112-persist-reload.png` (reload owned=[bella,sol]).
 
 ## Resolution
 
