@@ -100,15 +100,35 @@ static func detail_for(id: String) -> Dictionary: ...
 
 ## Acceptance criteria
 
-- [ ] **TDD first:** the three detail-data tests above written RED (blurb/traits absent), then GREEN.
-- [ ] Tapping a cell opens a centered detail modal over a dim backdrop with: blurb, 4 stat rows (5
+- [x] **TDD first:** the three detail-data tests above written RED (blurb/traits absent), then GREEN.
+- [x] Tapping a cell opens a centered detail modal over a dim backdrop with: blurb, 4 stat rows (5
       pips each, filled per the 1–5 stat), raseegenskaper chips, the Unikt trekk card, and the K-8
       trick list ("Kan lære: Sitt · Ligg · Legg deg") — shown **before** any adopt.
-- [ ] ✕ **and** outside/backdrop tap both close the modal; **grid scroll position is preserved**.
-- [ ] Reduced-motion (X-5) respected — no scale/fade tween when `ReducedMotion.query()` is true.
-- [ ] No dead/no-op adopt button is shipped (adopt press wiring is the next task, K-4); the modal is
+- [x] ✕ **and** outside/backdrop tap both close the modal; **grid scroll position is preserved**.
+- [x] Reduced-motion (X-5) respected — no scale/fade tween when `ReducedMotion.query()` is true.
+- [x] No dead/no-op adopt button is shipped (adopt press wiring is the next task, K-4); the modal is
       a complete inspect card with a commented adopt mount seam.
-- [ ] No economy/roster/save mutation in this task (inspect only).
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS on the live web build (390×844, real canvas tap): modal opens smooth, stat
+- [x] No economy/roster/save mutation in this task (inspect only).
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Visual Review PASS on the live web build (390×844, real canvas tap): modal opens smooth, stat
       panel legible, closes cleanly back to the grid at the same scroll spot; training page intact.
+
+## Resolution (2026-07-05)
+
+**Data (TDD):** added `blurb: String` + `traits: Array` to each of the 8 `DOGS` rows in
+`kennel_dog.gd` (warm Norwegian one-liners + 2–3 raseegenskap chips per dog), threaded through
+`_from_row` + `classify_kennel_dogs`, and a new `KennelDog.detail_for(id)` returning everything the
+modal reads (unknown-id → Bella fallback). 3 tests RED→GREEN (`test_each_dog_has_a_blurb_and_traits`,
+`test_detail_for_carries_stats_trait_and_trick_list`, `test_detail_for_unknown_id_falls_back_to_starter`).
+**Modal (Visual Review):** `KennelScreen.open_detail(id)`/`close_detail()` mount a dim-backdrop +
+centered card overlay ON TOP of the grid (grid untouched → scroll preserved): tinted band + steel bars
++ «Bella» title + ✕, warm blurb, 4 stat rows (Læreevne/Energi/Mot/Fokus) with 5 drawn `_StatPip`s each
+(filled `#4a90e2` / empty `#dfe5ea`, per the 1–5 stat), «Raseegenskaper» chips, cream «Unikt trekk»
+card, and the K-8 «Kan lære: Sitt · Ligg · Legg deg» trick list. Reduced-motion-guarded backdrop-fade +
+card scale-from-0.96. Both ✕ and backdrop-tap close. **No dead adopt button** — `_build_adopt_button()`
+returns null with a commented K-4 mount seam. `main._on_kennel_dog_selected(id)` now calls
+`_kennel.open_detail(id)` (was a no-op). No economy/roster/save mutation. New capture
+`tools/web_capture_kennel_modal.mjs`. verify green **590/0** (587+3); no new boot errors. **Visual
+Review PASS** — `.screenshots/108-kennel-modal.png` (full inspect card) + `108-kennel-modal-closed.png`
+(grid restored at same scroll). Next round: K-3/K-4 adopt button in this modal + the adopt/switch/persist
+economy spine + roster↔kennel id-space reconciliation.

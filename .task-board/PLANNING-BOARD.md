@@ -29,11 +29,13 @@ bugfix→improvement→first-spine-story; NOT work-ahead — Phase 8 has abundan
   **bake the portrait OFFLINE to a committed `assets/kennel/dog_portrait.png`** (headless capture scene,
   3/4-front whole-dog framing by overall extent, verify the frame by eye once) → load it as a static
   `Texture2D`, no runtime SubViewport. See the ⚠️ note at the top of `107-…md`.
-- **108 — FEATURE — kennel detail/inspect modal (PO Change 3, first spine story: K-2 + K-8 trick
-  list).** Tapping a cell is a no-op (`dog_selected` emits into nothing). Build the inspect modal:
-  blurb + 4 stat rows (5 pips) + raseegenskaper chips + Unikt trekk + the K-8 trick list, closable
-  (✕/backdrop, scroll preserved, X-5). Test-first for the new blurb/traits data; Visual Review for the
-  modal. **Inspect only** — no dead adopt button (adopt press wiring is K-4, next round).
+- **108 — FEATURE — kennel detail/inspect modal (PO Change 3, first spine story: K-2 + K-8 trick list). ✅ DONE.**
+  Tapping a cell was a no-op; now `main._on_kennel_dog_selected(id)` → `_kennel.open_detail(id)`. New
+  `KennelDog.blurb`/`traits` (TDD: 3 tests RED→GREEN) + `detail_for(id)`. `open_detail`/`close_detail`
+  mount a dim-backdrop centered card OVER the grid (scroll preserved): tinted band+bars+title+✕, warm
+  blurb, 4 stat rows w/ 5 drawn pips each, raseegenskap chips, cream Unikt-trekk card, K-8 «Kan lære:
+  Sitt · Ligg · Legg deg». Reduced-motion-guarded; ✕ + backdrop close. **No dead adopt button** (K-4
+  seam only). verify 590/0; Visual Review PASS (`.screenshots/108-kennel-modal*.png`).
 
 **Deferred to the next round (the adopt/switch/persist economy spine — PO Change 3 remainder):**
 K-3/K-4 adopt button + affordability gate + deduct/own transition (test-first per X-6), K-5 switch to

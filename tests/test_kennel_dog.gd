@@ -253,3 +253,39 @@ func test_unknown_owned_id_harmless() -> void:
 		if row["owned"]:
 			all_owned = true
 	assert_false(all_owned, "no dog is marked owned when owned array contains only unknown ids")
+
+# --- detail_for tests (108, Phase 8 K-2 — inspect modal data) ---
+
+func test_each_dog_has_a_blurb_and_traits() -> void:
+	# Every dog must carry a non-empty blurb String and at least one trait chip (Array entry).
+	# Guards a missing transcription in the DOGS table or _from_row wiring.
+	for d in KennelDog.catalog():
+		var dog: KennelDog = d
+		assert_true(dog.blurb is String and dog.blurb.length() > 0,
+			"%s must have a non-empty blurb" % dog.id)
+		assert_true(dog.traits is Array and (dog.traits as Array).size() >= 1,
+			"%s must have at least one trait chip" % dog.id)
+
+func test_detail_for_carries_stats_trait_and_trick_list() -> void:
+	# detail_for("nova") must expose stats (4 values), unique_trait, trick_ids (K-8),
+	# blurb, and traits — everything the modal reads from one call.
+	var detail: Dictionary = KennelDog.detail_for("nova")
+	assert_true(detail is Dictionary, "detail_for returns a Dictionary")
+	assert_eq(detail["id"], "nova", "detail_for('nova') id is 'nova'")
+	assert_eq((detail["stats"] as Array).size(), 4, "detail carries 4 stats")
+	assert_true(detail["unique_trait"] is String and (detail["unique_trait"] as String).length() > 0,
+		"detail carries a non-empty unique_trait")
+	assert_true(detail["trick_ids"] is Array and (detail["trick_ids"] as Array).size() >= 1,
+		"detail carries at least one trick_id (K-8)")
+	assert_true(detail["blurb"] is String and (detail["blurb"] as String).length() > 0,
+		"detail carries a non-empty blurb")
+	assert_true(detail["traits"] is Array and (detail["traits"] as Array).size() >= 1,
+		"detail carries at least one trait chip")
+
+func test_detail_for_unknown_id_falls_back_to_starter() -> void:
+	# An unknown id must resolve to Bella (the starter) — never a dog-less modal.
+	# Mirrors the by_id() no-dog-less-resolve contract (103).
+	var detail: Dictionary = KennelDog.detail_for("ghost_dog_99")
+	assert_true(detail is Dictionary, "detail_for unknown id still returns a Dictionary")
+	assert_eq(detail["id"], KennelDog.STARTER_ID,
+		"detail_for an unknown id falls back to the starter (Bella)")

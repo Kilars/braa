@@ -26,20 +26,39 @@ var stats: Array         ## [Læreevne, Energi, Mot, Fokus], each 1..5 (the moda
 var unique_trait: String ## the one "Unikt trekk"
 var band_tint: Color     ## per-dog cell-band bg tint (phase8.md:158) — NOT the coat colour
 var trick_ids: Array     ## the tricks this breed can train (shared core; asset-gated, K-8)
+var blurb: String        ## one warm Norwegian line shown in the K-2 inspect modal (108)
+var traits: Array        ## 2–3 short "raseegenskaper" chip words, e.g. ["Lærevillig","Energisk"]
 
 ## The shipped dogs, in kennel order (starter Bella first) — the single source of truth, a direct
 ## transcription of the spec table (phase8.md:147-159). Rows: id, name, breed, rarity, price,
-## [stats], unique_trait, band_tint. Kept as a literal table so it reads like the spec and a stray
-## edit fails the test_each_dog_matches_the_spec_table_exactly guard.
+## [stats], unique_trait, band_tint, blurb, [traits]. Kept as a literal table so it reads like the
+## spec and a stray edit fails the test_each_dog_matches_the_spec_table_exactly guard (108: the
+## blurb/traits columns are also TDD-pinned via test_each_dog_has_a_blurb_and_traits).
 const DOGS := [
-	["bella",  "Bella",  "Labrador retriever", Rarity.OWNED,  0,   [4, 3, 4, 3], "Godbit-radar",            Color(0.29, 0.565, 0.886)],
-	["nova",   "Nova",   "Border collie",      Rarity.EPIC,   900, [5, 5, 4, 5], "Øyet",                    Color(0.298, 0.322, 0.357)],
-	["balder", "Balder", "Schäferhund",        Rarity.RARE,   650, [4, 4, 5, 4], "Vaktpost",                Color(0.663, 0.498, 0.310)],
-	["sol",    "Sol",    "Golden retriever",   Rarity.RARE,   500, [4, 3, 4, 3], "Alles venn",              Color(0.886, 0.741, 0.463)],
-	["pontus", "Pontus", "Gravhund",           Rarity.COMMON, 350, [2, 3, 4, 2], "Gravemaskin",             Color(0.529, 0.337, 0.212)],
-	["lykke",  "Lykke",  "Spisshund",          Rarity.COMMON, 300, [3, 4, 3, 2], "Alarmen",                 Color(0.878, 0.643, 0.373)],
-	["sniff",  "Sniff",  "Beagle",             Rarity.COMMON, 320, [3, 4, 3, 2], "Nesa styrer",             Color(0.757, 0.584, 0.369)],
-	["trulte", "Trulte", "Malchi",             Rarity.SECRET, 0,   [3, 2, 1, 2], "Skjelver som et aspeløv", Color(0.902, 0.863, 0.796)],
+	["bella",  "Bella",  "Labrador retriever", Rarity.OWNED,  0,   [4, 3, 4, 3], "Godbit-radar",            Color(0.29, 0.565, 0.886),
+		"En varm og tålmodig hund som alltid setter pris på en godbit.",
+		["Snill", "Tålmodig", "Glupen"]],
+	["nova",   "Nova",   "Border collie",      Rarity.EPIC,   900, [5, 5, 4, 5], "Øyet",                    Color(0.298, 0.322, 0.357),
+		"Nova brenner for å lære og gir aldri opp — perfekt for ambisiøse trenere.",
+		["Lærevillig", "Energisk", "Intens"]],
+	["balder", "Balder", "Schäferhund",        Rarity.RARE,   650, [4, 4, 5, 4], "Vaktpost",                Color(0.663, 0.498, 0.310),
+		"Stødig og modig — Balder holder alltid øye med flokken sin.",
+		["Modig", "Lojal", "Årvåken"]],
+	["sol",    "Sol",    "Golden retriever",   Rarity.RARE,   500, [4, 3, 4, 3], "Alles venn",              Color(0.886, 0.741, 0.463),
+		"Sol lyser opp rommet og gjør raskt venner med alle hun møter.",
+		["Vennlig", "Glad", "Tillitsfull"]],
+	["pontus", "Pontus", "Gravhund",           Rarity.COMMON, 350, [2, 3, 4, 2], "Gravemaskin",             Color(0.529, 0.337, 0.212),
+		"Pontus følger nesa si — og nesa sier alltid «grav her».",
+		["Sta", "Nysgjerrig", "Utholdende"]],
+	["lykke",  "Lykke",  "Spisshund",          Rarity.COMMON, 300, [3, 4, 3, 2], "Alarmen",                 Color(0.878, 0.643, 0.373),
+		"Lykke er alltid klar til å varsle — ingenting slipper forbi de spisse ørene.",
+		["Vaktsom", "Livlig", "Selvstendig"]],
+	["sniff",  "Sniff",  "Beagle",             Rarity.COMMON, 320, [3, 4, 3, 2], "Nesa styrer",             Color(0.757, 0.584, 0.369),
+		"Der nesa peker, følger Sniff — luktesansen er hans superkraft.",
+		["Sporty", "Sta", "Sosial"]],
+	["trulte", "Trulte", "Malchi",             Rarity.SECRET, 0,   [3, 2, 1, 2], "Skjelver som et aspeløv", Color(0.902, 0.863, 0.796),
+		"Liten, skjelvende og overraskende modig — Trulte er kennelens beste hemmelighet.",
+		["Modig", "Skjelvende", "Liten"]],
 ]
 
 ## The tricks EVERY breed can train. All 8 dogs share the one Labrador rig, so all can perform the
@@ -88,10 +107,28 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
 			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,
 			"band_tint": d.band_tint, "trick_ids": d.trick_ids,
+			"blurb": d.blurb, "traits": d.traits,
 			"owned": is_owned, "active": d.id == active, "secret": is_secret,
 			"affordable": affordable, "status_label": status_label, "price_label": price_label,
 		})
 	return rows
+
+## Return a Dictionary containing everything the K-2 inspect modal reads for the given dog id.
+## Keys: id, name, breed, rarity, price, price_label, stats, unique_trait, trick_ids, blurb,
+## traits, band_tint, secret. An unknown id falls back to the starter Bella — never a dog-less
+## modal (mirrors by_id's no-dog-less-resolve contract).
+static func detail_for(id: String) -> Dictionary:
+	var d := by_id(id)  # unknown id already falls back to Bella via by_id
+	var is_secret := d.rarity == Rarity.SECRET
+	var price_label := "Din" if d.rarity == Rarity.OWNED else ("Gratis" if is_secret else str(d.price))
+	return {
+		"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
+		"price": d.price, "price_label": price_label,
+		"stats": d.stats.duplicate(), "unique_trait": d.unique_trait,
+		"trick_ids": d.trick_ids.duplicate(), "blurb": d.blurb,
+		"traits": d.traits.duplicate(), "band_tint": d.band_tint,
+		"secret": is_secret,
+	}
 
 static func _from_row(row: Array) -> KennelDog:
 	var d := KennelDog.new()
@@ -104,4 +141,6 @@ static func _from_row(row: Array) -> KennelDog:
 	d.unique_trait = row[6]
 	d.band_tint = row[7]
 	d.trick_ids = core_tricks()
+	d.blurb = row[8] if row.size() > 8 else ""
+	d.traits = (row[9] as Array).duplicate() if row.size() > 9 else []
 	return d

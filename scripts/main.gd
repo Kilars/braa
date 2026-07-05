@@ -2023,10 +2023,10 @@ func _publish_kennel_btn() -> void:
 	var c := _kennel_button.get_global_rect().get_center()
 	JavaScriptBridge.eval("window.__bra_kennel_btn = {x: %s, y: %s};" % [c.x, c.y], true)
 
-## dog_selected(id) from the kennel grid — this slice only logs it (the detail modal that
-## consumes it lands with K-2). No fake modal, no economy mutation.
-func _on_kennel_dog_selected(_id: String) -> void:
-	pass  # K-2 detail modal wires here in the next task
+## dog_selected(id) from the kennel grid — opens the K-2 inspect modal for that dog.
+## No economy/roster/save mutation: inspect only (K-4 adopt wiring lands in the next task).
+func _on_kennel_dog_selected(id: String) -> void:
+	_kennel.open_detail(id)
 
 ## The set of dog ids the player currently owns, in kennel terms.
 ## SEAM: for this browse-only slice, we always return [STARTER_ID] (Bella). The

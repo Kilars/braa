@@ -16,6 +16,7 @@ extends Control
 
 signal dog_selected(id: String)   ## cell was tapped → the detail modal task will consume this
 signal closed                      ## back/✕ was tapped → main restores the training HUD
+signal detail_closed               ## the inspect modal was dismissed (optional hook for main)
 
 # ---------------------------------------------------------------------------
 # Palette — cool/clinical kennel colours (phase8.md:114-118). Named constants,
@@ -39,6 +40,15 @@ const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed 
 const C_COIN_BG      := Color("f5b841")   ## gold coin chip bg
 const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold
 
+# Modal-specific palette (108, K-2 inspect modal). Named constants — no scattered literals.
+const C_MODAL_BACKDROP := Color(0.078, 0.11, 0.149, 0.5)  ## rgba(20,28,38,.5) dim overlay
+const C_MODAL_SURFACE  := Color("fbfbf7")                  ## warm off-white card surface
+const C_MODAL_CREAM    := Color("f4efe6")                  ## warm cream for Unikt trekk card
+const C_PIP_FILLED     := Color("4a90e2")                  ## filled stat pip (blue)
+const C_PIP_EMPTY      := Color("dfe5ea")                  ## empty stat pip (light grey)
+const C_TRAIT_BG       := Color("e8f0f8")                  ## raseegenskaper chip background
+const C_TRAIT_INK      := Color("3a6a9a")                  ## raseegenskaper chip text
+
 # ---------------------------------------------------------------------------
 # Layout constants
 # ---------------------------------------------------------------------------
@@ -52,6 +62,17 @@ const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
 const CLOSE_SIZE     := 36.0
 
+# Modal layout constants (108, K-2).
+const MODAL_CARD_RADIUS    := 24.0   ## card corner radius
+const MODAL_CARD_MAX_W     := 330.0  ## max card width (portrait: 390 - 2*30 margin)
+const MODAL_BAND_H         := 100.0  ## tinted header band on the modal card
+const MODAL_BODY_PAD       := 16.0   ## inner horizontal padding for card body
+const MODAL_PIP_W          := 28.0   ## width of one stat pip
+const MODAL_PIP_H          := 10.0   ## height of one stat pip
+const MODAL_PIP_GAP        := 4.0    ## gap between pips
+const MODAL_PIP_RADIUS     := 5.0    ## corner radius on each pip
+const MODAL_SECTION_SEP    := 10.0   ## vertical gap between modal sections
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
@@ -61,6 +82,10 @@ var _balance: int = 0          ## last balance passed to render()
 ## Live node refs (built once in _ready, updated per render())
 var _coin_label: Label
 var _grid: GridContainer
+
+## The currently open modal overlay (null when closed). Freed (not hidden) on close so the
+## grid's ScrollContainer position is preserved — we never touch the scroll container on close.
+var _modal_overlay: Control = null
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -89,6 +114,39 @@ func render(rows: Array, balance: int) -> void:
 ## the balance changes — kept simple: just call render() again).
 func balance() -> int:
 	return _balance
+
+## Open the K-2 inspect modal for the dog with the given id. Builds an overlay on top of the
+## grid without touching the ScrollContainer — scroll position is therefore preserved across
+## open+close. Calling open_detail while a modal is already open replaces it cleanly.
+## Headless-safe: builds the overlay node tree without requiring is_inside_tree(); tweens are
+## guarded by is_inside_tree() so the headless test harness never crashes.
+func open_detail(id: String) -> void:
+	if _grid == null:
+		_build_ui()
+	close_detail()  # replace any existing modal cleanly
+	var detail := KennelDog.detail_for(id)
+	_modal_overlay = _build_modal_overlay(detail)
+	add_child(_modal_overlay)
+	# Animate if inside the scene tree and not reduced-motion (X-5).
+	if _modal_overlay.is_inside_tree() and not ReducedMotion.query():
+		_modal_overlay.modulate.a = 0.0
+		var card := _modal_overlay.find_child("ModalCard", true, false)
+		if card != null:
+			(card as Control).scale = Vector2(0.96, 0.96)
+			(card as Control).pivot_offset = Vector2(MODAL_CARD_MAX_W * 0.5, 400.0)
+		var tw := _modal_overlay.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(_modal_overlay, "modulate:a", 1.0, 0.2)
+		if card != null:
+			tw.tween_property(card, "scale", Vector2(1.0, 1.0), 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Close the inspect modal. Frees the overlay so the ScrollContainer scroll position is
+## preserved (we never rebuild the grid). Emits detail_closed.
+func close_detail() -> void:
+	if _modal_overlay != null:
+		_modal_overlay.queue_free()
+		_modal_overlay = null
+		detail_closed.emit()
 
 # ---------------------------------------------------------------------------
 # UI construction (called once from _ready)
@@ -517,6 +575,353 @@ func _on_cell_pressed(dog_id: String) -> void:
 	dog_selected.emit(dog_id)
 
 # ---------------------------------------------------------------------------
+# Modal overlay builder (108, K-2 — inspect modal).
+# Builds the full-rect overlay with backdrop + centered card. Never touches the
+# ScrollContainer so grid scroll position is preserved across open+close.
+# ---------------------------------------------------------------------------
+
+## Build the full-rect overlay: backdrop ColorRect + centered card PanelContainer.
+## Returns a Control sized to fill the parent (this KennelScreen) anchored full-rect.
+func _build_modal_overlay(detail: Dictionary) -> Control:
+	var overlay := Control.new()
+	overlay.name = "ModalOverlay"
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	# Dim backdrop — a full-rect ColorRect. Tapping it closes the modal.
+	var backdrop := ColorRect.new()
+	backdrop.name = "Backdrop"
+	backdrop.color = C_MODAL_BACKDROP
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Tap the backdrop → close the modal.
+	backdrop.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
+			close_detail())
+	overlay.add_child(backdrop)
+
+	# Centered card — a PanelContainer with radius-24 surface.
+	var card := PanelContainer.new()
+	card.name = "ModalCard"
+	var card_sb := StyleBoxFlat.new()
+	card_sb.bg_color = C_MODAL_SURFACE
+	card_sb.set_corner_radius_all(int(MODAL_CARD_RADIUS))
+	card_sb.shadow_color = Color(0.114, 0.165, 0.227, 0.18)
+	card_sb.shadow_size  = 20
+	card_sb.shadow_offset = Vector2(0, 6)
+	card_sb.content_margin_left   = 0.0
+	card_sb.content_margin_right  = 0.0
+	card_sb.content_margin_top    = 0.0
+	card_sb.content_margin_bottom = 0.0
+	card.add_theme_stylebox_override("panel", card_sb)
+	# Center the card: anchor to center and offset by half the card width/height.
+	# Use a fixed max width; height is auto (content-driven via VBoxContainer).
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.custom_minimum_size = Vector2(MODAL_CARD_MAX_W, 0.0)
+	card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	# Position the card vertically centred but slightly above centre (golden ratio feel).
+	card.anchor_top    = 0.5
+	card.anchor_bottom = 0.5
+	card.anchor_left   = 0.5
+	card.anchor_right  = 0.5
+	# Let the card grow downward from its vertical centre offset.
+	# We can't know height at build time, so we use a Container parent for centering.
+	overlay.remove_child(backdrop)
+	# Rebuild with a CenterContainer so the card is properly centred.
+	var center := CenterContainer.new()
+	center.name = "CardCenter"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(backdrop)
+	overlay.add_child(center)
+
+	# The card's inner VBox holds all sections stacked vertically.
+	var vbox := VBoxContainer.new()
+	vbox.name = "CardVBox"
+	vbox.add_theme_constant_override("separation", 0)
+	card.add_child(vbox)
+
+	# 1. Header band: per-dog tint + steel bars + ✕ close button.
+	vbox.add_child(_build_modal_band(detail))
+
+	# 2. Body content in a VBoxContainer with padding.
+	var body := VBoxContainer.new()
+	body.name = "ModalBody"
+	body.add_theme_constant_override("separation", int(MODAL_SECTION_SEP))
+	var body_m := MarginContainer.new()
+	body_m.name = "BodyMargin"
+	body_m.add_theme_constant_override("margin_left",   int(MODAL_BODY_PAD))
+	body_m.add_theme_constant_override("margin_right",  int(MODAL_BODY_PAD))
+	body_m.add_theme_constant_override("margin_top",    int(MODAL_SECTION_SEP))
+	body_m.add_theme_constant_override("margin_bottom", int(MODAL_BODY_PAD))
+	body_m.add_child(body)
+	vbox.add_child(body_m)
+
+	# 2a. Blurb (warm line, Nunito body).
+	body.add_child(_build_modal_blurb(detail))
+
+	# 2b. 4 stat rows.
+	body.add_child(_build_modal_stats(detail))
+
+	# 2c. Raseegenskaper chip row.
+	body.add_child(_build_modal_traits(detail))
+
+	# 2d. Unikt trekk — warm cream card.
+	body.add_child(_build_modal_unique_trait(detail))
+
+	# 2e. Trick list (K-8): "Kan lære: Sitt · Ligg · Legg deg".
+	body.add_child(_build_modal_trick_list(detail))
+
+	# K-4 adopt button mounts here (next task).
+	# The _build_adopt_button() stub is defined below; it returns null in this slice
+	# so nothing is added — the modal is a complete inspect card with no dead button.
+	var adopt_node := _build_adopt_button(detail)
+	if adopt_node != null:
+		body.add_child(adopt_node)
+
+	center.add_child(card)
+	return overlay
+
+## Modal header band: per-dog tint + steel bars + ✕ close button (top-right).
+## Reuses the same _SteelBars inner class as the grid cells for visual consistency.
+func _build_modal_band(detail: Dictionary) -> Control:
+	var band := Control.new()
+	band.name = "ModalBand"
+	band.custom_minimum_size = Vector2(0, MODAL_BAND_H)
+	band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# Tinted background.
+	var bg := ColorRect.new()
+	bg.name = "ModalBandBg"
+	bg.color = detail["band_tint"]
+	bg.anchor_right  = 1.0
+	bg.anchor_bottom = 1.0
+	# Round only the top corners to match the card's radius-24 top edge.
+	# ColorRect doesn't support per-corner radius — use a StyleBoxFlat on a Panel instead.
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.add_child(bg)
+
+	# Steel-bar overlay (reuse _SteelBars for GL-Compat–safe rendering).
+	var bars := _SteelBars.new()
+	bars.name = "ModalSteelBars"
+	bars.anchor_right  = 1.0
+	bars.anchor_bottom = 1.0
+	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.add_child(bars)
+
+	# Dog name centred in the band (white, Baloo 2 display).
+	var name_lbl := Label.new()
+	name_lbl.name = "ModalDogName"
+	name_lbl.text = detail["name"]
+	name_lbl.add_theme_font_override("font", DesignSystem.font_display())
+	name_lbl.add_theme_font_size_override("font_size", DesignSystem.T_TITLE)
+	name_lbl.add_theme_color_override("font_color", Color.WHITE)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	band.add_child(name_lbl)
+
+	# ✕ close button — top-right of the band. ASCII "x", no tofu.
+	var close_btn := Button.new()
+	close_btn.name = "ModalClose"
+	close_btn.text = "x"
+	close_btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	close_btn.add_theme_font_size_override("font_size", 16)
+	close_btn.add_theme_color_override("font_color",         Color.WHITE)
+	close_btn.add_theme_color_override("font_hover_color",   Color.WHITE)
+	close_btn.add_theme_color_override("font_pressed_color", Color(1,1,1,0.6))
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.custom_minimum_size = Vector2(CLOSE_SIZE, CLOSE_SIZE)
+	var close_sb := StyleBoxFlat.new()
+	close_sb.bg_color = Color(0.0, 0.0, 0.0, 0.20)
+	close_sb.set_corner_radius_all(int(CLOSE_SIZE * 0.5))
+	close_sb.content_margin_left  = 6.0
+	close_sb.content_margin_right = 6.0
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		close_btn.add_theme_stylebox_override(st, close_sb)
+	close_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	# Position top-right with a small margin.
+	close_btn.anchor_left   = 1.0
+	close_btn.anchor_right  = 1.0
+	close_btn.anchor_top    = 0.0
+	close_btn.anchor_bottom = 0.0
+	close_btn.offset_left   = -(CLOSE_SIZE + 8.0)
+	close_btn.offset_right  = -8.0
+	close_btn.offset_top    = 8.0
+	close_btn.offset_bottom = 8.0 + CLOSE_SIZE
+	close_btn.pressed.connect(close_detail)
+	band.add_child(close_btn)
+
+	return band
+
+## Blurb — one warm Norwegian line (Nunito body font, muted ink).
+func _build_modal_blurb(detail: Dictionary) -> Label:
+	var lbl := Label.new()
+	lbl.name = "ModalBlurb"
+	lbl.text = detail["blurb"]
+	lbl.add_theme_font_override("font", DesignSystem.font_body())
+	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	lbl.add_theme_color_override("font_color", C_INK)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+## 4 stat rows: Læreevne · Energi · Mot · Fokus, each with 5 pips.
+## Pips are drawn as small rounded ColorRects (no font glyphs, no tofu).
+func _build_modal_stats(detail: Dictionary) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.name = "ModalStats"
+	col.add_theme_constant_override("separation", 7)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var stat_labels := ["Læreevne", "Energi", "Mot", "Fokus"]
+	var stats: Array = detail["stats"]
+	for i in stat_labels.size():
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 8)
+		col.add_child(row)
+
+		var lbl := Label.new()
+		lbl.text = stat_labels[i]
+		lbl.add_theme_font_override("font", DesignSystem.font_body())
+		lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+		lbl.add_theme_color_override("font_color", C_MUTED)
+		lbl.custom_minimum_size = Vector2(76.0, 0.0)
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(lbl)
+
+		var pip_row := HBoxContainer.new()
+		pip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pip_row.add_theme_constant_override("separation", int(MODAL_PIP_GAP))
+		row.add_child(pip_row)
+
+		var filled_count: int = stats[i] if i < stats.size() else 0
+		for p in 5:
+			var pip := _StatPip.new()
+			pip.filled = p < filled_count
+			pip.custom_minimum_size = Vector2(MODAL_PIP_W, MODAL_PIP_H)
+			pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pip_row.add_child(pip)
+
+	return col
+
+## Raseegenskaper chip row — the traits Array as small pill chips.
+## Plain text words in a HFlowContainer — no glyphs, no tofu.
+func _build_modal_traits(detail: Dictionary) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.name = "ModalTraits"
+	col.add_theme_constant_override("separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var section_lbl := Label.new()
+	section_lbl.text = "Raseegenskaper"
+	section_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+	section_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+	section_lbl.add_theme_color_override("font_color", C_MUTED)
+	section_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(section_lbl)
+
+	var chip_row := HBoxContainer.new()
+	chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip_row.add_theme_constant_override("separation", 6)
+	col.add_child(chip_row)
+
+	var traits: Array = detail["traits"]
+	for trait_word in traits:
+		var chip := PanelContainer.new()
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var chip_sb := StyleBoxFlat.new()
+		chip_sb.bg_color = C_TRAIT_BG
+		chip_sb.set_corner_radius_all(int(CHIP_RADIUS))
+		chip_sb.content_margin_left   = 8.0
+		chip_sb.content_margin_right  = 8.0
+		chip_sb.content_margin_top    = 4.0
+		chip_sb.content_margin_bottom = 4.0
+		chip.add_theme_stylebox_override("panel", chip_sb)
+		var chip_lbl := Label.new()
+		chip_lbl.text = str(trait_word)
+		chip_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		chip_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+		chip_lbl.add_theme_color_override("font_color", C_TRAIT_INK)
+		chip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_child(chip_lbl)
+		chip_row.add_child(chip)
+
+	return col
+
+## Unikt trekk — a warm-cream card showing the dog's one unique trait.
+func _build_modal_unique_trait(detail: Dictionary) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.name = "ModalUniqueTrait"
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = C_MODAL_CREAM
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_left   = MODAL_BODY_PAD
+	sb.content_margin_right  = MODAL_BODY_PAD
+	sb.content_margin_top    = 10.0
+	sb.content_margin_bottom = 10.0
+	card.add_theme_stylebox_override("panel", sb)
+
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 3)
+	card.add_child(col)
+
+	var heading := Label.new()
+	heading.text = "Unikt trekk"
+	heading.add_theme_font_override("font", DesignSystem.font_body_bold())
+	heading.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+	heading.add_theme_color_override("font_color", C_MUTED)
+	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(heading)
+
+	var trait_lbl := Label.new()
+	trait_lbl.name = "UniqueTraitLabel"
+	trait_lbl.text = detail["unique_trait"]
+	trait_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+	trait_lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	trait_lbl.add_theme_color_override("font_color", C_INK)
+	trait_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(trait_lbl)
+
+	return card
+
+## Trick list (K-8) — "Kan lære: Sitt · Ligg · Legg deg" as plain text.
+## Maps trick ids to display names (DogClips constants). No raw ids printed, no glyphs.
+func _build_modal_trick_list(detail: Dictionary) -> Label:
+	var id_to_label := {
+		DogClips.TRICK_SITT:    "Sitt",
+		DogClips.TRICK_LIGG:    "Ligg",
+		DogClips.TRICK_LEGG_DEG: "Legg deg",
+	}
+	var trick_ids: Array = detail["trick_ids"]
+	var parts: Array = []
+	for tid in trick_ids:
+		parts.append(id_to_label.get(str(tid), str(tid)))
+	var lbl := Label.new()
+	lbl.name = "ModalTrickList"
+	lbl.text = "Kan laere: " + " · ".join(parts)
+	lbl.add_theme_font_override("font", DesignSystem.font_body())
+	lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+	lbl.add_theme_color_override("font_color", C_MUTED)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+## K-4 adopt button mount seam (next task). Returns null in this K-2 inspect slice —
+## no visible, dead or no-op button is rendered. The K-4 task replaces this stub with
+## the real adopt wiring (spend coins, roster mutation, close modal, persist save).
+## Allowlisted as "a stand-in an open task names" per CLAUDE.md placeholder rules.
+func _build_adopt_button(_detail: Dictionary) -> Control:
+	# K-4 adopt button mounts here (next task — wires economy/roster/save).
+	return null
+
+# ---------------------------------------------------------------------------
 # Web capture hook — publish cell centres for real-tap automation.
 # ---------------------------------------------------------------------------
 func _publish_cells() -> void:
@@ -540,6 +945,25 @@ func _notification(what: int) -> void:
 		elif OS.has_feature("web"):
 			JavaScriptBridge.eval("window.__bra_kennel_open = false;", true)
 
+
+# ---------------------------------------------------------------------------
+# Inner class: drawn stat pip — a small rounded rect, filled or empty (108, K-2).
+# Drawn via _draw() with draw_rect — no font glyph, no tofu, GL Compatibility-safe.
+# ---------------------------------------------------------------------------
+class _StatPip extends Control:
+	var filled: bool = false
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		var color := C_PIP_FILLED if filled else C_PIP_EMPTY
+		# Draw a rounded rect by using draw_rect for the body + four corner circles.
+		# Godot 4's draw_rect with rounded corners requires the Canvas2D draw_rect overload
+		# which accepts a corner-radius parameter.
+		draw_rect(r, color, true, -1.0)
 
 # ---------------------------------------------------------------------------
 # Inner class: drawn steel bars overlay — GL Compatibility-safe, no shader needed.
