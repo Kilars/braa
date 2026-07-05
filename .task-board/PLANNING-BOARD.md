@@ -6,7 +6,29 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASE 9 (DIFFICULTY) CURRENT — father declined sign-off, filed 2 directives → 121/122 shipped; board EMPTY, awaits re-review — 2026-07-05
+## Status — PHASES 1–9 SIGNED OFF; owner training-page finish directives (5) preempt Phase 10 → 123/124/125 tasked — 2026-07-05
+
+Phase 9 (difficulty) SIGNED OFF 2026-07-05 (`5331e49`). Phase 10 (play mode) is current but
+**unspecced** — before scaffolding it, the owner play-tested the **training page** (the surface
+every phase replays) vs `.docs/specs/assets/goal-training-screen.png` and filed 5 buildable
+finish directives (commit `5d5ca1a`, no owner asset, X-4 preempts new-phase work). Top-3 tasked
+this round:
+
+- **123 — BUGFIX — the apex/approach timing ring collides with the BRA button (Bugfix #1).** The
+  cyan approach ring (`TrainerRingMarker`, expands to ~259 px) is anchored concentric with the
+  button band and sweeps across the pill. Reposition/scale so no ring visually overlaps the button;
+  pure-geometry TDD + Visual Review.
+- **124 — BUGFIX — grass coins render as glowing translucent orbs, not flat coins (Bugfix #2).**
+  `_coin_texture()`'s radial gradient + bright core reads as a blob; flatten to a solid opaque
+  gold disc with a crisp rim. Visual Review.
+- **125 — IMPROVEMENT — tone down the sun bloom/haze washout (Improvement #3, resolves #5).** The
+  2.4 m unshaded sun disc halo + near-white horizon/ambient wash the scene; shrink/de-bloom the
+  disc and firm sky/ambient so contrast+saturation match the goal, then verify HUD pill legibility.
+
+Deferred to next round (directive #4): deepen the BRA button blue + drop-shadow. Do NOT re-task
+118–122.
+
+### (historical) PHASE 9 directives 121/122 — 2026-07-05
 
 Phase 8 (kennel) was signed off (`a2eae20`); Phase 9 (difficulty) is current. The selector
 (118), special-dog lock (119) and background grace (120) shipped, and the father's **2026-07-05

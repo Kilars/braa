@@ -780,6 +780,17 @@ const TELL_HALF_WIDTH := ApexTellMarker.SIZE * 0.5  ## 160 — half the pulse sq
 const BRA_CENTER_Y := (BRA_OFFSET_TOP + BRA_OFFSET_BOTTOM) * 0.5
 const TELL_OFFSET_TOP := BRA_CENTER_Y - TELL_HALF_WIDTH
 const TELL_OFFSET_BOTTOM := BRA_CENTER_Y + TELL_HALF_WIDTH
+## Approach-cue trainer ring (058/P2-9): seated in the clear band ABOVE the BRA button so
+## the large cyan ring NEVER crosses the pill at any point in its animation (owner directive
+## 2026-07-05, task 123). The fully-expanded radius is ring_radius(160, 1.0) ≈ 259.2 px, so
+## the ring centre must satisfy: ring_center_y + 259.2 < BRA_OFFSET_TOP (-280), i.e.
+## ring_center_y < -539.2. -580 gives a bottom edge of ≈ -320.8 (41 px clear of the button
+## top) and a top edge of ≈ -839.2 (well within the 1280-px viewport). The half-width of the
+## marker square is still TELL_HALF_WIDTH (160) — same SIZE constant — so the two rings share
+## the same aspect; only the vertical band differs.
+const RING_CENTER_Y := -580.0
+const RING_OFFSET_TOP := RING_CENTER_Y - TELL_HALF_WIDTH    ## -740.0
+const RING_OFFSET_BOTTOM := RING_CENTER_Y + TELL_HALF_WIDTH ## -420.0
 ## The coin readout (069) gets its OWN top line at the very top of the HUD. Since the always-on chip
 ## row is retired (072, PO note 1 — the completion menu is the chooser now), the learned bar and timing
 ## readout stack directly below the coin line, reclaiming the band the selector used to occupy.
@@ -1724,17 +1735,18 @@ func _setup_tell_marker(ui: CanvasLayer) -> void:
 func _setup_trainer_marker(ui: CanvasLayer) -> void:
 	var marker := TrainerRingMarker.new()
 	marker.name = "TrainerRingMarker"
-	# Same 320×320 square centred on the BRA button band as the tell marker (TELL_HALF_WIDTH /
-	# TELL_OFFSET_TOP / TELL_OFFSET_BOTTOM) — the two rings are concentric; visual review
-	# decides whether the tell or trainer reads better on top.
+	# Seated ABOVE the BRA button, not concentric with it (owner directive 2026-07-05, task 123).
+	# The 320×320 square is centred on RING_CENTER_Y (-580), which sits far enough above the
+	# button that the fully-expanded ring bottom (-320.8) clears the button top (-280) by ~41 px.
+	# Horizontal anchoring is identical to the tell marker (centred on the viewport width).
 	marker.anchor_left = 0.5
 	marker.anchor_right = 0.5
 	marker.anchor_top = 1.0
 	marker.anchor_bottom = 1.0
 	marker.offset_left = -TELL_HALF_WIDTH
 	marker.offset_right = TELL_HALF_WIDTH
-	marker.offset_top = TELL_OFFSET_TOP
-	marker.offset_bottom = TELL_OFFSET_BOTTOM
+	marker.offset_top = RING_OFFSET_TOP
+	marker.offset_bottom = RING_OFFSET_BOTTOM
 	ui.add_child(marker)
 	_trainer_marker = marker
 
