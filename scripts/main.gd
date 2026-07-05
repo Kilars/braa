@@ -1803,6 +1803,7 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_menu.feedback_requested.connect(_on_feedback_requested)  # open the feedback form (085, X-8)
 	_menu.showcase_requested.connect(_on_showcase_requested)  # open the spotlit breed showcase (087, P3-4)
 	_menu.word_chosen.connect(_on_word_chosen)         # swap the active marker word (092/P5-4)
+	_menu.difficulty_chosen.connect(_on_difficulty_chosen)  # set the global difficulty mode (118/P4-1)
 
 	var btn := Button.new()
 	btn.name = "TricksButton"
@@ -2179,6 +2180,7 @@ func _refresh_trick_menu() -> void:
 		_menu.set_rows(_menu_rows(), _purse.balance)
 		_menu.set_breeds(_breed_rows())  # the adopt/select breeds section (079)
 		_menu.set_words(_word_rows())    # the marker-word section (092/P5-4)
+		_menu.set_difficulty(_difficulty_rows())  # the difficulty selector section (118/P4-1)
 		_publish_breed_rows()            # publish the breed-row centres for the live e2e capture (079)
 
 ## Build the completion-menu breed rows (079): the shipped-breed catalog classified against the owned
@@ -2205,6 +2207,13 @@ func _word_rows() -> Array:
 		(row as Dictionary)["cooling"] = _words.is_on_cooldown(id)
 		(row as Dictionary)["remaining"] = _words.cooldown_remaining(id)
 	return rows
+
+## Build the completion-menu difficulty rows (118, P4-1): the shipped modes (Normal/Hard/Expert)
+## classified against the active mode id, so the section shows one row per mode with the active one
+## marked. Order follows Difficulty.catalog(). The selector is free for a normal dog; task 119 extends
+## this through the same classify seam to reflect the special-dog lock.
+func _difficulty_rows() -> Array:
+	return TrickMenu.classify_difficulty(Difficulty.catalog(), _difficulty.id)
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
 ## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
@@ -2285,6 +2294,29 @@ func _on_word_chosen(id: String) -> void:
 	_payoff.set_active_word(_words.active())
 	_refresh_trick_menu()   # reflect the new ACTIVE row immediately (Active badge moves)
 	_save_progress()        # persist the chosen word so a reload boots into the same selection
+
+## Set the global difficulty mode from the menu (118, P4-1). Guards: a known mode only, and a no-op if
+## it is already active (no needless re-apply / persist). On a real switch, re-apply the difficulty
+## levers live to the running dog (the same calls a breed switch uses — erosion per trick + the loop's
+## feint chance; the timing window + tell rebuild from _difficulty on the next offer), refresh the menu
+## so the new active row highlights, and persist so a returning player boots into their chosen mode.
+func _on_difficulty_chosen(id: String) -> void:
+	if not Difficulty.is_known(id) or id == _difficulty.id:
+		return
+	_difficulty = Difficulty.by_id(id)
+	_apply_difficulty()
+	_refresh_trick_menu()  # the active badge moves to the newly-chosen mode
+	_save_progress()       # the blob already carries _difficulty.id (068/080)
+
+## Re-apply the current difficulty's levers to the live dog (118). Erosion scales each trick's learned
+## bar; the loop's feint chance takes breed × difficulty immediately. The timing-window radii + the tell
+## intensity read _difficulty in _begin_sit, so they apply on the next offer — no live rebuild needed.
+## Mirrors the difficulty half of _apply_breed_personality so the two paths never drift.
+func _apply_difficulty() -> void:
+	for tid in _progress_by_trick:
+		(_progress_by_trick[tid] as TrickProgress).set_erosion_scale(_difficulty.erosion_scale)
+	if _loop != null and not _force_scratch:  # _force_scratch pins offers to a scratch (071) — don't clobber it
+		_loop.feint_chance = _difficulty.scale_feint(_breed.feint_chance())
 
 ## Re-point the active breed onto the running dog (079): its coat tint (076) re-tints the coat atlas in
 ## place, and its four personality levers (075) re-apply — each trick's fill gains and the loop's feint
@@ -2397,6 +2429,14 @@ func _publish_breed_rows() -> void:
 	# Publish the "Vis frem hundene" showcase row centre so the capture can open the showcase (087).
 	var sc := _menu.showcase_row_center()
 	JavaScriptBridge.eval("window.__bra_showcase_row = [%f, %f];" % [sc.x, sc.y], true)
+	# Publish the difficulty row centres + ids + the active mode (118/P4-1) so the capture can land a
+	# REAL tap on a specific mode row and assert the global-difficulty switch — the same honest-tap proof.
+	var diffs: Array = []
+	for i in _menu.difficulty_row_count():
+		var c := _menu.difficulty_row_center(i)
+		diffs.append({"id": _menu.difficulty_id(i), "x": c.x, "y": c.y})
+	JavaScriptBridge.eval("window.__bra_difficulty_rows = %s;" % JSON.stringify(diffs), true)
+	JavaScriptBridge.eval("window.__bra_difficulty = '%s';" % _difficulty.id, true)
 
 ## Reflect the anti-mash gate onto the BRA button (046/P2-7): while locked it is disabled and
 ## dimmed to BRA_LOCKED_ALPHA, then re-enabled at full brightness when it re-arms. Both are

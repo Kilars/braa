@@ -35,6 +35,11 @@ signal feedback_requested
 ## over this menu (087, P3-4). Shown only when there are breeds; the menu stays dumb (only emits).
 signal showcase_requested
 
+## A selectable difficulty-mode row was tapped (118, P4-1) — main.set the global difficulty + re-apply
+## the levers live. The active mode (already selected) and, when the active dog LOCKS difficulty (119),
+## every row absorb the tap and emit nothing — the menu stays dumb (only emits, main decides).
+signal difficulty_chosen(id: String)
+
 ## Each known trick's standing in the collection. LOCKED covers both the owner-gated absent tricks and
 ## anything the loaded dog simply can't perform (the honest CC0 read) — neither is ever trainable.
 enum State { LEARNED, AVAILABLE, LOCKED }
@@ -104,6 +109,15 @@ const WORD_HEADER_H := 30.0    ## the "Marker words" subheading band
 const WORD_ROW_H := 54.0       ## one word row (display text + state badge)
 const WORD_ROW_GAP := 8.0      ## gutter between word rows
 
+## The difficulty section (118, P4-1): a small "Vanskelighet" subheading + one row per mode
+## (Normal/Hard/Expert), seated between the marker-words section and the showcase/footer pills.
+## Zero-height when no difficulty rows are fed, so the trick-only (072) / breeds (079) / words (092)
+## geometry is all unchanged when the section is absent.
+const DIFFICULTY_GAP := 18.0    ## gutter above the "Vanskelighet" subheading
+const DIFFICULTY_HEADER_H := 30.0  ## the "Vanskelighet" subheading band
+const DIFFICULTY_ROW_H := 54.0  ## one difficulty row (name + active/locked badge)
+const DIFFICULTY_ROW_GAP := 8.0 ## gutter between difficulty rows
+
 ## Type sizes.
 const TITLE_SIZE := 30
 const NUMBER_SIZE := 26
@@ -171,6 +185,16 @@ const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greye
 const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
 const WORD_COST_HINT     := DesignSystem.SLATE_SOFT  ## dimmed cost hint (095, P5-2) — secondary
 
+## Difficulty-row palette + badges (118, DS tokens). Mirrors the breed/word row treatment.
+const DIFF_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Vanskelighet" subheading — secondary
+const DIFF_NAME_ACTIVE   := DesignSystem.BLUE        ## the selected mode — primary accent
+const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active mode — slate body text
+const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed
+const DIFF_BADGE_ACTIVE  := "Valgt"                  ## the chosen mode's badge
+const DIFF_BADGE_LOCKED  := "Låst"                   ## the fixed mode on a special dog (119)
+## The "Vanskelighet" (difficulty) subheading label — Norwegian, homed as a named const.
+const LABEL_DIFFICULTY   := "Vanskelighet"
+
 ## The rows main fed in (each {id, state}) + the coin balance shown in the header.
 var _rows: Array = []
 var _balance := 0
@@ -180,6 +204,9 @@ var _breeds: Array = []
 ## The marker-word rows main fed in (each {id, display, state}) — empty until P5-4 wires them,
 ## so the trick-only + breeds-only menu geometry is unchanged when no words are fed.
 var _words: Array = []
+## The difficulty rows main fed in (each {id, name, active, selectable, locked}) — empty until 118 wires
+## them, so the trick/breeds/words-only geometry is byte-for-byte unchanged when the section is absent.
+var _difficulties: Array = []
 
 func _init() -> void:
 	# Modal: the menu eats every tap while it is up (STOP), so a tap can never fall through to the BRA
@@ -248,6 +275,31 @@ static func classify_words(catalog: Array, unlocked: Array, active: String) -> A
 			"cooldown": int(e.get("cooldown", 0))})
 	return rows
 
+## Classify each difficulty mode for the menu (118, P4-1; pure — the active split is unit-locked).
+## `catalog` is the ordered mode list (Difficulty objects, Normal→Hard→Expert); `active_id` the mode
+## currently in effect. Each row: {id, name, active, selectable, locked}. Order follows the catalog so
+## the selector reads the same every open. Unlocked (a normal dog): every row selectable, the active id
+## flagged. `locked` (a special dog, 119): every row non-selectable and `locked_id` is flagged active
+## instead of `active_id` — the fixed mode reads as the chosen one while nothing is tappable.
+static func classify_difficulty(catalog: Array, active_id: String, locked := false, locked_id := "") -> Array:
+	var rows: Array = []
+	var flagged := locked_id if locked else active_id
+	for entry in catalog:
+		var mode := entry as Difficulty
+		rows.append({
+			"id": mode.id,
+			"name": mode.display_name,
+			"active": mode.id == flagged,
+			"selectable": not locked,
+			"locked": locked,
+		})
+	return rows
+
+## Whether a difficulty row may be tapped (118/119). A locked row (special dog) is never selectable;
+## the active mode is still "selectable" (tapping it is simply a no-op switch in main). Pure predicate.
+static func is_difficulty_selectable(row: Dictionary) -> bool:
+	return row.get("selectable", false)
+
 ## The player-facing name for a trick id (pure). Unknown ids fall back to a capitalised id.
 static func display_name(id: String) -> String:
 	return LABELS.get(id, id.capitalize())
@@ -271,8 +323,25 @@ func set_words(rows: Array) -> void:
 	_words = rows
 	queue_redraw()
 
+## Set the difficulty rows to show (118) and request a redraw. Empty until the selector wires them; main
+## rebuilds these (via classify_difficulty) each time it opens the menu, so the menu itself stays dumb.
+func set_difficulty(rows: Array) -> void:
+	_difficulties = rows
+	queue_redraw()
+
 func row_count() -> int:
 	return _rows.size()
+
+## The difficulty rows accessors (118) — mirror the breed/word capture accessors so the live e2e /
+## Visual-Review capture can land a REAL canvas tap on a specific mode row rather than fragile pixels.
+func difficulty_row_count() -> int:
+	return _difficulties.size()
+
+func difficulty_row_center(i: int) -> Vector2:
+	return _difficulty_row_rect(i).get_center()
+
+func difficulty_id(i: int) -> String:
+	return (_difficulties[i] as Dictionary).id
 
 func breed_count() -> int:
 	return _breeds.size()
@@ -364,6 +433,35 @@ func _word_row_index_at(pos: Vector2) -> int:
 			return i
 	return -1
 
+## The difficulty block height (118): the gutter + "Vanskelighet" subheading + one row per mode. Zero
+## when no difficulty rows are fed, so the trick/breeds/words-only geometry is unchanged.
+func _difficulty_block_h() -> float:
+	var n := _difficulties.size()
+	if n == 0:
+		return 0.0
+	return DIFFICULTY_GAP + DIFFICULTY_HEADER_H + n * DIFFICULTY_ROW_H + (n - 1) * DIFFICULTY_ROW_GAP
+
+## The y where the difficulty section (subheading) begins — just below the words block (or breeds/trick
+## rows if those sections are absent, since each contributes 0 height when empty).
+func _difficulty_top() -> float:
+	var panel := _panel_rect()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() \
+		+ _words_block_h() + DIFFICULTY_GAP
+
+## The i-th difficulty row rect inside the panel (below the "Vanskelighet" subheading).
+func _difficulty_row_rect(i: int) -> Rect2:
+	var panel := _panel_rect()
+	var x := panel.position.x + PANEL_PAD
+	var y := _difficulty_top() + DIFFICULTY_HEADER_H + i * (DIFFICULTY_ROW_H + DIFFICULTY_ROW_GAP)
+	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, DIFFICULTY_ROW_H)
+
+## The difficulty row index under a point, or -1 if none.
+func _difficulty_row_index_at(pos: Vector2) -> int:
+	for i in _difficulties.size():
+		if _difficulty_row_rect(i).has_point(pos):
+			return i
+	return -1
+
 ## The showcase pill's block height (087): the gutter + pill, only when there are breeds to show off.
 ## Zero-height with no breeds, so the trick-only panel geometry (072) is unchanged.
 func _showcase_block_h() -> float:
@@ -373,15 +471,17 @@ func _showcase_block_h() -> float:
 ## The showcase + feedback pills sit above the close button, so the panel grows to fit them.
 func _panel_rect() -> Rect2:
 	var pw := minf(size.x - 2.0 * PANEL_MARGIN_X, PANEL_MAX_W)
-	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _words_block_h() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
+	var ph := PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _words_block_h() + _difficulty_block_h() + _showcase_block_h() + CLOSE_GAP + FEEDBACK_H + FEEDBACK_GAP + CLOSE_H + PANEL_PAD
 	var px := (size.x - pw) * 0.5
 	var py := (size.y - ph) * 0.5
 	return Rect2(px, py, pw, ph)
 
-## The y just below the trick + breeds + words blocks — the top of the footer (showcase/feedback/close pills).
+## The y just below the trick + breeds + words + difficulty blocks — the top of the footer
+## (showcase/feedback/close pills). Each section contributes 0 height when empty.
 func _foot_top() -> float:
 	var panel := _panel_rect()
-	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + _words_block_h()
+	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() \
+		+ _words_block_h() + _difficulty_block_h()
 
 ## The "Vis frem hundene" showcase pill rect (087) — between the breeds section and the feedback row.
 ## Zero-area (offscreen) when there are no breeds so it is never drawn or hit.
@@ -487,6 +587,13 @@ func _gui_input(event: InputEvent) -> void:
 			word_chosen.emit(w.id)  # switch the active marker word (non-active unlocked only)
 		# ACTIVE (already firing) / LOCKED (not earned) absorb the tap — no switch, no faked clip.
 		return
+	var di := _difficulty_row_index_at(pos)
+	if di >= 0:
+		var d: Dictionary = _difficulties[di]
+		if is_difficulty_selectable(d):
+			difficulty_chosen.emit(d.id)  # main no-ops an already-active pick; a locked dog's rows aren't selectable
+		# A locked row (special dog, 119) absorbs the tap — the mode is fixed, no switch.
+		return
 	if not _breeds.is_empty() and _showcase_rect().has_point(pos):
 		showcase_requested.emit()
 		accept_event()
@@ -550,6 +657,14 @@ func _draw() -> void:
 			BADGE_SIZE, WORD_SUBHEAD)
 		for i in _words.size():
 			_draw_word_row(f_bold, f_body, i)
+	# The difficulty section (118): a "Vanskelighet" subheading + one row per mode (Normal/Hard/Expert).
+	# Zero-height when no rows are fed, so the trick/breeds/words geometry is unchanged when absent.
+	if not _difficulties.is_empty():
+		var diff_sub_baseline := _difficulty_top() + f_bold.get_ascent(BADGE_SIZE)
+		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, diff_sub_baseline), LABEL_DIFFICULTY,
+			BADGE_SIZE, DIFF_SUBHEAD)
+		for i in _difficulties.size():
+			_draw_difficulty_row(f_bold, f_body, i)
 	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. Secondary paper pill
 	# so it reads as part of the DS footer, distinct from the primary BLUE close button.
 	if not _breeds.is_empty():
@@ -736,3 +851,41 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var word_badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
 	_draw_text(f_badge, Vector2(rect.position.x, word_badge_baseline), word_badge, BADGE_SIZE, word_badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
+
+## One difficulty row (118): the mode name on the left and a state badge on the right. The ACTIVE mode
+## reads BLUE + "Valgt" (chosen — DS primary accent); a selectable non-active mode reads SLATE with no
+## badge (tap to pick). When the row is LOCKED (special dog, 119) every row greys to SLATE_SOFT and the
+## fixed mode shows "Låst" so the player understands the challenge is fixed, not broken. Mirrors
+## _draw_breed_row / _draw_word_row so the section reads consistent with the rest of the menu.
+func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
+	var d: Dictionary = _difficulties[i]
+	var rect := _difficulty_row_rect(i)
+	var is_active: bool = d.get("active", false)
+	var locked: bool = d.get("locked", false)
+	# DS pill row background: CREAM for a live/selectable row, near-invisible tint when the mode is
+	# locked-and-not-the-fixed-one (dimmed so the fixed mode reads as the single active choice).
+	var dim := locked and not is_active
+	var row_bg := ROW_BG_LOCKED if dim else ROW_BG
+	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
+	# The mode name, left.
+	var name_col := DIFF_NAME_IDLE
+	if locked:
+		name_col = DIFF_NAME_ACTIVE if is_active else DIFF_NAME_LOCKED
+	elif is_active:
+		name_col = DIFF_NAME_ACTIVE
+	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
+	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
+		str(d.get("name", d.id)), NAME_SIZE, name_col)
+	# The badge, right. Locked-active → "Låst"; unlocked-active → "Valgt"; other rows show no badge.
+	var badge := ""
+	var badge_col := DIFF_NAME_ACTIVE
+	if is_active and locked:
+		badge = DIFF_BADGE_LOCKED
+		badge_col = DIFF_NAME_LOCKED
+	elif is_active:
+		badge = DIFF_BADGE_ACTIVE
+		badge_col = DIFF_NAME_ACTIVE
+	if badge != "":
+		var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
+		_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
+			HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)

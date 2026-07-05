@@ -103,3 +103,38 @@ func test_feint_chance_composes_breed_and_difficulty() -> void:
 	assert_eq(main._loop.feint_chance, breed.feint_chance(),
 		"Normal difficulty: effective feint_chance == breed.feint_chance() (identity)")
 	main.queue_free()
+
+# ---- 118 (P4-1): the player-facing selector switches, re-applies levers live, and persists ----
+
+func test_on_difficulty_chosen_switches_reapplies_and_persists() -> void:
+	var main := instantiate_main()
+	assert_eq(main._difficulty.id, "normal", "boot defaults to Normal (the selector starts here)")
+	var breed: BreedPersonality = main._breed
+	# Choose Hard from the menu.
+	main._on_difficulty_chosen("hard")
+	assert_eq(main._difficulty.id, "hard", "_on_difficulty_chosen('hard') sets the global mode to Hard")
+	# Levers re-applied live: the loop's feint chance is now breed × Hard.feint_scale (1.6), clamped.
+	var hard := Difficulty.hard()
+	var expected_feint := clampf(breed.feint_chance() * hard.feint_scale, 0.0, 1.0)
+	assert_eq(main._loop.feint_chance, expected_feint,
+		"switching to Hard re-applies the loop feint chance = breed × Hard.feint_scale")
+	# Persisted: the save now carries "hard" (a returning player boots into Hard).
+	assert_eq(main._store.load_difficulty(), "hard", "the chosen mode is persisted to the save blob")
+	# Restore Normal + persist so this test does not pollute the boot-default of other tests.
+	main._on_difficulty_chosen("normal")
+	assert_eq(main._store.load_difficulty(), "normal", "restored to Normal (no cross-test pollution)")
+	main.queue_free()
+
+func test_on_difficulty_chosen_unknown_id_is_a_no_op() -> void:
+	var main := instantiate_main()
+	assert_eq(main._difficulty.id, "normal", "boot defaults to Normal")
+	main._on_difficulty_chosen("ghost")
+	assert_eq(main._difficulty.id, "normal", "an unknown mode id is a no-op — the mode is unchanged")
+	main.queue_free()
+
+func test_difficulty_rows_reflect_the_active_mode() -> void:
+	var main := instantiate_main()
+	var rows: Array = main._difficulty_rows()
+	assert_eq(rows.size(), 3, "one row per shipped mode")
+	assert_true((rows[0] as Dictionary).active, "Normal (the boot default) is the active row")
+	main.queue_free()
