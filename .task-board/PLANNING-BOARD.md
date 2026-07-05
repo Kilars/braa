@@ -6,7 +6,29 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASE 8 (KENNEL) CURRENT — spine 109/110/111 shipped; construction audit surfaced 3 tasks (112/113/114) — 2026-07-05
+## Status — PHASE 9 (DIFFICULTY) CURRENT — father declined sign-off, filed 2 directives → 121/122 shipped; board EMPTY, awaits re-review — 2026-07-05
+
+Phase 8 (kennel) was signed off (`a2eae20`); Phase 9 (difficulty) is current. The selector
+(118), special-dog lock (119) and background grace (120) shipped, and the father's **2026-07-05
+PO play-test** found the mechanics genuinely live but **declined sign-off** on two buildable
+current-phase directives (`.docs/specs/po-review.md`):
+
+- **121 — FEATURE — difficulty rows show the reward/challenge trade inline (Improvement #1).**
+  The rows carried only a «Valgt»/«Låst» badge, so the trade was invisible and the feature inert
+  to the player's decision (the P5-2/095 standard). SHIPPED: `difficulty_trade_label()` derives a
+  dimmed subtitle from the `Difficulty` model — Normal none, Hard «×1.4 mynt · smalere vindu»,
+  Expert «×2 mynt · mye smalere vindu»; mirrors the marker-word cost hint. 5 TDD tests. Visual
+  Review PASS (`.screenshots/118-02-menu-hard.png`).
+- **122 — FEATURE — locked difficulty section states the reason (Improvement #2).** A special dog
+  greyed the section but gave no reason → reads as a bug. SHIPPED: dimmed one-liner «Spesialhunder
+  trener alltid på Hard» above the greyed rows, height reserved only when locked (normal dog
+  byte-identical). 3 TDD tests. Visual Review PASS (`.screenshots/119-01-menu-locked.png`).
+
+**BOTH SHIPPED (2026-07-05), board now EMPTY, verify green 653/0, all pushed → terminal hand-off to
+the father for the Phase-9 sign-off re-review.** Both filed directives are now in pixels; no new
+flags. Do NOT re-task 118–122.
+
+## Status — PHASE 8 (KENNEL) SIGNED OFF — spine 109/110/111 shipped; construction audit surfaced 3 tasks (112/113/114) — 2026-07-05
 
 The adopt/switch/persist/free-adopt spine (109/110/111) is in `done/` and `verify.sh` is green.
 Before handing the empty board to the father, the scan ran the **adversarial construction audit**
