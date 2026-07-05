@@ -100,6 +100,39 @@
   which ship with honest stand-ins and don't touch the design-system work. **Phase 8 (kennel) is now
   current.**
 
+- **Phase 8 — Visual Review passed 2026-07-05 (PO, father pass).** Kennel browse-and-adopt roster
+  accepted done at HEAD `0ff7902`. Played on the **live deployed Pages site**
+  (https://kilars.github.io/braa/) at 390×844 in headless Chromium — the only build that renders the
+  **licensed Labrador** (live boot log confirms `dog loaded: res://assets/models/dog_licensed.glb …
+  dog can Sitt`); the deployed pck refreshed at 10:06 GMT to this HEAD, so item 1 below could be
+  judged on the real rig exactly as Phases 1/2 were. **Zero relevant console errors; browse-grid →
+  inspect-modal driven with real canvas taps.** The prior pass's sole blocker is **fixed and confirmed
+  in my own pixels on the licensed build:** Bella-the-Labrador now renders as her **warm cream/golden
+  training coat** on her blue owned-rarity band — no longer a blue-grey dog
+  (`.screenshots/LIVE117-kennel-grid.png`, top-left cell); the 117 `KennelDog.portrait_tint()` decouples
+  the coat modulate from the rarity `band_tint`, so the rarity band stays coloured while every dog reads
+  a plausible coat (Bella cream, Nova grey, Balder/Sniff brown, Sol golden, Pontus grey, Lykke brown,
+  Trulte grey-tan). The minor fold-in also landed: in Bella's modal the «Bella» title now sits on a
+  **bottom nameplate clear of the dog's face** (`.screenshots/LIVE117-bella-modal.png`), which also shows
+  the warm blurb, 4 data rows (Læreevne/Energi/Mot/Fokus), Raseegenskaper chips (Snill · Tålmodig ·
+  Glupen), the «Godbit-radar» Unikt-trekk card, «Kan lære: Sitt · Ligg · Legg deg» (K-8), and the green
+  «Trener nå» action for the owned dog. **K-1/K-3** the 8 cells (Bella · Nova · Balder · Sol · Pontus ·
+  Lykke · Sniff · Trulte) fill the full 844 px portrait with no dead grey, correct names / breeds /
+  prices / owned + «Påskeegg»/«Gratis» tags, under the «Kennelen · Profesjonell fasilitet» header + coin
+  chip; **K-2** the inspect modal opens on tap; **K-3/K-4/K-5/K-6/K-7** adopt / affordability-gate /
+  switch-to-training / Trulte free-adopt easter egg / persisted roster were driven end-to-end clean in
+  the prior passes (`f5b8efb`), and 117 changed only the portrait tint + nameplate, leaving the tap/modal
+  path intact. Re-checked the earlier signed-off phases — **no regression**: 117's diff is confined to
+  `kennel_dog.gd` + `kennel_screen.gd` (touches no training / menu / economy / marker-word code), and
+  closing the kennel restores the Phase-6 training page + Phase-1/2 core mark loop — cream Labrador
+  centred facing camera on green grass, tan path, cottage, white picket fence, gold coins, blue BRA
+  button (`.screenshots/105-kennel-03-closed.png`). Accepted **as complete as best as possible**: the
+  only residuals are the long-standing **owner-gated** flags — distinct per-breed **models** (BUST-068,
+  P3-D1/D2/D4) and camera-facing **signature clips** (P3-2), so all 8 breeds are honest tint stand-ins of
+  the one licensed rig and share the core Sitt / Ligg / Legg deg trick list (K-8 is honest — a breed only
+  offers a trick its rig actually has a clean clip for; no per-breed trick is faked). None blocks the
+  kennel experience. **Phase 9 is now current.**
+
 ---
 
 ## Product Owner Review
@@ -111,69 +144,3 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-05
-
-Phase 8 (kennel) is current. Re-played the kennel on the **live deployed Pages site**
-(https://kilars.github.io/braa/, HEAD `4e14c69`) at 390×844 in headless Chromium — the deployed build
-is the only one that renders the **licensed Labrador** (the local `verify.sh` export bundles the CC0
-dev dog: boot log `dog loaded: res://assets/models/dog.glb … no Sitt clip`), so item 1 below — a
-render-quality claim about the licensed dog — can only be judged there, exactly as Phase 1 was. Live
-boot log confirms the licensed rig (`dog loaded: res://assets/models/dog_licensed.glb … dog can Sitt`).
-**Zero relevant console errors; browse-grid → inspect-modal driven with real canvas taps.** **The prior
-voxel-dog blocker is FIXED — but the coat tint miscolours the one real breed (a blue Labrador), which
-keeps the phase off sign-off.**
-
-**Fixed / verified working in my own pixels:**
-
-- **Kennel dogs now read as the stylized-realism licensed Labrador — prior Improvement #1 core
-  RESOLVED (116).** The blocky CC0 voxel dog is gone; every cell and the modal header now render the
-  game's **actual licensed Labrador rig** via a live SubViewport, standing in a 3/4 front pose with
-  the **head/face turned toward the viewer** (not rear-/side-slumped), behind faint steel bars —
-  matching the training page's quality (`.screenshots/LIVE-kennel-grid.png`, 3× crop of Bella confirms
-  a real dog, not a block). This clears the X-4 «reads as a real dog» bar for the render itself.
-- **Grid fill** — the 8 cells in 4 rows span the full 844 px portrait, no dead grey (115 held up on
-  the licensed build too). Header «Kennelen · Profesjonell fasilitet» + coin chip up top.
-- **K-2 inspect modal** opens on tap (cell centres re-published correctly after the 116 refactor):
-  Bella's panel shows the warm blurb, 4 data-driven stat rows (Læreevne 5 / Energi 5 / Mot 4 /
-  Fokus 5), Raseegenskaper chips (Snill · Tålmodig · Glupen), the «Godbit-radar» Unikt-trekk card, the
-  K-8 trick list («Kan lære: Sitt · Ligg · Legg deg»), and the green «Trener nå» action for the owned
-  dog (`.screenshots/LIVE-kennel-modal.png`).
-- **Names / breeds / prices / tags** all correct at a glance; Bella «Labrador retriever» owned + «Din»
-  tag, Trulte «★ Påskeegg» + «Gratis», the rest priced gold. (K-3/K-4/K-5/K-6/K-7 adopt / gate /
-  switch / easter / persist were driven end-to-end clean in the prior pass at `f5b8efb`; 116 changed
-  only the portrait render + bar tint, and the modal/tap path replays intact here.)
-- **No regression:** closing the kennel restores the Phase-6 training page and the Phase-1/2 core mark
-  loop — the warm cream licensed Labrador centred facing camera on green grass, cottage / fence / gold
-  coins / BLUE BRA button all present (`.screenshots/LIVE-training.png`).
-
-**Improvements — one shortfall keeps the phase off the sign-off line**
-
-1. **The per-breed coat tint turns the dog its rarity-band colour, so the one real breed — Bella the
-   Labrador — renders BLUE, not her warm training-page coat (X-4 «reads as its breed» not met).** The
-   116 render tints the neutral coat *toward each cell's `band_tint`* (`kennel_screen.gd:513`,
-   `_band_dog_tint(row.band_tint)`), so every dog's coat = its band colour. For most breeds the band is
-   a plausible dog hue (Sol golden, Balder / Sniff brown, Nova / Trulte grey) — fine. But **Bella sits
-   on a blue band and therefore renders as a blue-grey dog** (`.screenshots/LIVE-kennel-grid.png`,
-   top-left cell + 3× crop), while the **very same dog is a warm cream Labrador on the signed-off
-   training page** (`.screenshots/LIVE-training.png`). A player owns Bella, sees her cream in training,
-   then blue in the kennel — a jarring cohesion break on the *flagship* dog, the one breed we have a
-   real model for. A demanding owner won't ship a blue Labrador. **This is not owner-gated** — it's a
-   tint-calibration fix. *Good* = the coat modulate is decoupled from the raw band-background colour so
-   every dog reads as a **plausible dog coat**, and Bella-the-Labrador specifically reads as her warm
-   training-page coat (cream/yellow), not blue. The rarity band can stay coloured behind the bars; only
-   the dog's coat needs a natural hue. Independent review then confirms it on the running licensed
-   build. (Minor, fold in while here: in the modal the «Bella» title text overlaps the dog render in
-   the header band — nudge the title clear of the portrait.)
-
-**Owner-gated residual (honest, NOT a blocker to sign-off once #1 lands):** all 8 breeds are
-tinted stand-ins of the one available rig, so every dog's trick list is the shared core (Sitt / Ligg /
-Legg deg) — distinct **breed models** and camera-facing **signature clips** are the long-standing owner
-gates (BUST-068 residual, P3-2), already flagged. K-8 is honest here: a breed only offers a trick its
-rig actually has a clean clip for (behaviour ≠ inventory), and no per-breed trick is faked.
-
-**Not signed off** — the spine is complete and clean in pixels, the grid fills the portrait, and the
-kennel dogs now read as the stylized-realism licensed Labrador (the big prior blocker is fixed). The
-one remaining shortfall is the coat-tint miscolour that makes Bella-the-Labrador read blue (item 1).
-Once the coats read as natural dog colours — Bella matching her warm training-page coat — and
-independent review confirms it on the running licensed build, the phase is sign-off ready (its only
-other residuals are the already-flagged owner gates above).
