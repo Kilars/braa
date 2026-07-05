@@ -216,6 +216,22 @@ owner asset — these **preempt** new-phase work per the cross-cutting quality b
    against the washed sky. *Acceptance:* Triks pill and coin pill stay crisp and clearly legible over
    the sky band (largely resolved by fixing #3; verify the pill contrast/shadow after).
 
+**Menu (serious)**
+
+6. **[SERIOUS] The completion menu is information overload — reveal it as a story, not all at once.**
+   *What I saw:* the menu now stacks every system at full detail at the same time — the trick list
+   (learned / available / locked), the marker-words collection, the breeds section, coins, and
+   difficulty — so it reads as a dense settings dump instead of a reward moment. *Why it's wrong:* it
+   breaks the North-Star "single satisfying tap" calm and buries the sense of progression — a new
+   player is hit with every locked/future system at once. *Acceptance:* **progressive disclosure with
+   a narrative through-line** — do **not** reveal all elements at once. Sections and elements appear as
+   the player earns their way to them, so the menu *grows with the player* and tells a story of
+   progression rather than dumping the whole game up front. Concretely: hide or minimally tease systems
+   the player hasn't reached yet (e.g. the marker-words section only surfaces once the first alternate
+   word is within reach; the breeds section only once adoption is actually meaningful; locked rows are
+   teased sparingly, not fully enumerated). Turn the overload into a "silver lining" — each reveal is a
+   small earned beat in the game's story. This is a **serious** UX issue; treat it at high priority.
+
 _(Phase 9 signed off 2026-07-05; its 121/122 directives were replayed and found fixed. Phase 10 is
-current but unspecced — these training-page fixes come first.)_
+current but unspecced — these training-page + menu fixes come first.)_
 
