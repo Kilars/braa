@@ -60,7 +60,10 @@ const HEADER_H       := 72.0
 const GRID_PAD       := 12.0    ## scroll container margin from screen edges
 const CELL_GAP       := 12.0    ## gap between cells in the GridContainer
 const CELL_RADIUS    := 16.0
-const BAND_H         := 112.0   ## the tinted portrait band at the top of each cell
+const BAND_H         := 112.0   ## the tinted portrait band — the MINIMUM band height (short screens)
+const FOOTER_BLOCK_H := 72.0    ## the name+breed footer block below the band (cell_h − band_h)
+const GRID_COLS      := 2       ## the roster grid is 2-wide; rows = ceil(dogs / cols)
+const DESIGN_VP_H    := 1280.0  ## fallback logical viewport height (project.godot) when none is live
 const PORTRAIT_PATH  := "res://assets/kennel/dog_portrait.png"  ## baked CC0 dog silhouette (107, K-1)
 const DARK_BAND_LUM  := 0.42    ## below this band luminance, lighten the dog so it reads on a dark band
 const TAG_RADIUS     := 8.0
@@ -107,6 +110,15 @@ func _init() -> void:
 func _ready() -> void:
 	if _grid == null:
 		_build_ui()
+	# Re-fit the grid when the logical viewport resolves after the first render, or on an
+	# orientation/window change — cell heights are derived from the live viewport (115).
+	resized.connect(_on_resized)
+
+## Root resized: the derived cell height may have changed → rebuild the grid to re-fill the
+## portrait. Cheap (8 cells) and safe: _refresh never mutates the root size, so no resize loop.
+func _on_resized() -> void:
+	if _grid != null and not _rows.is_empty():
+		_refresh()
 
 # ---------------------------------------------------------------------------
 # Public API — main calls render(rows, balance) on open; nothing else mutates state.
@@ -364,6 +376,31 @@ func _refresh() -> void:
 # Cell construction — one reusable Button per classify row.
 # ---------------------------------------------------------------------------
 
+# Logical (stretch-space) viewport height. The root is anchored full-rect and the project
+# stretches canvas_items with aspect "expand", so on a tall phone the logical height grows past
+# the 1280 design (e.g. ~1558 at 390×844) — cells must be sized against the LIVE height, not a
+# constant, or 4 rows fill only the top ~55% and the lower portrait reads as unfinished (115).
+func _viewport_h() -> float:
+	if is_inside_tree():
+		var vp := get_viewport()
+		if vp != null:
+			var h := vp.get_visible_rect().size.y
+			if h > 0.0:
+				return h
+	if size.y > 0.0:
+		return size.y
+	return DESIGN_VP_H  # headless / pre-layout fallback
+
+# Cell height that makes the whole roster FILL the portrait below the header: the available
+# height (viewport − header − bottom pad − inter-row gaps) split evenly across the rows. Never
+# smaller than the natural band+footer, so short screens still scroll instead of squashing.
+func _target_cell_h() -> float:
+	var rows := int(ceil(float(_rows.size()) / float(GRID_COLS)))
+	if rows < 1:
+		rows = 1
+	var avail := _viewport_h() - HEADER_H - GRID_PAD - float(rows - 1) * CELL_GAP
+	return max(avail / float(rows), BAND_H + FOOTER_BLOCK_H)
+
 func _make_cell(row: Dictionary) -> Button:
 	var btn := Button.new()
 	btn.name = "Cell_" + str(row.id)
@@ -391,9 +428,10 @@ func _make_cell(row: Dictionary) -> Button:
 		btn.add_theme_stylebox_override(st, normal_sb if st != "pressed" else pressed_sb)
 	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	btn.focus_mode = Control.FOCUS_NONE
-	# The cell width: (viewport_width - 2*GRID_PAD - CELL_GAP) / 2 ≈ (390-24-12)/2 = 177 px.
-	# We can't query final size at build time, so set a reasonable minimum.
-	btn.custom_minimum_size = Vector2(160.0, BAND_H + 72.0)
+	# Width: the GridContainer expands cells to fill the row. Height is derived so the 8-dog
+	# roster fills the portrait (115) rather than stopping at ~55% with a dead grey lower half.
+	var cell_h := _target_cell_h()
+	btn.custom_minimum_size = Vector2(160.0, cell_h)
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	# Emit dog_selected on press. Scale-down affordance skipped in headless (no running tween).
@@ -411,8 +449,9 @@ func _make_cell(row: Dictionary) -> Button:
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	btn.add_child(vbox)
 
-	# 1. Portrait band with steel bars overlay and status/price tags.
-	vbox.add_child(_make_band(row))
+	# 1. Portrait band with steel bars overlay and status/price tags. The band takes all the
+	#    cell height above the fixed footer block, so a taller cell shows a bigger dog.
+	vbox.add_child(_make_band(row, cell_h - FOOTER_BLOCK_H))
 
 	# 2. Footer: name + breed (PanelContainer with white bg).
 	vbox.add_child(_make_footer(row))
@@ -422,10 +461,10 @@ func _make_cell(row: Dictionary) -> Button:
 ## The top portrait band: tinted background + steel-bar shader overlay + status tag (top-left)
 ## + price chip (bottom-right). No dog silhouette this slice — the tint IS the visual identity
 ## until the owner supplies distinct breed models (BUST-068 — already flagged, not a stub).
-func _make_band(row: Dictionary) -> Control:
+func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 	var band := Control.new()
 	band.name = "Band"
-	band.custom_minimum_size = Vector2(0, BAND_H)
+	band.custom_minimum_size = Vector2(0, max(band_h, BAND_H))
 	band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
