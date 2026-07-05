@@ -39,6 +39,18 @@ Entry format:
 
 ## Open
 
+### FLAG 2026-07-05 — Build host disk is CRITICALLY FULL (0 bytes free); the loop cleared regenerable caches to proceed
+- **Source:** task 107 (the portrait bake needed to write build/web + a PNG). `df` showed `/` at 100%, **0 MB free** — this fails the verify **export** leg and blocks any `nix` download.
+- **What the loop did to keep going (non-destructive):** deleted only **regenerable package caches** — `~/.cache/pypoetry/{cache,artifacts}`, `~/.cache/pip`, `~/.cache/nix` (~7.5 GB freed). **Left untouched:** `~/.cache/pypoetry/virtualenvs` (real envs), the Playwright/Chromium browsers (used by capture), and — deliberately — your **`~/.local/share/Trash` (28 GB)**.
+- **Decision needed (user-only):** reclaim real space — the **28 GB Trash** is the biggest single win (empty it), plus consider old `build/` artifacts / local licensed-dog copies. The 7.5 GB the loop freed will slowly refill as caches rebuild; without a durable cleanup the disk will hit 100% again and break the export gate.
+- **Why it's user-only:** emptying your Trash and deciding what large personal data to remove is your call, not the loop's — it only touched clearly-regenerable caches.
+
+### FLAG 2026-07-05 — Kennel cell portraits use the CC0 blocky dog, not the licensed Labrador (deliberate, licensing-clean)
+- **Source:** task 107 (K-1 dog render). The committed `assets/kennel/dog_portrait.png` is baked from the **CC0** `dog.glb`, so the kennel shows a blocky stylised dog while the **training page shows the realistic licensed Labrador** — a visible style mismatch on the shipped site.
+- **Why CC0 and not the Labrador:** ADR-0006 deliberately keeps the licensed dog OUT of the public repo (`dog_licensed*` gitignored, only the encrypted `.enc` ships). Committing a rendered PNG of the licensed dog would place its appearance in the clear in public git history — against that posture. The task itself sanctioned the CC0 fallback "if licensing is a concern".
+- **Decision needed (owner-only):** either (a) **approve** committing a licensed-derived kennel portrait for training↔kennel cohesion (the loop can re-bake from the licensed rig in one step — same `_bake_portrait` route, just point it at the licensed path), or (b) keep CC0 as the honest stand-in until distinct per-breed MODELS arrive (BUST-068). Only the owner can OK putting licensed appearance in the repo.
+- **Assumption made to keep going:** shipped the **CC0** silhouette, tinted per band — a real dog, the honest BUST-068 stand-in — so the cells read at a glance without any licensing exposure.
+
 ### FLAG 2026-07-03 — P3-2 per-breed trick DIVERGENCE is owner-gated on a camera-facing signature clip (the rig's only action clip, `Digging`, fails the face-the-camera apex bar)  ·  **flag-bust verdict of task 088 — the manifest WAS driven live, not asserted**
 - **Source:** task 088 (PO Review 2026-07-03, Change 2 — "each breed exposes a trick list that is **not identical**"). Per the task's own route 2b: the flag-bust drove the candidate clip on the rig at a PERFECT apex (not by name) and it did **not** meet the Phase-1 quality bar → record the verdict, ship **no stub trick**.
 - **What was tried (adversarial — refute "P3-2 is owner-gated"; this is NOT a premature flag):**

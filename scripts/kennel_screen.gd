@@ -8,11 +8,13 @@ extends Control
 ## land in follow-up tasks). Cell tap emits dog_selected(id); closed emits from the back
 ## button and triggers main._close_kennel().
 ##
-## Dog band render: the band is filled with the per-dog band_tint from KennelDog. All 8
-## dogs share the one licensed Labrador rig (owner-gated on distinct breed models,
-## BUST-068), so there is no per-dog portrait render here — the tinted band IS the honest
-## visual differentiation for this slice. A baked per-breed portrait is a later refinement
-## once the owner supplies distinct models; this is not a stub of a claimed feature.
+## Dog band render (107, K-1): each cell shows a real dog silhouette behind the steel bars —
+## ONE greyscale portrait baked from the CC0 dog (assets/kennel/dog_portrait.png, produced by
+## tools/bake_kennel_portrait.mjs), shared across all 8 cells and `modulate`-tinted toward each
+## dog's band_tint (X-7: bake once, reuse 8×, zero runtime 3D). Distinct per-breed MODELS stay
+## owner-gated (BUST-068) — the shared tinted silhouette is the honest stand-in the flag already
+## names, not a stub. If the baked PNG is absent (e.g. a fresh tree before the bake ran) the band
+## degrades cleanly to tint-only — never a primitive stand-in.
 
 signal dog_selected(id: String)   ## cell was tapped → the detail modal task will consume this
 signal closed                      ## back/✕ was tapped → main restores the training HUD
@@ -57,6 +59,8 @@ const GRID_PAD       := 12.0    ## scroll container margin from screen edges
 const CELL_GAP       := 12.0    ## gap between cells in the GridContainer
 const CELL_RADIUS    := 16.0
 const BAND_H         := 112.0   ## the tinted portrait band at the top of each cell
+const PORTRAIT_PATH  := "res://assets/kennel/dog_portrait.png"  ## baked CC0 dog silhouette (107, K-1)
+const DARK_BAND_LUM  := 0.42    ## below this band luminance, lighten the dog so it reads on a dark band
 const TAG_RADIUS     := 8.0
 const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
@@ -78,6 +82,12 @@ const MODAL_SECTION_SEP    := 10.0   ## vertical gap between modal sections
 # ---------------------------------------------------------------------------
 var _rows: Array = []          ## last rows passed to render()
 var _balance: int = 0          ## last balance passed to render()
+
+## The ONE baked dog portrait, loaded once and shared (modulate-tinted) across all 8 cells (X-7).
+## null when the PNG is absent (fresh tree before the bake ran) → cells fall back to tint-only.
+## _portrait_loaded guards a repeated load attempt when the file is genuinely missing.
+var _portrait_tex: Texture2D = null
+var _portrait_loaded: bool = false
 
 ## Live node refs (built once in _ready, updated per render())
 var _coin_label: Label
@@ -407,6 +417,30 @@ func _make_band(row: Dictionary) -> Control:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bg)
 
+	# Dog silhouette (107, K-1): the shared baked portrait, bottom-anchored behind the bars,
+	# modulate-tinted toward this dog's band_tint so all 8 cells read as distinct tinted dogs.
+	# Skipped cleanly when the baked PNG is absent (tint-only fallback) — never a primitive.
+	var tex := _get_portrait_texture()
+	if tex != null:
+		var dog := TextureRect.new()
+		dog.name = "DogPortrait"
+		dog.texture = tex
+		dog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		dog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		dog.modulate = _band_dog_tint(row.band_tint)
+		dog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Bottom-anchored, slightly inset from the band edges so the feet sit just above the
+		# bars' base frame and the silhouette doesn't touch the sides.
+		dog.anchor_left   = 0.0
+		dog.anchor_right  = 1.0
+		dog.anchor_top    = 0.0
+		dog.anchor_bottom = 1.0
+		dog.offset_left   = 8.0
+		dog.offset_right  = -8.0
+		dog.offset_top    = 8.0
+		dog.offset_bottom = -3.0
+		band.add_child(dog)
+
 	# Steel-bar overlay drawn in code (GL Compatibility — no shader needed for simple stripes).
 	# Repeating vertical stripes ~2px on ~29px pitch, #788794 @ 40%, + 2px inset frame.
 	# Rendered as a mouse-transparent Control using _draw.
@@ -444,6 +478,26 @@ func _make_band(row: Dictionary) -> Control:
 	band.add_child(chip)
 
 	return band
+
+## Load the baked dog portrait once and cache it (shared across all 8 cells — X-7). Returns null
+## when the PNG is absent (fresh tree before tools/bake_kennel_portrait.mjs ran) so the band
+## degrades to tint-only rather than erroring. ResourceLoader.exists() avoids a load() error spam.
+func _get_portrait_texture() -> Texture2D:
+	if not _portrait_loaded:
+		_portrait_loaded = true
+		if ResourceLoader.exists(PORTRAIT_PATH):
+			_portrait_tex = load(PORTRAIT_PATH) as Texture2D
+	return _portrait_tex
+
+## The modulate tint for the dog silhouette in a given band. The baked portrait is a mid-grey
+## (base < 1.0), so on a LIGHT/mid band, band_tint renders the dog as a darker tinted silhouette
+## that reads against its own band. On a DARK band (luminance < DARK_BAND_LUM) that would leave a
+## near-black dog on a near-black band, so we lighten the tint toward white — a light silhouette
+## on the dark band. Either way the dog carries the dog's colour and contrasts with the band bg.
+func _band_dog_tint(band_tint: Color) -> Color:
+	if band_tint.get_luminance() < DARK_BAND_LUM:
+		return band_tint.lerp(Color.WHITE, 0.7)
+	return band_tint
 
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
 ## For the secret/easter row a drawn _StarPip is prepended before the word label —

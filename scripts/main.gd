@@ -302,6 +302,17 @@ const FACE_REDUCED_SPEED := 100.0
 const FACE_DEFAULT_APEX := 1.0
 
 func _ready() -> void:
+	# One-shot portrait baker (107, K-1) — a gated OFFLINE tool route, NOT part of normal play.
+	# When the web URL carries ?bra_bake_portrait=1 we skip the whole game and just render the
+	# CC0 dog to a transparent PNG, handing its base64 to the Chromium bake harness
+	# (tools/bake_kennel_portrait.mjs), which writes the committed assets/kennel/dog_portrait.png.
+	# Web-only + explicit query → desktop/headless/normal play never trip it. Local Godot GL is
+	# broken in this env (GLX segfault), so the bake runs through the project's proven Chromium/
+	# SwiftShader path instead of `godot --headless`; the shipped kennel then loads a pure static
+	# Texture2D (zero runtime 3D — the spec's "baked Texture2D per breed in-grid for perf, X-7").
+	if _query_bake_portrait():
+		_bake_portrait()
+		return
 	_load_roster()                   # restore the owned-breeds roster + active breed BEFORE the dog loads (079/P3-4)
 	_words.restore(_store.load_words())  # restore the marker-word unlock state + active word (091/P5-1)
 	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
@@ -383,6 +394,143 @@ func _query_autotap() -> bool:
 		return false
 	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
 	return typeof(search) == TYPE_STRING and (search as String).contains("bra_autotap=1")
+
+## Portrait-bake seam (107, K-1): true only when the live web URL carries `?bra_bake_portrait=1`.
+## Gates the one-shot offline baker in _ready(); never trips on desktop/headless/normal play.
+func _query_bake_portrait() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	return typeof(search) == TYPE_STRING and (search as String).contains("bra_bake_portrait=1")
+
+## One-shot offline baker (107, K-1). Renders the CC0 dog to a transparent SubViewport, crops to
+## the silhouette, and hands the PNG (base64) to window.__bra_portrait_png for the Chromium bake
+## harness to write assets/kennel/dog_portrait.png. Runs ONLY on the ?bra_bake_portrait route — the
+## shipped kennel loads the resulting static Texture2D, so no SubViewport ever renders in normal play.
+##
+## Forces the CC0 dog (DOG_SCENE_PATH) even where the licensed Labrador is present: the licensed
+## asset's rendered appearance is deliberately kept out of the public repo (ADR-0006), so the
+## committed portrait must be the CC0 silhouette — a real dog, the honest BUST-068 stand-in.
+func _bake_portrait() -> void:
+	const PORTRAIT_W := 384
+	const PORTRAIT_H := 340
+	# Front-quarter view: camera to the dog's front (+Z, the face-the-player side) and off to one
+	# side (+X), lifted a touch (+Y) — head, body length and standing legs all read.
+	const VIEW_DIR := Vector3(0.66, 0.24, 1.0)
+	const FILL := 0.78   ## fraction of the tighter frame the bounding sphere spans (breathing room)
+
+	var vp := SubViewport.new()
+	vp.name = "PortraitBakeViewport"
+	vp.size = Vector2i(PORTRAIT_W, PORTRAIT_H)
+	vp.transparent_bg = true
+	vp.own_world_3d = true                        # fully isolated world — no bleed to/from anything else
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+
+	var packed := load(DOG_SCENE_PATH) as PackedScene   # CC0 dog, always (licensing — see docstring)
+	if packed == null:
+		JavaScriptBridge.eval("window.__bra_portrait_error='dog load failed';", true)
+		return
+	var dog: Node = packed.instantiate()
+	dog.name = "BakeDog"
+	vp.add_child(dog)
+	CoatOpaque.flatten(dog)                        # clean-coat contract (no-op on the opaque CC0 body)
+	# The CC0 glb ships its OWN Camera3D (CLAUDE.md gotcha) — inside this isolated world it would
+	# stay `current` and frame the dog itself (an extreme close-up), overriding ours. Strip every
+	# bundled camera so only the portrait camera below is ever current.
+	for bundled in _find_all_cameras(dog):
+		bundled.current = false
+		bundled.queue_free()
+
+	# Settle the idle to a natural standing frame (skinned pose snaps from rest on frame 0).
+	var ap := DogClips.find_animation_player(dog)
+	if ap != null:
+		var clips := DogClips.resolve(ap.get_animation_list())
+		if clips.idle != "":
+			ap.play(clips.idle)
+			ap.seek(0.6, true)
+
+	# Key + gentle fill so the coat reads as a rounded animal, not a flat cut-out.
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-34.0, -38.0, 0.0)
+	key.light_energy = 1.2
+	vp.add_child(key)
+	var fill := DirectionalLight3D.new()
+	fill.rotation_degrees = Vector3(-8.0, 145.0, 0.0)
+	fill.light_energy = 0.35
+	vp.add_child(fill)
+
+	# Frame the dog: measure its honest standing bounds (rest-pose bone span — skinned-safe), then
+	# place a 3/4-front camera far enough that the whole bounding SPHERE fits at any view angle
+	# (fitting the sphere, not just size.x, guarantees the rotated length never clips — attempt-1's
+	# height-fit bug). Camera is only current inside this isolated SubViewport (own_world_3d), so it
+	# can never steal the main view (attempt-1's bleed-through bug).
+	var box := DogBounds.measure(dog)
+	var cam := Camera3D.new()
+	cam.name = "PortraitCam"
+	cam.fov = 30.0                                # telephoto: flattens perspective so the near chest/legs
+	                                              # don't balloon (the default 75° at ~1.5m ballooned them
+	                                              # into an unreadable blob); pulls the camera back for a
+	                                              # clean, readable portrait silhouette.
+	vp.add_child(cam)                             # in-tree before look_at (026 — no Transform3D() error)
+	var aspect := float(PORTRAIT_W) / float(PORTRAIT_H)
+	var radius := maxf(maxf(box.size.x, box.size.y), box.size.z) * 0.5
+	var v_half := deg_to_rad(cam.fov) * 0.5
+	var h_half := atan(tan(v_half) * aspect)
+	var half_angle := minf(v_half, h_half)        # the tighter frame dimension bounds the fit
+	var dist := radius / tan(half_angle) / FILL
+	var target := DogFraming.target(box)
+	var eye := target + VIEW_DIR.normalized() * dist
+	cam.look_at_from_position(eye, target, Vector3.UP)
+	cam.make_current()                            # scoped to this SubViewport's own world
+	print("[bake] box.size=%s radius=%.3f dist=%.3f eye=%s" % [str(box.size), radius, dist, str(eye)])
+
+	# Let the skinned pose + lighting settle, then composite and grab.
+	for _i in 6:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img := vp.get_texture().get_image()
+	if img == null:
+		JavaScriptBridge.eval("window.__bra_portrait_error='no image';", true)
+		return
+	# Crop the transparent margins so the silhouette is tight — the kennel band bottom-anchors the
+	# TextureRect, so a tight crop puts the feet exactly at the bars' base.
+	var used := img.get_used_rect()
+	if used.size.x <= 1 or used.size.y <= 1:
+		JavaScriptBridge.eval("window.__bra_portrait_error='empty render';", true)
+		return
+	var cropped := img.get_region(used)
+	# Desaturate to a mid-grey silhouette with the 3D shading preserved (per-pixel luminance),
+	# so the kennel can `modulate` it cleanly toward each dog's band_tint. A grey base < 1.0 also
+	# renders DARKER than the same-tinted band background — the dog reads as a tinted silhouette,
+	# not a shape that blends into its own band colour. (The CC0 coat is a saturated brown that
+	# would muddy blue/grey tints if left as-is.)
+	cropped.convert(Image.FORMAT_RGBA8)
+	for y in cropped.get_height():
+		for x in cropped.get_width():
+			var px := cropped.get_pixel(x, y)
+			if px.a <= 0.01:
+				continue
+			var l := px.get_luminance()
+			var v := clampf(0.30 + l * 0.70, 0.0, 1.0)   # mid band: dark shading ~0.4, lit ~0.75
+			cropped.set_pixel(x, y, Color(v, v, v, px.a))
+	var png := cropped.save_png_to_buffer()
+	var b64 := Marshalls.raw_to_base64(png)
+	JavaScriptBridge.eval("window.__bra_portrait_png=%s;" % JSON.stringify(b64), true)
+	JavaScriptBridge.eval("window.__bra_portrait_w=%d;" % cropped.get_width(), true)
+	JavaScriptBridge.eval("window.__bra_portrait_h=%d;" % cropped.get_height(), true)
+	JavaScriptBridge.eval("window.__bra_portrait_ready=true;", true)
+	print("[bake] portrait ready %dx%d (%d b64 chars)" % [cropped.get_width(), cropped.get_height(), b64.length()])
+
+## Collect every Camera3D in a subtree (used by _bake_portrait to strip the CC0 dog's bundled camera).
+func _find_all_cameras(n: Node) -> Array:
+	var out: Array = []
+	if n is Camera3D:
+		out.append(n)
+	for c in n.get_children():
+		out.append_array(_find_all_cameras(c))
+	return out
 
 ## Trick-selection seam (065/067, BUST-064): read `?bra_trick=ligg` / `=legg_deg` (or `=sitt`) off the
 ## live web URL to boot the dog straight into a specific trick, so each wired trick is drivable +

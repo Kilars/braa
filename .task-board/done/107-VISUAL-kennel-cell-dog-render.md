@@ -141,5 +141,30 @@ var bars := _SteelBars.new(); band.add_child(bars)   # bars now read as metal OV
       needed).
 - [x] Headless `verify.sh` stays green — the bake must not error the headless boot (guarded / lazy).
 - [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
-- [ ] Visual Review PASS on the live web build (real canvas, 390×844): 8 tinted dogs behind bars, and
-      the Phase-6 training page still intact behind the «Kennel» pill (no regression).
+- [x] Visual Review PASS on the local web build (real canvas, 390×844, Chromium/SwiftShader): 8 tinted
+      dogs behind bars (`.screenshots/105-kennel-01-grid.png`), and the Phase-6 training page still intact
+      behind the «Kennel» pill, no regression (`.screenshots/105-kennel-03-closed.png`).
+
+## Attempt 2 (2026-07-05) — SHIPPED. What changed vs the plan.
+
+The recommended route was "bake OFFLINE via `godot --headless`". **That is impossible in this environment:
+local Godot GL is broken** — hardware GLX segfaults (`Parameter "fbc" is null` → signal 11), and the
+software-GL fallback (Xvfb + llvmpipe) segfaults too. The project's ONLY working render path is
+Chromium/SwiftShader on the Web export (why every PO review runs there). So the bake was adapted to that
+proven path, keeping the SAME committed-static-PNG outcome the spec wants:
+
+- **`main._bake_portrait()`** — a `?bra_bake_portrait=1` web-gated route (dormant in normal play). Renders
+  the **CC0** dog (forced `DOG_SCENE_PATH`, never the licensed Labrador — see flag) to a transparent
+  `SubViewport` (`own_world_3d` → no bleed; attempt-1 #2), frames a **telephoto** (fov 30°) camera by the
+  **bounding-sphere** extent (attempt-1 #1 height-fit close-up), strips the CC0 glb's bundled Camera3D (it
+  stole `current`), desaturates to a tintable mid-grey silhouette, crops to the used rect, hands the PNG
+  base64 to `window.__bra_portrait_png`. Deferred until in-tree → no `Transform3D()` boot error (attempt-1 #3).
+- **`tools/bake_kennel_portrait.mjs`** — one-shot Playwright harness: boots the bundle with the bake query,
+  reads the base64, writes **`assets/kennel/dog_portrait.png`** (249×305, committed).
+- **`kennel_screen.gd`** — loads that ONE static `Texture2D` (X-7: bake once, reuse 8×, zero runtime 3D),
+  adds a bottom-anchored `TextureRect` behind the steel bars per cell, `modulate`-tinted via `_band_dog_tint`
+  (adaptive: lighten on dark bands, `band_tint` on light bands so the grey base renders a darker silhouette).
+  Absent-PNG → clean tint-only fallback (headless-safe, never a primitive).
+
+The modal band (K-2) was left tint-only this slice — it centres the dog NAME full-rect, so a silhouette
+behind it is a separate polish call, out of K-1 scope.
