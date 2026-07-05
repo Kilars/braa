@@ -176,7 +176,46 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-_(none — Phase 9 signed off 2026-07-05; the two 2026-07-05 directives, 121 difficulty-row trade
-subtitles and 122 locked-section reason note, were replayed and found fixed. Phase 10 is now current
-and awaits its first play-test.)_
+### PO Review — 2026-07-05 (owner, larssski) — training-page finish vs the design goal
+
+Phases 1–9 are signed off and Phase 10 (play mode) is current but unspecced. Before Phase-10
+scaffolding, the **training page** — the persistent surface every phase replays — does **not** match
+the design goal in *finish*, even though the Phase-6 design system passed sign-off. Compared the goal
+art `.docs/specs/assets/goal-training-screen.png` against the live render `.screenshots/PO9-04-training.png`
+at 390×844. Layout and palette are right (Triks pill, coin pill, progress, fence, path, cottage,
+centred dog, blue BRA pill); the *surface* is washed-out and unpolished. All buildable now with no
+owner asset — these **preempt** new-phase work per the cross-cutting quality bar (X-4).
+
+**Bugfixes**
+
+1. **The apex timing ring collides with the BRA button.** The large thin timing ring overlaps and
+   sits on top of the blue BRA button (`PO9-04-training.png`), reading as a rendering accident rather
+   than intent. In the goal the button is clean with nothing crossing it. *Acceptance:* the approach /
+   apex ring never visually overlaps the BRA button at any point in its animation — reposition, scale,
+   or clip so the two are always clearly separated.
+
+2. **The on-grass coins render as fat glowing translucent orbs, not coins.** They read as oversized
+   soft blobs flanking the dog, not the small flat gold coins in the goal art (task 101 shrank them
+   but the glow/translucency remains). *Acceptance:* the grass coins read as small, solid, flat gold
+   coins (opaque, crisp edge, sized like the mockup), grounded on the grass, clear of the dog
+   silhouette.
+
+**Improvements**
+
+3. **A blown-out sun/bloom washes the whole scene out.** A bright hazy sun glare top-centre flattens
+   contrast and mutes the sky, grass, and top HUD, so the page reads foggy/over-bright where the goal
+   is crisp and saturated. *Acceptance:* tone down the sun glare / atmospheric haze so sky, grass, and
+   HUD hold the goal's clean contrast and saturation; the sun may stay as a soft accent, not a
+   scene-wide wash.
+
+4. **The BRA button is pale and flat vs the goal's saturated blue 3D pill.** *Acceptance:* deepen the
+   button blue to the design-token blue and restore the crisp lower drop-shadow so it reads as the
+   confident raised pill in `goal-training-screen.png`.
+
+5. **The top HUD reads cramped and faint under the bloom.** The Triks + coin pills lose legibility
+   against the washed sky. *Acceptance:* Triks pill and coin pill stay crisp and clearly legible over
+   the sky band (largely resolved by fixing #3; verify the pill contrast/shadow after).
+
+_(Phase 9 signed off 2026-07-05; its 121/122 directives were replayed and found fixed. Phase 10 is
+current but unspecced — these training-page fixes come first.)_
 
