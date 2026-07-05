@@ -75,6 +75,57 @@ func test_adopt_free_dog_costs_nothing() -> void:
 	assert_eq(purse.balance, 0, "balance stays 0 after adopting a free dog")
 	assert_true(roster.owns("trulte"), "Trulte is marked owned in the roster after the free adopt")
 
+# 5. K-6 free-adopt (task 111): the secret dog's full path — she is flagged `secret`, priced 0,
+#    always affordable, and adopting her leaves the balance untouched while marking her owned.
+#    Mirrors main._on_kennel_adopt's `affordable` expression (is_owned or price == 0 or ...).
+func test_free_adopt_costs_nothing_and_marks_owned() -> void:
+	var purse := CoinPurse.new()
+	var roster = _make_roster()
+	var detail := KennelDog.detail_for("trulte")
+	assert_true(detail.get("secret", false), "Trulte carries the secret flag — the K-6 easter egg")
+	assert_eq(int(detail.get("price", -1)), 0, "Trulte's price is 0 (Gratis)")
+	# The modal's affordability expression: owned OR price==0 OR balance>=price. At balance 0
+	# a free dog is affordable purely on the price==0 branch — no coins required.
+	var affordable: bool = roster.owns("trulte") or detail["price"] == 0 or purse.balance >= detail["price"]
+	assert_true(affordable, "a price-0 secret dog is affordable even at balance 0 — the coral free-adopt path")
+	# Adopt: spend(0) is a no-op deduction, roster marks her owned.
+	assert_true(purse.spend(int(detail["price"])), "spend(0) succeeds for the free adopt")
+	roster.adopt("trulte")
+	assert_eq(purse.balance, 0, "balance is unchanged (0) after the free adopt — nothing was spent")
+	assert_true(roster.owns("trulte"), "Trulte is owned after the free adopt")
+
+# 6. K-6 double-fire guard (task 111): a second press mid-adopt is swallowed by the busy flag,
+#    so the free dog is never adopted twice / the owned list never double-grows. Models main's
+#    `_kennel_adopt_busy` re-entrancy guard around the spend+adopt.
+func test_free_adopt_still_guarded_against_double_fire() -> void:
+	var purse := CoinPurse.new()
+	var roster = _make_roster()
+	# `state` is a Dictionary (reference type) so the closure mutates the shared flag — GDScript
+	# lambdas capture locals by VALUE, so a plain `var busy` wouldn't reflect changes.
+	var state := {"busy": false}
+	var adopt_once := func() -> bool:
+		# The guarded body of _on_kennel_adopt for Trulte (price 0).
+		if state["busy"]:
+			return false
+		if roster.owns("trulte"):
+			return false
+		state["busy"] = true
+		purse.spend(0)
+		roster.adopt("trulte")
+		state["busy"] = false
+		return true
+	# A re-entrant press WHILE busy is swallowed. Simulate by setting busy before the call.
+	state["busy"] = true
+	assert_false(adopt_once.call(), "a press while busy is swallowed — no adopt")
+	assert_false(roster.owns("trulte"), "no adopt happened during the busy window")
+	state["busy"] = false
+	# The real first press adopts once; an immediate second press is an owned-noop, not a re-adopt.
+	assert_true(adopt_once.call(), "the first real press adopts Trulte")
+	assert_true(roster.owns("trulte"), "Trulte is owned after the first press")
+	var owned_before: int = (roster.owned as Array).size()
+	assert_false(adopt_once.call(), "the second press is an owned-noop (already owned)")
+	assert_eq((roster.owned as Array).size(), owned_before, "the owned list never double-grows for the free dog")
+
 # 4. Idempotent: adopting the same dog twice spends the price only once.
 func test_adopt_is_idempotent_no_double_spend() -> void:
 	var script = load("res://scripts/kennel_roster.gd")

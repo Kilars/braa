@@ -2742,6 +2742,7 @@ func _on_kennel_adopt(id: String) -> void:
 		var rows := KennelDog.classify_kennel_dogs(_kennel_owned(), _kennel_active(), _purse.balance)
 		_kennel.render(rows, _purse.balance)
 		_kennel.open_detail(id)  # refresh the modal to the owned treatment
+	_publish_kennel_active()    # keep the owned-set capture hook fresh after the adopt (K-4/K-6)
 	# Positive feedback: joyful beat (077 pattern — a facing-preserving bounce, not a clip).
 	_play_joy_beat()
 	_kennel_adopt_busy = false

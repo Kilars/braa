@@ -735,6 +735,11 @@ func _build_modal_overlay(detail: Dictionary) -> Control:
 	# 2a. Blurb (warm line, Nunito body).
 	body.add_child(_build_modal_blurb(detail))
 
+	# 2a★. K-6 (task 111): the secret dog gets a coral «★ Påskeegg» ribbon above the stats — the
+	# star is drawn geometry (_StarPip), no U+2605 font glyph (tofu-safe, 106 precedent).
+	if detail.get("secret", false):
+		body.add_child(_build_egg_ribbon())
+
 	# 2b. 4 stat rows.
 	body.add_child(_build_modal_stats(detail))
 
@@ -988,12 +993,50 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
 
+## K-6 coral «★ Påskeegg» ribbon (task 111): a full-width coral band that flags the secret dog above
+## her stats. The star is the same drawn _StarPip geometry as the grid tag (no U+2605 glyph → no tofu).
+func _build_egg_ribbon() -> Control:
+	var panel := PanelContainer.new()
+	panel.name = "EggRibbon"
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = C_STATUS_EGG
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_left   = 10.0
+	sb.content_margin_right  = 10.0
+	sb.content_margin_top    = 7.0
+	sb.content_margin_bottom = 7.0
+	panel.add_theme_stylebox_override("panel", sb)
+	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(center)
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(hbox)
+	var pip := _StarPip.new()
+	pip.name = "RibbonStarPip"
+	pip.custom_minimum_size = Vector2(13.0, 13.0)
+	hbox.add_child(pip)
+	var lbl := Label.new()
+	lbl.text = "Påskeegg — en hemmelig venn"
+	lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+	lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(lbl)
+	return panel
+
 ## Full-width action button dispatcher (109 adopt + 110 switch). Three states:
 ##   - unowned            → the blue «Adopter · N mynt» adopt button (_build_adopt_button, K-4).
 ##   - owned & NOT active  → the green «Tren med [navn]» switch button (_build_train_with_button, K-5).
 ##   - owned & active      → a non-tappable «Trener nå» state (_build_active_state, no dead button, K-5).
 func _build_action_button(detail: Dictionary) -> Control:
 	if not detail.get("owned", false):
+		# K-6 (task 111): the secret free dog (Trulte) gets the coral «Adopter gratis ♥» button
+		# instead of the priced blue path — price 0, always affordable, drawn heart (no tofu).
+		if detail.get("secret", false):
+			return _build_free_adopt_button(detail)
 		return _build_adopt_button(detail)
 	if detail.get("active", false):
 		return _build_active_state(detail)
@@ -1107,6 +1150,59 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 
 	return btn
 
+## K-6 free-adopt button (task 111): the secret dog's coral «Adopter gratis ♥» affordance. Costs
+## nothing (price 0 → main._on_kennel_adopt spends 0 and marks her owned via the same adopt_requested
+## signal). The heart is DRAWN geometry (_HeartPip) — U+2665 has no entry in Baloo 2 / Nunito, so a
+## font glyph would tofu (106 / 089 precedent). The button provides the press + stylebox; a full-rect
+## CenterContainer child renders [label ♥] so the drawn heart sits beside the word.
+const C_ADOPT_FREE := Color("ff7a85")    ## coral free-adopt fill (matches the «Påskeegg» tag, C_STATUS_EGG)
+
+func _build_free_adopt_button(detail: Dictionary) -> Control:
+	var dog_id: String = detail.get("id", "")
+
+	var btn := Button.new()
+	btn.name = "FreeAdoptButton"
+	btn.text = ""   # visual content is the CenterContainer child (label + drawn heart)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = C_ADOPT_FREE
+	sb.set_corner_radius_all(int(CHIP_RADIUS))
+	sb.content_margin_top    = 14.0
+	sb.content_margin_bottom = 14.0
+	var sb_pressed := sb.duplicate() as StyleBoxFlat
+	sb_pressed.bg_color = C_ADOPT_FREE.darkened(0.12)
+	for st in ["normal", "hover", "disabled"]:
+		btn.add_theme_stylebox_override(st, sb)
+	btn.add_theme_stylebox_override("pressed", sb_pressed)
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+	# Content overlay: centred [«Adopter gratis»][drawn heart pip], non-interactive so the Button
+	# underneath receives the press.
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 7)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(hbox)
+	var lbl := Label.new()
+	lbl.text = "Adopter gratis"
+	lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(lbl)
+	var heart := _HeartPip.new()
+	heart.name = "HeartPip"
+	heart.custom_minimum_size = Vector2(17.0, 17.0)
+	hbox.add_child(heart)
+	btn.add_child(center)
+
+	btn.pressed.connect(func(): adopt_requested.emit(dog_id))
+	return btn
+
 # ---------------------------------------------------------------------------
 # Web capture hook — publish cell centres for real-tap automation.
 # ---------------------------------------------------------------------------
@@ -1151,7 +1247,7 @@ func _publish_modal_action() -> void:
 	_collect_buttons(_modal_overlay, found)
 	for node in found:
 		var nm := (node as Control).name
-		if nm == "TrainWithButton" or nm == "AdoptButton":
+		if nm == "TrainWithButton" or nm == "AdoptButton" or nm == "FreeAdoptButton":
 			var c := (node as Control).get_global_rect().get_center()
 			payload = "{id: '%s', x: %s, y: %s}" % [nm, c.x, c.y]
 			break
@@ -1250,3 +1346,34 @@ class _StarPip extends Control:
 		var outer_r := minf(cx, cy) * 0.95
 		var inner_r := outer_r * 0.44   ## ~0.44 gives a classic 5-point star silhouette
 		draw_colored_polygon(_star_points(cx, cy, outer_r, inner_r), Color.WHITE)
+
+# ---------------------------------------------------------------------------
+# Inner class: drawn heart pip for the K-6 free-adopt button (task 111).
+# Replaces the U+2665 BLACK HEART SUIT glyph which has no entry in Baloo 2 /
+# Nunito. Built from two top lobes (circles) + a bottom triangle, filled white
+# via draw_colored_polygon / draw_circle — zero font dependency, GL-Compat safe.
+# ---------------------------------------------------------------------------
+class _HeartPip extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		var r := w * 0.26            ## lobe radius
+		var lobe_y := h * 0.34       ## vertical centre of the two lobes
+		var lx := w * 0.30           ## left lobe centre x
+		var rx := w * 0.70           ## right lobe centre x
+		var col := Color.WHITE
+		# Two top lobes.
+		draw_circle(Vector2(lx, lobe_y), r, col)
+		draw_circle(Vector2(rx, lobe_y), r, col)
+		# Bottom point: a triangle from the outer edges of the lobes down to the tip.
+		var tip := Vector2(w * 0.5, h * 0.92)
+		var pts := PackedVector2Array([
+			Vector2(lx - r, lobe_y),
+			Vector2(rx + r, lobe_y),
+			tip,
+		])
+		draw_colored_polygon(pts, col)
