@@ -25,7 +25,15 @@ of the completed Phase-8 kennel work — it was **NOT clean** (3 findings → 3 
   in comments instead of exercising the real seam; `CHROME_NODES` under-covers the HUD hide
   (`_word_pop`/`_kennel_button`). Test-honesty fixes.
 
-After 112/113/114 the phase's spine is built + audited → hand-off to the father for the Phase-8 sign-off pass.
+**ALL THREE SHIPPED (2026-07-05), board now EMPTY, verify green → terminal hand-off to the father for
+the Phase-8 sign-off pass.** 112: both real-canvas-tap captures PASS as-is (no fix needed — the spine
+already worked at HEAD; the earlier "button not registering" was fixed by the final 110/111 commits);
+109/110/111 Visual-Review boxes ticked with `.screenshots/112-*` evidence. 113: `_selectable_tricks()`
+now sources the active kennel dog's `trick_ids` (K-8 true by construction; byte-identical today; 6 TDD
+tests). 114: the unaffordable-adopt test now exercises the real `main._can_adopt(owned, price, balance)`
+seam (boundary 899/900 + free-dog + already-owned cases) and `CHROME_NODES` covers all 8 non-BRA hidden
+nodes. No new flags; per-breed trick divergence stays owner-gated under P3-2. The construction audit is
+now clean; every Phase-8 buildable slice is built + audited + pixel-verified.
 
 ## Status — PHASE 8 (KENNEL) CURRENT — grid defects 106/107/108 shipped; scan replenished the deferred adopt/switch/persist spine as 109/110/111 — 2026-07-05
 

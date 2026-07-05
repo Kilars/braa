@@ -2738,14 +2738,23 @@ func _load_kennel_roster() -> void:
 ## On success: deducts the price, marks the dog owned, persists the whole blob, re-renders the
 ## kennel grid, re-opens/refreshes the modal to the owned treatment, and plays a small joyful
 ## beat (coin count-down via _refresh_coins + procedural bounce — reusing the 072/077 pattern).
+## Pure adopt decision (109/K-3/K-4/K-6) — the single predicate _on_kennel_adopt() branches on.
+## already_owned → false (no-op, no double-spend). A priced dog you can't afford (balance < price)
+## → false (K-3 gate). A free dog (price 0) is ALWAYS adoptable, at any balance (K-6 easter path).
+## Static so the gate unit-tests through the real seam, not a comment.
+static func _can_adopt(already_owned: bool, price: int, balance: int) -> bool:
+	if already_owned:
+		return false
+	if price > 0 and balance < price:
+		return false
+	return true
+
 func _on_kennel_adopt(id: String) -> void:
 	if _kennel_adopt_busy:
 		return
-	if _kennel_roster.owns(id):
-		return  # already owned — no-op, no spend
 	var price := KennelDog.by_id(id).price
-	if price > 0 and not _purse.can_afford(price):
-		return  # K-3 affordability gate
+	if not _can_adopt(_kennel_roster.owns(id), price, _purse.balance):
+		return  # already-owned no-op OR K-3 affordability gate
 	_kennel_adopt_busy = true
 	_purse.spend(price)
 	_kennel_roster.adopt(id)

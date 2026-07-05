@@ -9,6 +9,8 @@ extends "res://tests/test_case.gd"
 ##
 ## The goal: pin the invariants so any future regression in the wiring fails a test.
 
+const Main := preload("res://scripts/main.gd")
+
 func _make_roster():
 	return load("res://scripts/kennel_roster.gd").new()
 
@@ -32,29 +34,40 @@ func test_adopt_deducts_price_and_marks_owned() -> void:
 	assert_eq(purse.balance, 100, "balance drops by Sol's price (600 - 500 = 100)")
 	assert_true(roster.owns("sol"), "Sol is marked owned in the roster after the adopt")
 
-# 2. Adopting an unaffordable dog is a no-op: balance and owned set unchanged.
-func test_adopt_unaffordable_is_a_noop() -> void:
-	var script = load("res://scripts/kennel_roster.gd")
-	assert_true(script != null, "kennel_roster.gd must exist")
+# 2. The K-3/K-4 gate is exercised THROUGH the real decision seam main._can_adopt(owned, price,
+#    balance) — the exact predicate _on_kennel_adopt() branches on — not merely described in comments.
+#    A bug in that predicate (e.g. `<` vs `<=`, or dropping the price>0 guard) fails these.
+func test_can_adopt_gate_blocks_unaffordable_and_allows_at_price() -> void:
+	# Nova costs 900 (verified in test_kennel_dog.gd) — pin the boundary around her price.
+	assert_eq(KennelDog.by_id("nova").price, 900, "sanity: Nova's price is 900 coins")
+	assert_false(Main._can_adopt(false, 900, 200), "far under price → K-3 gate blocks the adopt")
+	assert_false(Main._can_adopt(false, 900, 899), "one coin short → still blocked (boundary)")
+	assert_true(Main._can_adopt(false, 900, 900), "exactly the price → adoptable (boundary)")
+	assert_true(Main._can_adopt(false, 900, 1200), "over the price → adoptable")
+
+func test_can_adopt_free_dog_bypasses_affordability() -> void:
+	# A price-0 dog (Trulte, K-6) is adoptable at ANY balance, including 0 — the gate must not
+	# swallow the free path.
+	assert_true(Main._can_adopt(false, 0, 0), "free dog adopts at balance 0 (K-6 easter path)")
+	assert_true(Main._can_adopt(false, 0, 500), "free dog adopts with coins in hand too")
+
+func test_can_adopt_already_owned_is_a_noop() -> void:
+	# An already-owned dog never re-adopts, regardless of balance (no double-spend).
+	assert_false(Main._can_adopt(true, 500, 700), "already owned → no-op even when affordable")
+	assert_false(Main._can_adopt(true, 0, 0), "already owned free dog → no-op")
+
+# 2b. End-to-end no-op invariant: an unaffordable adopt leaves purse + roster untouched (the whole
+#     point of the gate), driven by the same _can_adopt predicate the handler uses.
+func test_unaffordable_adopt_leaves_state_untouched() -> void:
 	var purse := CoinPurse.new()
-	var roster = script.new()
-	# Nova costs 900 coins (verified in test_kennel_dog.gd).
+	var roster = load("res://scripts/kennel_roster.gd").new()
 	var nova := KennelDog.by_id("nova")
-	assert_eq(nova.price, 900, "sanity: Nova's price is 900 coins")
 	purse.earn(200)
-	assert_eq(purse.balance, 200, "purse starts at 200 (not enough for Nova)")
-	# Simulate the K-3 gate in _on_kennel_adopt: if price > 0 and not can_afford → return.
-	var price := nova.price
-	assert_false(purse.can_afford(price),
-		"can_afford(900) is false at balance 200 — the K-3 gate blocks the adopt")
-	# The adopt must NOT proceed: balance unchanged, owned set unchanged.
-	# (We do NOT call spend or adopt here — this tests that the gate IS the right check.)
-	assert_eq(purse.balance, 200, "balance is unchanged after the K-3 gate blocks the adopt")
-	assert_false(roster.owns("nova"), "Nova is not marked owned after the K-3 gate blocks it")
-	# Also verify via CoinPurse.spend() directly: an unaffordable spend is a no-op.
-	assert_false(purse.spend(price), "spend(900) returns false (unaffordable) — no debt")
-	assert_eq(purse.balance, 200, "balance stays 200 after an unaffordable spend attempt")
-	assert_false(roster.owns("nova"), "roster is unchanged after a failed spend")
+	if Main._can_adopt(roster.owns("nova"), nova.price, purse.balance):
+		purse.spend(nova.price)
+		roster.adopt("nova")
+	assert_eq(purse.balance, 200, "balance unchanged — the gate blocked the adopt")
+	assert_false(roster.owns("nova"), "Nova not owned — the gate blocked the adopt")
 
 # 3. A free dog (price==0, e.g. Trulte) is always adoptable and costs nothing.
 func test_adopt_free_dog_costs_nothing() -> void:

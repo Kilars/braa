@@ -54,9 +54,11 @@ func _find_by_name(n: Node, nm: String) -> Node:
 			return f
 	return null
 
-## The training-chrome node names checked by the task-090 show/hide pattern.
-const CHROME_NODES := ["_tell_marker", "_trainer_marker", "_readout", "_learned_bar",
-	"_coin_readout", "_tricks_button"]
+## The training-chrome node names checked by the task-090 show/hide pattern. Covers all 8 non-BRA
+## nodes _set_training_hud_visible() toggles (`_bra_button` is asserted separately below) — incl.
+## `_word_pop` + `_kennel_button`, so a regression that left either visible over the kennel fails.
+const CHROME_NODES := ["_tell_marker", "_trainer_marker", "_readout", "_word_pop", "_learned_bar",
+	"_coin_readout", "_tricks_button", "_kennel_button"]
 
 # ---------------------------------------------------------------------------
 # Tests

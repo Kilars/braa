@@ -36,12 +36,12 @@ guards against (cf. task 026; the headless runner hides runtime SCRIPT ERRORs as
   hidden-on-open / restored-on-close assertions.
 
 ## Acceptance criteria
-- [ ] The unaffordable-adopt test invokes the real guard seam (handler or an extracted pure
+- [x] The unaffordable-adopt test invokes the real guard seam (handler or an extracted pure
       decision), and would FAIL if the gate condition were inverted — verify by temporarily
       inverting it locally, seeing red, then reverting.
-- [ ] Boundary covered: coins == price − 1 rejects, coins == price adopts, price == 0 adopts
+- [x] Boundary covered: coins == price − 1 rejects, coins == price adopts, price == 0 adopts
       free without the affordability gate swallowing it.
-- [ ] `test_kennel_screen_wiring.gd` asserts all 9 `_set_training_hud_visible` nodes hidden
+- [x] `test_kennel_screen_wiring.gd` asserts all 9 `_set_training_hud_visible` nodes hidden
       on kennel-open and restored on close (adds `_word_pop`, `_kennel_button`).
-- [ ] No test ends with zero assertions; no behavior asserted only in comments.
-- [ ] `nix develop -c bash verify.sh` green.
+- [x] No test ends with zero assertions; no behavior asserted only in comments.
+- [x] `nix develop -c bash verify.sh` green.
