@@ -2290,7 +2290,8 @@ static func _performable(wanted: Array, director) -> Array:
 func _menu_rows() -> Array:
 	var all_ids: Array = []
 	all_ids.append_array(KNOWN_TRICKS)
-	all_ids.append_array(ROADMAP_LOCKED_TRICKS)
+	# Progressive disclosure (127): tease just the NEXT roadmap trick, not all three future systems.
+	all_ids.append_array(MenuReveal.teased_locked(ROADMAP_LOCKED_TRICKS))
 	var mastered := {}
 	for id in KNOWN_TRICKS:
 		var p: TrickProgress = _progress_by_trick.get(id)
@@ -2301,9 +2302,14 @@ func _menu_rows() -> Array:
 func _refresh_trick_menu() -> void:
 	if _menu != null:
 		_menu.set_rows(_menu_rows(), _purse.balance)
-		_menu.set_breeds(_breed_rows())  # the adopt/select breeds section (079)
-		_menu.set_words(_word_rows())    # the marker-word section (092/P5-4)
-		_menu.set_difficulty(_difficulty_rows())  # the difficulty selector section (118/P4-1)
+		# Progressive disclosure (127, PO Phase-10 Menu #2): feed a section only once the player has
+		# earned their way to it — otherwise feed [] and the dumb renderer collapses it to zero height
+		# (the showcase row hides with empty breeds too). One new beat lands per mastery, never a dump.
+		var mastered_count := _count_mastered_tricks()
+		var breeds := _breed_rows() if MenuReveal.reveal_breeds(_purse.balance, _roster.owned.size(), BREED_ADOPT_COST) else []
+		_menu.set_breeds(breeds)         # the adopt/select breeds section (079) — revealed when adoption is meaningful
+		_menu.set_words(_word_rows() if MenuReveal.reveal_words(_unlocked_alt_word_count()) else [])  # marker words (092) — once the first alt word unlocks
+		_menu.set_difficulty(_difficulty_rows() if MenuReveal.reveal_difficulty(mastered_count) else [])  # difficulty (118) — once the loop is understood
 		_publish_breed_rows()            # publish the breed-row centres for the live e2e capture (079)
 
 ## Build the completion-menu breed rows (079): the shipped-breed catalog classified against the owned
@@ -2322,6 +2328,15 @@ func _breed_rows() -> Array:
 ## honestly: a stronger word that is currently on cooldown reads "Hviler" instead of "Active" so
 ## the player sees why the effective word fell back to "bra" this round. This is the minimal legible
 ## signal — the full per-round pop (P5-3) is deferred.
+## How many marker words the player has unlocked BEYOND the always-available base "bra" (127). Drives
+## the progressive reveal of the whole words section — it surfaces the moment the first alt word lands.
+func _unlocked_alt_word_count() -> int:
+	var count := 0
+	for id in _words.to_dict().get("unlocked", []):
+		if id != MarkerWords.BASE_ID:
+			count += 1
+	return count
+
 func _word_rows() -> Array:
 	var d := _words.to_dict()
 	var rows := TrickMenu.classify_words(MarkerWords.CATALOG, d.get("unlocked", []), d.get("active", MarkerWords.BASE_ID))
