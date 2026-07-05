@@ -138,3 +138,46 @@ func test_difficulty_rows_reflect_the_active_mode() -> void:
 	assert_eq(rows.size(), 3, "one row per shipped mode")
 	assert_true((rows[0] as Dictionary).active, "Normal (the boot default) is the active row")
 	main.queue_free()
+
+# ---- 119 (P4-1): special dogs LOCK the difficulty; switching back to a normal dog restores the pick ----
+
+func test_special_dog_forces_and_locks_difficulty() -> void:
+	var main := instantiate_main()
+	assert_eq(main._difficulty.id, "normal", "boot defaults to Normal on the starter dog")
+	assert_false(main._difficulty_locked(), "the starter Bella does not lock difficulty")
+	# Bring a special dog (Nova, EPIC) into training.
+	main._kennel_roster.adopt("nova")
+	main._kennel_roster.set_active("nova")
+	main._apply_active_kennel_dog("nova")
+	assert_true(main._difficulty_locked(), "a special dog (Nova) locks the difficulty")
+	assert_eq(main._difficulty.id, KennelDog.by_id("nova").locked_difficulty_id(),
+		"the effective mode is forced to the dog's locked mode")
+	# The selector is a no-op while locked: choosing another mode changes nothing.
+	main._on_difficulty_chosen("expert")
+	assert_eq(main._difficulty.id, KennelDog.by_id("nova").locked_difficulty_id(),
+		"_on_difficulty_chosen is a no-op while the active dog locks difficulty")
+	# The menu rows read locked.
+	var rows: Array = main._difficulty_rows()
+	for r in rows:
+		assert_false(TrickMenu.is_difficulty_selectable(r), "every row is non-selectable on a special dog")
+	main.queue_free()
+
+func test_switching_back_to_a_normal_dog_restores_the_chosen_mode() -> void:
+	var main := instantiate_main()
+	# Player picks Hard on the (normal) starter dog — this is their chosen preference.
+	main._on_difficulty_chosen("hard")
+	assert_eq(main._difficulty.id, "hard", "the player's chosen mode is Hard")
+	# A special dog forces its locked mode over the top.
+	main._kennel_roster.adopt("balder")  # RARE → locks
+	main._kennel_roster.set_active("balder")
+	main._apply_active_kennel_dog("balder")
+	assert_true(main._difficulty_locked(), "Balder (RARE) locks difficulty")
+	# Switching back to the starter (a normal dog) RESTORES the player's chosen Hard.
+	main._kennel_roster.set_active("bella")
+	main._apply_active_kennel_dog("bella")
+	assert_false(main._difficulty_locked(), "Bella does not lock difficulty")
+	assert_eq(main._difficulty.id, "hard", "the player's chosen mode (Hard) is restored on a normal dog")
+	# Restore Normal + persist so this test does not pollute the boot-default of other tests.
+	main._on_difficulty_chosen("normal")
+	assert_eq(main._store.load_difficulty(), "normal", "restored to Normal (no cross-test pollution)")
+	main.queue_free()

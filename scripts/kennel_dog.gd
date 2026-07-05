@@ -95,6 +95,18 @@ const STARTER_PORTRAIT_TINT := Color(0.905, 0.760, 0.470)
 func portrait_tint() -> Color:
 	return STARTER_PORTRAIT_TINT if id == STARTER_ID else band_tint
 
+## Whether this dog LOCKS the global difficulty (119, P4-1 "for special dogs difficulty should be
+## locked"). "Special" = a collectible/secret dog (RARE / EPIC / SECRET) — the challenge is part of
+## the dog, so the player can't trade it away. The OWNED starter (Bella) and plain COMMON adoptables
+## stay freely choosable. Pure predicate off the spec rarity rows (phase8.md:147-159).
+func locks_difficulty() -> bool:
+	return rarity == Rarity.RARE or rarity == Rarity.EPIC or rarity == Rarity.SECRET
+
+## The fixed difficulty mode a special dog pins (119, P4-1). A special dog is a set challenge —
+## Hard — never the free Normal. The exact mode is a product knob; it must name a known Difficulty id.
+func locked_difficulty_id() -> String:
+	return "hard"
+
 ## Map a 1..5 stat to a difficulty-lever multiplier centred on 1.0 (stat 3 == neutral 1.0), reaching
 ## ±(span/2) at the extremes (stat 1 == 1-span/2, stat 5 == 1+span/2). Keeps every lever near 1.0 so a
 ## chosen dog stays inside the PO-signed feel band — a temperament delta, never a shake-up (cf. 075).

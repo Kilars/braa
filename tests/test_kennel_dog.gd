@@ -327,3 +327,31 @@ func test_portrait_tint_non_starter_dogs_track_their_band_hue() -> void:
 		assert_true(pt is Color, "%s portrait_tint() returns a Color" % id)
 		assert_true((pt as Color).is_equal_approx(d.band_tint),
 			"%s portrait_tint tracks its (already plausible) band hue" % id)
+
+# ---- 119 (P4-1): special dogs LOCK the difficulty; the starter + COMMON dogs stay choosable ----
+
+func test_special_dogs_lock_difficulty() -> void:
+	# The collectible/secret tier (RARE/EPIC/SECRET) locks difficulty — the player can't trade the
+	# challenge away on a special dog. Nova EPIC, Balder + Sol RARE, Trulte SECRET all lock.
+	assert_true(_kd_has("locks_difficulty"), "KennelDog.locks_difficulty() must be implemented")
+	if not _kd_has("locks_difficulty"):
+		return
+	for id in ["nova", "balder", "sol", "trulte"]:
+		assert_true(KennelDog.by_id(id).call("locks_difficulty"),
+			"%s (RARE/EPIC/SECRET) locks difficulty" % id)
+
+func test_starter_and_common_dogs_do_not_lock_difficulty() -> void:
+	if not _kd_has("locks_difficulty"):
+		return
+	# Bella is the OWNED starter — never locked. Pontus/Lykke/Sniff are plain COMMON adoptables — free.
+	for id in ["bella", "pontus", "lykke", "sniff"]:
+		assert_false(KennelDog.by_id(id).call("locks_difficulty"),
+			"%s (starter or COMMON) keeps the free difficulty selector" % id)
+
+func test_locked_difficulty_id_is_a_known_mode() -> void:
+	assert_true(_kd_has("locked_difficulty_id"), "KennelDog.locked_difficulty_id() must be implemented")
+	if not _kd_has("locked_difficulty_id"):
+		return
+	var locked_id: String = KennelDog.by_id("nova").call("locked_difficulty_id")
+	assert_true(Difficulty.is_known(locked_id),
+		"locked_difficulty_id returns a known Difficulty mode id (never a ghost)")

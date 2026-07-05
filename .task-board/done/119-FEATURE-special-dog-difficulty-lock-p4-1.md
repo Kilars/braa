@@ -52,17 +52,21 @@ player understands *why* it's fixed), just non-interactive.
 
 ## Acceptance criteria
 
-- [ ] RED first: `KennelDog.locks_difficulty()` true for the special tier, false for
+- [x] RED first: `KennelDog.locks_difficulty()` true for the special tier, false for
   the starter (OWNED Bella) and COMMON dogs; `locked_difficulty_id()` returns a known
   `Difficulty` id.
-- [ ] RED first: `TrickMenu.classify_difficulty(..., locked=true, locked_id=...)` marks
+- [x] RED first: `TrickMenu.classify_difficulty(..., locked=true, locked_id=...)` marks
   every row non-selectable and flags the locked mode active; `TrickMenu.is_difficulty_selectable`
   false for all rows when locked.
-- [ ] RED first: `main._on_difficulty_chosen(x)` is a no-op while the active dog locks
+- [x] RED first: `main._on_difficulty_chosen(x)` is a no-op while the active dog locks
   difficulty (mode stays the locked one).
-- [ ] GREEN: switching a special dog into training forces + shows the locked difficulty;
+- [x] GREEN: switching a special dog into training forces + shows the locked difficulty;
   switching back to a normal dog restores the player's chosen mode.
-- [ ] Normal dogs (Bella + COMMON adoptables) keep the free 118 selector — no regression.
-- [ ] Visual Review (390×844): a special dog's menu shows the difficulty section as
+- [x] Normal dogs (Bella + COMMON adoptables) keep the free 118 selector — no regression.
+- [x] Visual Review (390×844): a special dog's menu shows the difficulty section as
   clearly **locked** (fixed mode + "Låst" read), a normal dog's shows it selectable.
-- [ ] `nix develop -c bash verify.sh` green; placeholder check clean; committed + pushed.
+- [x] `nix develop -c bash verify.sh` green; placeholder check clean; committed + pushed.
+
+
+## Outcome
+SHIPPED. KennelDog.locks_difficulty() (RARE/EPIC/SECRET → true; OWNED starter Bella + COMMON → false, matching phase8.md rarity rows: Nova EPIC, Balder+Sol RARE, Trulte SECRET lock; Bella/Pontus/Lykke/Sniff stay free) + locked_difficulty_id()='hard'. TrickMenu.classify_difficulty gained locked/locked_id params: locked → every row non-selectable, the locked mode flagged active, a Låst badge; _draw_difficulty_row greys the non-fixed rows. main: new _chosen_difficulty (player's free pick, persisted — a special-dog lock never clobbers it) vs effective _difficulty; _difficulty_locked()/_locked_difficulty_id() read the active KENNEL dog; _recompute_difficulty() forces the lock on a special dog and restores _chosen on a normal dog, wired into _apply_active_kennel_dog (boot + every switch); _on_difficulty_chosen no-ops while locked. Added ?bra_kennel=<id> Visual-Review seam (dormant off web). TDD +7 tests (KennelDog lock predicates, locked classify, main-level force+no-op+restore). verify 637/0. Visual Review PASS (.screenshots/119-01-menu-locked — Nova forces Hard/Låst, other modes greyed, a real tap on Normal swallowed).

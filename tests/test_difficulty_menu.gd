@@ -32,3 +32,20 @@ func test_classify_difficulty_rows_selectable_when_unlocked() -> void:
 	for r in rows:
 		assert_true(TrickMenu.is_difficulty_selectable(r),
 			"an unlocked difficulty row is selectable (the player can pick it)")
+
+# ---- 119 (P4-1): the locked variant — special dogs fix the mode, every row non-selectable ----
+
+func test_classify_difficulty_locked_flags_the_locked_mode_active() -> void:
+	# On a special dog the fixed mode is flagged active (not the free active_id), and every row is
+	# non-selectable — the section stays visible so the player sees WHY difficulty is fixed.
+	var rows := TrickMenu.classify_difficulty(Difficulty.catalog(), "normal", true, "hard")
+	assert_false(rows[0].active, "Normal is not the fixed mode")
+	assert_true(rows[1].active, "Hard (the locked mode) is flagged active regardless of active_id")
+	assert_false(rows[2].active, "Expert is not the fixed mode")
+
+func test_classify_difficulty_locked_rows_are_all_non_selectable() -> void:
+	var rows := TrickMenu.classify_difficulty(Difficulty.catalog(), "normal", true, "hard")
+	for r in rows:
+		assert_false(TrickMenu.is_difficulty_selectable(r),
+			"every difficulty row is non-selectable while a special dog locks the mode")
+		assert_true(r.locked, "each row carries the locked flag so the renderer shows the Låst read")

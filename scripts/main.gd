@@ -223,12 +223,19 @@ const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks 
 var _roster := BreedRoster.new()
 const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick mastery payout (3 × 10)
 
-## The global difficulty mode (080, P4-1 "Choose how hard"). Pure value object; Normal = identity
-## (reproduces today's tuning EXACTLY, no regression). Hard/Expert are dormant first-pass deltas tuned
-## when Phase 4 becomes current. Defaults to Normal on boot; overridable by `?bra_difficulty=` web seam.
-## No player-facing selector in the default HUD (dormant) — the mode is read-only unless the seam
-## explicitly picks a non-Normal mode. 081+ apply the bundle to resolve the read levers.
+## The EFFECTIVE global difficulty mode (080, P4-1 "Choose how hard"). Pure value object; Normal =
+## identity (reproduces today's tuning EXACTLY, no regression). Defaults to Normal on boot; set by the
+## player via the completion-menu selector (118), overridable by `?bra_difficulty=`, and FORCED to a
+## dog's locked mode while a special dog trains (119). 081+ apply the bundle to resolve the read levers.
+## The player's free pick lives in `_chosen_difficulty` (below); this is what a special-dog lock overrides.
 var _difficulty := Difficulty.normal()
+
+## The player's CHOSEN difficulty (119, P4-1). Distinct from the EFFECTIVE `_difficulty`: a special dog
+## (RARE/EPIC/SECRET) forces its locked mode over the top, but the player's free pick is remembered here
+## so switching back to a normal dog RESTORES it. This — not the effective mode — is what persists, so a
+## special dog forcing Hard never clobbers the player's real preference in the save. Normal on a fresh
+## boot; set from the persisted setting in _resolve_difficulty and updated only in _on_difficulty_chosen.
+var _chosen_difficulty := Difficulty.normal()
 
 ## The marker-word catalog + progressive unlock (091, P5-1). A pure value object: the set of
 ## unlocked word ids + the one active word id, persisted alongside tricks/coins/roster/difficulty
@@ -317,7 +324,8 @@ func _ready() -> void:
 	_words.restore(_store.load_words())  # restore the marker-word unlock state + active word (091/P5-1)
 	_breed = _resolve_active_breed() # the ACTIVE breed: the persisted roster pick, or the ?bra_breed= capture override (076/079); must precede _load_dog (coat tint) + _start_dog (levers)
 	_current_trick = _query_trick()  # the INITIAL trick; the 072 completion menu switches it at runtime (?bra_trick= is a kept web-only debug default for the capture harness)
-	_difficulty = _resolve_difficulty()  # the GLOBAL difficulty: the persisted setting or the ?bra_difficulty= override (080/P4-1); dormant (defaults to Normal)
+	_chosen_difficulty = _resolve_difficulty()  # the player's CHOSEN mode: persisted or ?bra_difficulty= (080/P4-1/119)
+	_difficulty = _chosen_difficulty     # the EFFECTIVE mode starts as the chosen one; a special active dog forces its lock in _apply_active_kennel_dog (119)
 	_apply_reduced_motion()  # set _motion_scale BEFORE _start_dog builds the tell (P1-8)
 	# Mount the ADR-0007 telemetry choke-point (084, X-8): the one node all captures route through.
 	# Instantiated here, before any capture, so session_start is the first event this session.
@@ -351,6 +359,12 @@ func _ready() -> void:
 	# that system + its ?bra_breed= capture seam stay unclobbered — and since kennel-Bella IS the yellow
 	# Labrador the breed default already boots, the visible dog is identical either way. So the kennel only
 	# takes over the boot once the player has chosen a kennel dog through it.
+	# Visual-Review seam (119): `?bra_kennel=<id>` forces that dog active on boot (adopt if needed), so the
+	# harness can boot straight into a special dog to prove the locked-difficulty read. Dormant off web.
+	var _forced_kennel := _query_kennel_id()
+	if _forced_kennel != "":
+		_kennel_roster.adopt(_forced_kennel)
+		_kennel_roster.set_active(_forced_kennel)
 	if _dog != null and _query_breed_id() == "" and _kennel_roster.active != KennelDog.STARTER_ID:
 		_apply_active_kennel_dog(_kennel_roster.active)
 	_publish_kennel_active()  # seed the capture/e2e hook with the booted active kennel dog
@@ -448,6 +462,23 @@ func _query_breed_id() -> String:
 		return ""
 	if (search as String).to_lower().contains("bra_breed=chocolate"):
 		return "chocolate_labrador"
+	return ""
+
+## Active-kennel-dog seam (119, P4-1): read `?bra_kennel=<id>` off the live web URL so the Visual-Review
+## harness can boot straight into a specific kennel dog (e.g. a special dog, to prove the locked
+## difficulty read) without grinding the coins to adopt it in-game. Returns the dog id, or "" (no
+## override → the persisted kennel roster). Reads a STRING (never a bare bool) to dodge the Web-export
+## null-Variant marshalling that bit the apex tell (036); an unknown id returns "".
+func _query_kennel_id() -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var search: Variant = JavaScriptBridge.eval("window.location.search || ''", true)
+	if typeof(search) != TYPE_STRING:
+		return ""
+	var q := (search as String).to_lower()
+	for d in KennelDog.catalog():
+		if q.contains("bra_kennel=" + (d as KennelDog).id):
+			return (d as KennelDog).id
 	return ""
 
 ## Resolve the GLOBAL difficulty for this boot (080/P4-1): the `?bra_difficulty=` web seam
@@ -2213,7 +2244,8 @@ func _word_rows() -> Array:
 ## marked. Order follows Difficulty.catalog(). The selector is free for a normal dog; task 119 extends
 ## this through the same classify seam to reflect the special-dog lock.
 func _difficulty_rows() -> Array:
-	return TrickMenu.classify_difficulty(Difficulty.catalog(), _difficulty.id)
+	return TrickMenu.classify_difficulty(Difficulty.catalog(), _difficulty.id,
+		_difficulty_locked(), _locked_difficulty_id())
 
 ## Open the completion menu (072): pop the modal and PAUSE offers. Any in-flight offer of the current
 ## trick is closed cleanly first (the dog stands up through its own end clip, never a mismatched one)
@@ -2301,12 +2333,15 @@ func _on_word_chosen(id: String) -> void:
 ## feint chance; the timing window + tell rebuild from _difficulty on the next offer), refresh the menu
 ## so the new active row highlights, and persist so a returning player boots into their chosen mode.
 func _on_difficulty_chosen(id: String) -> void:
-	if not Difficulty.is_known(id) or id == _difficulty.id:
+	if _difficulty_locked():
+		return  # a special dog fixes the mode — the selector is a no-op (119, P4-1)
+	if not Difficulty.is_known(id) or id == _chosen_difficulty.id:
 		return
-	_difficulty = Difficulty.by_id(id)
+	_chosen_difficulty = Difficulty.by_id(id)  # remember the player's free pick (survives a special-dog lock, 119)
+	_difficulty = _chosen_difficulty
 	_apply_difficulty()
 	_refresh_trick_menu()  # the active badge moves to the newly-chosen mode
-	_save_progress()       # the blob already carries _difficulty.id (068/080)
+	_save_progress()       # the blob carries the CHOSEN mode (068/080/119)
 
 ## Re-apply the current difficulty's levers to the live dog (118). Erosion scales each trick's learned
 ## bar; the loop's feint chance takes breed × difficulty immediately. The timing-window radii + the tell
@@ -2333,6 +2368,24 @@ func _apply_active_breed() -> void:
 ## coatless/CC0 dog just isn't re-tinted.
 func _apply_active_kennel_dog(id: String) -> void:
 	_apply_breed_personality(KennelDog.by_id(id).to_personality())
+	_recompute_difficulty()  # 119: a special dog forces its locked mode; a normal dog restores the player's chosen mode
+
+## True iff the active TRAINING dog locks the global difficulty (119, P4-1). "Special" dogs
+## (RARE/EPIC/SECRET) fix the challenge; the starter Bella + plain COMMON dogs stay choosable. The
+## active training dog is the active KENNEL dog (the kennel is the roster the training scene loads).
+func _difficulty_locked() -> bool:
+	return KennelDog.by_id(_kennel_roster.active).locks_difficulty()
+
+## The difficulty mode a special active dog pins (119). Only meaningful while _difficulty_locked().
+func _locked_difficulty_id() -> String:
+	return KennelDog.by_id(_kennel_roster.active).locked_difficulty_id()
+
+## Recompute the EFFECTIVE difficulty from the lock state (119). A special active dog forces its locked
+## mode; any other dog restores the player's CHOSEN mode. Re-applies the levers so the change lands live.
+## Idempotent — safe to call on every kennel switch and on boot after the active dog loads.
+func _recompute_difficulty() -> void:
+	_difficulty = Difficulty.by_id(_locked_difficulty_id()) if _difficulty_locked() else _chosen_difficulty
+	_apply_difficulty()
 
 ## Re-point the running dog onto a resolved BreedPersonality (the shared body of both the Phase-3 breed
 ## switch and the Phase-8 kennel switch): its coat tint (076) re-tints the coat atlas in place, and its
@@ -2562,7 +2615,7 @@ func _save_progress() -> void:
 	var out := {}
 	for id in _progress_by_trick:
 		out[id] = (_progress_by_trick[id] as TrickProgress).to_dict()
-	_store.save(out, _purse.balance, _roster.to_dict(), _difficulty.id, _words.to_dict(), _kennel_roster.to_dict())  # coins + roster + difficulty + words + kennel ride the same save file (068/079/080/091/109)
+	_store.save(out, _purse.balance, _roster.to_dict(), _chosen_difficulty.id, _words.to_dict(), _kennel_roster.to_dict())  # persist the player's CHOSEN mode, not the special-dog-forced effective one (068/079/080/091/109/119)
 	# Web-only e2e seam (087): mirror the active breed the save JUST wrote. Lets a capture prove a breed
 	# switch was PERSISTED to the save deterministically — the reload-restore is separately proven (079),
 	# but its IndexedDB flush is async/racy, so this hook is the deterministic write-side proof. No-op off
