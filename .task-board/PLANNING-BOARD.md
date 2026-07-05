@@ -20,11 +20,15 @@ bugfix→improvement→first-spine-story; NOT work-ahead — Phase 8 has abundan
   geometry (`_StarPip._draw` → `draw_colored_polygon`, 089 precedent) before the word in the coral
   tag. TDD `test_trulte_status_label_no_star_glyph` RED→GREEN; verify 587/0; Visual Review PASS
   (`.screenshots/105-kennel-01-grid.png` re-captured — star, no tofu). No `★` in any rendered string.
-- **107 — VISUAL — kennel cells have no dog render (PO Improvement 2, K-1).** All 8 portrait bands are
-  flat tinted rectangles with zero dog behind the steel bars, so cells read as indistinguishable
-  colour panels. NOT owner-gated (PO): bake the real licensed Labrador silhouette to one shared
-  `Texture2D` (SubViewport render, X-7 perf), reused per cell `modulate`-tinted to each dog's
-  `band_tint`, bottom-anchored behind the bars — the honest tinted stand-in BUST-068 already names.
+- **107 — VISUAL — kennel cells have no dog render (PO Improvement 2, K-1). ⚠️ ATTEMPT 1 REVERTED → requeued.**
+  All 8 portrait bands are flat tinted rectangles with zero dog behind the steel bars. NOT owner-gated
+  (PO): a tinted Labrador stand-in behind the bars, `modulate`-tinted per `band_tint`. **Attempt 1 (live
+  SubViewport bake) reverted** — height-fit framing gave an unreadable belly/leg close-up (quadruped is
+  longer than tall), the portrait camera/world wasn't isolated (training dog bled through at the screen
+  bottom), and it threw `is_inside_tree()` transform errors at boot. Requeued with a robust retry route:
+  **bake the portrait OFFLINE to a committed `assets/kennel/dog_portrait.png`** (headless capture scene,
+  3/4-front whole-dog framing by overall extent, verify the frame by eye once) → load it as a static
+  `Texture2D`, no runtime SubViewport. See the ⚠️ note at the top of `107-…md`.
 - **108 — FEATURE — kennel detail/inspect modal (PO Change 3, first spine story: K-2 + K-8 trick
   list).** Tapping a cell is a no-op (`dog_selected` emits into nothing). Build the inspect modal:
   blurb + 4 stat rows (5 pips) + raseegenskaper chips + Unikt trekk + the K-8 trick list, closable

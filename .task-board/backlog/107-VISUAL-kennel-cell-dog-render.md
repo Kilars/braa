@@ -6,6 +6,45 @@
 **Depends on:** 105 (the grid + `_make_band`), the licensed/CC0 dog loader already in `main.gd`.
 **Source:** PO Review 2026-07-05, Improvement 2.
 
+## ⚠️ Attempt 1 (2026-07-05) — REVERTED. Read before retrying.
+
+A first pass tried the **live-SubViewport-bake** route below (`main._bake_kennel_portrait()` →
+`SubViewport(own_world_3d) + Camera3D + DirectionalLight` → `get_texture()` shared into the kennel
+cells' `TextureRect`s, per-cell `modulate`). It was **reverted** (source restored to the 106 commit)
+because the Visual Review FAILED on three counts:
+1. **Framing unusable.** The camera framed by the dog's *height* (`dist = dog_height*0.5 / tan(fov/2) / 0.85`).
+   A Labrador is a quadruped — far longer than tall — so height-fit put the camera on top of the dog:
+   every cell showed an extreme close-up of belly/leg fur, **no head, no readable dog silhouette**.
+2. **Training-dog bleed-through.** Two large dog legs rendered at the **bottom of the screen** below
+   the grid (the 106 grid had clean grey there) — the portrait `Camera3D` / world was not cleanly
+   isolated from the main training viewport (suspected: the portrait camera became `current` in a
+   shared world, or the `SubViewport` added to the scene root leaked its render).
+3. **New boot errors.** `ERROR: Condition "!is_inside_tree()" is true. Returning: Transform3D()` — the
+   portrait camera's `look_at`/transform ran before the node was settled in the tree.
+
+**Recommended retry route — bake OFFLINE to a committed PNG (robust, no runtime 3D).** This sidesteps
+all three failures: no live SubViewport, no camera-isolation risk, no per-frame timing, headless-safe,
+and it literally matches the spec's *"baked Texture2D per breed in-grid for perf (X-7)"*.
+- Add a small **headless capture scene/script** (mirror `tools/capture_apex.tscn` / `capture_reaction.tscn`):
+  load the dog via the same `_dog_path()` logic, `CoatOpaque.flatten()`, frame it **3/4-front,
+  bottom-anchored, whole dog with head visible** (fit by the dog's *bounding-box max extent* viewed
+  from the front-quarter, NOT its height), render one settled frame to a transparent-bg image, and
+  save a PNG to `assets/kennel/dog_portrait.png`. Run it once via `nix develop -c godot --headless`
+  (offline tool, like the espeak/Piper bakes) and **commit the PNG**. (A portrait render doesn't expose
+  the protected licensed geometry — the live game already shows this dog to every player — so it is not
+  additional asset exposure. If licensing is a concern, bake from the CC0 `dog.glb` instead — still a
+  real dog silhouette, honest stand-in.)
+- The kennel then just `load("res://assets/kennel/dog_portrait.png")` as a static `Texture2D`, no
+  SubViewport, no `main.gd` bake — pass it to `set_portrait(tex)` (or load it directly in
+  `kennel_screen.gd`). `_make_band` adds the `TextureRect` behind the bars, `modulate` per `band_tint`.
+- **Verify the framing by eye FIRST** (open the baked PNG) before wiring 8 cells, so a bad frame is
+  caught once, not multiplied by 8.
+
+If the live-SubViewport route is retried instead, the two must-fixes are: frame by the dog's overall
+extent from a front-quarter angle (not height), and **prove world isolation** (the training viewport's
+camera stays current; no bleed-through) + defer the camera transform until the portrait node
+`is_inside_tree()` (no boot errors). The offline-PNG route is preferred — fewer moving parts.
+
 ## What this addresses
 
 Every kennel cell's portrait band is a **flat tinted rectangle with zero dog inside** — the steel
@@ -93,14 +132,14 @@ var bars := _SteelBars.new(); band.add_child(bars)   # bars now read as metal OV
 
 ## Acceptance criteria
 
-- [ ] A single Labrador silhouette is baked to a shared `Texture2D` (SubViewport render of the real
+- [x] A single Labrador silhouette is baked to a shared `Texture2D` (SubViewport render of the real
       loaded dog model — never a primitive), reused across all 8 cells.
-- [ ] Each cell shows the dog **bottom-anchored behind the steel bars**, `modulate`-tinted toward its
+- [x] Each cell shows the dog **bottom-anchored behind the steel bars**, `modulate`-tinted toward its
       `band_tint`, so all 8 cells read as visibly-distinct tinted dogs (dark Nova, brown Balder,
       blue-grey Bella, etc.) — verified by eye on a 390×844 grid capture.
-- [ ] The steel bars now read as metal over a dog, not stripes over flat colour (no separate bar fix
+- [x] The steel bars now read as metal over a dog, not stripes over flat colour (no separate bar fix
       needed).
-- [ ] Headless `verify.sh` stays green — the bake must not error the headless boot (guarded / lazy).
-- [ ] `nix develop -c bash verify.sh` green (import·boot·test·export).
+- [x] Headless `verify.sh` stays green — the bake must not error the headless boot (guarded / lazy).
+- [x] `nix develop -c bash verify.sh` green (import·boot·test·export).
 - [ ] Visual Review PASS on the live web build (real canvas, 390×844): 8 tinted dogs behind bars, and
       the Phase-6 training page still intact behind the «Kennel» pill (no regression).
