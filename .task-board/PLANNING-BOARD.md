@@ -6,36 +6,40 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASE 6 CURRENT — father's FIRST Phase-6 PO play-test (2026-07-04, HEAD `bf58a75`) DECLINED sign-off, filed 3 buildable directives → scan replenished 098/099/100 — 2026-07-04
+## Status — PHASE 8 (KENNEL) CURRENT — Phase 6 SIGNED OFF (`aa3577a`, 2026-07-05) → foundation task 103 shipped (`9bec40f`) — 2026-07-05
 
-The father PO play-tested the Phase-6 foundation+application (096/097 on the fresh local build) and
-**declined sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-04 — Phase 6). The DS foundation
-(096) + the training-page HUD/BRA restyle (097) are confirmed good, but Phase 6 promises the DS applied
-to **"all aspects of game, menu, training page visuals etc."** and two large surfaces still fall short.
-Three buildable, **non-owner-gated** directives filed → empty backlog → scan replenished 3 current-phase
-tasks (priority order: bugfix/change → improvement → minor polish):
+The father PO play-tested the fresh local build at HEAD `a3750fe` and **signed off Phase 6** (design
+system + training-page ambiance) — the training page now matches the goal (clean rounded HUD, dog
+centred+grounded on green grass, slim tan path to a cottage, picket fence, gold coins framing the dog,
+BLUE bra button) with no earlier-phase regression. The sign-off was committed as `aa3577a` (appends the
+Phase-6 entry to `po-review.md`'s Phase Sign-off list + declares **Phase 8 current**). There is no
+Phase 7 (numbering skips 4/7); Phase 9 (difficulty) is already banked as dormant work-ahead (080–082),
+Phase 10 deferred.
 
-- **098 — VISUAL — restyle the completion menu to the Design System (Bugfix/Change #1). P1.** The
-  `trick_menu.gd` completion modal is still the old **dark-navy panel + gold hairline + gold badges**
-  (`.screenshots/po-p6-menu.png`) — untouched by 096/097, and its 3 action buttons mix languages. Next
-  to the light training page it reads as **two different apps**. Restyle to a light DS `panel(PAPER)` card:
-  SLATE-on-paper in the DS fonts, BLUE the active accent, GOLD only on the coin, DS `pill` rows, DS buttons,
-  all-Norwegian labels. Skin only — the pure classify/`id_at`/signal tests stay green unchanged.
-- **099 — VISUAL — build the garden ambiance to the goal training screen (Improvement #2). P1.** The
-  running garden is noisy FBM grass + a blurred sun/horizon and nothing else — the dog reads as **floating
-  on an empty field** (`.screenshots/po-p6-idle-a/c`). Build the goal's layered place: path curving to a
-  small house top-right, white picket-fence line, corner bushes, a few ground coins, clear horizon
-  hedge/hills, a real grounding shadow, and smoother painterly grass — in the DS palette. Match
-  composition+grounding+juice (not pixel-exact). Scenery must never occlude the centered dog / apex read.
-- **100 — VISUAL — Triks menu glyph + HUD legibility over the sky (Polish #3, minor). P2.** Add a **drawn**
-  hamburger glyph (SLATE bars, never `☰` tofu) to the Triks pill, and lift the top HUD pills (near-opaque
-  PAPER + DS card shadow) so they read over the bright sun band. Ship after 098/099.
+Gap analysis (this scan): the **Phase-3 economy/roster/persistence spine is complete** (`CoinPurse`,
+`BreedRoster`, `TrickStore`, `BreedPersonality` + the adopt/switch wiring in `main.gd`). The kennel is a
+new *presentation surface* + a data-model extension over that spine — it adds NO new economy math or
+save store. Buildable slices, in dependency order:
 
-All three are current-phase VISUAL directives → Visual Review gated (orchestrator-verified frames), TDD-exempt
-for the pixels (any pure-logic change keeps tests green). No flag-bust / work-ahead applies: the phase has
-abundant buildable current-phase work; the DS residuals (Maren voice, breed models, POSTHOG_TOKEN) are
-owner-gated carry-overs already flagged, unrelated to these directives. Do NOT re-task 096/097 or re-add
-scattered `Color(...)` literals — all UI consumes `DesignSystem`.
+- **103 — FEATURE (test-first) — the 8-dog kennel catalog data model. SHIPPED `9bec40f`.** New
+  `scripts/kennel_dog.gd` `KennelDog`: the spec's 8-dog table (`phase8.md:147-159`) as one readable
+  `const DOGS` + a `_from_row` factory (id/name/breed/rarity/price/4-stats/band-tint/unique-trait/
+  trick-list). `core_tricks()` = fresh `[sitt,ligg,legg_deg]` per dog; K-8 asset gate proven against the
+  REAL resolver. `price==0` covers Bella (OWNED) + Trulte (SECRET/gratis). 10 TDD tests (561→571/0).
+  **Wired into NOTHING** so the just-signed-off Phase-6 completion menu stays byte-identical — the anchor
+  slice, dodging the saturated visual domain (7 of the last ~15 tasks were rendering).
+- **NEXT (next scan round) — the kennel SCREEN slices (Visual Review):** (a) K-1/K-3 grid scaffold —
+  `Control` root + header coin chip + `ScrollContainer › GridContainer(columns=2)` of barred white cells
+  fed each `KennelDog`, steel-bar shader, affordability tag; (b) K-2/K-4/K-5/K-6 detail modal + adopt/
+  switch/gratis flows, threading per-dog `price` + reconciling the roster to the kennel id-space (test-first
+  for the adopt math per X-6). These render each dog as a **tinted Labrador stand-in** until owner models
+  arrive.
+
+**Owner-gated residuals (already flagged — do NOT re-bust, do NOT fake):** the 7 distinct breed MODELS
+(BUST-068 residual) and any breed-specific **signature** trick clip (P3-2 flag; `Grav`/`Digging` proven
+rear-to-camera in 088 — do NOT re-wire). Every buildable kennel slice ships first against tinted stand-ins
++ the shared-core trick list. Do NOT re-task 103, expand `BreedPersonality.catalog()` in-place (it would
+disturb the signed-off completion menu), or fake per-breed trick distinctness.
 
 ---
 
