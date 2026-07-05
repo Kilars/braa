@@ -6,6 +6,42 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
+## Status — PHASE 8 (KENNEL) CURRENT — father PO-reviewed the grid (103–105), DECLINED sign-off, filed 2 defects + the unbuilt spine → scan replenished 106/107/108 — 2026-07-05
+
+The father PO play-tested the freshly-shipped kennel grid (tasks 103–105, HEAD `eb5c59e`) at 390×844
+and **declined sign-off** (`.docs/specs/po-review.md`, PO Review 2026-07-05). The grid is a "good
+foundation" — names/breeds/prices/tints correct, Bella-owned + Trulte-easter distinct, live coin chip
+— but **two defects ship in what's built** and **the whole interactive spine is unbuilt**. Empty
+backlog → scan replenished **3 current-phase tasks** (direct PO directives, priority order
+bugfix→improvement→first-spine-story; NOT work-ahead — Phase 8 has abundant current-phase work):
+
+- **106 — FIX — Trulte's «★ Påskeegg» easter tag renders the ★ (U+2605) as a tofu box (PO Bugfix 1).**
+  The star has no glyph in Baloo 2 / Nunito → missing-glyph box on the one cell meant to read
+  "special, not broken" (K-6). Same tofu class the project already fixed for the ◀▶ chevrons (089) +
+  coin emoji. Fix: drop the `★` character from the string (word becomes `Påskeegg`) and draw a coral
+  star pip in code (089 `_draw` precedent) — no tofu in any rendered string. TDD assert + Visual Review.
+- **107 — VISUAL — kennel cells have no dog render (PO Improvement 2, K-1).** All 8 portrait bands are
+  flat tinted rectangles with zero dog behind the steel bars, so cells read as indistinguishable
+  colour panels. NOT owner-gated (PO): bake the real licensed Labrador silhouette to one shared
+  `Texture2D` (SubViewport render, X-7 perf), reused per cell `modulate`-tinted to each dog's
+  `band_tint`, bottom-anchored behind the bars — the honest tinted stand-in BUST-068 already names.
+- **108 — FEATURE — kennel detail/inspect modal (PO Change 3, first spine story: K-2 + K-8 trick
+  list).** Tapping a cell is a no-op (`dog_selected` emits into nothing). Build the inspect modal:
+  blurb + 4 stat rows (5 pips) + raseegenskaper chips + Unikt trekk + the K-8 trick list, closable
+  (✕/backdrop, scroll preserved, X-5). Test-first for the new blurb/traits data; Visual Review for the
+  modal. **Inspect only** — no dead adopt button (adopt press wiring is K-4, next round).
+
+**Deferred to the next round (the adopt/switch/persist economy spine — PO Change 3 remainder):**
+K-3/K-4 adopt button + affordability gate + deduct/own transition (test-first per X-6), K-5 switch to
+training, K-6 Trulte free-adopt, K-7 persistence — **and** the roster↔kennel **id-space
+reconciliation** (economy uses `labrador`/`chocolate_labrador`, kennel uses `bella`/`nova`/…; the
+`_kennel_owned()`/`_kennel_active()` seams in `main.gd` are hardcoded to `STARTER_ID` until the adopt
+task migrates the save). Landed on top of the PO-reviewed modal so the delicate save-format migration
+is done only when adopt actually needs it. Owner-gated residuals unchanged (7 distinct breed MODELS
+BUST-068, P3-2 signature clip — do NOT re-bust, do NOT fake).
+
+---
+
 ## Status — PHASE 8 (KENNEL) CURRENT — Phase 6 SIGNED OFF (`aa3577a`, 2026-07-05) → foundation task 103 shipped (`9bec40f`) — 2026-07-05
 
 The father PO play-tested the fresh local build at HEAD `a3750fe` and **signed off Phase 6** (design

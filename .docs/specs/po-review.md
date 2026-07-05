@@ -111,9 +111,70 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-_No open directives. Phase 6 was signed off 2026-07-05 (see the Phase Sign-off list above): task 102
-(HEAD `a3750fe`) resolved the last three round-2 garden directives — path un-wedged (dog back on green
-grass, slim ribbon to the side), coins now read as real gold (9146 in-world coin-gold pixels vs zero
-the prior pass), and the house reads as a cottage, not a tower — and the training page now matches the
-goal composition/grounding/juice with no earlier-phase regression. The current phase is now Phase 8
-(kennel)._
+### PO Review — 2026-07-05
+
+Phase 8 (kennel) is now current. Played the freshly-shipped kennel grid (tasks 103–105, HEAD
+`eb5c59e`) on a 390×844 phone-portrait viewport in headless Chromium against a fresh local
+`build/web` (rebuilt via `verify.sh`, gate green) served over http — SwiftShader == the deployed
+GL Compatibility renderer. The grid opens from a new **«Kennel»** HUD pill, renders all 8 dogs in a
+2-column grid (`.screenshots/105-kennel-01-grid.png`), and the ✕ closes it cleanly back to the
+intact Phase-6 training page (`105-kennel-03-closed.png` — dog centred on grass, path/cottage/fence/
+coins/BLUE BRA all present, no regression from the kennel wiring). **Good foundation** — names,
+breeds, prices and tints are all correct (Bella «Din hund»/«Din», Nova 900, Balder 650, Sol 500,
+Pontus 350, Lykke 300, Sniff 320, Trulte «Gratis»), Bella's owned state and Trulte's easter tag are
+distinct, the coin chip shows the live balance («0 mynter»). **But the phase falls well short** —
+its whole interactive spine is unbuilt, and two concrete defects already ship in the grid.
+
+**Bugfixes**
+
+1. **★ tofu in the «★ Påskeegg» easter tag (Trulte).** The leading star renders as a **missing-glyph
+   box**, not a star — zoomed from `105-kennel-01-grid.png` (Trulte cell, top-left coral tag) the
+   glyph is a hollow tofu rectangle before "Påskeegg". K-6 requires the easter dog to read as
+   *"special, not broken"* — a tofu box is exactly *broken*, on the one cell that is meant to feel
+   magical. This is the same tofu class the project already fixed for the ◀▶ showcase chevrons (089)
+   and the coin emoji. *Good* = draw the star as geometry (the 089 `_draw`-polygon / baked-icon
+   precedent), use a font that carries U+2605, or drop the glyph for a coral pip — **no tofu in any
+   rendered string** (the standing project rule).
+
+**Improvements**
+
+2. **Cells have no dog render — every band is a flat tinted rectangle (K-1).** All 8 portrait bands
+   are a solid tint + vertical bars with **zero dog** inside (`105-kennel-01-grid.png`; even the dark
+   Nova cell shows no silhouette). K-1 requires each cell to show a **dog render** so the roster
+   *"reads at a glance … no tap required to tell them apart"* — right now they are indistinguishable
+   coloured panels, and the intended *"dogs behind clean steel bars"* read collapses because the bars
+   sit over nothing. This is **not owner-gated**: the licensed Labrador renders live in training, and
+   the chocolate-Lab `CoatTint` recolor already proved a per-dog **tinted stand-in** ships with no new
+   model — the spec's own asset note (`phase8.md`) says *"every buildable slice (recolor breeds à la
+   the chocolate Lab) ships first."* Shipping tint-only bands as "honest, owner-gated" over-claims the
+   gate. *Good* = each cell shows a bottom-anchored dog render behind the steel bars — at minimum the
+   real Labrador silhouette tinted to the dog's band tint, baked to a `Texture2D` for grid perf (X-7);
+   the bars then read as bars *over a dog*. (Once a real dog fills the band the steel bars, which now
+   read as flat stripes over colour, will read as metal — no separate bar fix needed.)
+
+**Changes — the phase's interactive spine is still entirely unbuilt**
+
+3. The kennel is **browse-only**: tapping any cell is a **no-op** (`dog_selected` is emitted into
+   nothing — no modal, no adopt, no switch). The core of Phase 8 — *inspect → afford → adopt →
+   train-with → remember* — does not exist yet. Build the remaining stories:
+   - **K-2 inspect modal:** tap a cell → detail card (warm blurb · 4 stat rows Læreevne / Energi /
+     Mot / Fokus with 5 pips each · Raseegenskaper chips · the one Unikt trekk · and per **K-8** the
+     breed's trick list, shown *before* adopt), closable by ✕ / outside-tap with grid scroll
+     preserved, reduced-motion respected (X-5).
+   - **K-3 / K-4 adopt:** full-width «Adopter · N mynt» button; affordability gate (dim +
+     non-tappable when coins < price, no error state); press → deduct price + mark owned + coin
+     count-down + a small celebratory beat; button flips to «Tren med [navn]»; no double-spend;
+     **test-first** (balance math + gate + owned transition) per X-6.
+   - **K-5 switch:** «Tren med [navn]» sets the active dog and returns to the training scene with
+     that dog loaded (ties into the Phase-3 breed switch).
+   - **K-6 easter adopt:** Trulte's modal shows the coral ribbon + «Adopter gratis ♥» — free adopt.
+   - **K-7 persist:** coins / owned set / active dog persist on the **existing** Phase-3 `user://`
+     save (`TrickStore`/`BreedRoster`, no parallel store); works offline after first load (X-7).
+
+**Minor (note for the eventual `polish` pass, not blocking):** with 8 cells in 4 rows the grid fills
+only the top ~55% of the 844 px screen, leaving a large empty grey panel below Trulte
+(`105-kennel-01-grid.png`) — adding the dog renders + revisiting cell/band height so the roster fills
+the portrait would make the screen feel finished rather than cut off.
+
+**Not signed off** — the grid (K-1/K-3) is a solid start, but K-2/K-4/K-5/K-6/K-7 are unbuilt and
+items 1–2 are defects in what already shipped.
