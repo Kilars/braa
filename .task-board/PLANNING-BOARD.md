@@ -6,7 +6,20 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASES 1–9 SIGNED OFF; PO father-pass-2 → 135/136/137 tasked (3 remaining X-4 directives) — 2026-07-06
+## Status — PHASES 1–9 SIGNED OFF; PO father-pass-3 → 138 DONE (completion menu localized) — 2026-07-06
+
+PO father pass 3 re-verified the 135/136/137 arc as fixed + pruned, and filed **one** new buildable
+X-4 directive: the completion menu was the only player-facing surface still in English (the «Triks»
+pill opened a «Tricks» panel).
+
+- **138 — DONE** localize the completion menu to Norwegian: `trick_menu.gd` BADGE «Learned/Available/
+  Locked»→«Lært/Tilgjengelig/Låst», BREED_BADGE «Active/Switch/Adopt/Locked»→«Aktiv/Bytt/Adopter/Låst»,
+  WORD_BADGE «Active/Switch/Locked»→«Aktiv/Bytt/Låst», headings «Tricks»→«Triks» / «Breeds»→«Raser» /
+  «Marker words»→«Markørord» (homed as LABEL_ consts), and `difficulty.gd` «Expert»→«Ekspert». 5 TDD
+  localization asserts (RED→GREEN) + updated the difficulty display-name test, verify green, Visual
+  Review PASS (`072-menu-open.png` — «Triks / Lært / Tilgjengelig / Markørord / Aktiv / Bytt / Låst»).
+
+### Prior — PO father-pass-2 → 135/136/137 (3 X-4 directives)
 
 PO father pass 2 (`a7ea9d3`) re-verified 129–134 as fixed and named the **3 X-4 directives left
 untouched**: #1 kennel modal legibility + explicit CTA states (135), #2 kennel header band +

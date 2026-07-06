@@ -68,9 +68,9 @@ const LABELS := {
 
 ## The state badge each row shows to its right.
 const BADGE := {
-	State.LEARNED: "Learned",
-	State.AVAILABLE: "Available",
-	State.LOCKED: "Locked",
+	State.LEARNED: "Lært",
+	State.AVAILABLE: "Tilgjengelig",
+	State.LOCKED: "Låst",
 }
 
 ## Layout, homed here (no scattered literals — cf. 029). Design space; the panel centres in whatever
@@ -180,6 +180,13 @@ const SECONDARY_TEXT := DesignSystem.BLUE         ## Bra-Blue text — reads as 
 const SECONDARY_OUTLINE := DesignSystem.BLUE      ## Bra-Blue hairline outline on the ghost pill
 const SECONDARY_OUTLINE_W := 2.0                  ## outline thickness (px, design space)
 
+## Section heading labels — all Norwegian (138), homed as named consts (no scattered literals).
+## LABEL_TITLE: the panel title the «Triks» HUD pill opens (was «Tricks»).
+## LABEL_BREEDS / LABEL_WORDS: the breeds + marker-words section subheadings (were «Breeds» / «Marker words»).
+const LABEL_TITLE     := "Triks"
+const LABEL_BREEDS    := "Raser"
+const LABEL_WORDS     := "Markørord"
+
 ## Action button labels — all Norwegian, homed as named consts (no scattered literals).
 const LABEL_SHOWCASE  := "Vis frem hundene"
 const LABEL_FEEDBACK  := "Gi tilbakemelding"
@@ -187,10 +194,10 @@ const LABEL_CLOSE     := "Fortsett treningen"
 
 ## Breed-row palette + badges (079, DS restyle 098).
 const BREED_BADGE := {
-	BreedState.ACTIVE: "Active",
-	BreedState.OWNED: "Switch",
-	BreedState.BUYABLE: "Adopt",
-	BreedState.LOCKED: "Locked",
+	BreedState.ACTIVE: "Aktiv",
+	BreedState.OWNED: "Bytt",
+	BreedState.BUYABLE: "Adopter",
+	BreedState.LOCKED: "Låst",
 }
 const BREED_NAME_ACTIVE  := DesignSystem.BLUE        ## the running dog — primary accent
 const BREED_NAME_OWNED   := DesignSystem.SLATE       ## owned, tap to switch — slate body text
@@ -201,9 +208,9 @@ const SWATCH_RIM         := DesignSystem.BORDER      ## hairline rim so a pale c
 
 ## Marker-word-row palette + badges (092, DS restyle 098).
 const WORD_BADGE := {
-	WordState.ACTIVE:   "Active",
-	WordState.UNLOCKED: "Switch",
-	WordState.LOCKED:   "Locked",
+	WordState.ACTIVE:   "Aktiv",
+	WordState.UNLOCKED: "Bytt",
+	WordState.LOCKED:   "Låst",
 }
 const WORD_NAME_ACTIVE   := DesignSystem.BLUE        ## the firing word — primary accent
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
@@ -722,7 +729,7 @@ func _draw() -> void:
 	var hx := panel.position.x + PANEL_PAD
 	var hy := panel.position.y + PANEL_PAD
 	var title_baseline := hy + f_display.get_ascent(TITLE_SIZE)
-	_draw_text(f_display, Vector2(hx, title_baseline), "Tricks", TITLE_SIZE, TITLE_COLOR)
+	_draw_text(f_display, Vector2(hx, title_baseline), LABEL_TITLE, TITLE_SIZE, TITLE_COLOR)
 	# The header balance is the SHARED CoinReadout pill (129), a child node right-anchored in the
 	# header band — not a bespoke hand-draw. Built lazily here (add_child in _init is a no-op headless).
 	_ensure_coin_readout()
@@ -733,7 +740,7 @@ func _draw() -> void:
 	# The breeds section (079): a subheading + one row per shipped breed (swatch, name, state/price).
 	if not _breeds.is_empty():
 		var sub_baseline := _breeds_top() + f_bold.get_ascent(BADGE_SIZE)
-		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, sub_baseline), "Breeds",
+		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, sub_baseline), LABEL_BREEDS,
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(f_bold, f_body, i)
@@ -749,7 +756,7 @@ func _draw() -> void:
 			PANEL_BORDER, WORD_DIVIDER_H)
 		# Baloo-2 display heading (heavier weight than the body-bold used for "Breeds" / "Vanskelighet").
 		var word_head_baseline := _words_top() + WORD_DIVIDER_H + WORD_DIVIDER_GAP + f_display.get_ascent(TITLE_SIZE)
-		_draw_text(f_display, Vector2(panel.position.x + PANEL_PAD, word_head_baseline), "Marker words",
+		_draw_text(f_display, Vector2(panel.position.x + PANEL_PAD, word_head_baseline), LABEL_WORDS,
 			TITLE_SIZE, TITLE_COLOR)
 		for i in _words.size():
 			_draw_word_row(f_bold, f_body, i)

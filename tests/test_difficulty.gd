@@ -93,7 +93,7 @@ func test_hard_display_name() -> void:
 
 func test_expert_display_name() -> void:
 	var e := Difficulty.expert()
-	assert_eq(e.display_name, "Expert", "Expert mode has display_name 'Expert'")
+	assert_eq(e.display_name, "Ekspert", "Expert mode has Norwegian display_name 'Ekspert'")
 
 func test_normal_display_name() -> void:
 	var n := Difficulty.normal()

@@ -49,7 +49,7 @@ static func hard() -> Difficulty:
 ## Expert mode — monotonically harder than Hard on every lever. The peak difficulty stack.
 ## First-pass tuning, dormant until Phase 4 becomes current; subject to PO refinement.
 static func expert() -> Difficulty:
-	return Difficulty.new("expert", "Expert", 0.5, 0.62, 2.4, 2.2, 2.0)
+	return Difficulty.new("expert", "Ekspert", 0.5, 0.62, 2.4, 2.2, 2.0)
 
 ## The shipped difficulty modes, in order: Normal, Hard, Expert. The ONLY place the mode
 ## list is enumerated — is_known, by_id, and any future UI read this.

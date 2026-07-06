@@ -295,3 +295,29 @@ func test_classify_words_base_word_has_identity_cost() -> void:
 	assert_true(bra_row.has("cooldown"), "bra row has cooldown key")
 	assert_eq(bra_row.window_scale, 1.0, "base 'bra' has window_scale 1.0 (identity)")
 	assert_eq(bra_row.cooldown, 0, "base 'bra' has cooldown 0 (never cools down)")
+
+# ---- localization: the completion-menu chrome is Norwegian (138, PO father-pass-3) ----------------
+
+func test_badge_labels_are_norwegian() -> void:
+	# The «Triks» pill must open a Norwegian panel — the trick-row state badges read in Norwegian,
+	# not the old English «Learned / Available / Locked».
+	assert_eq(TrickMenu.BADGE[TrickMenu.State.LEARNED], "Lært", "LEARNED badge is «Lært»")
+	assert_eq(TrickMenu.BADGE[TrickMenu.State.AVAILABLE], "Tilgjengelig", "AVAILABLE badge is «Tilgjengelig»")
+	assert_eq(TrickMenu.BADGE[TrickMenu.State.LOCKED], "Låst", "LOCKED badge is «Låst»")
+
+func test_breed_badge_labels_are_norwegian() -> void:
+	assert_eq(TrickMenu.BREED_BADGE[TrickMenu.BreedState.ACTIVE], "Aktiv", "breed ACTIVE badge is «Aktiv»")
+	assert_eq(TrickMenu.BREED_BADGE[TrickMenu.BreedState.OWNED], "Bytt", "breed OWNED badge is «Bytt»")
+	assert_eq(TrickMenu.BREED_BADGE[TrickMenu.BreedState.BUYABLE], "Adopter", "breed BUYABLE badge is «Adopter»")
+	assert_eq(TrickMenu.BREED_BADGE[TrickMenu.BreedState.LOCKED], "Låst", "breed LOCKED badge is «Låst»")
+
+func test_word_badge_labels_are_norwegian() -> void:
+	assert_eq(TrickMenu.WORD_BADGE[TrickMenu.WordState.ACTIVE], "Aktiv", "word ACTIVE badge is «Aktiv»")
+	assert_eq(TrickMenu.WORD_BADGE[TrickMenu.WordState.UNLOCKED], "Bytt", "word UNLOCKED badge is «Bytt»")
+	assert_eq(TrickMenu.WORD_BADGE[TrickMenu.WordState.LOCKED], "Låst", "word LOCKED badge is «Låst»")
+
+func test_section_heading_labels_are_norwegian() -> void:
+	# The three section headings are homed as named consts (no scattered literals) and read Norwegian.
+	assert_eq(TrickMenu.LABEL_TITLE, "Triks", "panel title is «Triks»")
+	assert_eq(TrickMenu.LABEL_BREEDS, "Raser", "breeds subheading is «Raser»")
+	assert_eq(TrickMenu.LABEL_WORDS, "Markørord", "marker-words heading is «Markørord»")
