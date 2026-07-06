@@ -121,11 +121,9 @@ const DIFFICULTY_NOTE_H := 22.0  ## the locked-section reason note band (122) �
 
 ## Type sizes.
 const TITLE_SIZE := 30
-const NUMBER_SIZE := 26
 const NAME_SIZE := 26
 const BADGE_SIZE := 18
 const CLOSE_SIZE := 22
-const COIN_R := 11.0
 
 ## Palette — DS tokens (098, Phase 6). SLATE-on-PAPER, BLUE primary accent, GOLD reserved for coin.
 ## BACKDROP: soft INK-based veil, not pure black.
@@ -145,10 +143,10 @@ const NAME_LOCKED := DesignSystem.SLATE_SOFT
 const BADGE_LEARNED := DesignSystem.BLUE
 const BADGE_AVAILABLE := DesignSystem.BLUE
 const BADGE_LOCKED := DesignSystem.SLATE_SOFT
-## Coin: GOLD disc + GOLD_DARK rim; coin number in SLATE (legible on light panel).
+## Coin GOLD reserved for the Buyable breed-price badge (the header balance is now the shared
+## CoinReadout pill, 129 — not a bespoke hand-draw). GOLD_DARK / the number colour moved into
+## CoinReadout, so only the price-badge GOLD remains here.
 const COIN_GOLD := DesignSystem.GOLD
-const COIN_RIM := DesignSystem.GOLD_DARK
-const NUMBER_COLOR := DesignSystem.SLATE
 ## Action button colours — primary (dismiss/continue) = BLUE; secondary = CREAM paper pill.
 const CLOSE_BG := DesignSystem.BLUE
 const CLOSE_TEXT := DesignSystem.PAPER
@@ -218,6 +216,12 @@ var _words: Array = []
 ## The difficulty rows main fed in (each {id, name, active, selectable, locked}) — empty until 118 wires
 ## them, so the trick/breeds/words-only geometry is byte-for-byte unchanged when the section is absent.
 var _difficulties: Array = []
+
+## The shared coin pill (129, X-4): the SAME CoinReadout widget the training HUD uses, hosted as a child
+## in the header band so the balance reads identically on training / menu / kennel. Built lazily on the
+## first draw (never in _init — headless harness gotcha: add_child in _init doesn't work). The header
+## coin is no longer hand-drawn; _position_coin_readout keeps it right-anchored in the header rect.
+var _coin_readout: CoinReadout = null
 
 func _init() -> void:
 	# Modal: the menu eats every tap while it is up (STOP), so a tap can never fall through to the BRA
@@ -347,6 +351,8 @@ static func display_name(id: String) -> String:
 func set_rows(rows: Array, balance: int) -> void:
 	_rows = rows
 	_balance = maxi(0, balance)
+	if _coin_readout != null:
+		_coin_readout.set_balance(_balance)
 	queue_redraw()
 
 ## Set the breed rows to show (079) and request a redraw. Empty until the roster wires them; main rebuilds
@@ -683,7 +689,10 @@ func _draw() -> void:
 	var hy := panel.position.y + PANEL_PAD
 	var title_baseline := hy + f_display.get_ascent(TITLE_SIZE)
 	_draw_text(f_display, Vector2(hx, title_baseline), "Tricks", TITLE_SIZE, TITLE_COLOR)
-	_draw_coins(f_display, panel, hy)
+	# The header balance is the SHARED CoinReadout pill (129), a child node right-anchored in the
+	# header band — not a bespoke hand-draw. Built lazily here (add_child in _init is a no-op headless).
+	_ensure_coin_readout()
+	_position_coin_readout(panel, hy)
 	# The trick rows.
 	for i in _rows.size():
 		_draw_row(f_bold, f_body, i)
@@ -742,21 +751,28 @@ func _panel_box() -> StyleBoxFlat:
 	## PAPER card with hairline BORDER + card shadow via the DS builder (098, Phase 6).
 	return DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_LG)
 
-## The drawn coin disc + balance, right-aligned in the header band (reuses the CoinReadout motif so no
-## font-glyph tofu — bug 1 can never come back through this seam either).
-func _draw_coins(font: Font, panel: Rect2, top: float) -> void:
-	var num := "%d" % _balance
-	var num_w := font.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, NUMBER_SIZE).x
-	var cy := top + COIN_R + 3.0
-	var right := panel.position.x + panel.size.x - PANEL_PAD
-	# number sits to the right of the coin; lay the group out from the right edge leftward.
-	var num_x := right - num_w
-	var cc := Vector2(num_x - 8.0 - COIN_R, cy)
-	draw_circle(cc, COIN_R, COIN_RIM)
-	draw_circle(cc, COIN_R - 2.0, COIN_GOLD)
-	draw_arc(cc, COIN_R * 0.55, 0.0, TAU, 20, COIN_RIM, 1.5)
-	var nb := cy + font.get_ascent(NUMBER_SIZE) * 0.5 - font.get_descent(NUMBER_SIZE) * 0.5
-	_draw_text(font, Vector2(num_x, nb), num, NUMBER_SIZE, NUMBER_COLOR)
+## Lazily build the shared CoinReadout child (129) — the SAME pill the training HUD uses, so the
+## balance reads identically across surfaces. Never built in _init (add_child there is a headless
+## no-op, CLAUDE.md gotcha); this runs in _draw, where the node is safely attached. Seeds the pill
+## with the last balance fed via set_rows so a redraw before the next feed still shows the right number.
+func _ensure_coin_readout() -> void:
+	if _coin_readout != null:
+		return
+	var readout := CoinReadout.new()
+	readout.name = "CoinReadout"
+	readout.set_balance(_balance)
+	add_child(readout)
+	_coin_readout = readout
+
+## Right-anchor the shared CoinReadout pill within the header band. The pill draws its own paper
+## background + gold coin disc + right-aligned number, so we only give it a rect: full panel width
+## (it self-right-aligns the pill to its own right edge) at the header's vertical centre.
+func _position_coin_readout(panel: Rect2, top: float) -> void:
+	if _coin_readout == null:
+		return
+	var pill_w := panel.size.x - 2.0 * PANEL_PAD
+	_coin_readout.position = Vector2(panel.position.x + PANEL_PAD, top)
+	_coin_readout.size = Vector2(pill_w, CoinReadout.HEIGHT)
 
 func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var r: Dictionary = _rows[i]

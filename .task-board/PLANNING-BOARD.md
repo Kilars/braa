@@ -6,7 +6,28 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASES 1–9 SIGNED OFF; owner training-page finish directives (5) preempt Phase 10 → 123/124/125 tasked — 2026-07-05
+## Status — PHASES 1–9 SIGNED OFF; owner critique+polish pass (9 X-4 directives) preempts Phase 10 → 129/130/131 tasked — 2026-07-06
+
+Phase 10 stays owner-gated (spec empty), but the owner's 2026-07-06 critique+polish pass
+(commit `24a7ee0`) filed **9 fresh buildable X-4 quality directives** (4 HIGH, 3 MED, 2 LOW)
+concentrated on the **kennel** (a signed-off surface that drifted below the bar) plus
+cross-screen consistency + the completion menu. These are current-phase quality work and
+**preempt** the Phase-10 owner-gate. Top-3 HIGH tasked this round — one per surface:
+
+- **129 — VISUAL — unify CoinReadout across training/menu/kennel (dir #8 HIGH).** One datum, three
+  shapes today (training pill · menu bare coin · kennel "%d mynter" disc) → route menu + kennel
+  through the canonical `scripts/coin_readout.gd` pill.
+- **130 — VISUAL — menu primary CTA "Fortsett treningen" reads as primary (dir #7 HIGH).** Restyle to
+  the 126 gradient/weight (full Bra-Blue, white ≥700); demote "Gi tilbakemelding" to ghost secondary.
+- **131 — VISUAL — kennel face-on head-and-shoulders portraits (dir #1 HIGH, biggest gap).** Per-cell
+  `SubViewport` camera framing/rotation so each dog faces the viewer + no two cells look identical
+  (distinct breed silhouettes stay owner-gated BUST-068 — framing only, no faked models).
+
+**Remaining directives for the next scan rounds:** #2 price-badge collision (HIGH), #3 kennel cell
+floor/shadow cohesion (MED), #4 inspect-modal legibility (MED), #5 kennel header alignment (LOW),
+#6 menu typography/sectioning (MED), #9 PERFECT/Bra! mark-text contrast (LOW).
+
+## (prior) Status — PHASES 1–9 SIGNED OFF; owner training-page finish directives (5) preempt Phase 10 → 123/124/125 tasked — 2026-07-05
 
 Phase 9 (difficulty) SIGNED OFF 2026-07-05 (`5331e49`). Phase 10 (play mode) is current but
 **unspecced** — before scaffolding it, the owner play-tested the **training page** (the surface

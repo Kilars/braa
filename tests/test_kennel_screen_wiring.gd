@@ -4,7 +4,7 @@ extends "res://tests/test_case.gd"
 ## these prove the RUNNING scene:
 ##   • mounts the kennel screen hidden on the CanvasLayer,
 ##   • render(rows, balance) builds exactly 8 cells in the GridContainer,
-##   • the coin chip text reflects the supplied balance after render(),
+##   • the shared CoinReadout pill reflects the supplied balance after render(),
 ##   • pressing a cell emits dog_selected(id) with the correct id,
 ##   • opening the kennel hides the training HUD (task-090 pattern),
 ##   • closing the kennel restores the training HUD.
@@ -32,9 +32,9 @@ func _find_kennel(main: Node) -> KennelScreen:
 func _find_grid(ks: KennelScreen) -> GridContainer:
 	return _find_by_class(ks, GridContainer) as GridContainer
 
-## Walk the KennelScreen to find the coin Label inside the CoinPill.
-func _find_coin_label(ks: KennelScreen) -> Label:
-	return _find_by_name(ks, "CoinLabel") as Label
+## Walk the KennelScreen to find the shared CoinReadout pill in the header (129, X-4).
+func _find_coin_readout(ks: KennelScreen) -> CoinReadout:
+	return _find_by_class(ks, CoinReadout) as CoinReadout
 
 func _find_by_class(n: Node, klass) -> Node:
 	if is_instance_of(n, klass):
@@ -89,16 +89,16 @@ func test_render_builds_8_cells() -> void:
 	_clear_save()
 
 func test_coin_chip_reflects_balance() -> void:
-	## The coin label text must include the supplied balance after render().
+	## The shared CoinReadout pill must reflect the supplied balance after render() (129, X-4).
 	_clear_save()
 	var main := instantiate_main()
 	var ks := _find_kennel(main)
-	assert_true(ks != null, "need a KennelScreen to test coin chip")
+	assert_true(ks != null, "need a KennelScreen to test coin readout")
 	var rows := KennelDog.classify_kennel_dogs([KennelDog.STARTER_ID], KennelDog.STARTER_ID, 42)
 	ks.render(rows, 42)
-	var lbl := _find_coin_label(ks)
-	assert_true(lbl != null, "coin label must exist in the header after render()")
-	assert_true(lbl.text.contains("42"), "coin chip text must include the supplied balance (42)")
+	var readout := _find_coin_readout(ks)
+	assert_true(readout != null, "the shared CoinReadout pill must exist in the header after render()")
+	assert_eq(readout.balance(), 42, "the CoinReadout must reflect the supplied balance (42)")
 	main.queue_free()
 	_clear_save()
 

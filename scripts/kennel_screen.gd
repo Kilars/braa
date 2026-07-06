@@ -44,8 +44,7 @@ const C_PRICE_GOLD   := Color("f5b841")   ## buyable price chip (gold)
 const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
 const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
 const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed in code)
-const C_COIN_BG      := Color("f5b841")   ## gold coin chip bg
-const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold
+const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold (still used by the price chip label)
 
 # Modal-specific palette (108, K-2 inspect modal). Named constants — no scattered literals.
 const C_MODAL_BACKDROP := Color(0.078, 0.11, 0.149, 0.5)  ## rgba(20,28,38,.5) dim overlay
@@ -118,7 +117,10 @@ var _portrait_tex: Texture2D = null
 var _portrait_built: bool = false
 
 ## Live node refs (built once in _ready, updated per render())
-var _coin_label: Label
+## _coin_readout is the SHARED CoinReadout pill (129, X-4) — the SAME widget the training HUD +
+## completion menu use, so the balance reads identically everywhere (replaces the old flat gold
+## "%d mynter" / "0 🪙" Label, whose coin emoji rendered as a tofu box).
+var _coin_readout: CoinReadout
 var _grid: GridContainer
 
 ## The currently open modal overlay (null when closed). Freed (not hidden) on close so the
@@ -316,30 +318,15 @@ func _build_header() -> void:
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_col.add_child(sub)
 
-	# Live coin chip — right side.
-	var coin_pill := PanelContainer.new()
-	coin_pill.name = "CoinPill"
-	coin_pill.custom_minimum_size = Vector2(80, 32)
-	var coin_style := StyleBoxFlat.new()
-	coin_style.bg_color = C_COIN_BG
-	coin_style.set_corner_radius_all(DesignSystem.R_PILL)
-	coin_style.content_margin_left  = 10.0
-	coin_style.content_margin_right = 10.0
-	coin_style.content_margin_top   = 4.0
-	coin_style.content_margin_bottom = 4.0
-	coin_pill.add_theme_stylebox_override("panel", coin_style)
-	row.add_child(coin_pill)
-
-	_coin_label = Label.new()
-	_coin_label.name = "CoinLabel"
-	_coin_label.text = "0 🪙"
-	_coin_label.add_theme_font_override("font", DesignSystem.font_body_bold())
-	_coin_label.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	_coin_label.add_theme_color_override("font_color", C_COIN_TEXT)
-	_coin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_coin_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	_coin_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	coin_pill.add_child(_coin_label)
+	# Live coin balance — right side. The SHARED CoinReadout pill (129, X-4): the exact widget the
+	# training HUD + completion menu use, so the balance reads identically across all three surfaces.
+	# It draws its own white paper pill + gold coin disc + right-aligned number (no gold chip / no
+	# "mynter" word / no coin emoji), so we just give it a fixed slot in the header row.
+	_coin_readout = CoinReadout.new()
+	_coin_readout.name = "CoinReadout"
+	_coin_readout.custom_minimum_size = Vector2(84.0, CoinReadout.HEIGHT)
+	_coin_readout.set_balance(_balance)
+	row.add_child(_coin_readout)
 
 func _build_scroll_grid() -> void:
 	var scroll := ScrollContainer.new()
@@ -368,11 +355,11 @@ func _build_scroll_grid() -> void:
 # ---------------------------------------------------------------------------
 
 func _refresh() -> void:
-	if _grid == null or _coin_label == null:
+	if _grid == null or _coin_readout == null:
 		return  # not ready yet
 
-	# Update coin chip text.
-	_coin_label.text = "%d mynter" % _balance
+	# Update the shared coin pill (129) — same widget as training/menu, so the balance reads identically.
+	_coin_readout.set_balance(_balance)
 
 	# Clear and repopulate the grid.
 	for c in _grid.get_children():
