@@ -43,7 +43,7 @@ colour to the explicit Ink-Soft `#5A6B7D` (reuse the `C_INK_SOFT` token added in
 Pure render glue — **Visual Review**, no logic branch, no TDD.
 
 ## Definition of done
-- `nix develop -c bash verify.sh` green.
-- Visual Review at 390×844 (grid + scrolled): a clearly solid header band, no cell bleeding under
+- [x] `nix develop -c bash verify.sh` green.
+- [x] Visual Review at 390×844 (grid + scrolled): a clearly solid header band, no cell bleeding under
   it, ✕ / «Kennelen» / coin number on one baseline, legible Ink-Soft subtitle.
-- Placeholder-grep clean on the diff.
+- [x] Placeholder-grep clean on the diff.

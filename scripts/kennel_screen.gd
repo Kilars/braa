@@ -285,6 +285,9 @@ func _build_header() -> void:
 	hdr_style.bg_color = C_CELL
 	hdr_style.border_width_bottom = 1
 	hdr_style.border_color = C_HAIRLINE
+	hdr_style.shadow_color = Color(0.133, 0.204, 0.290, 0.12)
+	hdr_style.shadow_size = 6
+	hdr_style.shadow_offset = Vector2(0, 3)
 	hdr_style.content_margin_left   = 16.0
 	hdr_style.content_margin_right  = 12.0
 	hdr_style.content_margin_top    = 0.0
@@ -309,6 +312,7 @@ func _build_header() -> void:
 	close_btn.add_theme_color_override("font_pressed_color", C_MUTED)
 	close_btn.focus_mode = Control.FOCUS_NONE
 	close_btn.custom_minimum_size = Vector2(CLOSE_SIZE, CLOSE_SIZE)
+	close_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var close_style := StyleBoxFlat.new()
 	close_style.bg_color = C_CLOSE_BG
 	close_style.set_corner_radius_all(int(CLOSE_SIZE * 0.5))
@@ -325,6 +329,7 @@ func _build_header() -> void:
 	title_col.name = "TitleCol"
 	title_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	title_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title_col.add_theme_constant_override("separation", 0)
 	row.add_child(title_col)
 
@@ -343,7 +348,7 @@ func _build_header() -> void:
 	sub.text = "Profesjonell fasilitet · 8 plasser"
 	sub.add_theme_font_override("font", DesignSystem.font_body())
 	sub.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	sub.add_theme_color_override("font_color", C_MUTED)
+	sub.add_theme_color_override("font_color", C_INK_SOFT)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_col.add_child(sub)
@@ -355,6 +360,7 @@ func _build_header() -> void:
 	_coin_readout = CoinReadout.new()
 	_coin_readout.name = "CoinReadout"
 	_coin_readout.custom_minimum_size = Vector2(84.0, CoinReadout.HEIGHT)
+	_coin_readout.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_coin_readout.set_balance(_balance)
 	row.add_child(_coin_readout)
 

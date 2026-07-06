@@ -15,7 +15,9 @@ baseline (136), #3 mark word-pop contrast over grass (137).
 - **135 — DONE** kennel modal: wider card, Ink-Soft T_BODY stat labels + «Kan lære» line, explicit
   greyed «Har ikke råd · mangler N» disabled CTA (pure `adopt_button_label` helper TDD'd). Visual
   Review PASS (`108-kennel-modal.png` — Nova @ 0 coins shows the disabled token).
-- **136 — kennel header solid band + one baseline for ✕/title/coin.**
+- **136 — DONE** kennel header: soft drop-shadow band separating header from top cells,
+  ✕/title/coin on one baseline (SHRINK_CENTER), Ink-Soft legible subtitle. Visual Review PASS
+  (`105-kennel-01-grid.png`).
 - **137 — mark word-pop «Bra!» PERFECT-grade outline+shadow so it holds over bright grass.**
 
 ---
