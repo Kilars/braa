@@ -6,7 +6,26 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASES 1–9 SIGNED OFF; owner critique+polish pass (9 X-4 directives) preempts Phase 10 → 129/130/131 tasked — 2026-07-06
+## Status — PHASES 1–9 SIGNED OFF; owner critique+polish pass round 2 → 132/133/134 tasked (dir #2/#3/#6) — 2026-07-06
+
+Second scan round on the 9 X-4 directives (commit `24a7ee0`). Directives **#1 (131), #7 (130),
+#8 (129)** shipped last round. This round tasks the top of the remaining six — one HIGH + two
+MED, batching the two kennel-grid items on the same surface plus the menu:
+
+- **132 — VISUAL — kennel price badge anchor + contrast (dir #2 HIGH).** Pill collides with the
+  caption strip / "Fullført" star and washes out gold-on-tan → anchor ~8px inside the band, add a
+  dark scrim so any fill holds on any band, keep status + price in opposite corners.
+- **133 — VISUAL — kennel cells one DS neutral surface + contact shadow (dir #3 MED).** Eight
+  clashing rarity fills + floating dogs → one Warm Sand surface tinted only by ownership state,
+  subtle planks, a grounding contact shadow per dog (coat tint stays the dog-distinction signal).
+- **134 — VISUAL — completion menu DS typography + distinct "Marker words" section (dir #6 MED).**
+  Route all menu text through the DS fonts/scale (no default sans), give "Marker words" a heavier
+  heading + divider, raise sub-labels (`+15% · hviler 2`) to ≥12px Ink-Soft. Disclosure (127/128) untouched.
+
+**Remaining directives for the next scan round:** #4 inspect-modal legibility (MED), #5 kennel
+header alignment (LOW), #9 PERFECT/Bra! mark-text contrast (LOW).
+
+## (prior) Status — PHASES 1–9 SIGNED OFF; owner critique+polish pass (9 X-4 directives) preempts Phase 10 → 129/130/131 tasked — 2026-07-06
 
 Phase 10 stays owner-gated (spec empty), but the owner's 2026-07-06 critique+polish pass
 (commit `24a7ee0`) filed **9 fresh buildable X-4 quality directives** (4 HIGH, 3 MED, 2 LOW)

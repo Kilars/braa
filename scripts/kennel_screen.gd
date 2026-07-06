@@ -45,6 +45,7 @@ const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
 const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
 const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed in code)
 const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold (still used by the price chip label)
+const C_PRICE_SCRIM  := Color("22344a", 0.35) ## dark border behind price chip so any fill holds on any band bg
 
 # Modal-specific palette (108, K-2 inspect modal). Named constants — no scattered literals.
 const C_MODAL_BACKDROP := Color(0.078, 0.11, 0.149, 0.5)  ## rgba(20,28,38,.5) dim overlay
@@ -555,16 +556,17 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 		tag.offset_bottom = 6.0 + 22.0
 		band.add_child(tag)
 
-	# Price chip — bottom-right.
+	# Price chip — bottom-right, ~8px inset inside the band image area (clear of the caption strip).
+	# Status tag is top-left (see above) so these two elements are always at opposite corners.
 	var chip := _make_price_chip(row)
 	chip.anchor_left   = 1.0
 	chip.anchor_right  = 1.0
 	chip.anchor_top    = 1.0
 	chip.anchor_bottom = 1.0
-	chip.offset_left   = -84.0
-	chip.offset_right  = -6.0
-	chip.offset_top    = -28.0
-	chip.offset_bottom = -6.0
+	chip.offset_left   = -88.0
+	chip.offset_right  = -8.0
+	chip.offset_top    = -30.0
+	chip.offset_bottom = -8.0
 	band.add_child(chip)
 
 	return band
@@ -798,6 +800,12 @@ func _make_price_chip(row: Dictionary) -> PanelContainer:
 	sb.content_margin_right  = 7.0
 	sb.content_margin_top    = 3.0
 	sb.content_margin_bottom = 3.0
+	# Dark scrim border so any fill (gold, green, coral) holds on every band bg (tan/orange/blue/grey).
+	sb.border_width_left   = 1
+	sb.border_width_right  = 1
+	sb.border_width_top    = 1
+	sb.border_width_bottom = 1
+	sb.border_color = C_PRICE_SCRIM
 	panel.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = row.price_label
