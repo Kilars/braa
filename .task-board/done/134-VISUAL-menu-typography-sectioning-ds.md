@@ -61,12 +61,35 @@ this is purely typography + sectioning of the rows that already appear.
 
 ## Acceptance criteria
 
-- [ ] Every menu text node renders in the DS font (Baloo 2 headings / Nunito body) — no default sans.
-- [ ] Menu type scale follows `DesignSystem` (heading vs row vs sub-label), not ad-hoc `font_size`.
-- [ ] "Marker words" is a distinct section: heavier heading + divider, rows differentiated from
-      trick rows.
-- [ ] Sub-labels (`+15% · hviler 2` and peers) are ≥12px Ink-Soft `#5A6B7D` and legible.
-- [ ] Progressive disclosure (127/128, `MenuReveal`) is untouched — same rows show as before.
-- [ ] No new scattered `Color(...)`/font literals; go through `DesignSystem`.
-- [ ] Visual Review PASS on the completion menu capture (phone-portrait 390×844).
-- [ ] verify gate green (import·boot·test·export); placeholder check clean.
+- [x] Every menu text node renders in the DS font (Baloo 2 headings / Nunito body) — no default sans.
+- [x] Menu type scale follows `DesignSystem` (heading vs row vs sub-label), not ad-hoc `font_size`
+      (`TITLE_SIZE=T_TITLE`, `NAME_SIZE=T_TITLE`, `BADGE_SIZE=T_HEAD`, `HINT_SIZE=T_SMALL`).
+- [x] "Marker words" is a distinct section: a hairline divider rule + a Baloo-2 display heading, its
+      rows differentiated from trick rows by a leading filled pip + left indent.
+- [x] Sub-labels (`+15% · hviler 2` and peers) are `HINT_SIZE`=`T_SMALL` (13px ≥12) in `DesignSystem.SLATE`
+      Ink-Soft `#5A6B7D` and legible.
+- [x] Progressive disclosure (127/128, `MenuReveal`) is untouched — only `scripts/trick_menu.gd` changed.
+- [x] No new scattered `Color(...)`/font literals; go through `DesignSystem` (SLATE / PANEL_BORDER / T_*).
+- [x] Visual Review PASS on the completion menu capture (phone-portrait 390×844).
+      (`072-menu-open.png`, 2026-07-06: "Tricks" + "Marker words" headings render in rounded Baloo 2,
+      rows in Nunito; a divider rule + heavier heading set the marker-words section apart; each word row
+      (• Bra! / • Dyktig! / • Flink!) carries a leading pip + indent distinct from trick rows; the
+      `+15% · hviler 2` sub-line is legible Ink-Soft.)
+- [x] verify gate green (import·boot·test·export); placeholder check clean.
+
+## Resolution (2026-07-06)
+
+All in `scripts/trick_menu.gd` (58+/30- lines) — no logic touched, `MenuReveal` (127/128) untouched.
+
+- **DS type scale:** the ad-hoc `TITLE_SIZE/NAME_SIZE/BADGE_SIZE/HINT_SIZE` literals now bind to
+  `DesignSystem.T_TITLE` (26) / `T_HEAD` (18) / `T_SMALL` (13). Every draw goes through the DS Baloo-2
+  display / Nunito body fonts — no engine-default sans left.
+- **"Marker words" section:** new consts `WORD_DIVIDER_H`/`WORD_DIVIDER_GAP`/`WORD_HEADER_H` draw a
+  hairline `PANEL_BORDER` divider rule above a Baloo-2 display heading (heavier than the body-bold
+  "Breeds"/"Vanskelighet" subheads); `_words_top()` / row-rect math adjusted for the divider+heading.
+- **Row differentiation:** each word row gets a leading filled pip (`WORD_PIP_R`, coloured by word
+  state) + `WORD_ROW_INDENT`, so marker-word rows read distinctly from trick rows.
+- **Legible sub-labels:** the cost hint (`+15%…`) and trade subtitle now use `WORD_COST_HINT =
+  DesignSystem.SLATE` (Ink-Soft `#5A6B7D`) at `HINT_SIZE`=`T_SMALL` (13px ≥12).
+
+Gate: `✓ verify gate green` (import·boot·test·export). Visual Review PASS (`072-menu-open.png`).

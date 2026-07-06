@@ -102,12 +102,17 @@ const BREED_ROW_H := 54.0       ## one breed row (swatch + name + state/price)
 const BREED_ROW_GAP := 8.0      ## gutter between breed rows
 const SWATCH_R := 13.0          ## the honest coat-colour chip radius
 
-## The marker words section (092, P5-4): a small "Marker words" subheading + one row per catalog word,
-## seated between the breeds section and the showcase/footer pills. Zero-height when no words are fed.
-const WORDS_GAP := 18.0        ## gutter between the breeds section (or trick rows if no breeds) and the words section
-const WORD_HEADER_H := 30.0    ## the "Marker words" subheading band
-const WORD_ROW_H := 54.0       ## one word row (display text + state badge)
-const WORD_ROW_GAP := 8.0      ## gutter between word rows
+## The marker words section (092, P5-4; typography 134): a distinct Baloo-2 heading + a divider rule
+## + one row per catalog word, seated between the breeds section and the showcase/footer pills.
+## Zero-height when no words are fed, so the trick-only + breeds-only geometry is unchanged.
+const WORDS_GAP := 18.0          ## gutter above the divider rule (from the breeds section, or trick rows if no breeds)
+const WORD_DIVIDER_H := 1.0      ## hairline divider rule height (134: section break before the heading)
+const WORD_DIVIDER_GAP := 8.0    ## gap between the divider rule and the heading text
+const WORD_HEADER_H := 38.0      ## the "Marker words" heading band — taller for the Baloo-2 display heading (was 30)
+const WORD_ROW_H := 54.0         ## one word row (display text + state badge)
+const WORD_ROW_GAP := 8.0        ## gutter between word rows
+const WORD_ROW_INDENT := 8.0     ## extra left indent for marker-word rows (134: visually distinct from trick rows)
+const WORD_PIP_R := 3.0          ## leading pip radius — small filled circle at the left of each word row (134)
 
 ## The difficulty section (118, P4-1): a small "Vanskelighet" subheading + one row per mode
 ## (Normal/Hard/Expert), seated between the marker-words section and the showcase/footer pills.
@@ -119,11 +124,17 @@ const DIFFICULTY_ROW_H := 54.0  ## one difficulty row (name + active/locked badg
 const DIFFICULTY_ROW_GAP := 8.0 ## gutter between difficulty rows
 const DIFFICULTY_NOTE_H := 22.0  ## the locked-section reason note band (122) — reserved only when locked
 
-## Type sizes.
-const TITLE_SIZE := 30
-const NAME_SIZE := 26
-const BADGE_SIZE := 18
-const CLOSE_SIZE := 22
+## Type sizes — DS tokens (DesignSystem.T_*), not ad-hoc literals.
+## TITLE_SIZE: Baloo 2 SemiBold heading (T_TITLE=26) for the "Tricks" panel title.
+## NAME_SIZE: Nunito Bold row name at heading scale (T_TITLE=26 — a DS section/row heading).
+## BADGE_SIZE: Baloo 2 sub-heading / badge scale (T_HEAD=18).
+## HINT_SIZE: Nunito secondary caption for cost/trade sub-labels (T_SMALL=13 — ≥12px per spec).
+## CLOSE_SIZE: CTA button label — one step above BADGE so the primary action reads dominant.
+const TITLE_SIZE := DesignSystem.T_TITLE   ## 26 px — Baloo 2 heading (panel title)
+const NAME_SIZE  := DesignSystem.T_TITLE   ## 26 px — Nunito Bold row name
+const BADGE_SIZE := DesignSystem.T_HEAD    ## 18 px — badge / sub-heading
+const HINT_SIZE  := DesignSystem.T_SMALL   ## 13 px — secondary caption (cost / trade hint) ≥12px
+const CLOSE_SIZE := DesignSystem.T_TITLE   ## 26 px — primary CTA label
 
 ## Palette — DS tokens (098, Phase 6). SLATE-on-PAPER, BLUE primary accent, GOLD reserved for coin.
 ## BACKDROP: soft INK-based veil, not pure black.
@@ -198,7 +209,7 @@ const WORD_NAME_ACTIVE   := DesignSystem.BLUE        ## the firing word — prim
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
 const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
 const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
-const WORD_COST_HINT     := DesignSystem.SLATE_SOFT  ## dimmed cost hint (095, P5-2) — secondary
+const WORD_COST_HINT     := DesignSystem.SLATE  ## cost hint (095, P5-2) — Ink-Soft #5A6B7D, legible ≥12px (task 134)
 
 ## Difficulty-row palette + badges (118, DS tokens). Mirrors the breed/word row treatment.
 const DIFF_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Vanskelighet" subheading — secondary
@@ -470,14 +481,14 @@ func _breeds_block_h() -> float:
 		return 0.0
 	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
 
-## The marker words block height (092): the gutter + "Marker words" subheading + one row per word.
+## The marker words block height (092/134): the gutter + divider + divider-gap + heading + rows.
 ## Zero when no word rows are fed, so the trick-only panel geometry (072) and the breeds layout
 ## (079) are both unchanged when the section is absent.
 func _words_block_h() -> float:
 	var n := _words.size()
 	if n == 0:
 		return 0.0
-	return WORDS_GAP + WORD_HEADER_H + n * WORD_ROW_H + (n - 1) * WORD_ROW_GAP
+	return WORDS_GAP + WORD_DIVIDER_H + WORD_DIVIDER_GAP + WORD_HEADER_H + n * WORD_ROW_H + (n - 1) * WORD_ROW_GAP
 
 ## The y where the words section (subheading) begins — just below breeds, or just below trick rows
 ## if there are no breeds.
@@ -485,11 +496,12 @@ func _words_top() -> float:
 	var panel := _panel_rect()
 	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + WORDS_GAP
 
-## The i-th word row rect inside the panel (below the "Marker words" subheading).
+## The i-th word row rect inside the panel (below the "Marker words" heading + divider).
+## _words_top() is the start of the section; skip divider + divider-gap + heading to reach the first row.
 func _word_row_rect(i: int) -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := _words_top() + WORD_HEADER_H + i * (WORD_ROW_H + WORD_ROW_GAP)
+	var y := _words_top() + WORD_DIVIDER_H + WORD_DIVIDER_GAP + WORD_HEADER_H + i * (WORD_ROW_H + WORD_ROW_GAP)
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, WORD_ROW_H)
 
 ## The word row index under a point, or -1 if none.
@@ -725,12 +737,20 @@ func _draw() -> void:
 			BADGE_SIZE, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(f_bold, f_body, i)
-	# The marker words section (092): a subheading + one row per catalog word (Active/Unlocked/Locked).
+	# The marker words section (092/134): a distinct Baloo-2 heading + a hairline divider rule above
+	# it (matching the DS section-break treatment), then one row per catalog word (Active/Unlocked/Locked).
 	# Zero-height when no words are fed, so the trick-only + breeds-only geometry (072/079) is unchanged.
 	if not _words.is_empty():
-		var word_sub_baseline := _words_top() + f_bold.get_ascent(BADGE_SIZE)
-		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, word_sub_baseline), "Marker words",
-			BADGE_SIZE, WORD_SUBHEAD)
+		# Hairline divider rule above the heading — DS BORDER colour, full panel inner width.
+		var div_y := _words_top() + WORD_DIVIDER_H * 0.5
+		draw_line(
+			Vector2(panel.position.x + PANEL_PAD, div_y),
+			Vector2(panel.position.x + panel.size.x - PANEL_PAD, div_y),
+			PANEL_BORDER, WORD_DIVIDER_H)
+		# Baloo-2 display heading (heavier weight than the body-bold used for "Breeds" / "Vanskelighet").
+		var word_head_baseline := _words_top() + WORD_DIVIDER_H + WORD_DIVIDER_GAP + f_display.get_ascent(TITLE_SIZE)
+		_draw_text(f_display, Vector2(panel.position.x + PANEL_PAD, word_head_baseline), "Marker words",
+			TITLE_SIZE, TITLE_COLOR)
 		for i in _words.size():
 			_draw_word_row(f_bold, f_body, i)
 	# The difficulty section (118): a "Vanskelighet" subheading + one row per mode (Normal/Hard/Expert).
@@ -932,11 +952,19 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	if show_cost_hint:
 		var pct: int = int(round((w_window_scale - 1.0) * 100.0))
 		cost_hint = "+%d%% · hviler %d" % [pct, w_cooldown]
+	# Leading pip — a small filled circle at the left edge of every word row so the eye separates
+	# marker-word rows from trick rows at a glance (134: visual differentiation within the section).
+	var pip_x := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R
+	var pip_y := rect.position.y + rect.size.y * 0.5
+	var pip_col := WORD_NAME_ACTIVE if st == WordState.ACTIVE else (WORD_NAME_UNLOCKED if st == WordState.UNLOCKED else WORD_NAME_LOCKED)
+	draw_circle(Vector2(pip_x, pip_y), WORD_PIP_R, pip_col)
+	# Left offset for name text: past the pip + a small gap.
+	var name_left := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R * 2.0 + 6.0
 	# Lay out the name: if we have a cost hint, shift the name up slightly to leave room for
 	# the hint line below it, keeping everything within the row height.
 	var name_mid_y := rect.position.y + rect.size.y * 0.5
 	if show_cost_hint:
-		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(BADGE_SIZE) * 0.5 - 1.0
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(HINT_SIZE) * 0.5 - 1.0
 	# The word display text (e.g. "Dyktig!"), left-aligned.
 	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
 	# so it reads as "loaded but unavailable this round" rather than fully locked.
@@ -947,13 +975,13 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
 	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
-	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
+	_draw_text(f_name, Vector2(name_left, name_baseline),
 		str(w.get("display", w.id)), NAME_SIZE, name_col)
-	# Cost hint below the name (095, P5-2): SLATE_SOFT secondary text for UNLOCKED/ACTIVE stronger words.
+	# Cost hint below the name (095, P5-2; 134: SLATE Ink-Soft #5A6B7D, HINT_SIZE ≥12px for legibility).
 	if show_cost_hint:
-		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(BADGE_SIZE) + 2.0
-		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
-			cost_hint, BADGE_SIZE, WORD_COST_HINT)
+		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(HINT_SIZE) + 2.0
+		_draw_text(f_badge, Vector2(name_left, hint_baseline),
+			cost_hint, HINT_SIZE, WORD_COST_HINT)
 	# The state badge, right-aligned. A cooling ACTIVE word shows "Hviler (n)" (resting, n marks
 	# left) so the size of the rest cost is legible — was a bare "Hviler" before 095.
 	## Cooling badge: SLATE_SOFT at 0.70 alpha — dimmed, same family as locked, distinct from active.
@@ -1003,15 +1031,15 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 		name_col = DIFF_NAME_ACTIVE
 	var name_mid_y := rect.position.y + rect.size.y * 0.5
 	if show_trade:
-		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(BADGE_SIZE) * 0.5 - 1.0
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(HINT_SIZE) * 0.5 - 1.0
 	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
 	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
 		str(d.get("name", d.id)), NAME_SIZE, name_col)
-	# Trade subtitle below the name (121): SLATE_SOFT secondary text for Hard/Expert.
+	# Trade subtitle below the name (121; 134: SLATE Ink-Soft #5A6B7D, HINT_SIZE ≥12px for legibility).
 	if show_trade:
-		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(BADGE_SIZE) + 2.0
+		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(HINT_SIZE) + 2.0
 		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
-			trade, BADGE_SIZE, DIFF_TRADE_HINT)
+			trade, HINT_SIZE, DIFF_TRADE_HINT)
 	# The badge, right. Locked-active → "Låst"; unlocked-active → "Valgt"; other rows show no badge.
 	var badge := ""
 	var badge_col := DIFF_NAME_ACTIVE

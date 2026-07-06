@@ -22,6 +22,12 @@ MED, batching the two kennel-grid items on the same surface plus the menu:
   Route all menu text through the DS fonts/scale (no default sans), give "Marker words" a heavier
   heading + divider, raise sub-labels (`+15% · hviler 2`) to ≥12px Ink-Soft. Disclosure (127/128) untouched.
 
+**Shipped this iteration (2026-07-06):** 132 (`cd1e26e`) kennel price pill inset + dark-border scrim
+(holds contrast on every band, opposite corner from status); 133 (`94ebaed`) kennel cells → one Warm
+Sand surface tinted only by ownership + per-dog contact shadow + subtle planks (`_cell_surface` TDD);
+134 completion-menu DS typography (T_* scale, Baloo-2/Nunito, distinct "Marker words" divider+pips,
+legible Ink-Soft sub-labels). All three Visual-Reviewed at 390×844, verify green, pushed.
+
 **Remaining directives for the next scan round:** #4 inspect-modal legibility (MED), #5 kennel
 header alignment (LOW), #9 PERFECT/Bra! mark-text contrast (LOW).
 
