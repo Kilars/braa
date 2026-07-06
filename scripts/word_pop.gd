@@ -14,7 +14,8 @@ const FADE := 0.55          ## linear fade from opaque to fully transparent
 const RISE_PX := 64.0       ## how far the word floats UP over its life at full motion
 const COLOR_WORD := Color(1.0, 0.86, 0.30)            ## warm praise gold (agrees with PERFECT/mastery)
 const OUTLINE_COLOR := Color(0.07, 0.07, 0.10, 1.0)   ## near-black stroke, reads against any sky
-const OUTLINE_SIZE := 10
+const OUTLINE_SIZE := 13                               ## firmer stroke to match PERFECT's legibility ratio
+const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.55)      ## solid drop-shadow, reads over bright grass
 
 var _age := 0.0
 var _active := false
@@ -29,6 +30,11 @@ func _init() -> void:
 	add_theme_color_override("font_color", COLOR_WORD)
 	add_theme_color_override("font_outline_color", OUTLINE_COLOR)
 	add_theme_constant_override("outline_size", OUTLINE_SIZE)
+	# Solid drop-shadow on top of the outline for high contrast over bright grass
+	add_theme_color_override("font_shadow_color", SHADOW_COLOR)
+	add_theme_constant_override("shadow_offset_x", 2)
+	add_theme_constant_override("shadow_offset_y", 3)
+	add_theme_constant_override("shadow_outline_size", 1)
 	self_modulate.a = 0.0  # start blank — nothing fired yet
 
 func _ready() -> void:

@@ -18,7 +18,12 @@ baseline (136), #3 mark word-pop contrast over grass (137).
 - **136 — DONE** kennel header: soft drop-shadow band separating header from top cells,
   ✕/title/coin on one baseline (SHRINK_CENTER), Ink-Soft legible subtitle. Visual Review PASS
   (`105-kennel-01-grid.png`).
-- **137 — mark word-pop «Bra!» PERFECT-grade outline+shadow so it holds over bright grass.**
+- **137 — DONE** mark word-pop «Bra!»: outline 10→13 + solid drop-shadow (font_shadow 55%,
+  offset 2/3) matching «PERFECT»'s contrast; float/fade unchanged, word_pop tests green. Visual
+  Review PASS (mark burst — «Bra!» crisp over grass beside the dog).
+
+**Board EMPTY — 135/136/137 shipped, verify green, all pushed → terminal hand-off to father for the
+next PO pass on the 3 X-4 directives.**
 
 ---
 
