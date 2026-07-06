@@ -55,6 +55,8 @@ const C_PIP_FILLED     := Color("4a90e2")                  ## filled stat pip (b
 const C_PIP_EMPTY      := Color("dfe5ea")                  ## empty stat pip (light grey)
 const C_TRAIT_BG       := Color("e8f0f8")                  ## raseegenskaper chip background
 const C_TRAIT_INK      := Color("3a6a9a")                  ## raseegenskaper chip text
+const C_INK_SOFT       := Color("5a6b7d")                  ## Ink-Soft — legible sub-labels / stat labels (X-4 modal)
+const C_ADOPT_DISABLED := Color("c3cdd6")                  ## muted-grey fill for unaffordable adopt button (135)
 
 # Cell surface tokens (133): one DS neutral surface, tinted only by ownership state.
 # C_SURFACE_SAND is the Warm Sand DS base (#F4EFE6 = C_MODAL_CREAM — same token, aliased
@@ -115,7 +117,7 @@ const CLOSE_SIZE     := 36.0
 
 # Modal layout constants (108, K-2).
 const MODAL_CARD_RADIUS    := 24.0   ## card corner radius
-const MODAL_CARD_MAX_W     := 330.0  ## max card width (portrait: 390 - 2*30 margin)
+const MODAL_CARD_MAX_W     := 362.0  ## max card width (portrait: 390 - 2*14 margin, 135)
 const MODAL_BAND_H         := 100.0  ## tinted header band on the modal card
 const MODAL_BODY_PAD       := 16.0   ## inner horizontal padding for card body
 const MODAL_PIP_W          := 28.0   ## width of one stat pip
@@ -213,6 +215,7 @@ func open_detail(id: String) -> void:
 	detail["owned"] = is_owned
 	detail["active"] = is_active
 	detail["affordable"] = is_owned or detail["price"] == 0 or _balance >= detail["price"]
+	detail["balance"] = _balance
 	# Carry the dog's grid index (131) so the modal header shows the SAME distinct-yaw portrait as its cell.
 	detail["cell_index"] = _dog_index_for_id(id)
 	_modal_overlay = _build_modal_overlay(detail)
@@ -1122,7 +1125,7 @@ func _build_modal_blurb(detail: Dictionary) -> Label:
 func _build_modal_stats(detail: Dictionary) -> VBoxContainer:
 	var col := VBoxContainer.new()
 	col.name = "ModalStats"
-	col.add_theme_constant_override("separation", 7)
+	col.add_theme_constant_override("separation", 8)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var stat_labels := ["Læreevne", "Energi", "Mot", "Fokus"]
@@ -1136,9 +1139,9 @@ func _build_modal_stats(detail: Dictionary) -> VBoxContainer:
 		var lbl := Label.new()
 		lbl.text = stat_labels[i]
 		lbl.add_theme_font_override("font", DesignSystem.font_body())
-		lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-		lbl.add_theme_color_override("font_color", C_MUTED)
-		lbl.custom_minimum_size = Vector2(76.0, 0.0)
+		lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+		lbl.add_theme_color_override("font_color", C_INK_SOFT)
+		lbl.custom_minimum_size = Vector2(84.0, 22.0)
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(lbl)
@@ -1256,8 +1259,8 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 	lbl.name = "ModalTrickList"
 	lbl.text = "Kan laere: " + " · ".join(parts)
 	lbl.add_theme_font_override("font", DesignSystem.font_body())
-	lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	lbl.add_theme_color_override("font_color", C_MUTED)
+	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	lbl.add_theme_color_override("font_color", C_INK_SOFT)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
@@ -1365,53 +1368,70 @@ func _build_active_state(_detail: Dictionary) -> Control:
 	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	return btn
 
-## K-4 adopt button (109). For an unowned dog: a full-width blue button reading «Adopter · N mynt»
-## (Baloo 2, #4a90e2). When the dog is unaffordable the button is visually dimmed and disabled
-## (non-tappable) — no error state (K-3). On press emits adopt_requested(id) which
-## main._on_kennel_adopt wires into the real spend+roster mutation. Trulte's free-adopt coral
-## treatment is K-6 (task 111) — this task ships the priced blue path only.
+## K-4 adopt button (109). For an unowned dog: a full-width blue button reading «Adopter  N mynt»
+## (Baloo 2, #4a90e2) when affordable, or a greyed «Har ikke råd · mangler N» disabled token when
+## not (135). On press emits adopt_requested(id) which main._on_kennel_adopt wires into the real
+## spend+roster mutation. Trulte's free-adopt coral treatment is K-6 (task 111) — this ships the
+## priced blue path only.
 const C_ADOPT_BLUE := Color("4a90e2")    ## blue adopt button bg
-const C_ADOPT_DIM  := Color("b0c8e8")    ## dimmed blue when unaffordable
+
+## Pure static helper: maps (price, balance, affordable) → the adopt button label string.
+## Affordable + priced  → "Adopter  N mynt" (two spaces before number, matching legacy label_text).
+## Affordable + free    → "Adopter"
+## Not affordable       → "Har ikke råd · mangler N" where N = max(0, price − balance).
+## TDD: tests/test_kennel_modal_cta.gd (135).
+static func adopt_button_label(price: int, balance: int, affordable: bool) -> String:
+	if affordable:
+		return "Adopter  %d mynt" % price if price > 0 else "Adopter"
+	return "Har ikke råd · mangler %d" % max(0, price - balance)
 
 func _build_adopt_button(detail: Dictionary) -> Control:
 	var price: int = detail.get("price", 0)
 	var affordable: bool = detail.get("affordable", true)
+	var balance: int = detail.get("balance", 0)
 	var dog_id: String = detail.get("id", "")
-
-	# Button label: «Adopter · N mynt» (price in numerals — no emoji, no non-theme glyph).
-	var label_text := "Adopter  %d mynt" % price if price > 0 else "Adopter"
 
 	var btn := Button.new()
 	btn.name = "AdoptButton"
-	btn.text = label_text
+	btn.text = adopt_button_label(price, balance, affordable)
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	btn.add_theme_color_override("font_color", Color.WHITE)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 0.75))
-	btn.add_theme_color_override("font_disabled_color", Color.WHITE)
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	var bg_color := C_ADOPT_BLUE if affordable else C_ADOPT_DIM
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg_color
 	sb.set_corner_radius_all(int(CHIP_RADIUS))
 	sb.content_margin_left   = 0.0
 	sb.content_margin_right  = 0.0
 	sb.content_margin_top    = 14.0
 	sb.content_margin_bottom = 14.0
-	var sb_pressed := sb.duplicate() as StyleBoxFlat
-	sb_pressed.bg_color = bg_color.darkened(0.12)
-	for st in ["normal", "hover", "disabled"]:
-		btn.add_theme_stylebox_override(st, sb)
-	btn.add_theme_stylebox_override("pressed", sb_pressed)
+
+	if affordable:
+		# Full Bra-Blue + white bold — the clear "you can adopt" state.
+		sb.bg_color = C_ADOPT_BLUE
+		btn.add_theme_color_override("font_color", Color.WHITE)
+		btn.add_theme_color_override("font_hover_color", Color.WHITE)
+		btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 0.75))
+		btn.add_theme_color_override("font_disabled_color", Color.WHITE)
+		var sb_pressed := sb.duplicate() as StyleBoxFlat
+		sb_pressed.bg_color = C_ADOPT_BLUE.darkened(0.12)
+		for st in ["normal", "hover", "disabled"]:
+			btn.add_theme_stylebox_override(st, sb)
+		btn.add_theme_stylebox_override("pressed", sb_pressed)
+	else:
+		# Distinct greyed disabled token (135): solid muted-grey fill + Ink-Soft text at full
+		# opacity — NOT a washed-out blue. Reads as a deliberate "Har ikke råd" state.
+		sb.bg_color = C_ADOPT_DISABLED
+		btn.add_theme_color_override("font_color", C_INK_SOFT)
+		btn.add_theme_color_override("font_hover_color", C_INK_SOFT)
+		btn.add_theme_color_override("font_disabled_color", C_INK_SOFT)
+		for st in ["normal", "hover", "pressed", "disabled"]:
+			btn.add_theme_stylebox_override(st, sb)
+
 	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
-	# K-3: unaffordable → dim + non-tappable.
+	# K-3: unaffordable → non-tappable (no modulate wash — the greyed fill is the disabled signal).
 	btn.disabled = not affordable
-	if not affordable:
-		btn.modulate = Color(1.0, 1.0, 1.0, 0.55)
 
 	# On press emit the new adopt_requested signal — main wires to _on_kennel_adopt.
 	if affordable:

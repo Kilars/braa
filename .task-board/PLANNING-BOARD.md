@@ -6,7 +6,21 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASES 1–9 SIGNED OFF; owner critique+polish pass round 2 → 132/133/134 tasked (dir #2/#3/#6) — 2026-07-06
+## Status — PHASES 1–9 SIGNED OFF; PO father-pass-2 → 135/136/137 tasked (3 remaining X-4 directives) — 2026-07-06
+
+PO father pass 2 (`a7ea9d3`) re-verified 129–134 as fixed and named the **3 X-4 directives left
+untouched**: #1 kennel modal legibility + explicit CTA states (135), #2 kennel header band +
+baseline (136), #3 mark word-pop contrast over grass (137).
+
+- **135 — DONE** kennel modal: wider card, Ink-Soft T_BODY stat labels + «Kan lære» line, explicit
+  greyed «Har ikke råd · mangler N» disabled CTA (pure `adopt_button_label` helper TDD'd). Visual
+  Review PASS (`108-kennel-modal.png` — Nova @ 0 coins shows the disabled token).
+- **136 — kennel header solid band + one baseline for ✕/title/coin.**
+- **137 — mark word-pop «Bra!» PERFECT-grade outline+shadow so it holds over bright grass.**
+
+---
+
+### Prior — owner critique+polish pass round 2 → 132/133/134 (dir #2/#3/#6) — 2026-07-06
 
 Second scan round on the 9 X-4 directives (commit `24a7ee0`). Directives **#1 (131), #7 (130),
 #8 (129)** shipped last round. This round tasks the top of the remaining six — one HIGH + two
