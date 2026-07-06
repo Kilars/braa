@@ -176,65 +176,56 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-06 (PO, father pass 2) — independent replay: 3 X-4 directives still open
+### PO Review — 2026-07-06 (PO, father pass 3) — prior 3 directives verified fixed; one localization gap filed
 
-Second same-day pass, run fresh and stateless. Independently replayed the current running build
-(`build/web` at HEAD `0f6465a` — the 132/133/134 arc, gate green) on a 390×844 phone-portrait viewport:
-the training page + a mark burst, the completion menu on mastery, and the kennel grid → inspect modal →
-scroll → close. **Zero console errors.** The build uses the CC0 rig (the licensed Labrador renders only
-on the live Pages deploy), so per-breed *silhouette* is the owner-gated BUST-068 residual — but every
-directive below is layout / colour / framing / type, which the CC0 rig renders truthfully. Reconstructed
-the six owner directives tasked into 129–134 from the board + commits and **re-checked each in my own
-pixels: six replay as fixed and stay pruned; the three below still fall short unchanged since the prior
-pass** (they were never tasked — the board went empty after 134, so nothing has moved on them).
+Third same-day pass, run fresh and stateless. Rebuilt the current HEAD (`1b09145` — the 135/136/137 arc,
+`verify.sh` green: import·boot·test·export) and drove `build/web` in headless Chromium at 390×844
+(SwiftShader == the deployed GL Compatibility renderer). **Zero console errors.** Replayed the kennel grid
+→ Nova inspect modal → close, a dense `?bra_autotap=1` mark burst (caught the «PERFECT» + «Bra!» word-pop),
+and the completion menu on mastery. The build uses the CC0 rig locally (the licensed Labrador renders only
+on the live Pages deploy); every item below is layout / colour / type / **language**, which the CC0 rig
+renders truthfully.
 
-**FIXED this arc — re-verified in my own pixels, pruned:** coin readout unified across training / menu /
-kennel (129, `097-training-01.png` · `072-menu-open.png` · `105-kennel-01-grid.png`); menu primary CTA a
-solid Bra-Blue gradient pill with the feedback button demoted to a ghost secondary (130, `072-menu-open.png`);
-per-cell distinct yaws so the grid no longer reads as eight identical silhouettes (131, `105-kennel-01-grid.png`);
-inset gold price pill with dark scrim, clear of the caption + owned/Påskeegg tags (132, same); one unified
-warm-sand cell surface tinted by ownership with a soft contact shadow per dog (133, same); Marker-words
-heading + hairline divider + pip-led indented rows distinct from the trick rows, progressive disclosure
-intact (134, `072-menu-open.png`).
+**FIXED this arc — re-verified in my own pixels, all three prior directives pruned:**
 
-**STILL falls short — buildable now, preempts the Phase-10 owner-gate:**
+1. **Kennel modal legibility + CTA (135).** `.screenshots/108-kennel-modal.png` (Nova): the card is wider,
+   the 4 stat rows (Læreevne/Energi/Mot/Fokus) now read as legible Ink-Soft labels beside blue pip bars,
+   the «Kan lære: Sitt · Ligg · Legg deg» line is readable, and the unaffordable adopt CTA is an **explicit
+   greyed «Har ikke råd · mangler 300»** — it reads intentionally disabled, no longer a washed-out button. ✓
+2. **Kennel header band + baseline (136).** `108-kennel-modal-closed.png`: a soft drop-shadow surface band
+   now sits behind the header, the ✕ / «Kennelen» title block / coin pill share one baseline, and the
+   «Profesjonell fasilitet · 8 plasser» subtitle is legible Ink-Soft on the band, not bleeding over the top
+   cells. ✓
+3. **Word-pop «Bra!» outline (137).** `.screenshots/POd-mark-15.png` + a 3× zoom (`POd-bra-crop.png`): the
+   «Bra!» that floats up from the BRA button now renders amber Baloo 2 with a solid dark outline/drop-shadow,
+   holding crisp contrast over the bright grass along its float — matching the «PERFECT» treatment. ✓
 
-1. **[HIGH] The kennel inspect modal is illegible — micro-type stats + a washed-out CTA.** *Saw:*
-   `.screenshots/108-kennel-modal.png` (Nova). The modal is small and cramped against the dimmed grid; the
-   4-stat block (Læreevne/Energi/Mot/Fokus) draws a blue pip-grid bar per stat but the left-hand labels are
-   unreadable micro-type, the «Kan lære: Sitt · Ligg · Legg deg» line is tiny, and the bottom action button
-   is pale text on a pale fill — it reads *broken*, not intentionally disabled (Nova costs 300, the player
-   has 0 coins, but nothing states «Har ikke råd»). *Bar:* X-4 — a modal you can actually read and act on.
-   *Acceptance:* enlarge the modal to fill more of the portrait width; stat labels ≥13px Ink-Soft `#5A6B7D`
-   at ≥1.4 line-height / ~8px row rhythm and the «Kan lære» line legible; the adopt/select CTA in full
-   Bra-Blue `#4A90E2` + white ≥700 when affordable, and an **explicit disabled token** (greyed fill +
-   «Har ikke råd»-style label showing the shortfall) when not — never an accidentally-washed-out button.
-   This is the one directive the 129–134 arc never touched; it is now the biggest remaining kennel gap.
+**NEWLY falls short — buildable now, preempts the Phase-10 owner-gate:**
 
-2. **[LOW] Kennel header cramped, no band, mixed baselines.** *Saw:* `105-kennel-01-grid.png` /
-   `105-kennel-02-scroll.png` — the «Kennelen» title, its faint «Profesjonell fasilitet · 8 plasser»
-   subtitle, the close «✕», and the coin pill float over the busy first grid row with no solid band
-   separating header from cells, and the ✕ / title / coin pill don't share one baseline. *Acceptance:* a
-   solid DS surface band behind the header; ✕ + title block + coin pill on one baseline; subtitle ≥12px
-   Ink-Soft, legible on the band rather than bleeding over the top cells.
+1. **[MEDIUM] The completion menu is in English — the one player-facing surface not localized to
+   Norwegian.** *Saw:* `.screenshots/072-menu-open.png`. Every other string in the game is Norwegian — the
+   HUD pill reads **«Triks»**, the kennel is «Kennelen / Læreevne / Energi / Mot / Fokus / Raseegenskaper /
+   Har ikke råd / Kan lære», the buttons are «Fortsett treningen / Gi tilbakemelding», the marker words are
+   «Bra! / Dyktig! / Flink!» — but the completion menu those open is headed **«Tricks»** with rows
+   **«Learned / Available / Locked»**, a **«Marker words»** subheading, and breed/word status chips
+   **«Active / Switch / Locked»** (hardcoded in `scripts/trick_menu.gd:71-73, 190-206, 725, 752`). It is an
+   internal contradiction — the «Triks» pill opens a «Tricks» panel. *Why it's wrong:* X-4 "reads first" —
+   for a Norwegian game aimed at Norwegian dog-owners, English structural labels break immersion and read as
+   unfinished; the fully-Norwegian kennel proves the intended language. *What good looks like:* translate all
+   completion-menu chrome to Norwegian in the kennel's register — «Tricks»→«Triks», «Marker
+   words»→«Markørord», «Learned»→«Lært», «Available»→«Tilgjengelig», «Locked»→«Låst», «Active»→«Aktiv»,
+   «Switch»→«Bytt» (the Breeds section rows too) — and sweep the rest of the menu (and the difficulty /
+   «Vanskelighet» rows) for any other English UI string, so the whole app is one language.
 
-3. **[LOW] The mark word-pop «Bra!» has no outline — softens over bright grass.** *Saw:*
-   `.screenshots/MARK-frame-08.png` (over grass) vs `MARK-frame-13.png` (over the BRA button). «PERFECT»
-   renders in amber Baloo 2 with a legible outline (good), but the «Bra!» word that floats up from the BRA
-   button is **flat amber with no outline/shadow** — legible enough when it passes over the dark button
-   (frame 13) but washed over the bright green grass (frame 08). *Acceptance:* give the «Bra!» word-pop the
-   same high-contrast treatment as «PERFECT» — amber `#F5B841` (or white) Baloo 2 with a solid drop-shadow
-   or dark outline — so it stays crisply legible over any garden frame along its whole float.
-
-**Not a directive — checked and clean:** no regression in the signed-off phases on this build. The
-training page pixel-matches the goal (`097-training-01.png` — cream dog centred/grounded facing camera on
-green grass, tan path → cottage, white picket fence, gold coins, blue BRA button); the core mark loop runs
-idle → wander → cyan approach ring → seated apex → PERFECT → joyful face-on reaction with the gold BRA-ring
-pulse (`MARK-frame-04/13.png`, no rear-spin — **077 holds**); the completion menu (tricks + marker words +
-breeds) and the kennel grid / modal / scroll / close path all render and drive clean.
+**Not a directive — checked and clean:** no regression in the signed-off phases on this build. The training
+page pixel-matches the goal (`POd-mark-10.png` — cream dog centred/grounded facing camera on green grass,
+tan path → cottage, white picket fence, gold coins, blue BRA button); the core mark loop runs idle → wander
+→ cyan approach ring (`POd-mark-14.png`) → seated apex → «PERFECT» + «Bra!» pop → joyful face-on reaction
+(no rear-spin — **077 holds**); the completion menu progressive disclosure (Tricks + Marker words, breeds
+gated) and the kennel grid / modal / scroll / close path all render and drive clean.
 
 **No sign-off this pass.** Phases 1–9 remain signed; Phase 10 (`phase10.md`) is still empty/deferred —
-owner-gated, nothing to sign. But the three directives above are genuine, buildable X-4 quality work that
-the 129–134 arc left untouched, so this is **not** the terminal stop state: the loop has real polish to
-build (the modal above all). Once 1–3 land and replay clean and no further improvement can be honestly
-found, the next pass may reach the owner-gated terminal hand-off (Phase 10 awaiting its spec).
+owner-gated, nothing to sign. The three prior X-4 directives all landed and replay clean, but the
+localization gap above is genuine, buildable quality work, so this is **not** the terminal stop state.
+Once it lands and replays clean and no further improvement can be honestly found, the next pass may reach
+the owner-gated terminal hand-off (Phase 10 awaiting its spec).
