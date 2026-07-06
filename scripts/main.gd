@@ -1012,7 +1012,7 @@ const GARDEN_RAIL_D := 0.04            ## rail depth
 const GARDEN_RAIL_Y_LOW := 0.18        ## lower rail height off the foot plane
 const GARDEN_RAIL_Y_HIGH := 0.40       ## upper rail height off the foot plane
 const GARDEN_FENCE_WHITE := Color(0.95, 0.95, 0.92)     ## soft white pickets (not clinical pure white)
-const GARDEN_COIN_R := 0.12            ## 102: ambient ground-coin radius (0.24 m disc). The camera sits ~1.2 m off the dog so it MAGNIFIES on-screen props — at R=0.18 the coins read as crowding orbs; 0.12 reads as small grounded coins. (101's coins vanished from being OFF-SCREEN at |x|=1.4-1.7, not from size.)
+const GARDEN_COIN_R := 0.04            ## 142 (PO father-pass-7): ambient ground-coin radius (0.08 m disc). The PO gold-pixel-scanned the 102 R=0.12 coins at 70×69 px (~18 % of the 390-wide screen) — ~4.5× the goal art's small (~14 px) scatter, so they read as HUD orbs crowding the dog. Camera sits ~1.2 m off the dog → ~292 px/m at coin depth, so 0.08 m ≈ 23 px, landing in the goal's 20–26 px band. keep_scale stays true (GL-Compat billboard collapses edge-on otherwise) — smallness comes from the radius.
 const GARDEN_COIN_LIFT := 0.02         ## metres above the grass so a coin rests, doesn't sink
 
 ## A winding light-tan PATH curving from just in front of the dog back to a small HOUSE in the
@@ -1263,40 +1263,54 @@ func _setup_ground_coins(dog: Node) -> void:
 	var coins := Node3D.new()
 	coins.name = "GardenCoins"
 	add_child(coins)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = _coin_texture()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-even gold, not dimmed by the grazing sun
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA      # the round alpha edge IS the coin rim
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED     # always face the camera → a clean disc
-	mat.billboard_keep_scale = true   # GL-Compat needs this true or the billboard collapses edge-on; smallness comes from GARDEN_COIN_R
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	# 102: [x, z] — grounded gold coins FLANKING the centred dog, two left + one right. Measured via an
-	# analytic 390×844 projection: the camera sits only ~1.2 m behind the dog, so the narrow portrait FOV
-	# only shows |x| < ~0.5 m at this depth — 101's coins at |x|=1.4-1.7 were entirely OFF-SCREEN (hence the
-	# PO's zero-gold scan; it was never a size problem). These sit just outside the dog's silhouette
-	# (|x|≈0.4-0.46) and a touch behind/beside it (-Z, low), landing at the left/right margins, low in the
-	# grass band, clear of the dog and the BRA button. Verified gold-visible in captured pixels, not just wired.
+	# 142: two-tone — a gold coin material + a rose accent one, matching the goal art's gold + red/pink
+	# scatter. Same billboard/unshaded/alpha setup, only the baked face texture differs.
+	var gold_mat := _coin_material(_coin_texture())
+	var rose_mat := _coin_material(_coin_texture(DesignSystem.ROSE, DesignSystem.ROSE_DARK))
+	# 142: [x, z, accent] — a loose, NON-OVERLAPPING scatter FLANKING the centred dog, two per flank at
+	# staggered depths. Measured via an analytic 390×844 projection: the camera sits only ~1.2 m behind
+	# the dog, so the narrow portrait FOV only shows |x| < ~0.5 m at this depth — 101's coins at |x|=1.4-1.7
+	# were entirely OFF-SCREEN (the PO's zero-gold scan). These sit just outside the dog silhouette
+	# (|x|≈0.40-0.46), well separated in z (>=0.35 m apart, never the touching pair the PO caught), low in
+	# the grass band, clear of the dog and the BRA button. One rose accent for the goal's two-tone read.
 	var spots := [
-		[c.x - 0.47, c.z - 0.55],
-		[c.x - 0.42, c.z - 0.15],
-		[c.x + 0.47, c.z - 0.35],
+		[c.x - 0.46, c.z - 0.20, false],
+		[c.x - 0.40, c.z - 0.80, false],
+		[c.x + 0.46, c.z - 0.55, true],
+		[c.x + 0.40, c.z - 1.05, false],
 	]
 	for sp in spots:
 		var coin := MeshInstance3D.new()
 		var quad := QuadMesh.new()
 		quad.size = Vector2(GARDEN_COIN_R * 2.0, GARDEN_COIN_R * 2.0)
 		coin.mesh = quad
-		coin.material_override = mat
+		coin.material_override = rose_mat if sp[2] else gold_mat
 		coin.position = Vector3(sp[0], y, sp[1])
 		coin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		coins.add_child(coin)
+
+## 142: the shared billboard material for an ambient garden coin — unshaded (self-even face, not dimmed
+## by the grazing sun), alpha-transparent (the round edge IS the rim), camera-billboarded with keep_scale
+## true (GL-Compat collapses the billboard edge-on otherwise; smallness comes from GARDEN_COIN_R). Only the
+## baked face texture varies (gold vs rose), so the setup lives in one place.
+func _coin_material(face: Texture2D) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = face
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.billboard_keep_scale = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return mat
 
 ## The ambient coin's texture (099/124): a flat solid gold disc baked to an Image — opaque GOLD
 ## face, crisp GOLD_DARK rim ring at dist>0.86, hard alpha edge at dist>1.0. No bright blooming
 ## core, no soft radial falloff (owner directive 2026-07-05: coins must read as small flat gold
 ## coins, not glowing translucent orbs). Optional subtle upper-left glint stays opaque.
 ## Headless-safe (baked Image, no shader).
-func _coin_texture() -> ImageTexture:
+## 142: parametrized by face + rim so the same flat-disc bake yields both the gold coin and the rose
+## accent (two-tone scatter). Defaults to the gold pair so existing callers are unchanged.
+func _coin_texture(face: Color = DesignSystem.GOLD, rim: Color = DesignSystem.GOLD_DARK) -> ImageTexture:
 	var d := 64
 	var img := Image.create(d, d, false, Image.FORMAT_RGBA8)
 	var mid := float(d) * 0.5
@@ -1307,14 +1321,14 @@ func _coin_texture() -> ImageTexture:
 			if dist > 1.0:
 				col = Color(0, 0, 0, 0)                       # outside the disc — transparent
 			elif dist > 0.86:
-				col = DesignSystem.GOLD_DARK                  # crisp opaque rim ring
+				col = rim                                     # crisp opaque rim ring
 			else:
-				# Flat solid gold face — no soft gradient, no near-white blooming core.
+				# Flat solid face — no soft gradient, no near-white blooming core.
 				# Subtle upper-left glint (opaque, not luminous) for a coin-face read.
 				var gx := float(px) - mid
 				var gy := float(py) - mid
 				var glint := clampf((-gx - gy) / (mid * 1.4), 0.0, 1.0)  # upper-left direction
-				col = DesignSystem.GOLD.lerp(DesignSystem.GOLD_DARK.lerp(DesignSystem.GOLD, 0.6), glint * 0.18)
+				col = face.lerp(rim.lerp(face, 0.6), glint * 0.18)
 				col.a = 1.0
 			img.set_pixel(px, py, col)
 	return ImageTexture.create_from_image(img)

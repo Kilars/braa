@@ -219,27 +219,72 @@ func test_the_fence_shows_pickets_on_both_sides_of_the_gate() -> void:
 func test_the_coins_read_as_gold_discs_grounded_in_the_foreground() -> void:
 	var main := instantiate_main()
 	var coins := main.get_node_or_null("GardenCoins") as Node3D
-	assert_true(coins != null, "ambient coins rest on the grass (099/101/102)")
+	assert_true(coins != null, "ambient coins rest on the grass (099/101/102/142)")
 	var c: Vector3 = main._dog_bounds(main._dog).get_center()
 	var c0 := coins.get_child(0) as MeshInstance3D
 	var quad := c0.mesh as QuadMesh
 	assert_true(quad != null, "the coin is a billboard quad")
-	# 102: the PO reversed the 101 shrink — at R=0.16 (0.32 m) the coins scanned as ZERO gold pixels
-	# in-world (vanished). The fix is a READABLE band: big enough to read as a coin, still smaller than
-	# the old R=0.24 (0.48 m) orb. Pins BOTH failure modes — a regression to the vanishing tick (< 0.34)
-	# OR back to the orb (> 0.46) fails. (Smallness still comes from the radius, keep_scale stays true —
-	# the GL-Compat billboard collapses edge-on without it.)
-	assert_true(quad.size.x >= 0.20 and quad.size.x <= 0.36,
-		"the coin reads without being an orb (diameter %.2f in [0.20, 0.36] m)" % quad.size.x)
-	# 102: the coins FLANK the centred dog at the on-screen margins. Measured via an analytic 390×844
+	# 142 (PO father-pass-7): the PO gold-pixel-scanned the 102 coins at 70×69 / 63×51 px (~18 % of the
+	# 390-wide screen) — ~4.5× the goal art's small (~14 px / ~4 %) scatter, so they read as oversized HUD
+	# tokens crowding the dog. The camera sits ~1.2 m off the dog, so ~292 px/m at coin depth → the goal's
+	# 20–26 px band means a diameter of ~0.07–0.09 m ⇒ radius ~0.035–0.045. Pin the SMALL band so a
+	# regression back to the 0.24 m orb can't read green. (Smallness still comes from the radius; keep_scale
+	# stays true — the GL-Compat billboard collapses edge-on without it.)
+	assert_true(quad.size.x >= 0.06 and quad.size.x <= 0.12,
+		"the coin reads small like the goal art, not an HUD orb (diameter %.3f in [0.06, 0.12] m)" % quad.size.x)
+	# 142: the coins FLANK the centred dog at the on-screen margins. Measured via an analytic 390×844
 	# projection: the camera sits only ~1.2 m behind the dog, so the narrow portrait FOV shows only
 	# |x| < ~0.5 m at this depth — 101's coins at |x|=1.4-1.7 were entirely OFF-SCREEN (the PO's zero-gold
-	# scan), and the goal's exact lower-third corners aren't reachable without regressing the framing (the
-	# 101 note). This pins each coin to a lateral band — far enough out to clear the dog silhouette, near
+	# scan). This pins each coin to a lateral band — far enough out to clear the dog silhouette, near
 	# enough to stay inside the FOV — so a regression back UNDER the dog OR off-screen can't read green.
 	for child in coins.get_children():
 		var coin := child as MeshInstance3D
 		var dx: float = absf(coin.position.x - c.x)
-		assert_true(coin != null and dx >= 0.32 and dx <= 0.7,
-			"the coin flanks the dog within the narrow FOV (|dx| %.2f in [0.32, 0.7] m)" % dx)
+		assert_true(coin != null and dx >= 0.32 and dx <= 0.5,
+			"the coin flanks the dog within the narrow FOV (|dx| %.2f in [0.32, 0.5] m)" % dx)
+	main.queue_free()
+
+## 142 (PO father-pass-7 — X-4 polish): the PO measured the 102 coins as oversized (70×69 px),
+## OVERLAPPING (a left cluster of two touching discs), and single-tone flat gold — diverging from the
+## goal art's small, clearly-spaced, TWO-TONE (gold + red/pink) scatter. These pin the fix's structural
+## invariants: a loose non-overlapping scatter, and at least one rose accent coin. The LOOK stays
+## Visual-Review-gated; these guard that a regression to the crowded monochrome cluster can't read green.
+
+func test_the_coins_are_a_loose_non_overlapping_scatter() -> void:
+	var main := instantiate_main()
+	var coins := main.get_node_or_null("GardenCoins") as Node3D
+	assert_true(coins != null, "ambient coins rest on the grass (142)")
+	# The goal is a small scatter that FRAMES the dog — enough coins to read as a scatter, split on both
+	# flanks, and never a stacked cluster like the two touching left coins the PO caught.
+	var kids: Array = coins.get_children()
+	assert_true(kids.size() >= 4, "a loose scatter of coins frames the dog (got %d, want >= 4)" % kids.size())
+	# No two coin centres sit within their combined footprint (2×radius) — the ground-plane (x,z) distance
+	# between every pair must exceed the coin diameter, so none overlaps on-screen.
+	var r: float = main.GARDEN_COIN_R
+	for i in range(kids.size()):
+		for j in range(i + 1, kids.size()):
+			var a := kids[i] as MeshInstance3D
+			var b := kids[j] as MeshInstance3D
+			var d := Vector2(a.position.x - b.position.x, a.position.z - b.position.z).length()
+			assert_true(d > 2.0 * r,
+				"coins %d,%d don't overlap (ground gap %.3f m > diameter %.3f m)" % [i, j, d, 2.0 * r])
+	main.queue_free()
+
+func test_at_least_one_coin_is_a_rose_accent_two_tone() -> void:
+	var main := instantiate_main()
+	var coins := main.get_node_or_null("GardenCoins") as Node3D
+	assert_true(coins != null, "ambient coins rest on the grass (142)")
+	# Two-tone: the scatter carries BOTH the gold coin material and a red/pink (rose) accent one, matching
+	# the goal art's gold + red/pink pair. Detect by the two distinct baked textures on the coins.
+	var textures := {}
+	for child in coins.get_children():
+		var coin := child as MeshInstance3D
+		var mat := coin.material_override as BaseMaterial3D
+		assert_true(mat != null and mat.albedo_texture != null, "each coin carries a baked face texture")
+		textures[mat.albedo_texture.get_instance_id()] = true
+	assert_true(textures.size() >= 2,
+		"the scatter is two-tone — gold + a rose accent coin (got %d distinct coin textures)" % textures.size())
+	# The rose token is a genuine red/pink (r leads g and b), distinct from gold (which leads r≈g high).
+	assert_true(DesignSystem.ROSE.r > DesignSystem.ROSE.g and DesignSystem.ROSE.r > DesignSystem.ROSE.b,
+		"ROSE reads red/pink — r leads g and b")
 	main.queue_free()

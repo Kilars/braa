@@ -176,53 +176,62 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-06 (PO, father pass 6) — modal bust *consistency* verified fixed across all 8 dogs; no new buildable improvement → owner-gated terminal hand-off
+### PO Review — 2026-07-07 (PO, father pass 7) — polish-lens pass: modal-bust arc re-verified converged; ONE measured X-4 fidelity gap found (training-page coins oversized/overlapping vs goal art)
 
-Sixth same-day pass, run fresh and stateless. Built the current HEAD (`c51bf5d` — task 141, closing the
-modal hero-bust arc; `build/web` is the fresh `verify.sh` output at this HEAD, gate green:
-import·boot·test·export) and drove it in headless Chromium at 390×844 (SwiftShader == the deployed GL
-Compatibility renderer). **Zero console errors on every run** (kennel grid → all 8 inspect modals → close;
-completion menu on mastery; a `?bra_autotap=1` mark burst + training settle). The build uses the CC0 rig
-locally (the licensed Labrador renders only on the live Pages deploy); everything judged below is layout /
-colour / type / framing, which the CC0 rig renders truthfully.
+Seventh pass, run fresh and stateless, and the **first under the polish/critique lens** (father prompt
+`b9881f6`): I did not go looking to sign off — I went looking for what still falls short of the goal art and
+the design system. Built the current HEAD (`b9881f6`; `build/web` is the fresh `verify.sh` output at this
+HEAD, gate green: import·boot·test·export) and drove the **real** game with real taps in headless Chromium at
+390×844 (SwiftShader == the deployed GL Compatibility renderer). This local bundle boots the **licensed
+Labrador** (`?bra_autotap=1` mark burst, completion menu via the Triks pill, kennel grid → owned / secret /
+unaffordable modals → close). **Zero console errors on every run.** Evidence for every claim below is a
+screenshot I captured this pass (`.screenshots/PO7b-*`).
 
-**FIXED — the sole prior directive (pass-5 modal bust *consistency*) is resolved and re-verified in my own
-pixels; pruned:**
+**Re-verified fixed (pruned) — the modal-bust arc (135→141) has converged and holds:** every inspect modal
+opens on the identical front-¾ hero bust across all states — owned Bella (green «Trener nå»,
+`PO7b-07-modal-bella.png`), unaffordable Nova (greyed «Har ikke råd · mangler 900», `PO7b-07-modal-nova.png`),
+Trulte easter egg (pink «Adopter gratis ♥» + «Påskeegg» banner, `PO7b-07-modal-trulte.png`). Only the coat
+tint differs per dog; nameplate clears the legs; stat meters, Raseegenskaper chips, Unikt-trekk card and
+«Kan lære» line are all legible. No new directive here.
 
-1. **Every inspect modal now opens on a CONSISTENT front-¾ hero bust — no more side-profile lottery
-   (140/141).** I swept the whole roster and screenshotted each modal
-   (`.screenshots/140-modal-{bella,nova,balder,sol,pontus,lykke,sniff,trulte}.png`). The two dogs that were
-   the pass-5 outliers are now fixed: **Bella** (`140-modal-bella.png`) and **Balder** (`140-modal-balder.png`)
-   — whose *grid cells* still face sideways in the background — both open on a clean face-on / 3-4 head-and-
-   shoulders bust, no longer a zoomed side profile that just repeated the tapped cell. **All 8** render the
-   identical hero framing (only the coat tint differs: Bella cream, Nova/Pontus grey, Balder/Lykke brown, Sol
-   golden, Sniff tan, Trulte grey-tan), each with «name» on the solid nameplate strip clear of the legs, the
-   correct CTA (green «Trener nå» on owned Bella, pink «Adopter gratis ♥» on the Trulte easter egg, greyed «Har
-   ikke råd · mangler N» on the unaffordable ones). The 140 fix decouples the modal from the per-cell variety
-   yaw (131) via a dedicated fixed-front SubViewport shared by every modal; 141's regression guard holds. ✓
+**Not a directive — hunted hard, found clean:** the completion menu showing **only** the Triks section on a
+fresh boot (`PO7b-04-menu.png`) is **correct progressive disclosure** (task 127 — breeds/marker-words/
+difficulty sections reveal once adoption is meaningful / the first alt word unlocks), not a missing-content
+bug. The kennel modal stat display (Læreevne/Energi/Mot/Fokus) reads as clean 5-segment blue/grey meters, not
+raw debug squares (`PO7b-crop-stats` zoom). The core loop lands with punch — seated dog facing camera, cyan
+approach ring on the apex, gold «PERFECT» verdict + «Bra!» word-pop rising from the button
+(`PO7b-03-training-c.png`); the praise-gold on the verdict/word-pop is the DS's sanctioned `GOLD = coins /
+mastery` token, not an off-token leak. **No regression** in the signed-off phases: training page still
+pixel-matches the goal (dog centred/grounded on grass, tan path → blue-roofed cottage, white picket fence,
+blue BRA button), kennel grid renders 8 distinct-yaw tinted cells with «Din hund»/«Påskeegg» tags + header +
+coin chip (`PO7b-05-kennel-grid.png`), menu is the DS paper card.
 
-**Not a directive — checked and clean:** no regression in the signed-off phases on this build. The training
-page pixel-matches the goal (`.screenshots/097-training-02.png` / `032-frame-04.png` — dog centred/grounded on
-green grass, tan path → blue-roofed cottage, white picket fence, gold coins framing the dog, cyan approach
-ring, big blue BRA button); the completion menu is the DS paper card with the Norwegian progressive
-disclosure (`.screenshots/072-menu-open.png` — «Triks / Sitt · Lært / Ligg · Tilgjengelig / Gi labb · Låst /
-Markørord / Bra! · Aktiv / Dyktig! · Bytt / Gi tilbakemelding / Fortsett treningen»); and the kennel grid
-renders 8 distinct-yaw tinted cells with «Din hund»/«Påskeegg» tags, header band + coin chip (visible behind
-every `140-modal-*.png`). All drive clean.
+**Improvements**
 
-**No sign-off — and, honestly, no new buildable improvement this pass.** Phases 1–9 remain signed. Phase 10
-(`phase10.md`) is still **empty/deferred** — the "play mode" spec is unwritten, so it is owner-gated: it
-cannot be Visual-Reviewed and it cannot be given buildable directives without inventing stories (out of
-bounds). I hunted hard across the whole experience (kennel grid + all 8 modals, training core loop, the
-completion menu, marker-word disclosure) and the modal-bust arc that has driven the last several passes
-(135→141) has now **converged** to a clean, consistent, good-looking result. The only remaining
-differentiators between dogs are **owner-gated** — distinct per-breed **models** (every dog is honestly the
-one licensed Labrador rig, tinted; BUST-068 / P3-D1/D2/D4) and camera-facing **signature clips** (P3-2), plus
-the standing warm-human "Bra!"/Maren voice and coat UV re-export flags. None is buildable by the loop.
+1. **Training-page garden coins are oversized, overlapping, and monochrome — they diverge measurably from the
+   goal art's small, grounded, two-tone scatter (X-4 "reads first, looks the part").** *What I saw:* on the
+   mark-payoff frame (`.screenshots/PO7b-03-training-c.png`, 390×844) a gold-pixel scan locates the right
+   garden coin as a **70×69 px** disc (~**18 % of the screen width**) and the left cluster as a **63×51 px**
+   disc with a **second coin overlapping directly below it** — the zoom `.screenshots/PO7b-crop-leftcoins.png`
+   shows two big flat-gold discs touching, and `.screenshots/PO7b-crop-rightcoin.png` the outsized right one.
+   All coins are the same flat gold and float at the dog's chest height. *Why it falls short:* the goal art
+   (`assets/goal-training-screen.png`, `.screenshots/PO7b-goal-coins.png`) shows garden coins as **small
+   (~14 px, ~4 % of width)**, clearly **spaced**, sitting **low / grounded** near a bush, and in **two tones**
+   (a gold coin *and* a red/pink coin). The build coins are **~4.5× too big**, **collide with each other**,
+   sit too high, and are single-tone — so instead of a playful scatter of distant collectibles they read as
+   oversized HUD tokens crowding the dog, competing with the coin-count HUD pill and undercutting the
+   stylized-realism garden read. *What "good" looks like:* shrink the garden coins to roughly the goal
+   proportion (~**20–26 px**), space them so no two overlap, seat them **lower and nearer the grass** as a
+   loose scatter that **frames** (not crowds) the dog, and reintroduce the goal art's **two-tone variety**
+   (add at least one red/pink accent coin alongside the gold) so the cluster matches the goal's read. Keep
+   them clearly in-world (grounded, subtle) and distinct from the gold coin-count HUD pill. This is a signed
+   Phase-6 surface, so it is a cross-cutting **X-4** polish directive (the polish lens explicitly permits
+   these on signed surfaces) — buildable with no owner asset, and it **preempts** the owner-gated terminal
+   state so the loop keeps improving the game rather than idling.
 
-**This is the owner-gated terminal hand-off the prior pass anticipated.** The specified game is complete and
-signed; the last X-4 quality directive is delivered and verified; I can find no further buildable improvement
-that would raise real quality against the vision, the goal art, or the design system. The game now waits on
-the **owner**: author the Phase-10 (play mode) spec, and/or close the standing asset flags (per-breed models,
-signature clips, human voice, coat re-export). Absent new owner input, the next unchanged pass should end the
-run.
+**No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
+**empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
+inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-
+facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's
+next buildable work is the coin-polish directive above; the owner still owns the Phase-10 spec + the asset
+flags.
