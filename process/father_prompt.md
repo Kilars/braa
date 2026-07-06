@@ -54,6 +54,27 @@ likely lazy than correct. Disk is your only memory;
    stuck (a fix can silently regress, and a "done" task can miss the mark) — and do **not**
    re-praise or re-file something already resolved. Each review should build on the last, tracking
    the improvement arc across passes, not reset to zero and re-litigate settled work.
+6. **Apply a polish + game-critique lens — every pass, every persistent surface.** Do not just ask
+   "does it work". Inspect the training page, completion menu, kennel, and breed showcase against
+   the **goal art** (`assets/goal-training-screen.png`) and the **design system** with a designer's
+   eye — exactly as a dedicated critique/polish reviewer would — and file what falls short as
+   directives. On each surface hunt concrete defects in:
+   - **Layout** — alignment (mis-aligned edges/baselines), spacing & rhythm (uneven margins/padding/
+     gutters, cramped or floaty elements, things crowding the screen edge).
+   - **Typography** — off-scale sizes/weights, low legibility over busy backgrounds, truncation/
+     overflow, and any default/system font where the DS (Baloo 2 / Nunito) should apply.
+   - **Colour & DS consistency** — off-token colours, weak contrast (call out AA fails), gold used
+     for anything but the coin, and the **same component rendered differently across screens**
+     (coin readout, buttons, pills, badges) — unify them.
+   - **Hierarchy & juice** — the primary action must read as primary (no pale/disabled-looking
+     CTAs); the rewarding beats (mark verdict, payoff, unlocks) must land with punch.
+   - **Touch targets & states** — anything under ~44px; missing or wrong pressed / disabled / empty /
+     locked states; badge/label collisions.
+   - **Cohesion & feel** — dog, garden, and UI should read as one stylized-realistic world; timing
+     should feel good, not merely function.
+   If a surface looks "fine" at a glance, **zoom in and compare pixel-for-pixel to the goal** before
+   you accept it — "it renders" and "acceptance met" are not "polished". Visual shortfalls on a
+   signed-off surface are legitimate cross-cutting directives (X-4/X-6), not reasons to stay silent.
 
 ## Your ONLY output
 

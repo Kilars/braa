@@ -41,6 +41,10 @@ ANALYST_PROMPT="$SCRIPT_DIR/analyst_prompt.md"
 MODEL="${MODEL:-opus}"   # driver model; override: MODEL=sonnet scripts/loop.sh
 MAX_ITER="${1:-0}"       # 0 = run until no work is left (auto-stop on "done") or a hard failure
 FATHER_EVERY="${FATHER_EVERY:-5}"  # run the PO review at least this often
+IDLE_RECHECK="${IDLE_RECHECK:-14400}"  # NEVER-STOP: on no-work + PO-unchanged, idle this many secs then
+                                       # re-check instead of exiting (default 4h). Wakes sooner if the next
+                                       # local midnight is closer, so the daily feedback pull fires promptly
+                                       # after midnight. Set IDLE_RECHECK=0 to restore auto-stop-on-no-work.
 MAX_TURNS=600          # per-invocation turn cap (scan + implement + gate)
 SOFT_CTX_WARN=150000   # warn if any single turn's prompt exceeds this (context heavy)
 MAX_RETRY=3            # attempts per invocation before giving up on a *non-session* failure
@@ -333,7 +337,9 @@ maybe_run_analyst() {
   report_run "iter $i (analyst)"
 }
 
-if (( MAX_ITER == 0 )); then iter_desc="unbounded (until no work is left, or a failure)"; else iter_desc="max $MAX_ITER iters"; fi
+if (( MAX_ITER == 0 )); then
+  if (( IDLE_RECHECK > 0 )); then iter_desc="never-stop (idle re-check every ${IDLE_RECHECK}s, midnight-aware; stop with q or SIGTERM)"; else iter_desc="unbounded (until no work is left, or a failure)"; fi
+else iter_desc="max $MAX_ITER iters"; fi
 echo "=== loop start $(date -u) — $iter_desc, PO review every $FATHER_EVERY (deferred until app runnable) ===" | tee -a "$LOG"
 [[ -t 0 ]] && echo "    press q to stop the loop and tear down claude + all subagents (Ctrl-C also works)" | tee -a "$LOG"
 
@@ -392,6 +398,19 @@ for ((i=1; MAX_ITER == 0 || i <= MAX_ITER; i++)); do
     # changed nothing — nothing left to build and the PO has no new direction. Exit cleanly and
     # let the human take over (true completion, or the phase blocked purely on the owner).
     if (( no_work_created == 1 )) && [[ "$before" == "$after" ]]; then
+      # NEVER-STOP: no work + PO unchanged. Rather than exit, idle and re-check later — the owner may
+      # add directives, and players may leave feedback the daily pull turns into tasks. Wake every
+      # ~IDLE_RECHECK secs, but sooner if the next local midnight is closer, so maybe_run_analyst (top
+      # of the loop) runs the day's feedback pull promptly after midnight. IDLE_RECHECK=0 → old auto-stop.
+      if (( IDLE_RECHECK > 0 )); then
+        idle_secs=$IDLE_RECHECK
+        mid=$(( $(date -d 'tomorrow 00:00:30' +%s) - $(date +%s) ))
+        (( mid > 0 && mid < idle_secs )) && idle_secs=$mid
+        printf 'no work + PO unchanged — idling %ss then re-checking (never-stop; midnight-aware). %s\n' "$idle_secs" "$(date -u)" | tee -a "$LOG"
+        nap "$idle_secs" || break     # a stop (q / SIGTERM) during the idle wait exits cleanly
+        since_father=0
+        continue                      # → next iteration: maybe_run_analyst (feedback pull), then re-scan
+      fi
       echo "no work left and the PO changed nothing — game matches the spec (or is blocked on the owner). Exiting." | tee -a "$LOG"
       break
     elif [[ "$before" == "$after" ]]; then
