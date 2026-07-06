@@ -19,11 +19,19 @@ cross-screen consistency + the completion menu. These are current-phase quality 
   through the canonical `scripts/coin_readout.gd` pill.
 - **130 — VISUAL — menu primary CTA "Fortsett treningen" reads as primary (dir #7 HIGH).** Restyle to
   the 126 gradient/weight (full Bra-Blue, white ≥700); demote "Gi tilbakemelding" to ghost secondary.
-- **131 — VISUAL — kennel face-on head-and-shoulders portraits (dir #1 HIGH, biggest gap).** Per-cell
-  `SubViewport` camera framing/rotation so each dog faces the viewer + no two cells look identical
-  (distinct breed silhouettes stay owner-gated BUST-068 — framing only, no faked models).
+- **131 — VISUAL — kennel face-on head-and-shoulders portraits (dir #1 HIGH, biggest gap).**
+  **RE-FILED to backlog 2026-07-06 — first attempt reverted.** Per-cell snapshot via
+  `SubViewport.get_texture().get_image()` (CPU readback) rendered green in verify but **blanked
+  every dog in the real WebGL/GL-Compat browser capture** (readback of a render target returns
+  empty on web). Reverted to the working shared-texture kennel (dogs visible). Re-filed with the
+  web-safe fix: **N live `ViewportTexture`s (one per yaw), NO `get_image()`**. Head-and-shoulders
+  framing params from the attempt are web-safe and reusable (in the task file).
 
-**Remaining directives for the next scan rounds:** #2 price-badge collision (HIGH), #3 kennel cell
+**Shipped this iteration (2026-07-06):** 129 (`git` pushed) coin readout unified across
+training/menu/kennel; 130 (pushed) menu primary CTA raised-blue gradient + feedback ghost pill
+(shared `DesignSystem.gradient_pill` baker). Both Visual-Reviewed at 390×844.
+
+**Remaining directives for the next scan rounds:** 131 (re-filed, HIGH), #2 price-badge collision (HIGH), #3 kennel cell
 floor/shadow cohesion (MED), #4 inspect-modal legibility (MED), #5 kennel header alignment (LOW),
 #6 menu typography/sectioning (MED), #9 PERFECT/Bra! mark-text contrast (LOW).
 
