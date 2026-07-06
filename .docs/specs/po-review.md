@@ -176,62 +176,60 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 7) — polish-lens pass: modal-bust arc re-verified converged; ONE measured X-4 fidelity gap found (training-page coins oversized/overlapping vs goal art)
+### PO Review — 2026-07-07 (PO, father pass 8) — polish-lens pass: coin fix (142) verified landed; ONE new measured X-4 gap — training-scene atmosphere reads dusk/muddy vs the goal art's bright sunny day
 
-Seventh pass, run fresh and stateless, and the **first under the polish/critique lens** (father prompt
-`b9881f6`): I did not go looking to sign off — I went looking for what still falls short of the goal art and
-the design system. Built the current HEAD (`b9881f6`; `build/web` is the fresh `verify.sh` output at this
-HEAD, gate green: import·boot·test·export) and drove the **real** game with real taps in headless Chromium at
-390×844 (SwiftShader == the deployed GL Compatibility renderer). This local bundle boots the **licensed
-Labrador** (`?bra_autotap=1` mark burst, completion menu via the Triks pill, kennel grid → owned / secret /
-unaffordable modals → close). **Zero console errors on every run.** Evidence for every claim below is a
-screenshot I captured this pass (`.screenshots/PO7b-*`).
+Eighth pass, run fresh and stateless under the polish/critique lens. Built the current HEAD (`1455112`;
+`build/web` is the fresh `verify.sh` output at this HEAD, gate green: import·boot·test·export) and drove the
+**real** game with real taps in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
+renderer). This local bundle boots the **licensed Labrador** (`?bra_autotap=1` mark burst, completion menu via
+the Triks pill, kennel grid → owned / secret / unaffordable modals → close). **Zero console errors on every
+run.** Evidence for every claim is a screenshot I captured this pass (`.screenshots/PO8-*`).
 
-**Re-verified fixed (pruned) — the modal-bust arc (135→141) has converged and holds:** every inspect modal
-opens on the identical front-¾ hero bust across all states — owned Bella (green «Trener nå»,
-`PO7b-07-modal-bella.png`), unaffordable Nova (greyed «Har ikke råd · mangler 900», `PO7b-07-modal-nova.png`),
-Trulte easter egg (pink «Adopter gratis ♥» + «Påskeegg» banner, `PO7b-07-modal-trulte.png`). Only the coat
-tint differs per dog; nameplate clears the legs; stat meters, Raseegenskaper chips, Unikt-trekk card and
-«Kan lære» line are all legible. No new directive here.
+**Re-verified fixed (pruned) — the garden-coin directive (task 142) landed and is correct:** on the training
+frame (`.screenshots/PO8-03-training-c.png`, `PO8-01-training-a.png`) the garden coins are now a **small,
+spaced, two-tone scatter** — a gold-pixel scan measures the discs at ~**20–24 px** (goal band), no two overlap,
+and there is a clear **rose/pink** accent coin on the right flank alongside the gold ones, matching the goal
+art's read. No longer oversized HUD orbs. Directive resolved — removed.
 
-**Not a directive — hunted hard, found clean:** the completion menu showing **only** the Triks section on a
-fresh boot (`PO7b-04-menu.png`) is **correct progressive disclosure** (task 127 — breeds/marker-words/
-difficulty sections reveal once adoption is meaningful / the first alt word unlocks), not a missing-content
-bug. The kennel modal stat display (Læreevne/Energi/Mot/Fokus) reads as clean 5-segment blue/grey meters, not
-raw debug squares (`PO7b-crop-stats` zoom). The core loop lands with punch — seated dog facing camera, cyan
-approach ring on the apex, gold «PERFECT» verdict + «Bra!» word-pop rising from the button
-(`PO7b-03-training-c.png`); the praise-gold on the verdict/word-pop is the DS's sanctioned `GOLD = coins /
-mastery` token, not an off-token leak. **No regression** in the signed-off phases: training page still
-pixel-matches the goal (dog centred/grounded on grass, tan path → blue-roofed cottage, white picket fence,
-blue BRA button), kennel grid renders 8 distinct-yaw tinted cells with «Din hund»/«Påskeegg» tags + header +
-coin chip (`PO7b-05-kennel-grid.png`), menu is the DS paper card.
+**Also re-verified fixed / clean (no new directive):** the **modal hero-bust arc (135→141) holds** — every
+inspect modal opens on the identical front-¾ hero bust: owned Bella (green «Trener nå», `PO8-07-modal-bella.png`),
+unaffordable Nova (greyed «Har ikke råd · mangler 900», `PO8-07-modal-nova.png`), Trulte easter egg (pink
+«Adopter gratis ♥» + «Få tilgang — en hemmelig venn» + «Påskeegg» banner, `PO8-07-modal-trulte.png`); only the
+coat tint differs, nameplate clears the legs, stat meters + Raseegenskaper chips + Unikt-trekk card + «Kan lære»
+line all legible. The **BRA button** primary CTA is punchy and legible — near-white label `(247,248,247)` on the
+raised blue pill `(99,151,230)`, high contrast, matches the goal. The **completion menu** showing only the Triks
+section on fresh boot is correct progressive disclosure (task 127), not missing content. The **kennel grid**
+renders 8 clean distinct cells with «Din hund»/«Påskeegg»/«$30» tags + header + coin chip
+(`PO8-05-kennel-grid.png`) and reads brighter/cleaner than the training scene. Core loop lands with punch —
+seated dog facing camera, cyan approach ring on the apex, gold «PERFECT» verdict + «Bra!» word-pop rising from
+the button. **No structural regression** in the signed-off phases.
 
 **Improvements**
 
-1. **Training-page garden coins are oversized, overlapping, and monochrome — they diverge measurably from the
-   goal art's small, grounded, two-tone scatter (X-4 "reads first, looks the part").** *What I saw:* on the
-   mark-payoff frame (`.screenshots/PO7b-03-training-c.png`, 390×844) a gold-pixel scan locates the right
-   garden coin as a **70×69 px** disc (~**18 % of the screen width**) and the left cluster as a **63×51 px**
-   disc with a **second coin overlapping directly below it** — the zoom `.screenshots/PO7b-crop-leftcoins.png`
-   shows two big flat-gold discs touching, and `.screenshots/PO7b-crop-rightcoin.png` the outsized right one.
-   All coins are the same flat gold and float at the dog's chest height. *Why it falls short:* the goal art
-   (`assets/goal-training-screen.png`, `.screenshots/PO7b-goal-coins.png`) shows garden coins as **small
-   (~14 px, ~4 % of width)**, clearly **spaced**, sitting **low / grounded** near a bush, and in **two tones**
-   (a gold coin *and* a red/pink coin). The build coins are **~4.5× too big**, **collide with each other**,
-   sit too high, and are single-tone — so instead of a playful scatter of distant collectibles they read as
-   oversized HUD tokens crowding the dog, competing with the coin-count HUD pill and undercutting the
-   stylized-realism garden read. *What "good" looks like:* shrink the garden coins to roughly the goal
-   proportion (~**20–26 px**), space them so no two overlap, seat them **lower and nearer the grass** as a
-   loose scatter that **frames** (not crowds) the dog, and reintroduce the goal art's **two-tone variety**
-   (add at least one red/pink accent coin alongside the gold) so the cluster matches the goal's read. Keep
-   them clearly in-world (grounded, subtle) and distinct from the gold coin-count HUD pill. This is a signed
-   Phase-6 surface, so it is a cross-cutting **X-4** polish directive (the polish lens explicitly permits
-   these on signed surfaces) — buildable with no owner asset, and it **preempts** the owner-gated terminal
-   state so the loop keeps improving the game rather than idling.
+1. **The training scene's atmosphere reads as a muddy dusk/overcast haze, not the goal art's bright sunny day —
+   the sky and grass are objectively off-palette (X-4 "cohesion & feel"; owner-corroborated).** *What I saw:*
+   on the live training frame (`.screenshots/PO8-01-training-a.png`, 390×844) a pixel scan gives the **sky** a
+   warm grey-brown `(166,156,127)` fading to a greenish horizon `(76,117,93)` under a blown-out white sun disc —
+   there is **no blue in the sky at all** — and the **grass** beside the dog reads a dark, low-saturation olive
+   `(85,148,94)`. The whole scene reads gloomy/hazy. *Why it falls short:* the goal art
+   (`.docs/specs/assets/goal-training-screen.png`) is a **cheerful bright day** — its **sky** samples a clean
+   pale **blue** `(184,213,240)` and its **grass** a bright saturated **green** `(136,185,104)`. Side by side the
+   build is markedly darker, browner, and less saturated, so the training page — the game's hero surface and the
+   first thing a player sees — feels overcast and flat where the goal feels sunny and inviting; it also clashes
+   tonally with the bright, clean kennel grid (`PO8-05-kennel-grid.png`), breaking the one-world read. This is
+   the same **background/visuals-vs-mockup gap the owner flagged** on 2026-07-06. *What "good" looks like:* warm
+   the scene toward the goal — give the **sky a clear pale-blue** gradient (kill the grey-brown haze; keep only a
+   soft, contained sun, not a blown white disc), lift the **grass albedo/saturation** toward the goal's brighter
+   green, and raise overall ambient exposure so the training page reads as a **bright sunny day** matching
+   `goal-training-screen.png` and the DS `sky`/`grass` tokens. Verify by re-sampling: sky should read blue
+   (B > R and B > G by a clear margin), grass brighter and more saturated than today. This is a signed Phase-6
+   surface, so it is a cross-cutting **X-4** polish directive (the polish lens explicitly permits these on signed
+   surfaces) — buildable with no owner asset (WorldEnvironment sky/ambient + directional-light + grass material
+   tuning), and it **preempts** the owner-gated terminal state so the loop keeps improving the game rather than
+   idling.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-
 facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's
-next buildable work is the coin-polish directive above; the owner still owns the Phase-10 spec + the asset
-flags.
+next buildable work is the atmosphere directive above; the owner still owns the Phase-10 spec + the asset flags.

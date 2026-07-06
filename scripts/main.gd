@@ -702,15 +702,19 @@ func _setup_environment() -> void:
 	# Sky gradient (P2-10 stylization, 062): a bright clear sky-blue zenith grading down to a WARM
 	# peach/cream near-horizon — the Pokémon-GO warmth the owner asked for, and a richer grade than
 	# the old blue→flat-pale-yellow band. Peach means red leads green leads blue at the horizon.
-	sky_mat.sky_top_color = Color(0.24, 0.55, 0.92)       # bright, clear sky-blue zenith
-	sky_mat.sky_horizon_color = Color(0.88, 0.68, 0.44)   # warm peach horizon — richer/less-white, holds saturation
-	sky_mat.sky_curve = 0.2                     # gentle grade — the warm band spreads up, not banded
+	# 143 (PO father-pass-8, X-4): the old warm-peach horizon dominated the look-down camera's
+	# near-horizon band, so the visible sky read a muddy grey-brown haze (PO measured (166,156,127)) —
+	# no blue at all. The goal art is a bright sunny day: a clean pale-blue sky (~(184,213,240)). So the
+	# horizon now reads PALE BLUE (blue leads), turning the whole visible band cool and sunny.
+	sky_mat.sky_top_color = Color(0.30, 0.56, 0.90)       # clear sky-blue zenith
+	sky_mat.sky_horizon_color = Color(0.72, 0.84, 0.95)   # pale-blue horizon — matches the goal-art sky sample; blue leads
+	sky_mat.sky_curve = 0.2                     # gentle grade — the pale band spreads up, not banded
 	# Ground half of the procedural sky (below horizon). The finite 40 m grass plane doesn't quite
 	# reach the true horizon, so a thin band of this shows between the plane's far edge and the sky.
-	# Match it to a warm haze at the horizon fading to grass-green below, so that band reads as a
-	# distant grassy haze — NOT the old light-blue sliver that cut a cyan seam under the peach sky.
-	sky_mat.ground_bottom_color = Color(0.40, 0.58, 0.30)   # muted distant grass
-	sky_mat.ground_horizon_color = Color(0.93, 0.83, 0.66)  # warm haze, blends with the peach sky horizon
+	# 143: a COOL pale haze at the horizon (was warm cream) so that thin band blends into the pale-blue
+	# sky instead of cutting a brown seam under it, fading to distant grass-green below.
+	sky_mat.ground_bottom_color = Color(0.46, 0.66, 0.36)   # brighter distant grass (matches the lifted lawn)
+	sky_mat.ground_horizon_color = Color(0.74, 0.84, 0.88)  # cool pale haze, blends with the pale-blue sky horizon
 	sky_mat.ground_curve = 0.1
 	# Sun disc: aligned with the DirectionalLight3D so the disc IS the key light. A clean,
 	# readable disc — sun_angle_max sets the disc radius; sun_curve sharpens the inner glow.
@@ -726,7 +730,7 @@ func _setup_environment() -> void:
 	# Ambient from sky so the dog's unlit surfaces (belly, paws) stay readable, not pitch black.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 0.6   # mix: bright sky bounce, not blown out
-	env.ambient_light_energy = 0.6   # 125: trimmed from 0.8 — less sky wash, holds saturation
+	env.ambient_light_energy = 0.8   # 143: lifted 0.6 → 0.8 for a brighter sunny-day exposure (the goal reads bright, not dusk)
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
@@ -902,6 +906,16 @@ func _frame_camera(dog: Node) -> void:
 	cam.make_current()
 	_camera = cam  # kept so the face-the-camera turn (061/P2-11) aims at its real position
 
+## 143 (PO father-pass-8, X-4): the painterly grass ramp's shadow/mid/light tones. Lifted from
+## the 099 values toward the goal art's bright saturated green (~(136,185,104)) so the mottled
+## lawn reads sunny, not the dark olive (85,148,94) the PO measured. Named so the grass-brightness
+## test can guard it directly (a regression back to the dark ramp can't read green).
+const GRASS_TONES := [
+	Color(0.34, 0.56, 0.28),       # shadowed green (lifted)
+	Color(0.44, 0.66, 0.34),       # mid grass
+	Color(0.54, 0.75, 0.41),       # light sunny green — near the goal-art lawn sample
+]
+
 ## Grass ground plane (047/P2-10): a large PlaneMesh at the dog's FOOT PLANE so the dog
 ## stands visibly ON grass. Sized 40×40 m so the horizon split (where the plane meets the
 ## sky) is well inside view at any reasonable look-down angle. The foot-plane Y is read
@@ -934,14 +948,11 @@ func _setup_ground_plane(dog: Node) -> void:
 	noise.fractal_gain = 0.45          # gentler octave falloff → softer mottle
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
-	# 099: a NARROWER tonal range than the old high-contrast ramp so the grass reads as smooth
-	# painterly green rather than patchy pixel noise (the PO's note) — depth still comes from the
-	# baked normal map below, not from albedo contrast.
-	ramp.colors = PackedColorArray([
-		Color(0.26, 0.48, 0.23),       # shadowed green (lifted, close to mid)
-		Color(0.32, 0.56, 0.28),       # mid grass
-		Color(0.40, 0.64, 0.33),       # light sunny green (pulled in from 0.46,0.74,0.35)
-	])
+	# 143 (PO father-pass-8, X-4): the 099 ramp read a dark low-saturation olive under the dusk sky
+	# (PO measured (85,148,94)); the goal art's lawn is a bright saturated green (~(136,185,104)). The
+	# shadow/mid/light tones are lifted toward the goal so the mottled average reads bright and sunny,
+	# while the narrow range (099) keeps it smooth-painterly, not patchy pixel-noise.
+	ramp.colors = PackedColorArray(GRASS_TONES)
 	var grass_tex := NoiseTexture2D.new()
 	grass_tex.noise = noise
 	grass_tex.color_ramp = ramp
@@ -1453,7 +1464,7 @@ func _setup_sun_disc(dog: Node) -> void:
 	# ~40% less sky area (halo also fades out at 0.72 radius so the effective wash is far smaller).
 	# Solid core (~0.30 of radius) is ~0.45 m, halo edge at 0.72×0.75 m ≈ 0.54 m radius.
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1.5, 1.5)
+	quad.size = Vector2(1.2, 1.2)   # 143: shrunk 1.5 → 1.2 — a soft CONTAINED sun on the brighter blue sky, not a blown white disc
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = grad_tex
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # self-luminous, not lit by the scene

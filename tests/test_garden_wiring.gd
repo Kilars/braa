@@ -21,7 +21,13 @@ func _sky_material(main: Node) -> ProceduralSkyMaterial:
 		return null
 	return we.environment.sky.sky_material as ProceduralSkyMaterial
 
-func test_the_sky_is_graded_and_warm_at_the_horizon() -> void:
+func test_the_sky_reads_as_a_clear_blue_day() -> void:
+	# 143 (PO father-pass-8, X-4): the warm-peach horizon (062 "Pokémon-GO warmth") dominated the
+	# look-down camera's near-horizon band, so the visible sky read a muddy grey-brown haze with no
+	# blue at all — the PO measured (166,156,127) vs the goal art's clean pale-blue (184,213,240).
+	# The newer directive SUPERSEDES the old warm-horizon intent for the sky: the horizon must now
+	# read COOL/BLUE so the whole sky reads a bright sunny day. Pin blue-leads so a regression back
+	# to the warm-peach haze can't read green.
 	var main := instantiate_main()
 	var sky := _sky_material(main)
 	assert_true(sky != null, "the garden uses a ProceduralSkyMaterial sky (graded, not a flat BG colour)")
@@ -30,12 +36,28 @@ func test_the_sky_is_graded_and_warm_at_the_horizon() -> void:
 		"the sky is graded — zenith and horizon differ")
 	# A blue zenith: more blue than red up top.
 	assert_true(sky.sky_top_color.b > sky.sky_top_color.r, "the zenith reads blue (b > r)")
-	# A WARM horizon: peachy/cream, so red leads green leads blue — the directive's 'warmer' sky.
-	# The old 047 horizon was a flat pale yellow (r == g); a warm peach makes r strictly > g.
-	assert_true(sky.sky_horizon_color.r > sky.sky_horizon_color.g,
-		"the horizon is warm — red leads green (a peach/cream, not the flat pale-yellow band)")
-	assert_true(sky.sky_horizon_color.g > sky.sky_horizon_color.b,
-		"the horizon is warm — green leads blue")
+	# A COOL/BLUE horizon — the directive's verification: sky should read blue with B > R and B > G
+	# by a clear margin (the near-horizon band is what the look-down camera actually shows).
+	assert_true(sky.sky_horizon_color.b > sky.sky_horizon_color.r + 0.08,
+		"the horizon reads blue — blue leads red by a clear margin (kills the warm-peach haze)")
+	assert_true(sky.sky_horizon_color.b > sky.sky_horizon_color.g + 0.02,
+		"the horizon reads blue — blue leads green")
+	main.queue_free()
+
+func test_the_grass_reads_a_bright_saturated_green() -> void:
+	# 143 (PO father-pass-8, X-4): the PO measured the build grass at a dark low-saturation olive
+	# (85,148,94) vs the goal art's bright saturated green (136,185,104). The painterly ramp's tones
+	# were pulled too dark/desaturated. Pin the named tone table so the lightest tone is a genuinely
+	# BRIGHT, SATURATED green near the goal — a regression back to the dark olive can't read green.
+	var main := instantiate_main()
+	var tones: Array = main.GRASS_TONES
+	assert_true(tones.size() >= 3, "the grass ramp carries shadow/mid/light tones (got %d)" % tones.size())
+	var light: Color = tones[tones.size() - 1]
+	# Bright: the lightest sunny tone lifts toward the goal's g≈0.73 — brighter than the old 0.64.
+	assert_true(light.g >= 0.70, "the lightest grass tone is bright (g %.2f >= 0.70)" % light.g)
+	# Saturated green: green clearly leads red and blue (a lawn, not a grey-olive).
+	assert_true(light.g > light.r and light.g > light.b, "the light tone reads green — green leads")
+	assert_true(light.g - light.b >= 0.28, "the light tone is saturated (g-b %.2f >= 0.28)" % (light.g - light.b))
 	main.queue_free()
 
 func test_the_sun_is_a_crisp_haloed_billboard_disc() -> void:
