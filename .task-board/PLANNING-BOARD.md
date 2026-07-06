@@ -6,7 +6,23 @@ phase + `index.md`; PO log in `po-review.md`) and the ADRs in [`adr/`](../adr/).
 > **Phasing rule (from the spec):** Phase 1 is the whole bet. Nothing past Phase 1
 > starts until Phase 1 passes its Visual Review and is bug-free.
 
-## Status — PHASES 1–9 SIGNED OFF; PO father-pass-3 → 138 DONE (completion menu localized) — 2026-07-06
+## Status — PHASES 1–9 SIGNED OFF; PO father-pass-4 → 139 DONE (kennel modal-header hero bust) — 2026-07-06
+
+PO father pass 4 (`546ccb5` HEAD) re-verified the localization arc (138) as fixed + pruned, and filed
+**one** new buildable X-4 directive: the kennel inspect-modal header dog rendered as a tiny thumbnail
+marooned in a wide dark band, with the «Nova» nameplate crossing its legs.
+
+- **139 — DONE** kennel inspect-modal header portrait as a hero bust (`kennel_screen.gd _build_modal_band`):
+  `MODAL_BAND_H` 100→200 + the shared 384×340 portrait switched `STRETCH_KEEP_ASPECT_CENTERED`→`COVERED`
+  (+`clip_contents`) so the near-square render fills the FULL band width as a head-and-shoulders bust
+  (~54% card fill, was ~34% thumbnail in dark margins). Name moved onto a solid `MODAL_NAMEPLATE_H=38`
+  dark strip the dog stands above — feet inset above the strip so the legs are never crossed. Pure
+  render/layout glue → Visual Review (no test asserts these constants). verify green, Visual Review PASS
+  (`108-kennel-modal.png` — Nova face-on hero bust, nameplate clear). Pushed `bce5f3f`.
+
+**Board EMPTY — 139 shipped, verify green, pushed → terminal hand-off to father for the next PO pass.**
+
+### Prior — PO father-pass-3 → 138 (completion menu localized)
 
 PO father pass 3 re-verified the 135/136/137 arc as fixed + pruned, and filed **one** new buildable
 X-4 directive: the completion menu was the only player-facing surface still in English (the «Triks»
