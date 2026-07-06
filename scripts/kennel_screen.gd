@@ -105,6 +105,16 @@ const PORTRAIT_THREE_QUARTER := 0.42  ## radians (~24°) — front-¾, flatterin
 ## rear/side profile. One viewport per entry → up to this many live dog instances (kennel is a modal,
 ## not the main loop, so the cost is acceptable; each renders a still one-shot frame, not per-frame).
 const PORTRAIT_YAW_SPREAD := [0.12, -0.40, 0.34, -0.22, 0.46, -0.14, 0.26, -0.34]
+## Modal-header framing yaw (140, PO father-pass-5): the inspect modal must open on ONE
+## consistent front-¾ hero bust for EVERY dog — not the tapped cell's variety yaw, which made
+## side-facing cells (Bella/Balder) render a zoomed side profile identical to their grid cell.
+## The modal uses a single dedicated portrait viewport at this fixed offset (0.0 = pure
+## PORTRAIT_THREE_QUARTER, the most face-on framing, NO per-cell delta) shared across all 8
+## dogs (coat differs by the existing per-dog modulate tint — same trick the grid uses). Kept
+## as a helper (not just a literal) so the index-independence is a testable seam.
+const MODAL_PORTRAIT_YAW := 0.0
+static func modal_portrait_yaw_offset(_dog_index: int) -> float:
+	return MODAL_PORTRAIT_YAW
 ## Head-and-shoulders lift (131): aim the camera a touch higher up the bbox (toward the head/neck) and
 ## fill a bit tighter than the full-body 116 framing, so the cell reads as a portrait bust rather than
 ## a distant whole-body figure — while still fitting the full bounding sphere so nothing clips at any
@@ -146,6 +156,13 @@ var _balance: int = 0          ## last balance passed to render()
 var _portrait_vps: Array = []    ## SubViewport per yaw index
 var _portrait_texs: Array = []   ## live ViewportTexture per yaw index (parallel to _portrait_vps)
 var _portrait_built: bool = false
+
+## Dedicated modal-header portrait (140): ONE live SubViewport at the fixed front-¾ MODAL_PORTRAIT_YAW,
+## shared by every dog's inspect modal (coat differs by modulate). Decoupled from the per-cell variety
+## spread so every modal opens on a consistent hero bust, not the tapped cell's (sometimes side-on) angle.
+## Built lazily on first modal open (never in _init — headless harness gotcha); null until then → tint-only.
+var _modal_portrait_tex: Texture2D = null
+var _modal_portrait_built: bool = false
 
 ## Live node refs (built once in _ready, updated per render())
 ## _coin_readout is the SHARED CoinReadout pill (129, X-4) — the SAME widget the training HUD +
@@ -637,6 +654,22 @@ func _get_portrait_texture(cell_index: int = 0) -> Texture2D:
 		return null
 	return _portrait_texs[cell_index % _portrait_texs.size()]
 
+## The dedicated modal-header portrait texture (140): one live SubViewport at the fixed front-¾
+## MODAL_PORTRAIT_YAW, built once and reused by every dog's inspect modal (coat via modulate). Lazily
+## built on first modal open (never in _init — headless harness gotcha). Returns null if the asset is
+## missing / headless, so the modal band degrades to tint-only rather than erroring. Decoupled from
+## _get_portrait_texture (the grid's per-cell variety yaw) so every modal opens on a consistent hero bust.
+func _get_modal_portrait_texture() -> Texture2D:
+	if not _modal_portrait_built:
+		_modal_portrait_built = true
+		var path := _portrait_dog_path()
+		if ResourceLoader.exists(path):
+			var packed := load(path) as PackedScene
+			if packed != null:
+				# idx -1 → a distinct SubViewport name, kept out of the per-cell _portrait_vps set.
+				_modal_portrait_tex = _build_one_portrait(packed, MODAL_PORTRAIT_YAW, -1)
+	return _modal_portrait_tex
+
 ## Build one live portrait SubViewport per PORTRAIT_YAW_SPREAD entry: instance the game's dog once per
 ## viewport, pose each to base-facing + its per-index yaw, frame face-on, and cache each viewport's LIVE
 ## ViewportTexture. Bails cleanly (empty arrays → tint-only) when the asset is missing. Each viewport is
@@ -1041,11 +1074,12 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bg)
 
-	# Shared dog portrait (116): the same live SubViewport texture as the grid cells, modulate-tinted
-	# toward this dog's NATURAL COAT hue (portrait_tint, 117) — so the modal header shows the same
-	# stylized-realism Labrador (Bella warm cream, not blue) behind the bars.
-	# Skipped cleanly when the viewport isn't renderable yet (tint-only) — never a primitive.
-	var mtex := _get_portrait_texture(int(detail.get("cell_index", 0)))
+	# Dedicated modal portrait (140): a single front-¾ hero-bust render shared by every dog's modal,
+	# NOT the tapped cell's variety-yaw texture (131) — which made side-facing cells render a zoomed
+	# side profile identical to their grid cell. Modulate-tinted toward this dog's NATURAL COAT hue
+	# (portrait_tint, 117) so Bella reads warm cream, not blue. So every inspect modal opens on a
+	# consistent Nova/Sol-quality face-on bust. Tint-only fallback when the viewport isn't renderable.
+	var mtex := _get_modal_portrait_texture()
 	if mtex != null:
 		var mdog := TextureRect.new()
 		mdog.name = "ModalDogPortrait"

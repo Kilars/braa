@@ -176,55 +176,60 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-06 (PO, father pass 4) — localization verified fixed; kennel modal-header portrait filed
+### PO Review — 2026-07-06 (PO, father pass 5) — modal-header bust verified fixed; bust-framing *consistency* filed
 
-Fourth same-day pass, run fresh and stateless. Built the current HEAD (`546ccb5` — task 138, the
-localization arc; `build/web` is the 138 verify output, `verify.sh` green: import·boot·test·export) and
-drove it in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer). **Zero
-console errors.** Replayed the completion menu on mastery, the kennel grid → Nova inspect modal → close, and
-a `?bra_autotap=1` mark burst (caught the «PERFECT» + «Bra!» word-pop). The build uses the CC0 rig locally
-(the licensed Labrador renders only on the live Pages deploy); every item below is layout / colour / type /
-**language**, which the CC0 rig renders truthfully.
+Fifth same-day pass, run fresh and stateless. Built the current HEAD (`999a050` — task 139, the modal-header
+hero-bust arc; `build/web` is the fresh `verify.sh` output at this HEAD, gate green: import·boot·test·export)
+and drove it in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer). **Zero
+console errors on every run** (kennel grid → 6 inspect modals → close; completion menu on mastery; a
+`?bra_autotap=1` 14-frame mark burst). The build uses the CC0 rig locally (the licensed Labrador renders only
+on the live Pages deploy); every item below is layout / colour / type / framing, which the CC0 rig renders
+truthfully.
 
 **FIXED this arc — re-verified in my own pixels, prior directive pruned:**
 
-1. **Completion menu localized to Norwegian (138).** `.screenshots/072-menu-open.png`: the «Triks» HUD pill
-   now opens a **«Triks»** panel (was «Tricks»), rows read **«Sitt · Lært / Ligg · Tilgjengelig / Legg deg ·
-   Tilgjengelig / Gi labb · Låst»**, the marker-word section is headed **«Markørord»** with **«Bra! · Aktiv /
-   Dyktig! · Bytt / Flink! · Låst»**, and the buttons are «Gi tilbakemelding / Fortsett treningen». Swept the
-   rest: the difficulty rows use «Vanskelighet / Ekspert», the breeds section «Raser» with «Aktiv/Bytt/
-   Adopter/Låst», and the kennel's own tags read «Din hund» / «Påskeegg». **The whole app is now one
-   language.** ✓ (135/136/137 from the prior arc also still hold — kennel modal legibility + greyed CTA,
-   header band + baseline, and the amber-outlined «Bra!» pop over grass all replay clean.)
+1. **Kennel inspect-modal header is no longer a marooned thumbnail with the name across its legs (139).**
+   `.screenshots/108-kennel-modal.png` + `.screenshots/PO5-modal-zoom.png` (Nova): `MODAL_BAND_H` 100→200
+   and `STRETCH_KEEP_ASPECT_COVERED` (+`clip_contents`) now make the near-square portrait **fill the full
+   band width** as a head-and-shoulders bust — Nova reads as a crisp face-on hero, no dark side-margins. The
+   white «Nova» name sits on a **solid `MODAL_NAMEPLATE_H=38` dark strip** the dog stands above; the feet
+   inset clears the strip, so the name never crosses the legs. Swept 6 dogs
+   (`.screenshots/PO5-modal-{bella,balder,sol,sniff,trulte,lykke}.png`): **no dog is head-cropped** — Sol
+   (`PO5-modal-sol.png`) and Trulte render as clean 3/4 face-forward busts too, greyed «Har ikke råd · mangler
+   N» disabled CTA on the unaffordable ones, green «Trener nå» on owned Bella. ✓ (135/136/137/138 all still
+   hold — kennel legibility + greyed CTA, header band + baseline, amber «Bra!» pop over grass, and the fully
+   Norwegian completion menu — «Triks / Sitt · Lært / Markørord / Bra! · Aktiv / Gi tilbakemelding» — all
+   replay clean in `.screenshots/072-menu-open.png`.)
 
-**NEWLY falls short — buildable now, preempts the Phase-10 owner-gate:**
+**Still falls short — buildable now, preempts the Phase-10 owner-gate:**
 
-1. **[MEDIUM] The kennel inspect-modal header dog is a tiny figure floating in a wide dark band, with the
-   name label crossing its legs.** *Saw:* `.screenshots/108-kennel-modal.png` + a zoom (`PO4-modaltop.png`),
-   Nova. The modal's header band is a wide-short strip (`MODAL_BAND_H = 100` px tall, card ~340 px wide =
-   3.4:1), but the shared portrait texture is near-square (384×340) and drawn `STRETCH_KEEP_ASPECT_CENTERED`
-   — so it fits by height and renders the dog only ~113 px wide, marooned between two big empty dark-steel
-   margins, and the bottom-anchored white «Nova» nameplate cuts straight across the dog's legs
-   (`scripts/kennel_screen.gd:1022` `_build_modal_band`). *Why it's wrong:* X-4 "reads first, looks the part"
-   — the inspect modal is where you study the dog you're about to adopt, so its portrait should be the hero
-   of the card; instead it's the weakest element, a distant thumbnail with text through its body, while the
-   grid cells right behind it (131, `PORTRAIT_HEAD_FRAC` bust framing, BAND_H 112 in a ~1.6:1 cell) read as
-   big, crisp, clearly-posed dogs. The contrast makes the modal look unfinished. *What good looks like:* frame
-   the modal header dog as a prominent portrait bust like the grid cells — either give the band a taller /
-   less extreme aspect so the near-square render fills it, or crop/anchor the portrait to fill the band width
-   (head-and-shoulders, PORTRAIT_HEAD_FRAC-style) — and lay the name on a solid nameplate strip clear of the
-   dog's body, never crossing its legs, in the same Baloo-2 white treatment.
+1. **[LOW–MEDIUM] The modal "hero bust" is inconsistent dog-to-dog — front-facers get a lovely portrait,
+   side-facers get the *same side shot as their grid cell*, just zoomed.** *Saw:* the modal reuses each dog's
+   grid-cell portrait texture, whose yaw was deliberately varied per cell for grid variety (131). So the
+   `COVERED` crop lands very differently depending on the cell's yaw: **Nova** (`PO5-modal-nova`/108) and
+   **Sol** (`PO5-modal-sol.png`) face the camera and become gorgeous face-on / 3-4 busts, but **Bella**
+   (`PO5-modal-bella.png`) and **Balder** (`PO5-modal-balder.png`) are side-on, so their modal header is a
+   zoomed **side profile** — essentially the identical shot as the grid cell you just tapped, only cropped
+   tighter. *Why it falls short:* X-4 "looks the part" + the inspect modal's whole promise is a *closer,
+   better* look at the dog you're deciding to adopt; the header should present every dog as a hero portrait
+   facing the viewer (the stats/traits/blurb rows already carry the information). Instead the framing is a
+   lottery — half the roster gets a flat side view that repeats the grid cell, so tapping "inspect" reveals
+   nothing new for them, and the modal quality visibly swings between dogs. *What good looks like:* give the
+   modal header its **own** consistent front/3-4-facing framing for all 8 dogs (e.g. a dedicated
+   camera-yaw-toward-viewer render for the modal portrait, or select/rotate the portrait so the head faces
+   forward), independent of the grid cell's variety yaw — so every inspect modal opens on a Nova/Sol-quality
+   hero bust, not a re-cropped side shot.
 
 **Not a directive — checked and clean:** no regression in the signed-off phases on this build. The training
-page pixel-matches the goal (`PO4-mark-09.png` — cream dog centred/grounded facing camera on green grass,
-tan path → cottage, white picket fence, gold coins, blue BRA button); the core mark loop runs idle → wander
-→ cyan approach ring (`PO4-mark-06.png`) → seated apex → «PERFECT» + «Bra!» pop (`PO4-mark-13.png`) → joyful
-face-on reaction (no rear-spin — **077 holds**); the completion menu progressive disclosure (Triks + Markørord)
-and the kennel grid (8 distinct-yaw tinted portraits, «Din hund»/«Gratis»/«Påskeegg» tags, header band) all
-render and drive clean.
+page pixel-matches the goal (`PO5-mark-10.png` — dog centred/grounded facing camera on green grass, tan path
+→ blue-roofed cottage, white picket fence, gold coins, big blue BRA button); the core mark loop runs idle →
+wander → cyan approach ring → seated face-camera apex → reaction (no rear-spin — **077 holds**,
+`PO5-mark-strip.png`); the completion menu progressive disclosure (Triks + Markørord) and the kennel grid
+(`108-kennel-modal-closed.png`, 8 distinct-yaw tinted portraits, «Din hund»/«Gratis»/«Påskeegg» tags, header
+band, coin chip) all render and drive clean.
 
 **No sign-off this pass.** Phases 1–9 remain signed; Phase 10 (`phase10.md`) is still empty/deferred —
-owner-gated, nothing to sign. The prior localization directive landed and replays clean, but the modal-header
-portrait gap above is genuine, buildable X-4 quality work, so this is **not** the terminal stop state. Once it
-lands and replays clean and no further improvement can be honestly found, the next pass may reach the
-owner-gated terminal hand-off (Phase 10 awaiting its spec).
+owner-gated, nothing to sign. The prior modal-header directive landed and replays clean, but the bust-framing
+*consistency* gap above is genuine, buildable X-4 quality work, so this is **not** the terminal stop state.
+Once it lands and every inspect modal opens on a consistent hero bust — and no further improvement can be
+honestly found — the next pass may reach the owner-gated terminal hand-off (Phase 10 awaiting its spec).
