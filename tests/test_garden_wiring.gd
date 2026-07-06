@@ -60,6 +60,34 @@ func test_the_grass_reads_a_bright_saturated_green() -> void:
 	assert_true(light.g - light.b >= 0.28, "the light tone is saturated (g-b %.2f >= 0.28)" % (light.g - light.b))
 	main.queue_free()
 
+func test_the_grass_foreground_is_even_and_not_muddy() -> void:
+	# 144 (PO father-pass-9, X-4): the PO measured the foreground/lower grass darkening sharply
+	# (green ≈92 at y≈0.65) into dark cloud-like blotches (region-avg (48–74,76–115,48–72)), while
+	# the goal art's lawn is a near-uniform bright green with no dark patches. Two levers, both pinned
+	# here so a regression back to the muddy blotches can't read green:
+	var main := instantiate_main()
+	var tones: Array = main.GRASS_TONES
+	# (a) The darkest (shadow) tone is LIFTED so even a fully-shadowed bump reads a subtle green
+	# variation, not mud — its green channel is well up off the old 0.56, and green still leads.
+	var dark: Color = tones[0]
+	assert_true(dark.g >= 0.60, "the darkest grass tone is lifted off mud (g %.2f >= 0.60)" % dark.g)
+	assert_true(dark.g > dark.r and dark.g > dark.b, "even the shadow tone reads green — green leads")
+	# (b) The shadow→light spread is NARROW so the mottle is a subtle variation, not high-contrast
+	# blotches (the foreground can't read markedly darker than the mid-field).
+	var light: Color = tones[tones.size() - 1]
+	assert_true(light.g - dark.g <= 0.16,
+		"the grass tone spread is gentle, not high-contrast blotchy (Δg %.2f <= 0.16)" % (light.g - dark.g))
+	# (c) The baked normal-map relief is TAMED (named GRASS_RELIEF_BUMP) so the mottle is a whisper,
+	# not high-contrast blotches. Kept > 0 so the lawn still has micro-relief, not a flat fill.
+	assert_true(main.GRASS_RELIEF_BUMP > 0.0 and main.GRASS_RELIEF_BUMP <= 0.7,
+		"the grass relief is gentle so the foreground stays evenly lit (bump %.2f in (0,0.7])" % main.GRASS_RELIEF_BUMP)
+	# (d) THE root cause: the flat contact-shadow disc, projected from the low camera, was enlarged
+	# (101: 1.55×) until it washed the whole foreground lawn ~0.5-alpha dark. Snug it so it grounds
+	# the paws without spilling onto the grass — the disc stays a tight smudge, not a foreground haze.
+	assert_true(main.GARDEN_SHADOW_SPREAD <= 1.2,
+		"the contact shadow is a snug grounding smudge, not a wide foreground wash (spread %.2f <= 1.2)" % main.GARDEN_SHADOW_SPREAD)
+	main.queue_free()
+
 func test_the_sun_is_a_crisp_haloed_billboard_disc() -> void:
 	var main := instantiate_main()
 	var sun := main.get_node_or_null("SunDisc") as MeshInstance3D

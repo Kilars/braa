@@ -910,11 +910,28 @@ func _frame_camera(dog: Node) -> void:
 ## the 099 values toward the goal art's bright saturated green (~(136,185,104)) so the mottled
 ## lawn reads sunny, not the dark olive (85,148,94) the PO measured. Named so the grass-brightness
 ## test can guard it directly (a regression back to the dark ramp can't read green).
+## 144 (PO father-pass-9, X-4): the ROOT CAUSE of the muddy/blotchy foreground was the oversized
+## contact-shadow disc washing the near lawn (see GARDEN_SHADOW_SPREAD below) — NOT the ramp. But
+## while here, lift the dark end off (0.34,0.56,0.28) and narrow the shadow→light spread to Δg 0.13
+## so the painterly mottle is a subtle variation, not high-contrast patches, and the whole lawn sits
+## nearer the goal's bright green. Secondary polish; the test pins the dark floor + the spread.
 const GRASS_TONES := [
-	Color(0.34, 0.56, 0.28),       # shadowed green (lifted)
-	Color(0.44, 0.66, 0.34),       # mid grass
-	Color(0.54, 0.75, 0.41),       # light sunny green — near the goal-art lawn sample
+	Color(0.52, 0.72, 0.42),       # shadowed green — lifted off mud, still green-leading/saturated
+	Color(0.57, 0.78, 0.46),       # mid grass
+	Color(0.62, 0.84, 0.50),       # light sunny green — near the goal-art lawn sample
 ]
+
+## 144 (PO father-pass-9, X-4): the baked normal-map relief strength. Pass-8 left it at 1.3; a strong
+## relief adds visible mottle at the grazing foreground angle, so dial it to a gentle 0.3 — the lawn
+## keeps a whisper of micro-relief but shades evenly front-to-back (a probe with it disabled confirmed
+## it was NOT the main foreground-darkening cause; the contact shadow was). Named so the test guards it.
+const GRASS_RELIEF_BUMP := 0.3
+
+## 144 (PO father-pass-9, X-4): the contact-shadow disc diameter as a multiple of the footprint.
+## 101 pushed this to 1.55×, but the flat disc projects from the low camera across the whole lower
+## frame and washes the foreground grass dark. 1.1× keeps a tight grounding smudge under the paws
+## without spilling onto the lawn. Named so the foreground-grass evenness test can guard it.
+const GARDEN_SHADOW_SPREAD := 1.1
 
 ## Grass ground plane (047/P2-10): a large PlaneMesh at the dog's FOOT PLANE so the dog
 ## stands visibly ON grass. Sized 40×40 m so the horizon split (where the plane meets the
@@ -971,7 +988,7 @@ func _setup_ground_plane(dog: Node) -> void:
 	var grass_normal := NoiseTexture2D.new()
 	grass_normal.noise = relief
 	grass_normal.as_normal_map = true
-	grass_normal.bump_strength = 1.3   # 099: softened (2.2 → 1.3) so relief reads gentle, not rubble
+	grass_normal.bump_strength = GRASS_RELIEF_BUMP   # 099: 2.2→1.3; 144: →0.5 so foreground shades evenly (no grazing-angle blotches)
 	grass_normal.seamless = true
 	grass_normal.width = 256
 	grass_normal.height = 256
@@ -979,7 +996,7 @@ func _setup_ground_plane(dog: Node) -> void:
 	mat.normal_texture = grass_normal
 	mat.normal_scale = 1.0
 	mat.uv1_scale = Vector3(3.5, 3.5, 1.0)   # 099: coarser tiling (6 → 3.5) → larger, softer painterly patches
-	mat.roughness = 0.9    # matte grass, a hint of sheen so the normal-map relief shows
+	mat.roughness = 1.0    # 144: fully matte — kills the low-gloss sheen that over-brightened the mid-field
 	mat.metallic = 0.0
 	# Allow the sun's directional shading to land on it naturally.
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
@@ -1498,7 +1515,12 @@ func _setup_contact_shadow(dog: Node) -> void:
 	# 078/Note-6: a touch wider than the bare footprint disc so the darker core lands fully under
 	# the paws and the dog reads planted, not floating (the PO's "appears to float"). Position math
 	# (foot plane / centre — the tested contract) is untouched; only the visual disc grows.
-	var diameter := ContactShadow.radius(box) * 2.0 * 1.55  # 101: a touch wider still — the PO still read the grounding faint
+	# 101 widened this to 1.55×; 144 (PO father-pass-9): that flat disc, seen from the low ~1.2 m
+	# camera, projected across the WHOLE lower frame and — at ~0.5 alpha black — halved the grass
+	# beneath it, which is the "dark/muddy/blotchy foreground lawn" the PO measured (the brighter
+	# 143 sky/grass made the wash newly obvious). Snug it back to 1.1× so the shadow stays a tight
+	# smudge under the paws and the foreground grass reads as bright as the mid-field.
+	var diameter := ContactShadow.radius(box) * 2.0 * GARDEN_SHADOW_SPREAD
 	disc.size = Vector2(diameter, diameter)
 	blob.mesh = disc
 	blob.material_override = _contact_shadow_material()
@@ -1525,12 +1547,16 @@ func _contact_shadow_material() -> StandardMaterial3D:
 	# 101: firmer again — the PO's Phase-6 re-review still read the seated dog's grounding as faint.
 	# A darker core (0.62 → 0.72) and a stronger mid (0.34 → 0.42), pushed a touch further out (mid stop
 	# 0.62 → 0.66), so more of the ellipse holds shadow before the soft rim → the dog reads planted.
+	# 144 (PO father-pass-9): concentrate the shadow. 101 held a strong 0.42 alpha all the way out to
+	# 66 % radius — a wide dark disc that, projected from the low camera, muddied the foreground lawn.
+	# Keep the firm core (grounding intact) but fall off FAST so the disc's outer half — the part that
+	# projects into the foreground — is near-transparent: alpha halves by 30 % radius and is gone by 70 %.
 	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.66, 1.0])
+	grad.offsets = PackedFloat32Array([0.0, 0.30, 0.70])
 	grad.colors = PackedColorArray([
-		Color(0.0, 0.0, 0.0, 0.72),   # centre: a firm dark core under the paws
-		Color(0.0, 0.0, 0.0, 0.42),   # mid: soft falloff
-		Color(0.0, 0.0, 0.0, 0.0),    # rim: fully transparent
+		Color(0.0, 0.0, 0.0, 0.72),   # centre: a firm dark core under the paws (grounding)
+		Color(0.0, 0.0, 0.0, 0.30),   # mid: already faint by 30% radius — fast falloff
+		Color(0.0, 0.0, 0.0, 0.0),    # transparent by 70% radius — no wide foreground wash
 	])
 	var tex := GradientTexture2D.new()
 	tex.gradient = grad
