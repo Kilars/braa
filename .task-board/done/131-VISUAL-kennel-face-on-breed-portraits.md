@@ -70,3 +70,11 @@ non-monotonic spread reads best (adjacent grid cells clearly differ).
 - [ ] Skinned-transform-at-frame-0 gotcha respected (settle before the one-shot render).
 - [ ] Visual Review PASS on kennel grid + scroll captures (390×844).
 - [ ] verify gate green (import·boot·test·export); placeholder check clean; committed + pushed.
+
+## DONE 2026-07-06
+Shipped per-cell live portrait SubViewports (one per PORTRAIT_YAW_SPREAD entry) fed by live
+`ViewportTexture`s — NOT `get_image()` readback. Each cell + the modal header (`_dog_index_for_id`)
+selects its own distinct-yaw viewport. Head-and-shoulders via PORTRAIT_HEAD_FRAC=0.66 + PORTRAIT_FILL=1.18
+(overfill crops the lower body; head/ears stay in frame). Verify green (import·boot·test·export).
+Visual Review PASS on `.screenshots/105-kennel-01-grid.png`: all 8 dogs VISIBLE (no readback-blank
+regression), each a face-on portrait at a distinct angle, coat tints preserved, no faked breed.

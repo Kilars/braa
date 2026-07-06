@@ -78,13 +78,27 @@ const PORTRAIT_VP_SIZE := Vector2i(384, 340)   ## portrait-ish render target, ma
 const NEUTRAL_COAT     := Color(0.62, 0.62, 0.62)
 ## Front-quarter face-on view + fill, mirroring the retired bake so head/body/legs all read.
 const PORTRAIT_VIEW_DIR := Vector3(0.66, 0.24, 1.0)
-const PORTRAIT_FILL     := 0.78
+const PORTRAIT_FILL     := 1.18  ## 131: >1 overfills the full-body sphere → the lower body crops out,
+                                 ## leaving a head-and-shoulders bust (aimed up via PORTRAIT_HEAD_FRAC)
 ## The idle dog's rest pose faces its own default heading (side-on to the camera), so — unlike the
 ## training scene, which turns the dog to face the camera for a trick (061, P2-11) — the kennel must
 ## apply the SAME camera-facing yaw here, or the portrait reads as a broadside profile (PO 2026-07-05
 ## "framed facing the viewer, not rear/side-slumped"). We rotate the dog to face the camera eye, then
 ## add a small ¾ offset so the face reads toward the viewer without a foreshortened dead-on stance.
 const PORTRAIT_THREE_QUARTER := 0.42  ## radians (~24°) — front-¾, flattering, face clearly to camera
+## Per-cell yaw variation (131, K-1) so no two cells read as the same broadside Labrador — each cell
+## gets its OWN live SubViewport with the dog posed to base-facing + this per-index delta. A distinct
+## per-breed MODEL stays owner-gated (BUST-068); what's buildable is a distinct ANGLE per cell. The
+## spread is deterministic (no randf — banned + captures must reproduce) and NON-monotonic so adjacent
+## grid cells clearly differ. Kept within ±0.5 rad so every dog still reads front-¾ face-on, never a
+## rear/side profile. One viewport per entry → up to this many live dog instances (kennel is a modal,
+## not the main loop, so the cost is acceptable; each renders a still one-shot frame, not per-frame).
+const PORTRAIT_YAW_SPREAD := [0.12, -0.40, 0.34, -0.22, 0.46, -0.14, 0.26, -0.34]
+## Head-and-shoulders lift (131): aim the camera a touch higher up the bbox (toward the head/neck) and
+## fill a bit tighter than the full-body 116 framing, so the cell reads as a portrait bust rather than
+## a distant whole-body figure — while still fitting the full bounding sphere so nothing clips at any
+## per-cell yaw. Validated in capture on the CC0 dog (watch the ears at the tighter fill).
+const PORTRAIT_HEAD_FRAC := 0.66  ## aim this fraction up the bbox (0.5 = centre) — lifts toward the head
 const TAG_RADIUS     := 8.0
 const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
@@ -107,13 +121,15 @@ const MODAL_SECTION_SEP    := 10.0   ## vertical gap between modal sections
 var _rows: Array = []          ## last rows passed to render()
 var _balance: int = 0          ## last balance passed to render()
 
-## The ONE live portrait SubViewport (116) — renders the game's actual dog to a single
-## ViewportTexture shared (modulate-tinted) across all 8 cells + the modal header (X-7).
-## Built lazily the first time a portrait is needed (NEVER in _init — headless harness gotcha).
-## _portrait_built guards a repeated build attempt; _portrait_tex is null until the viewport is
-## in-tree and has rendered a frame, so consumers fall back to tint-only cleanly meanwhile.
-var _portrait_vp: SubViewport = null
-var _portrait_tex: Texture2D = null
+## Per-cell live portrait SubViewports (131, was ONE shared in 116): one live SubViewport per distinct
+## yaw (PORTRAIT_YAW_SPREAD), each rendering the game's actual dog posed to that angle, so no two cells
+## read as the same broadside Labrador. Each cell's TextureRect is fed its viewport's LIVE ViewportTexture
+## directly (a GPU texture) — NEVER get_image()/CPU readback, which returns blank in the WebGL2 export and
+## made every dog invisible in the first 131 attempt. Built lazily on first need (NEVER in _init — headless
+## harness gotcha). _portrait_built guards a repeated build; the arrays stay empty until the viewports are
+## in-tree, so consumers fall back to tint-only cleanly meanwhile.
+var _portrait_vps: Array = []    ## SubViewport per yaw index
+var _portrait_texs: Array = []   ## live ViewportTexture per yaw index (parallel to _portrait_vps)
 var _portrait_built: bool = false
 
 ## Live node refs (built once in _ready, updated per render())
@@ -188,6 +204,8 @@ func open_detail(id: String) -> void:
 	detail["owned"] = is_owned
 	detail["active"] = is_active
 	detail["affordable"] = is_owned or detail["price"] == 0 or _balance >= detail["price"]
+	# Carry the dog's grid index (131) so the modal header shows the SAME distinct-yaw portrait as its cell.
+	detail["cell_index"] = _dog_index_for_id(id)
 	_modal_overlay = _build_modal_overlay(detail)
 	add_child(_modal_overlay)
 	# Publish the modal's action-button centre for the Visual-Review capture (110) — after the layout
@@ -368,7 +386,7 @@ func _refresh() -> void:
 	var reduced := ReducedMotion.query()
 	for i in _rows.size():
 		var row: Dictionary = _rows[i]
-		var cell := _make_cell(row)
+		var cell := _make_cell(row, i)
 		_grid.add_child(cell)
 		# Pop-in animation: small scale-up + fade, lightly staggered (X-5: skip stagger when reduced).
 		# Guard on cell.is_inside_tree() — headless harness may not have a running SceneTree.
@@ -411,7 +429,7 @@ func _target_cell_h() -> float:
 	var avail := _viewport_h() - HEADER_H - GRID_PAD - float(rows - 1) * CELL_GAP
 	return max(avail / float(rows), BAND_H + FOOTER_BLOCK_H)
 
-func _make_cell(row: Dictionary) -> Button:
+func _make_cell(row: Dictionary, cell_index: int = 0) -> Button:
 	var btn := Button.new()
 	btn.name = "Cell_" + str(row.id)
 	# White StyleBoxFlat, radius 16, soft shadow + hairline (phase8.md:119).
@@ -461,7 +479,7 @@ func _make_cell(row: Dictionary) -> Button:
 
 	# 1. Portrait band with steel bars overlay and status/price tags. The band takes all the
 	#    cell height above the fixed footer block, so a taller cell shows a bigger dog.
-	vbox.add_child(_make_band(row, cell_h - FOOTER_BLOCK_H))
+	vbox.add_child(_make_band(row, cell_h - FOOTER_BLOCK_H, cell_index))
 
 	# 2. Footer: name + breed (PanelContainer with white bg).
 	vbox.add_child(_make_footer(row))
@@ -471,7 +489,7 @@ func _make_cell(row: Dictionary) -> Button:
 ## The top portrait band: tinted background + the shared live-SubViewport dog (116) behind the steel
 ## bars + status tag (top-left) + price chip (bottom-right). Distinct per-breed models stay owner-
 ## gated (BUST-068) — every cell shares the one stylized-realism Labrador, modulate-tinted per breed.
-func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
+func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) -> Control:
 	var band := Control.new()
 	band.name = "Band"
 	band.custom_minimum_size = Vector2(0, max(band_h, BAND_H))
@@ -491,7 +509,8 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 	# toward this dog's NATURAL COAT hue (portrait_tint, 117) — decoupled from the rarity band bg so
 	# Bella-the-Labrador reads warm cream, not her blue owned-band. All 8 read as tinted Labradors.
 	# Skipped cleanly when the SubViewport isn't renderable yet (tint-only fallback) — never a primitive.
-	var tex := _get_portrait_texture()
+	# cell_index selects this cell's own distinct-yaw viewport (131) so no two cells look identical.
+	var tex := _get_portrait_texture(cell_index)
 	if tex != null:
 		var dog := TextureRect.new()
 		dog.name = "DogPortrait"
@@ -550,36 +569,59 @@ func _make_band(row: Dictionary, band_h: float = BAND_H) -> Control:
 
 	return band
 
-## The ONE live portrait texture (116, X-7): the game's actual dog rendered face-on by a shared
-## SubViewport, fed to every cell + the modal header and modulate-tinted per breed. Lazily builds
-## the SubViewport on first call (never in _init — headless harness gotcha). Returns the
-## ViewportTexture, or null if the viewport can't be built yet / the model failed to load, so the
-## band degrades cleanly to tint-only rather than erroring. Cheap after the first build (cached).
-func _get_portrait_texture() -> Texture2D:
+## The live portrait texture for cell `cell_index` (131): each distinct yaw has its OWN live SubViewport
+## + dog, so no two cells look identical. Lazily builds ALL viewports on the first call (never in _init —
+## headless harness gotcha). Returns that cell's live ViewportTexture, or null if none could be built
+## (no asset / headless), so the band degrades cleanly to tint-only rather than erroring. cell_index is
+## wrapped into the built set, so more rows than viewports still resolve (adjacent-distinct is preserved
+## by the non-monotonic spread). Cheap after the first build (cached GPU textures).
+## The grid index of the dog with this id in the last-rendered rows (131) — so the modal header can
+## reuse that cell's distinct-yaw portrait. 0 if not found (safe: wraps into the built viewport set).
+func _dog_index_for_id(id: String) -> int:
+	for i in _rows.size():
+		if _rows[i].get("id") == id:
+			return i
+	return 0
+
+func _get_portrait_texture(cell_index: int = 0) -> Texture2D:
 	if not _portrait_built:
 		_portrait_built = true
-		_build_portrait_viewport()
-	return _portrait_tex
+		_build_portrait_viewports()
+	if _portrait_texs.is_empty():
+		return null
+	return _portrait_texs[cell_index % _portrait_texs.size()]
 
-## Build the shared portrait SubViewport: instance the game's dog (licensed on deploy, CC0 locally —
-## same pick as main._dog_path()), flatten + neutral-tint the coat, frame it face-on with a Camera3D
-## via DogBounds/DogFraming, and light it. The ViewportTexture is cached in _portrait_tex. Attached
-## as a child of this Control (headless-safe: SubViewports render off-screen; guarded .play()).
-func _build_portrait_viewport() -> void:
+## Build one live portrait SubViewport per PORTRAIT_YAW_SPREAD entry: instance the game's dog once per
+## viewport, pose each to base-facing + its per-index yaw, frame face-on, and cache each viewport's LIVE
+## ViewportTexture. Bails cleanly (empty arrays → tint-only) when the asset is missing. Each viewport is
+## a still one-shot render (UPDATE_ONCE after the pose settles), so 8 dogs cost one frame each, not per
+## frame — and a live ViewportTexture is a GPU texture, dodging the get_image() readback pitfall entirely.
+func _build_portrait_viewports() -> void:
 	var path := _portrait_dog_path()
 	if not ResourceLoader.exists(path):
 		return  # no dog asset → tint-only fallback (never a primitive)
 	var packed := load(path) as PackedScene
 	if packed == null:
 		return
+	for i in PORTRAIT_YAW_SPREAD.size():
+		var tex := _build_one_portrait(packed, PORTRAIT_YAW_SPREAD[i], i)
+		if tex != null:
+			_portrait_texs.append(tex)  # the vp itself is appended to _portrait_vps inside the builder
+
+## Build a single portrait SubViewport for one yaw offset and return its live ViewportTexture (or null).
+## Instances the game's dog (licensed on deploy, CC0 locally — same pick as main._dog_path()), flattens +
+## neutral-tints the coat, poses it to face the camera + `yaw_offset`, frames it head-and-shoulders with a
+## Camera3D via DogBounds/DogFraming, and lights it. Attached as a child of this Control (headless-safe:
+## SubViewports render off-screen; guarded .play()). UPDATE_ONCE after the pose is set → one still frame.
+func _build_one_portrait(packed: PackedScene, yaw_offset: float, idx: int) -> Texture2D:
 	var vp := SubViewport.new()
-	vp.name = "KennelPortraitViewport"
+	vp.name = "KennelPortraitViewport_" + str(idx)
 	vp.size = PORTRAIT_VP_SIZE
 	vp.transparent_bg = true
 	vp.own_world_3d = true                        # isolated world — no bleed to/from the main scene
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # live idle → breathing portrait
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # keep the idle breathing; still cheap for a modal
 	add_child(vp)
-	_portrait_vp = vp
+	_portrait_vps.append(vp)
 
 	var dog: Node = packed.instantiate()
 	dog.name = "KennelPortraitDog"
@@ -635,22 +677,27 @@ func _build_portrait_viewport() -> void:
 	var h_half := atan(tan(v_half) * aspect)
 	var half_angle := minf(v_half, h_half)
 	var dist := radius / tan(half_angle) / PORTRAIT_FILL
-	var target := DogFraming.target(box)
+	# Head-and-shoulders (131): aim up the bbox toward the head/neck (not dead-centre) AND overfill
+	# (PORTRAIT_FILL > 1) so the lower body crops out the frame bottom, leaving a portrait bust. The
+	# head sits well below the top even overfilled (it's near the bbox top, target is at 0.66), so the
+	# ears stay in frame at every per-cell yaw — validated in the 390×844 capture.
+	var target := box.position + Vector3(box.size.x * 0.5, box.size.y * PORTRAIT_HEAD_FRAC, box.size.z * 0.5)
 	var eye := target + PORTRAIT_VIEW_DIR.normalized() * dist
 	cam.look_at_from_position(eye, target, Vector3.UP)
 	cam.make_current()                            # scoped to this SubViewport's own world
 
 	# Turn the dog to FACE the camera (the raw idle rest pose is side-on). Same convention main.gd
 	# uses for the trick face-turn: heading = atan2(camX - dogX, camZ - dogZ) applied to the root
-	# basis about UP. A small ¾ offset keeps it a flattering front-¾, not a dead-on foreshortened
-	# stance. Done AFTER the sphere-fit distance (rotation about UP keeps the fit radius) so no clip.
+	# basis about UP. A ¾ offset PLUS this cell's per-index yaw (131) keeps every dog front-¾ face-on
+	# while giving each cell a visibly distinct angle. Done AFTER the sphere-fit distance (rotation
+	# about UP keeps the fit radius) so no clip.
 	if dog is Node3D:
 		var d3 := dog as Node3D
 		var to_cam := eye - d3.transform.origin
-		var heading := atan2(to_cam.x, to_cam.z) + PORTRAIT_THREE_QUARTER
+		var heading := atan2(to_cam.x, to_cam.z) + PORTRAIT_THREE_QUARTER + yaw_offset
 		d3.transform.basis = d3.transform.basis.rotated(Vector3.UP, heading)
 
-	_portrait_tex = vp.get_texture()
+	return vp.get_texture()
 
 ## The dog to render in the kennel portrait: the licensed Labrador on deploy, the CC0 dog locally —
 ## the SAME pick as main._dog_path() so the kennel shows the game's actual dog. (No debug override:
@@ -946,7 +993,7 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	# toward this dog's NATURAL COAT hue (portrait_tint, 117) — so the modal header shows the same
 	# stylized-realism Labrador (Bella warm cream, not blue) behind the bars.
 	# Skipped cleanly when the viewport isn't renderable yet (tint-only) — never a primitive.
-	var mtex := _get_portrait_texture()
+	var mtex := _get_portrait_texture(int(detail.get("cell_index", 0)))
 	if mtex != null:
 		var mdog := TextureRect.new()
 		mdog.name = "ModalDogPortrait"
