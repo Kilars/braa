@@ -30,3 +30,42 @@ func test_modal_yaw_differs_from_side_facing_cells() -> void:
 			most_side = v
 	assert_true(absf(modal_y - most_side) > 0.3,
 		"modal framing yaw clearly differs from the most side-facing cell yaw (%f)" % most_side)
+
+## Find the modal header's live dog portrait TextureRect texture, or null (tint-only fallback).
+func _modal_portrait_texture(ks: KennelScreen) -> Texture2D:
+	var node := _find_named(ks, "ModalDogPortrait")
+	return (node as TextureRect).texture if node is TextureRect else null
+
+func _find_named(n: Node, nm: String) -> Node:
+	if n.name == nm:
+		return n
+	for c in n.get_children():
+		var f := _find_named(c, nm)
+		if f != null:
+			return f
+	return null
+
+func test_owned_active_dog_shares_the_same_modal_portrait_texture() -> void:
+	## Pass-6 regression guard. The owned + ACTIVE dog (Bella, cell 0) must open its inspect
+	## modal on the SAME dedicated front-¾ portrait as every unowned dog — coat differs only by
+	## modulate. So the ModalDogPortrait TextureRect must reference the IDENTICAL shared modal
+	## ViewportTexture for an owned+active dog and an unowned dog. If anyone ever re-couples the
+	## owned dog to its per-cell grid texture (the pass-5/pass-6 symptom), this fails.
+	var ks := KennelScreen.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(ks)
+	var rows: Array = KennelDog.classify_kennel_dogs(["bella"], "bella", 0)
+	ks.render(rows, 0)
+
+	ks.open_detail("bella")     # cell 0 — owned + active (the marquee «Din hund»)
+	var t_owned := _modal_portrait_texture(ks)
+	ks.open_detail("nova")      # an unowned dog
+	var t_unowned := _modal_portrait_texture(ks)
+	ks.close_detail()
+
+	assert_true(t_owned != null,
+		"owned/active dog's modal header has a live portrait texture (not a tint-only fallback)")
+	assert_true(t_owned == t_unowned,
+		"owned/active dog and unowned dog share the identical dedicated modal portrait texture")
+
+	ks.queue_free()
