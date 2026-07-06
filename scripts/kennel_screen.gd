@@ -56,6 +56,14 @@ const C_PIP_EMPTY      := Color("dfe5ea")                  ## empty stat pip (li
 const C_TRAIT_BG       := Color("e8f0f8")                  ## raseegenskaper chip background
 const C_TRAIT_INK      := Color("3a6a9a")                  ## raseegenskaper chip text
 
+# Cell surface tokens (133): one DS neutral surface, tinted only by ownership state.
+# C_SURFACE_SAND is the Warm Sand DS base (#F4EFE6 = C_MODAL_CREAM — same token, aliased
+# here so the intent is explicit). Owned/egg get a faint state wash over the sand.
+const C_SURFACE_SAND  := Color("f4efe6")   ## Warm Sand base — all neutral cells
+const C_SURFACE_OWNED := Color("e6f0e8")   ## sand nudged toward soft green (owned cells)
+const C_SURFACE_EGG   := Color("f5e9e6")   ## sand nudged toward soft coral (secret/easter cells)
+const C_CELL_SHADOW   := Color(0.133, 0.204, 0.290, 0.12)  ## #22344a @ 12% — soft contact shadow ellipse
+
 # ---------------------------------------------------------------------------
 # Layout constants
 # ---------------------------------------------------------------------------
@@ -487,6 +495,16 @@ func _make_cell(row: Dictionary, cell_index: int = 0) -> Button:
 
 	return btn
 
+## Cell background surface (133): one DS neutral surface, tinted only by ownership state.
+## Owned → faint green-warm wash; secret/easter → faint coral wash; neutral → plain Warm Sand.
+## This is a pure mapping (no side-effects) — unit-tested in test_kennel_screen_wiring.gd.
+func _cell_surface(row: Dictionary) -> Color:
+	if row.get("owned", false):
+		return C_SURFACE_OWNED
+	if row.get("secret", false):
+		return C_SURFACE_EGG
+	return C_SURFACE_SAND
+
 ## The top portrait band: tinted background + the shared live-SubViewport dog (116) behind the steel
 ## bars + status tag (top-left) + price chip (bottom-right). Distinct per-breed models stay owner-
 ## gated (BUST-068) — every cell shares the one stylized-realism Labrador, modulate-tinted per breed.
@@ -497,10 +515,11 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 	band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	# Tinted background.
+	# Tinted background — one DS neutral surface (133), tinted only by ownership state.
+	# Replaces the per-breed rarity band_tint (the PO-flagged "eight clashing fills").
 	var bg := ColorRect.new()
 	bg.name = "BandBg"
-	bg.color = row.band_tint
+	bg.color = _cell_surface(row)
 	bg.anchor_right  = 1.0
 	bg.anchor_bottom = 1.0
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -513,6 +532,18 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 	# cell_index selects this cell's own distinct-yaw viewport (131) so no two cells look identical.
 	var tex := _get_portrait_texture(cell_index)
 	if tex != null:
+		# Contact shadow (133): a soft dark ellipse at the dog's feet — grounding, not floating.
+		# Added BEFORE the dog TextureRect so the dog sits on top. Drawn by _ContactShadow._draw()
+		# as a soft ellipse matching the training garden's treatment (Color("22344a", 0.12)).
+		var shadow := _ContactShadow.new()
+		shadow.name = "ContactShadow"
+		shadow.anchor_left   = 0.0
+		shadow.anchor_right  = 1.0
+		shadow.anchor_top    = 0.0
+		shadow.anchor_bottom = 1.0
+		shadow.mouse_filter  = Control.MOUSE_FILTER_IGNORE
+		band.add_child(shadow)
+
 		var dog := TextureRect.new()
 		dog.name = "DogPortrait"
 		dog.texture = tex
@@ -1531,10 +1562,10 @@ class _StatPip extends Control:
 # Repeating ~2px vertical stripes on ~29px pitch, C_STEEL @ 40% alpha, + 2px inset frame.
 # ---------------------------------------------------------------------------
 class _SteelBars extends Control:
-	const STRIPE_W  := 3.0    ## stripe width (px) — wider so the thin bars actually read (116)
-	const PITCH     := 26.0   ## stripe centre-to-centre pitch (px) — tighter for a denser cage
-	const BAR_ALPHA := 0.38   ## bar opacity over the tint — spec #788794 @ 32-40% (116)
-	const FRAME_W   := 2.0    ## inset frame width (px)
+	const STRIPE_W  := 2.5    ## stripe width (px) — slimmed so bars read as fine texture (133)
+	const PITCH     := 38.0   ## stripe centre-to-centre pitch (px) — wider so bars are subtle, not a cage (133)
+	const BAR_ALPHA := 0.18   ## bar opacity — halved from 0.38 so planks are a faint texture on sand (133)
+	const FRAME_W   := 1.5    ## inset frame width (px)
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1556,6 +1587,38 @@ class _SteelBars extends Control:
 		draw_rect(Rect2(0.0, 0.0, FRAME_W, h), frame_color)        # left
 		draw_rect(Rect2(w - FRAME_W, 0.0, FRAME_W, h), frame_color) # right
 
+
+# ---------------------------------------------------------------------------
+# Inner class: drawn contact shadow for each kennel cell's dog portrait (133).
+# A soft dark ellipse at the dog's feet — anchored to the bottom of the band,
+# occupying the lower ~25% of its height and ~70% of its width. Matches the
+# training garden's shadow treatment (#22344a, ~0.12 alpha at centre). Drawn
+# via _draw() as two overlapping ellipses (solid inner + soft semi-transparent
+# outer ring) for a smudge effect. GL Compatibility-safe — no shader needed.
+# ---------------------------------------------------------------------------
+class _ContactShadow extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		# Centre the ellipse at the bottom quarter of the band (the dog's feet region).
+		var cx := w * 0.5
+		var cy := h * 0.82                    ## 82% down — feet area of the portrait
+		var rx := w * 0.34                    ## horizontal radius: ~68% of cell width
+		var ry := h * 0.045                   ## vertical radius: flat oblique ellipse
+		# Outer soft halo: C_CELL_SHADOW alpha at ~50% to build softness.
+		var outer_col := Color(C_CELL_SHADOW.r, C_CELL_SHADOW.g, C_CELL_SHADOW.b, C_CELL_SHADOW.a * 0.5)
+		draw_set_transform(Vector2(cx, cy), 0.0, Vector2(1.0, 1.0))
+		# Inner core ellipse (approximate with draw_rect scaled via set_transform).
+		# Godot 4 GL Compat doesn't expose draw_ellipse, so approximate with a scaled circle.
+		# We scale the transform non-uniformly (rx vs ry) so draw_circle draws an ellipse.
+		draw_set_transform(Vector2(cx, cy), 0.0, Vector2(1.0, ry / rx))
+		draw_circle(Vector2.ZERO, rx * 1.25, outer_col)
+		draw_circle(Vector2.ZERO, rx, C_CELL_SHADOW)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0))  # reset
 
 # ---------------------------------------------------------------------------
 # Inner class: drawn 5-point star pip for the easter/secret tag (task 106).

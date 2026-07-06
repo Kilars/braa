@@ -72,13 +72,48 @@ band.add_child(shadow)               # added BEFORE the dog so the dog sits on t
 
 ## Acceptance criteria
 
-- [ ] All 8 cells share one DS neutral surface (Warm Sand `#F4EFE6`), tinted **only** by ownership
+- [x] All 8 cells share one DS neutral surface (Warm Sand `#F4EFE6`), tinted **only** by ownership
       state — no more eight clashing rarity fills.
-- [ ] Per-dog **coat** tint on the portrait is unchanged (that stays the dog-distinction signal).
-- [ ] Steel planks are subtle (reduced alpha / wider pitch), not the dominant element.
-- [ ] Each dog has a soft contact shadow grounding it (matches the training garden's treatment) —
+- [x] Per-dog **coat** tint on the portrait is unchanged (that stays the dog-distinction signal).
+- [x] Steel planks are subtle (reduced alpha / wider pitch), not the dominant element.
+- [x] Each dog has a soft contact shadow grounding it (matches the training garden's treatment) —
       no floating dogs.
-- [ ] `_cell_surface` covered test-first (neutral→sand, owned→wash, secret→wash); tests green.
-- [ ] No new scattered `Color(...)` literals beyond the named surface/shadow tokens.
-- [ ] Visual Review PASS on the full 8-cell grid capture (phone-portrait 390×844).
-- [ ] verify gate green (import·boot·test·export); placeholder check clean.
+- [x] `_cell_surface` covered test-first (neutral→sand, owned→wash, secret→wash); tests green.
+- [x] No new scattered `Color(...)` literals beyond the named surface/shadow tokens.
+- [x] Visual Review PASS on the full 8-cell grid capture (phone-portrait 390×844).
+      (`105-kennel-01-grid.png`, 2026-07-06: all 8 cells share one Warm Sand surface — Bella a faint
+      green owned wash, Trulte a faint coral egg wash, rest plain sand; steel planks are subtle faint
+      lines; every dog sits on a soft contact-shadow ellipse — no floating; per-dog coat tints still
+      vary (Balder dark brown, Pontus grey, Lykke red-brown) so the dogs stay distinguishable.)
+- [x] verify gate green (import·boot·test·export); placeholder check clean.
+
+## Resolution
+
+Implemented in `scripts/kennel_screen.gd` (all logic) and `tests/test_kennel_screen_wiring.gd`
+(type annotations fix for pre-written RED tests).
+
+**1. Surface tokens** — added four named constants in the Modal-specific palette block:
+- `C_SURFACE_SAND  = Color("f4efe6")` — Warm Sand base (alias of `C_MODAL_CREAM`)
+- `C_SURFACE_OWNED = Color("e6f0e8")` — sand nudged toward soft green
+- `C_SURFACE_EGG   = Color("f5e9e6")` — sand nudged toward soft coral
+- `C_CELL_SHADOW   = Color(0.133, 0.204, 0.290, 0.12)` — `#22344a` @ 12%
+
+**2. `_cell_surface(row)` helper** — pure mapping above `_make_band()`: owned→`C_SURFACE_OWNED`,
+secret→`C_SURFACE_EGG`, else→`C_SURFACE_SAND`. `bg.color = row.band_tint` replaced with
+`bg.color = _cell_surface(row)` in `_make_band()`.
+
+**3. Contact shadow** — new `_ContactShadow` inner class (after `_SteelBars`, before `_StarPip`).
+Draws a soft two-layer ellipse via `_draw()` scaled non-uniformly via `draw_set_transform` to fake
+an oblique ellipse (Godot 4 GL Compat has no `draw_ellipse`). Centred at 82% down the band (feet
+area), RX ~34% of cell width, RY ~4.5% of cell height. Outer halo at 50% of `C_CELL_SHADOW` alpha,
+inner core at full `C_CELL_SHADOW`. Added before the `DogPortrait` TextureRect so the dog sits on top.
+
+**4. Steel planks** — `_SteelBars` constants reduced: `BAR_ALPHA 0.38→0.18`, `PITCH 26→38px`,
+`STRIPE_W 3→2.5px`, `FRAME_W 2→1.5px`. Planks are now a faint texture, not the dominant element.
+
+**5. Test fix** — three pre-written RED tests in `test_kennel_screen_wiring.gd` had GDScript type
+inference failures (`var x := rows[N]` from untyped Array → Variant). Added explicit `: Dictionary`
+annotations and one `as Dictionary` cast.
+
+**Gate result:** `ran 671 test(s), 0 failure(s)` · `✓ verify gate green` (import·boot·test·export).
+Placeholder check clean — no stub/TODO/mock in added lines.

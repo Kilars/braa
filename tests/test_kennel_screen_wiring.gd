@@ -151,3 +151,64 @@ func test_close_kennel_restores_training_hud() -> void:
 			"training chrome '%s' must be restored after kennel closes" % prop)
 	main.queue_free()
 	_clear_save()
+
+# ---------------------------------------------------------------------------
+# _cell_surface mapping — pure color selection based on ownership/secret state
+# ---------------------------------------------------------------------------
+
+func test_cell_surface_neutral_row_returns_warm_sand() -> void:
+	## A neutral row (neither owned nor secret) must return the Warm Sand base color
+	## (#F4EFE6), the DS constant C_MODAL_CREAM already defined in KennelScreen.
+	_clear_save()
+	var main := instantiate_main()
+	var ks := _find_kennel(main)
+	assert_true(ks != null, "need a KennelScreen to test _cell_surface()")
+	# Build a neutral row (not owned, not secret) for a common dog.
+	var rows := KennelDog.classify_kennel_dogs([], KennelDog.STARTER_ID, 0)
+	var neutral_row: Dictionary = rows[1]  # Nova, a common EPIC dog (not owned, not secret)
+	assert_false(neutral_row.owned, "test precondition: row must not be owned")
+	assert_false(neutral_row.secret, "test precondition: row must not be secret")
+	var surface := ks._cell_surface(neutral_row)
+	assert_eq(surface, Color("f4efe6"), "neutral row must return Warm Sand #F4EFE6")
+	main.queue_free()
+	_clear_save()
+
+func test_cell_surface_owned_row_returns_distinct_owned_wash() -> void:
+	## An owned row (owned == true) must return a distinct color that is NOT the plain
+	## Warm Sand. The owned wash is a faint green-warm tint over the sand.
+	_clear_save()
+	var main := instantiate_main()
+	var ks := _find_kennel(main)
+	assert_true(ks != null, "need a KennelScreen to test _cell_surface()")
+	# Build rows where Bella (the starter) is owned.
+	var rows := KennelDog.classify_kennel_dogs([KennelDog.STARTER_ID], KennelDog.STARTER_ID, 0)
+	var owned_row: Dictionary = rows[0]  # Bella, marked as owned
+	assert_true(owned_row.owned, "test precondition: Bella must be marked owned")
+	assert_false(owned_row.secret, "test precondition: Bella must not be secret")
+	var surface := ks._cell_surface(owned_row)
+	var neutral_sand := Color("f4efe6")
+	assert_ne(surface, neutral_sand, "owned row must return a color distinct from Warm Sand")
+	main.queue_free()
+	_clear_save()
+
+func test_cell_surface_secret_row_returns_distinct_egg_wash() -> void:
+	## A secret/easter-egg row (secret == true) must return a distinct color that is
+	## NOT the plain Warm Sand and NOT the owned wash. The egg wash is a faint coral tint.
+	_clear_save()
+	var main := instantiate_main()
+	var ks := _find_kennel(main)
+	assert_true(ks != null, "need a KennelScreen to test _cell_surface()")
+	# Build rows with the full 8-dog catalog. Trulte (index 7) has Rarity.SECRET.
+	var rows := KennelDog.classify_kennel_dogs([], KennelDog.STARTER_ID, 0)
+	var secret_row: Dictionary = rows[7]  # Trulte, the SECRET easter egg
+	assert_false(secret_row.owned, "test precondition: Trulte must not be owned (she is free secret)")
+	assert_true(secret_row.secret, "test precondition: Trulte must be marked secret")
+	var surface := ks._cell_surface(secret_row)
+	var neutral_sand := Color("f4efe6")
+	# Build the owned row to compare against (so we verify secret is distinct from owned too).
+	var owned_rows := KennelDog.classify_kennel_dogs([KennelDog.STARTER_ID], KennelDog.STARTER_ID, 0)
+	var owned_surface := ks._cell_surface(owned_rows[0] as Dictionary)
+	assert_ne(surface, neutral_sand, "secret row must return a color distinct from Warm Sand")
+	assert_ne(surface, owned_surface, "secret row must return a color distinct from owned wash")
+	main.queue_free()
+	_clear_save()
