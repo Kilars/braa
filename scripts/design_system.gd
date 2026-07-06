@@ -176,6 +176,71 @@ static func pill(bg: Color, radius: int = R_PILL) -> StyleBoxFlat:
 	return sb
 
 # ---------------------------------------------------------------------------
+# Raised-gradient CTA pill (126/130)
+# ---------------------------------------------------------------------------
+## The shared raised-blue gradient palette used by both the BRA button (126) and the
+## completion-menu primary CTA (130), so the two dominant actions read identically. These
+## are the goal-art samples the BRA bake was tuned to; homed here as tokens so no surface
+## re-hardcodes the blue gradient math.
+const GRAD_PILL_TOP := Color(0.475, 0.690, 0.980)   ## ~(121,176,250) — glossy top sheen
+const GRAD_PILL_BOT := Color(0.349, 0.553, 0.878)   ## ~(89,141,224)  — deep bottom
+const GRAD_PILL_LIP := Color(0.239, 0.424, 0.737)   ## ~(61,108,188)  — darker 3D lower lip
+
+## Signed distance to a rounded rect (negative inside). Standard SDF — lets us anti-alias the
+## pill edge and soften the drop shadow with one cheap formula. Shared by gradient_pill (130).
+static func _sdf_round_rect(p: Vector2, rect: Rect2, r: float) -> float:
+	var half := rect.size * 0.5
+	var q := (p - (rect.position + half)).abs() - (half - Vector2(r, r))
+	return Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - r
+
+## Bake a raised gradient-pill StyleBoxTexture (126/130): a rounded-rect vertical-gradient
+## face (bright `top` → deep `bot`) with a darker lower `lip` band and a soft drop shadow
+## baked into transparent padding, wrapped in a StyleBoxTexture whose expand_margins push the
+## shadow/AA pad back outside the layout rect so the pill occupies exactly `content_w × content_h`.
+## Size-parameterized so both the BRA button and the menu CTA share one baker; the defaults are
+## the BRA button's numbers so its appearance is byte-identical after the refactor. Per-pixel
+## image loop — CALLERS MUST CACHE the result, never bake per-frame.
+static func gradient_pill(content_w: int, content_h: int, radius: float,
+		top: Color = GRAD_PILL_TOP, bot: Color = GRAD_PILL_BOT, lip: Color = GRAD_PILL_LIP,
+		pad: int = 56, lip_h: float = 14.0, shadow_dy: float = 14.0,
+		shadow_blur: float = 30.0, shadow_max: float = 0.30) -> StyleBoxTexture:
+	var cw := maxi(1, content_w)
+	var ch := maxi(1, content_h)
+	var w := cw + pad * 2
+	var h := ch + pad * 2
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var face := Rect2(pad, pad, cw, ch)
+	var shadow_rect := Rect2(face.position + Vector2(0, shadow_dy), face.size)
+	var shadow_rgb := Vector3(INK.r, INK.g, INK.b)
+	for y in range(h):
+		for x in range(w):
+			var p := Vector2(x + 0.5, y + 0.5)
+			# Face colour: vertical gradient, with the bottom lip_h band pulled toward the lip colour.
+			var t := clampf((p.y - face.position.y) / face.size.y, 0.0, 1.0)
+			var face_col := top.lerp(bot, t)
+			var from_bottom := (face.position.y + face.size.y) - p.y
+			if from_bottom < lip_h:
+				face_col = face_col.lerp(lip, clampf(1.0 - from_bottom / lip_h, 0.0, 1.0))
+			var f_a := clampf(0.5 - _sdf_round_rect(p, face, radius), 0.0, 1.0)  # AA edge
+			# Soft drop shadow, only where the face doesn't already cover.
+			var sd := _sdf_round_rect(p, shadow_rect, radius)
+			var sc := clampf(1.0 - sd / shadow_blur, 0.0, 1.0)
+			var s_a := shadow_max * sc * sc * (1.0 - f_a)
+			var out_a := f_a + s_a
+			if out_a <= 0.0:
+				continue
+			var rgb := (Vector3(face_col.r, face_col.g, face_col.b) * f_a + shadow_rgb * s_a) / out_a
+			img.set_pixel(x, y, Color(rgb.x, rgb.y, rgb.z, out_a))
+	var sb := StyleBoxTexture.new()
+	sb.texture = ImageTexture.create_from_image(img)
+	sb.expand_margin_left   = pad
+	sb.expand_margin_right  = pad
+	sb.expand_margin_top    = pad
+	sb.expand_margin_bottom = pad
+	return sb
+
+# ---------------------------------------------------------------------------
 # Godot Theme — applied at the scene root so all Control text uses real fonts
 # ---------------------------------------------------------------------------
 

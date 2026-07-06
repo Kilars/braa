@@ -51,10 +51,34 @@ CTA-specific treatment, not a global token change. Do NOT touch the progressive 
 
 ## Acceptance criteria
 
-- [ ] "Fortsett treningen" renders with the 126 gradient/weight (full Bra-Blue `#4A90E2`, white ≥700).
-- [ ] "Gi tilbakemelding" demoted to a clear secondary/ghost style, visibly lighter than the primary.
-- [ ] Primary reads as the dominant action; no more hierarchy inversion.
-- [ ] `DesignSystem.BLUE` / `.pill()` general tokens unchanged; gradient helper shared, not duplicated.
-- [ ] Progressive disclosure (127/128) untouched.
-- [ ] Visual Review PASS (phone-portrait 390×844).
-- [ ] verify gate green (import·boot·test·export); placeholder check clean; committed + pushed.
+- [x] "Fortsett treningen" renders with the 126 gradient/weight (full Bra-Blue `#4A90E2`, white ≥700).
+- [x] "Gi tilbakemelding" demoted to a clear secondary/ghost style, visibly lighter than the primary.
+- [x] Primary reads as the dominant action; no more hierarchy inversion.
+- [x] `DesignSystem.BLUE` / `.pill()` general tokens unchanged; gradient helper shared, not duplicated.
+- [x] Progressive disclosure (127/128) untouched.
+- [x] Visual Review PASS (phone-portrait 390×844). (`072-menu-open.png` @ 11:14: "Fortsett
+      treningen" now a raised blue gradient pill matching the BRA button; "Gi tilbakemelding"
+      demoted to a ghost pill (paper fill + blue outline + blue text). Hierarchy correct.)
+- [x] verify gate green (import·boot·test·export); placeholder check clean; committed + pushed.
+
+## Resolution
+
+Extracted the raised-gradient bake out of `main` into a shared, size-parameterized baker on
+`DesignSystem` so the BRA button (126) and the menu primary CTA now share one code path:
+
+- `DesignSystem.gradient_pill(content_w, content_h, radius, top, bot, lip, pad, lip_h, shadow_dy,
+  shadow_blur, shadow_max) -> StyleBoxTexture` (`scripts/design_system.gd`). `_sdf_round_rect` moved
+  alongside it. The blue palette is homed as tokens `GRAD_PILL_TOP/BOT/LIP` (the exact goal-art
+  samples the BRA bake used) and are the baker's defaults, so nothing re-hardcodes the gradient.
+- `main._make_bra_pill_stylebox()` now just calls `DesignSystem.gradient_pill(...)` with the BRA
+  content size (`cw`/`ch` from the BRA offsets) and the `BRA_PILL_*` constants. Those constants are
+  byte-identical to the old values (and equal the new `GRAD_PILL_*` defaults), and the baker body is
+  a verbatim move of the original loop → the BRA button is pixel-identical.
+- `trick_menu.gd`: the "Fortsett treningen" CTA draws the shared gradient box (softer footer-scale
+  lip/shadow/radius, same blue palette) instead of the flat `DesignSystem.pill(CLOSE_BG, ...)`. White
+  `CLOSE_TEXT` at `CLOSE_SIZE` on `f_bold` (≥700) kept. The box is cached in `_cta_box` and rebaked
+  only when `_cta_box_size` changes (never per frame). "Gi tilbakemelding" + "Vis frem hundene"
+  demoted to a ghost pill (`_draw_ghost_pill`: PAPER fill + Bra-Blue hairline outline + Bra-Blue
+  text) so they read clearly lighter than the CTA. `DesignSystem.BLUE`/`.pill()` untouched.
+
+verify gate green (import · boot · test · export). Visual Review left for the main agent to capture.

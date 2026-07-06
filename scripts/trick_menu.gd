@@ -147,11 +147,27 @@ const BADGE_LOCKED := DesignSystem.SLATE_SOFT
 ## CoinReadout pill, 129 — not a bespoke hand-draw). GOLD_DARK / the number colour moved into
 ## CoinReadout, so only the price-badge GOLD remains here.
 const COIN_GOLD := DesignSystem.GOLD
-## Action button colours — primary (dismiss/continue) = BLUE; secondary = CREAM paper pill.
-const CLOSE_BG := DesignSystem.BLUE
+## Action button colours. The primary CTA ("Fortsett treningen") is drawn with the SAME raised-blue
+## gradient treatment as the BRA button (130, via DesignSystem.gradient_pill), so the two dominant
+## actions read identically — not the old flat pale-BLUE pill that read as secondary. White ≥700 label.
 const CLOSE_TEXT := DesignSystem.PAPER
-const SECONDARY_BG := DesignSystem.CREAM
-const SECONDARY_TEXT := DesignSystem.SLATE
+## The CTA gradient corner radius — R_MD-scale so it matches the footer pills' rounding, baked into
+## the gradient texture (the shared baker is radius-parameterized). Kept modest so the CTA reads as a
+## footer button, not the hero BRA band (which uses the much larger BRA_PILL_RADIUS).
+const CLOSE_GRAD_RADIUS := 16.0
+## Softer shadow/lip numbers than the hero BRA button — this is a footer CTA on a paper card, so the
+## raised effect is present but restrained (shorter lip, shorter/softer shadow, smaller pad).
+const CLOSE_GRAD_PAD := 22
+const CLOSE_GRAD_LIP_H := 8.0
+const CLOSE_GRAD_SHADOW_DY := 8.0
+const CLOSE_GRAD_SHADOW_BLUR := 18.0
+const CLOSE_GRAD_SHADOW_MAX := 0.22
+## Secondary footer pills (feedback / showcase) — demoted to a clear GHOST style so they never
+## compete with the primary CTA: PAPER fill, a Bra-Blue hairline outline, Bra-Blue text.
+const SECONDARY_BG := DesignSystem.PAPER          ## paper fill (was CREAM) — lighter than the CTA
+const SECONDARY_TEXT := DesignSystem.BLUE         ## Bra-Blue text — reads as a link/ghost action
+const SECONDARY_OUTLINE := DesignSystem.BLUE      ## Bra-Blue hairline outline on the ghost pill
+const SECONDARY_OUTLINE_W := 2.0                  ## outline thickness (px, design space)
 
 ## Action button labels — all Norwegian, homed as named consts (no scattered literals).
 const LABEL_SHOWCASE  := "Vis frem hundene"
@@ -222,6 +238,12 @@ var _difficulties: Array = []
 ## first draw (never in _init — headless harness gotcha: add_child in _init doesn't work). The header
 ## coin is no longer hand-drawn; _position_coin_readout keeps it right-anchored in the header rect.
 var _coin_readout: CoinReadout = null
+
+## Cached raised-gradient StyleBoxTexture for the primary CTA (130). Baking is a per-pixel image
+## loop, so it MUST NOT run every _draw frame — we bake once and rebuild only when the CTA rect size
+## changes (tracked by _cta_box_size). Rebuilt lazily in _draw via _ensure_cta_box().
+var _cta_box: StyleBoxTexture = null
+var _cta_box_size := Vector2.ZERO
 
 func _init() -> void:
 	# Modal: the menu eats every tap while it is up (STOP), so a tap can never fall through to the BRA
@@ -726,23 +748,28 @@ func _draw() -> void:
 				BADGE_SIZE, DIFF_TRADE_HINT)
 		for i in _difficulties.size():
 			_draw_difficulty_row(f_bold, f_body, i)
-	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. Secondary paper pill
-	# so it reads as part of the DS footer, distinct from the primary BLUE close button.
+	# The "Vis frem hundene" showcase pill (087) — only when there are breeds. GHOST secondary pill
+	# (paper fill + Bra-Blue outline + Bra-Blue text) so it reads clearly lighter than the primary CTA.
 	if not _breeds.is_empty():
 		var sr := _showcase_rect()
-		draw_style_box(DesignSystem.pill(SECONDARY_BG, DesignSystem.R_MD), sr)
+		_draw_ghost_pill(sr)
 		var sb := sr.position.y + sr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
 		_draw_text(f_bold, Vector2(sr.position.x, sb), LABEL_SHOWCASE, CLOSE_SIZE,
 			SECONDARY_TEXT, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
-	# The "Gi tilbakemelding" pill — secondary paper pill, always reachable above the close button (085, X-8).
+	# The "Gi tilbakemelding" pill — GHOST secondary (demoted, 130) so it no longer competes with the
+	# primary CTA below it. Always reachable above the close button (085, X-8).
 	var fr := _feedback_rect()
-	draw_style_box(DesignSystem.pill(SECONDARY_BG, DesignSystem.R_MD), fr)
+	_draw_ghost_pill(fr)
 	var fb := fr.position.y + fr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
 	_draw_text(f_bold, Vector2(fr.position.x, fb), LABEL_FEEDBACK, CLOSE_SIZE, SECONDARY_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, fr.size.x)
-	# The "Fortsett treningen" close button — primary BLUE pill (the main action).
+	# The "Fortsett treningen" close button — the PRIMARY CTA (130). Drawn with the SAME raised-blue
+	# gradient treatment as the BRA button (bright top → deep bottom + darker lip + drop shadow) so it
+	# reads as the dominant action; white ≥700 label. The gradient StyleBoxTexture is cached (per-pixel
+	# bake, never re-run per frame — rebuilt only when the rect size changes).
 	var cr := _close_rect()
-	draw_style_box(DesignSystem.pill(CLOSE_BG, DesignSystem.R_MD), cr)
+	_ensure_cta_box(cr.size)
+	draw_style_box(_cta_box, cr)
 	var cb := cr.position.y + cr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
 	_draw_text(f_bold, Vector2(cr.position.x, cb), LABEL_CLOSE, CLOSE_SIZE, CLOSE_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
@@ -750,6 +777,33 @@ func _draw() -> void:
 func _panel_box() -> StyleBoxFlat:
 	## PAPER card with hairline BORDER + card shadow via the DS builder (098, Phase 6).
 	return DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_LG)
+
+## A GHOST secondary pill (130): PAPER fill + a Bra-Blue hairline outline, at the footer R_MD radius.
+## Used for the demoted "Gi tilbakemelding" + "Vis frem hundene" pills so they read clearly lighter
+## than the raised-gradient primary CTA. StyleBoxFlat is cheap to build, so no cache needed here.
+func _draw_ghost_pill(rect: Rect2) -> void:
+	var sb := DesignSystem.pill(SECONDARY_BG, DesignSystem.R_MD)
+	sb.border_width_top    = int(SECONDARY_OUTLINE_W)
+	sb.border_width_right  = int(SECONDARY_OUTLINE_W)
+	sb.border_width_bottom = int(SECONDARY_OUTLINE_W)
+	sb.border_width_left   = int(SECONDARY_OUTLINE_W)
+	sb.border_color = SECONDARY_OUTLINE
+	draw_style_box(sb, rect)
+
+## Lazily (re)bake the primary-CTA raised-gradient StyleBoxTexture (130), reusing the shared
+## DesignSystem baker + the SAME GRAD_PILL_* blue palette as the BRA button so both dominant actions
+## match. PERFORMANCE: baking is a per-pixel image loop — this reuses the cache and rebuilds ONLY when
+## the CTA rect size changes (the panel width tracks the screen), never every _draw frame.
+func _ensure_cta_box(cta_size: Vector2) -> void:
+	if _cta_box != null and _cta_box_size == cta_size:
+		return
+	var cw := int(round(cta_size.x))
+	var ch := int(round(cta_size.y))
+	_cta_box = DesignSystem.gradient_pill(cw, ch, CLOSE_GRAD_RADIUS,
+		DesignSystem.GRAD_PILL_TOP, DesignSystem.GRAD_PILL_BOT, DesignSystem.GRAD_PILL_LIP,
+		CLOSE_GRAD_PAD, CLOSE_GRAD_LIP_H, CLOSE_GRAD_SHADOW_DY, CLOSE_GRAD_SHADOW_BLUR,
+		CLOSE_GRAD_SHADOW_MAX)
+	_cta_box_size = cta_size
 
 ## Lazily build the shared CoinReadout child (129) — the SAME pill the training HUD uses, so the
 ## balance reads identically across surfaces. Never built in _init (add_child there is a headless

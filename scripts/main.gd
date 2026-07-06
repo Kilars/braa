@@ -1734,54 +1734,19 @@ const BRA_PILL_SHADOW_DY := 14.0                      ## how far the shadow drop
 const BRA_PILL_SHADOW_BLUR := 30.0                    ## shadow softness (px)
 const BRA_PILL_SHADOW_MAX := 0.30                     ## shadow peak alpha over grass
 
-## Signed distance to a rounded rect (negative inside). Standard SDF — lets us anti-alias the pill
-## edge and soften the drop shadow with one cheap formula.
-static func _sdf_round_rect(p: Vector2, rect: Rect2, r: float) -> float:
-	var half := rect.size * 0.5
-	var q := (p - (rect.position + half)).abs() - (half - Vector2(r, r))
-	return Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - r
-
-## Bake the BRA button's normal StyleBox: a rounded-rect vertical-gradient face (bright top → deep
-## bottom) with a darker lower lip and a soft drop shadow baked into the transparent pad, wrapped in
-## a StyleBoxTexture whose expand_margins push the shadow outside the button's layout rect (126).
+## Bake the BRA button's normal StyleBox via the shared DesignSystem gradient-pill baker (130):
+## a rounded-rect vertical-gradient face (bright top → deep bottom) with a darker lower lip and a
+## soft drop shadow baked into the transparent pad, wrapped in a StyleBoxTexture whose
+## expand_margins push the shadow outside the button's layout rect (126). The menu primary CTA
+## reuses the SAME baker + the same GRAD_PILL_* palette so both dominant actions match.
 func _make_bra_pill_stylebox() -> StyleBoxTexture:
 	# Content size derived from the button's own offsets (VIEWPORT_W − 2·48 wide; the BRA band tall),
 	# so the bake tracks the layout instead of drifting from a hard-coded literal.
 	var cw := int(VIEWPORT_W - BRA_OFFSET_LEFT + BRA_OFFSET_RIGHT)   ## 624
 	var ch := int(BRA_OFFSET_BOTTOM - BRA_OFFSET_TOP)                ## 192
-	var w := cw + BRA_PILL_PAD * 2
-	var h := ch + BRA_PILL_PAD * 2
-	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var face := Rect2(BRA_PILL_PAD, BRA_PILL_PAD, cw, ch)
-	var shadow_rect := Rect2(face.position + Vector2(0, BRA_PILL_SHADOW_DY), face.size)
-	var shadow_rgb := Vector3(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b)
-	for y in range(h):
-		for x in range(w):
-			var p := Vector2(x + 0.5, y + 0.5)
-			# Face colour: vertical gradient, with the bottom LIP_H band pulled toward the lip colour.
-			var t := clampf((p.y - face.position.y) / face.size.y, 0.0, 1.0)
-			var face_col := BRA_PILL_TOP.lerp(BRA_PILL_BOT, t)
-			var from_bottom := (face.position.y + face.size.y) - p.y
-			if from_bottom < BRA_PILL_LIP_H:
-				face_col = face_col.lerp(BRA_PILL_LIP, clampf(1.0 - from_bottom / BRA_PILL_LIP_H, 0.0, 1.0))
-			var f_a := clampf(0.5 - _sdf_round_rect(p, face, BRA_PILL_RADIUS), 0.0, 1.0)  # AA edge
-			# Soft drop shadow, only where the face doesn't already cover.
-			var sd := _sdf_round_rect(p, shadow_rect, BRA_PILL_RADIUS)
-			var sc := clampf(1.0 - sd / BRA_PILL_SHADOW_BLUR, 0.0, 1.0)
-			var s_a := BRA_PILL_SHADOW_MAX * sc * sc * (1.0 - f_a)
-			var out_a := f_a + s_a
-			if out_a <= 0.0:
-				continue
-			var rgb := (Vector3(face_col.r, face_col.g, face_col.b) * f_a + shadow_rgb * s_a) / out_a
-			img.set_pixel(x, y, Color(rgb.x, rgb.y, rgb.z, out_a))
-	var sb := StyleBoxTexture.new()
-	sb.texture = ImageTexture.create_from_image(img)
-	sb.expand_margin_left   = BRA_PILL_PAD
-	sb.expand_margin_right  = BRA_PILL_PAD
-	sb.expand_margin_top    = BRA_PILL_PAD
-	sb.expand_margin_bottom = BRA_PILL_PAD
-	return sb
+	return DesignSystem.gradient_pill(cw, ch, BRA_PILL_RADIUS,
+		BRA_PILL_TOP, BRA_PILL_BOT, BRA_PILL_LIP, BRA_PILL_PAD,
+		BRA_PILL_LIP_H, BRA_PILL_SHADOW_DY, BRA_PILL_SHADOW_BLUR, BRA_PILL_SHADOW_MAX)
 
 ## The apex-tell pulse (024d/P1-4), centred over the BRA marker. Added ON TOP of the
 ## button but with mouse input ignored, so it glows around the verb without ever
