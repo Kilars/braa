@@ -118,7 +118,11 @@ const CLOSE_SIZE     := 36.0
 # Modal layout constants (108, K-2).
 const MODAL_CARD_RADIUS    := 24.0   ## card corner radius
 const MODAL_CARD_MAX_W     := 362.0  ## max card width (portrait: 390 - 2*14 margin, 135)
-const MODAL_BAND_H         := 100.0  ## tinted header band on the modal card
+const MODAL_BAND_H         := 200.0  ## tinted header band on the modal card — tall enough that the
+                                     ## near-square portrait (384×340) fills it as a hero bust like the
+                                     ## grid cells (139, PO 2026-07-06), not a thumbnail in a wide strip
+const MODAL_NAMEPLATE_H    := 38.0   ## solid strip along the band bottom that carries the white name —
+                                     ## the dog's feet rest above it, so the name never crosses its legs
 const MODAL_BODY_PAD       := 16.0   ## inner horizontal padding for card body
 const MODAL_PIP_W          := 28.0   ## width of one stat pip
 const MODAL_PIP_H          := 10.0   ## height of one stat pip
@@ -1047,14 +1051,21 @@ func _build_modal_band(detail: Dictionary) -> Control:
 		mdog.name = "ModalDogPortrait"
 		mdog.texture = mtex
 		mdog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		mdog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# COVERED (not CENTERED): the near-square portrait fills the full band WIDTH and crops to a
+		# head-and-shoulders bust (139) — the dog becomes the hero of the card instead of a thumbnail
+		# marooned in side margins. The camera aims up (PORTRAIT_HEAD_FRAC) so the head stays in-frame;
+		# the nameplate strip covers where the legs crop out.
+		mdog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		mdog.clip_contents = true
 		mdog.modulate = _band_dog_tint(detail["portrait_tint"])
 		mdog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mdog.set_anchors_preset(Control.PRESET_FULL_RECT)
 		mdog.offset_left   = 8.0
 		mdog.offset_right  = -8.0
 		mdog.offset_top    = 6.0
-		mdog.offset_bottom = -3.0
+		# Feet rest ABOVE the nameplate strip (139) so the bottom-anchored name never
+		# crosses the dog's legs — the strip reads as a base the dog stands on.
+		mdog.offset_bottom = -(MODAL_NAMEPLATE_H + 2.0)
 		band.add_child(mdog)
 
 	# Steel-bar overlay (reuse _SteelBars for GL-Compat–safe rendering).
@@ -1065,9 +1076,21 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bars)
 
-	# Dog name along the band BOTTOM edge (white, Baloo 2 display) — clear of the portrait's
-	# face, which the live render turns toward the viewer in the upper band (117, PO 2026-07-05:
-	# the centred title previously overlapped the dog render). Bottom-aligned reads as a nameplate.
+	# Solid nameplate strip along the band bottom (139) — a base the dog stands on, so the
+	# white name reads on a firm surface and never crosses the dog's legs (PO 2026-07-06).
+	# Drawn AFTER the steel bars so it's a clean solid strip, not striped.
+	var plate := ColorRect.new()
+	plate.name = "ModalNamePlate"
+	plate.color = Color(0.078, 0.11, 0.149, 0.62)  # dim ink, matches the backdrop token
+	plate.anchor_left   = 0.0
+	plate.anchor_right  = 1.0
+	plate.anchor_top    = 1.0
+	plate.anchor_bottom = 1.0
+	plate.offset_top    = -MODAL_NAMEPLATE_H
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.add_child(plate)
+
+	# Dog name centred on the nameplate strip (white, Baloo 2 display).
 	var name_lbl := Label.new()
 	name_lbl.name = "ModalDogName"
 	name_lbl.text = detail["name"]
@@ -1075,10 +1098,13 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	name_lbl.add_theme_font_size_override("font_size", DesignSystem.T_TITLE)
 	name_lbl.add_theme_color_override("font_color", Color.WHITE)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_BOTTOM
+	name_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	name_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	name_lbl.offset_bottom = -6.0
+	name_lbl.anchor_left   = 0.0
+	name_lbl.anchor_right  = 1.0
+	name_lbl.anchor_top    = 1.0
+	name_lbl.anchor_bottom = 1.0
+	name_lbl.offset_top    = -MODAL_NAMEPLATE_H
 	band.add_child(name_lbl)
 
 	# ✕ close button — top-right of the band. ASCII "x", no tofu.

@@ -176,56 +176,55 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-06 (PO, father pass 3) — prior 3 directives verified fixed; one localization gap filed
+### PO Review — 2026-07-06 (PO, father pass 4) — localization verified fixed; kennel modal-header portrait filed
 
-Third same-day pass, run fresh and stateless. Rebuilt the current HEAD (`1b09145` — the 135/136/137 arc,
-`verify.sh` green: import·boot·test·export) and drove `build/web` in headless Chromium at 390×844
-(SwiftShader == the deployed GL Compatibility renderer). **Zero console errors.** Replayed the kennel grid
-→ Nova inspect modal → close, a dense `?bra_autotap=1` mark burst (caught the «PERFECT» + «Bra!» word-pop),
-and the completion menu on mastery. The build uses the CC0 rig locally (the licensed Labrador renders only
-on the live Pages deploy); every item below is layout / colour / type / **language**, which the CC0 rig
-renders truthfully.
+Fourth same-day pass, run fresh and stateless. Built the current HEAD (`546ccb5` — task 138, the
+localization arc; `build/web` is the 138 verify output, `verify.sh` green: import·boot·test·export) and
+drove it in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer). **Zero
+console errors.** Replayed the completion menu on mastery, the kennel grid → Nova inspect modal → close, and
+a `?bra_autotap=1` mark burst (caught the «PERFECT» + «Bra!» word-pop). The build uses the CC0 rig locally
+(the licensed Labrador renders only on the live Pages deploy); every item below is layout / colour / type /
+**language**, which the CC0 rig renders truthfully.
 
-**FIXED this arc — re-verified in my own pixels, all three prior directives pruned:**
+**FIXED this arc — re-verified in my own pixels, prior directive pruned:**
 
-1. **Kennel modal legibility + CTA (135).** `.screenshots/108-kennel-modal.png` (Nova): the card is wider,
-   the 4 stat rows (Læreevne/Energi/Mot/Fokus) now read as legible Ink-Soft labels beside blue pip bars,
-   the «Kan lære: Sitt · Ligg · Legg deg» line is readable, and the unaffordable adopt CTA is an **explicit
-   greyed «Har ikke råd · mangler 300»** — it reads intentionally disabled, no longer a washed-out button. ✓
-2. **Kennel header band + baseline (136).** `108-kennel-modal-closed.png`: a soft drop-shadow surface band
-   now sits behind the header, the ✕ / «Kennelen» title block / coin pill share one baseline, and the
-   «Profesjonell fasilitet · 8 plasser» subtitle is legible Ink-Soft on the band, not bleeding over the top
-   cells. ✓
-3. **Word-pop «Bra!» outline (137).** `.screenshots/POd-mark-15.png` + a 3× zoom (`POd-bra-crop.png`): the
-   «Bra!» that floats up from the BRA button now renders amber Baloo 2 with a solid dark outline/drop-shadow,
-   holding crisp contrast over the bright grass along its float — matching the «PERFECT» treatment. ✓
+1. **Completion menu localized to Norwegian (138).** `.screenshots/072-menu-open.png`: the «Triks» HUD pill
+   now opens a **«Triks»** panel (was «Tricks»), rows read **«Sitt · Lært / Ligg · Tilgjengelig / Legg deg ·
+   Tilgjengelig / Gi labb · Låst»**, the marker-word section is headed **«Markørord»** with **«Bra! · Aktiv /
+   Dyktig! · Bytt / Flink! · Låst»**, and the buttons are «Gi tilbakemelding / Fortsett treningen». Swept the
+   rest: the difficulty rows use «Vanskelighet / Ekspert», the breeds section «Raser» with «Aktiv/Bytt/
+   Adopter/Låst», and the kennel's own tags read «Din hund» / «Påskeegg». **The whole app is now one
+   language.** ✓ (135/136/137 from the prior arc also still hold — kennel modal legibility + greyed CTA,
+   header band + baseline, and the amber-outlined «Bra!» pop over grass all replay clean.)
 
 **NEWLY falls short — buildable now, preempts the Phase-10 owner-gate:**
 
-1. **[MEDIUM] The completion menu is in English — the one player-facing surface not localized to
-   Norwegian.** *Saw:* `.screenshots/072-menu-open.png`. Every other string in the game is Norwegian — the
-   HUD pill reads **«Triks»**, the kennel is «Kennelen / Læreevne / Energi / Mot / Fokus / Raseegenskaper /
-   Har ikke råd / Kan lære», the buttons are «Fortsett treningen / Gi tilbakemelding», the marker words are
-   «Bra! / Dyktig! / Flink!» — but the completion menu those open is headed **«Tricks»** with rows
-   **«Learned / Available / Locked»**, a **«Marker words»** subheading, and breed/word status chips
-   **«Active / Switch / Locked»** (hardcoded in `scripts/trick_menu.gd:71-73, 190-206, 725, 752`). It is an
-   internal contradiction — the «Triks» pill opens a «Tricks» panel. *Why it's wrong:* X-4 "reads first" —
-   for a Norwegian game aimed at Norwegian dog-owners, English structural labels break immersion and read as
-   unfinished; the fully-Norwegian kennel proves the intended language. *What good looks like:* translate all
-   completion-menu chrome to Norwegian in the kennel's register — «Tricks»→«Triks», «Marker
-   words»→«Markørord», «Learned»→«Lært», «Available»→«Tilgjengelig», «Locked»→«Låst», «Active»→«Aktiv»,
-   «Switch»→«Bytt» (the Breeds section rows too) — and sweep the rest of the menu (and the difficulty /
-   «Vanskelighet» rows) for any other English UI string, so the whole app is one language.
+1. **[MEDIUM] The kennel inspect-modal header dog is a tiny figure floating in a wide dark band, with the
+   name label crossing its legs.** *Saw:* `.screenshots/108-kennel-modal.png` + a zoom (`PO4-modaltop.png`),
+   Nova. The modal's header band is a wide-short strip (`MODAL_BAND_H = 100` px tall, card ~340 px wide =
+   3.4:1), but the shared portrait texture is near-square (384×340) and drawn `STRETCH_KEEP_ASPECT_CENTERED`
+   — so it fits by height and renders the dog only ~113 px wide, marooned between two big empty dark-steel
+   margins, and the bottom-anchored white «Nova» nameplate cuts straight across the dog's legs
+   (`scripts/kennel_screen.gd:1022` `_build_modal_band`). *Why it's wrong:* X-4 "reads first, looks the part"
+   — the inspect modal is where you study the dog you're about to adopt, so its portrait should be the hero
+   of the card; instead it's the weakest element, a distant thumbnail with text through its body, while the
+   grid cells right behind it (131, `PORTRAIT_HEAD_FRAC` bust framing, BAND_H 112 in a ~1.6:1 cell) read as
+   big, crisp, clearly-posed dogs. The contrast makes the modal look unfinished. *What good looks like:* frame
+   the modal header dog as a prominent portrait bust like the grid cells — either give the band a taller /
+   less extreme aspect so the near-square render fills it, or crop/anchor the portrait to fill the band width
+   (head-and-shoulders, PORTRAIT_HEAD_FRAC-style) — and lay the name on a solid nameplate strip clear of the
+   dog's body, never crossing its legs, in the same Baloo-2 white treatment.
 
 **Not a directive — checked and clean:** no regression in the signed-off phases on this build. The training
-page pixel-matches the goal (`POd-mark-10.png` — cream dog centred/grounded facing camera on green grass,
+page pixel-matches the goal (`PO4-mark-09.png` — cream dog centred/grounded facing camera on green grass,
 tan path → cottage, white picket fence, gold coins, blue BRA button); the core mark loop runs idle → wander
-→ cyan approach ring (`POd-mark-14.png`) → seated apex → «PERFECT» + «Bra!» pop → joyful face-on reaction
-(no rear-spin — **077 holds**); the completion menu progressive disclosure (Tricks + Marker words, breeds
-gated) and the kennel grid / modal / scroll / close path all render and drive clean.
+→ cyan approach ring (`PO4-mark-06.png`) → seated apex → «PERFECT» + «Bra!» pop (`PO4-mark-13.png`) → joyful
+face-on reaction (no rear-spin — **077 holds**); the completion menu progressive disclosure (Triks + Markørord)
+and the kennel grid (8 distinct-yaw tinted portraits, «Din hund»/«Gratis»/«Påskeegg» tags, header band) all
+render and drive clean.
 
 **No sign-off this pass.** Phases 1–9 remain signed; Phase 10 (`phase10.md`) is still empty/deferred —
-owner-gated, nothing to sign. The three prior X-4 directives all landed and replay clean, but the
-localization gap above is genuine, buildable quality work, so this is **not** the terminal stop state.
-Once it lands and replays clean and no further improvement can be honestly found, the next pass may reach
-the owner-gated terminal hand-off (Phase 10 awaiting its spec).
+owner-gated, nothing to sign. The prior localization directive landed and replays clean, but the modal-header
+portrait gap above is genuine, buildable X-4 quality work, so this is **not** the terminal stop state. Once it
+lands and replays clean and no further improvement can be honestly found, the next pass may reach the
+owner-gated terminal hand-off (Phase 10 awaiting its spec).
