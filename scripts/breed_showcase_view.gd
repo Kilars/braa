@@ -43,6 +43,16 @@ const COMMIT_H := 42         ## commit-pill content height (offset -88 .. -46)
 static func commit_disabled_fill() -> Color:
 	return Color("cfd6dd")
 
+## The ◀ ▶ chevrons cycle the OWNED roster, so they only do something with 2+ owned breeds (164,
+## PO father-pass-29). With ≤1 owned dog they are verified no-ops → hidden, and the hint drops the
+## "bla med pilene" instruction so no dead control looks live and no line instructs a no-op.
+const HINT_MULTI := "Bla med pilene eller trykk en hund"   ## 2+ owned: arrows + tap both work
+const HINT_SINGLE := "Adopter flere hunder for å bla"       ## ≤1 owned: no arrows — explains why
+static func chevrons_active(owned_count: int) -> bool:
+	return owned_count > 1
+static func hint_text(owned_count: int) -> String:
+	return HINT_MULTI if chevrons_active(owned_count) else HINT_SINGLE
+
 const TITLE_H := 92.0        ## the top title band height
 const CONTROL_H := 190.0     ## the bottom control-bar band height
 const SWATCH_R := 16.0
@@ -195,7 +205,7 @@ func _build_ui() -> void:
 	add_child(_back_btn)
 
 	_hint = Label.new()
-	_hint.text = "Bla med pilene eller trykk en hund"
+	_hint.text = HINT_MULTI  # replaced per roster size in _refresh
 	_hint.add_theme_color_override("font_color", SUBTLE)
 	_hint.add_theme_font_override("font", DesignSystem.font_body())
 	_hint.add_theme_font_size_override("font_size", 13)
@@ -311,6 +321,12 @@ func _refresh() -> void:
 	# The commit button reads differently when the spotlit dog is already the active one.
 	_commit_btn.disabled = is_active
 	_commit_btn.text = "Trener denne" if is_active else "Tren denne"
+	# ◀ ▶ only cycle owned breeds — hide them (and drop the "bla med pilene" hint) when there's
+	# nothing to cycle to, so a single-dog showcase shows no active-looking dead controls (164).
+	var multi := chevrons_active(_entries.size())
+	_prev_btn.visible = multi
+	_next_btn.visible = multi
+	_hint.text = hint_text(_entries.size())
 
 func _name_of(id: String) -> String:
 	for entry in _entries:

@@ -45,3 +45,45 @@ func test_cycle_buttons_draw_a_chevron_not_a_glyph() -> void:
 	assert_ne(view._prev_btn.get_node_or_null("Chevron"), null, "the prev button mounts a drawn Chevron")
 	assert_ne(view._next_btn.get_node_or_null("Chevron"), null, "the next button mounts a drawn Chevron")
 	view.queue_free()
+
+## --- 164 (PO father-pass-29): a single-dog roster must not show active-looking dead chevrons ---
+## nor a hint that instructs their (no-op) use. The ◀ ▶ chevrons only cycle OWNED breeds, so with
+## one owned dog they are verified no-ops; make the state honest below ≤1 breed, active at 2+.
+
+func test_chevrons_active_only_with_more_than_one_breed() -> void:
+	## Pure predicate: chevrons cycle only when there is more than one owned breed to cycle between.
+	assert_false(BreedShowcaseView.chevrons_active(0), "no owned breeds → no live chevrons")
+	assert_false(BreedShowcaseView.chevrons_active(1), "one owned breed → nothing to cycle → no live chevrons")
+	assert_true(BreedShowcaseView.chevrons_active(2), "two owned breeds → chevrons cycle")
+	assert_true(BreedShowcaseView.chevrons_active(5), "several owned breeds → chevrons cycle")
+
+func test_single_dog_hint_does_not_instruct_arrow_use() -> void:
+	## The single-dog hint must NOT tell the player to "bla med pilene" (use the arrows) — the arrows are gone.
+	var single := BreedShowcaseView.hint_text(1)
+	assert_false(single.to_lower().contains("pilene"),
+		"single-dog hint must not instruct arrow use (was '%s')" % single)
+	assert_true(single.length() > 0, "single-dog hint is still a real line")
+	var multi := BreedShowcaseView.hint_text(2)
+	assert_true(multi.to_lower().contains("pilene"), "multi-dog hint still invites the arrows (was '%s')" % multi)
+
+func test_single_dog_view_hides_cycle_chevrons() -> void:
+	## A rendered one-owned-dog showcase draws no active chevrons.
+	var view := _build_view()  # _build_view renders exactly one owned breed (labrador)
+	assert_false(view._prev_btn.visible, "single-dog showcase hides the ◀ prev chevron")
+	assert_false(view._next_btn.visible, "single-dog showcase hides the ▶ next chevron")
+	view.queue_free()
+
+func test_multi_dog_view_shows_cycle_chevrons() -> void:
+	## A rendered two-owned-dog showcase keeps both chevrons live.
+	var view := BreedShowcaseView.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(view)
+	if not view.is_node_ready():
+		view._ready()
+	view.render([
+		{"id": "labrador", "name": "Labrador", "tint": Color(1, 1, 1)},
+		{"id": "chocolate_labrador", "name": "Brun lab", "tint": Color(0.7, 0.5, 0.3)},
+	], "labrador", "labrador")
+	assert_true(view._prev_btn.visible, "two-dog showcase shows the ◀ prev chevron")
+	assert_true(view._next_btn.visible, "two-dog showcase shows the ▶ next chevron")
+	view.queue_free()

@@ -176,51 +176,50 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 28) — polish-lens pass: verified 162 («Adopter 30» price badge → dark-ink + gold coin pip) landed clean and pruned it; then opened the **breed showcase** («Vis frem hundene», P3-4) — the one persistent UI surface the entire 129→162 design-system / WCAG-AA arc **never touched** — and found it wholly off-system: a **charcoal panel with gold-filled buttons in the default (non-DS) font**, and an **illegible ~1.03:1 disabled «Trener denne» primary CTA** (its washed disabled label over the gold fill). One buildable cross-cutting directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 29) — polish-lens pass: verified 163 (breed showcase joins the design system, illegible disabled CTA fixed) landed clean and pruned it; re-played every surface; found ONE remaining wrong-empty-state defect on the freshly-redesigned showcase — its ◀ ▶ cycle chevrons render as fully active pills (and the hint invites their use) in the **single-dog default state** where they are verified no-ops. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Twenty-eighth pass, fresh and stateless under the polish/critique lens. HEAD is `7918f0c` (the 162 breed-price-badge commit).
+Twenty-ninth pass, fresh and stateless under the polish/critique lens. HEAD is `ba74328` (the 163 breed-showcase-DS commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and
 driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Booted `?bra_autotap=1&bra_coins=120`
-to reveal the completion menu's «Raser» section and then its **«Vis frem hundene» breed showcase**. `__bra_menu_open`=`true`, `__bra_showcase_open`=`true`,
-`__bra_showcase_spotlit`=`labrador`. **Zero console errors** on every run (exit 0). Evidence: this pass's screenshots (`.screenshots/P26-01-training.png`,
-`P26-02-menu-full.png`, `P28-01-showcase.png`) + zoom crops (`/tmp/p28_brunlab4.png` the fixed badge, `/tmp/p28_showctrl2.png` the showcase control panel) +
-sampled pixel colours + the code I read (`scripts/breed_showcase_view.gd:19-30,192-208,255-269`, `scripts/trick_menu.gd:173-179,954-976`), against the goal art + DS.
+to reach the completion menu, the «Raser» section, the **«Vis frem hundene» breed showcase**, and the kennel grid; adopted the 2nd breed (balance 120→90) to reach
+the showcase's enabled state and to preview a non-active dog. **Zero console errors** on every run (exit 0). Evidence: this pass's screenshots
+(`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`, `P28-01-showcase.png` the single-dog default, `P28b-02-preview-enabled.png` the 2-dog preview,
+`P24-03-kennel-grid.png`) + zoom crops (`/tmp/p29_ctrl2.png` single-dog control band, `/tmp/p29_enabled.png` 2-dog control band) + sampled pixel colours
+(disabled fill `srgb(207,214,221)` = #cfd6dd) + the harness no-op probe (`spotlit after next`/`next2` both stayed `labrador`) + the code I read
+(`scripts/breed_showcase_view.gd` in full), against the goal art + DS.
 
-**Verified fixed → pruned:** the pass-27 directive (**«Adopter 30» breed-price badge gold-on-cream ~1.55:1, sub-AA**) is **resolved** by 162. In my own pixels the
-buyable «Brun lab» row now reads **«Brun lab   ● Adopter 30»** — the price string in dark **slate** ink (`BADGE_PRICE_INK` = `DesignSystem.SLATE` #5a6b7d, ~4.78:1
-on cream) with a small **gold coin pip** to its left, so the "gold = coin" signal survives on a real glyph and the price is legible; name + price read as one system
-(`/tmp/p28_brunlab4.png`). I also confirmed the badge is state-correct: tapping the buyable row adopts the dog (balance 120→90) and the badge flips to the blue
-«Bytt» switch badge, and the ACTIVE «Aktiv» / LOCKED «Låst» badges are untouched (`.screenshots/P26-03-showcase.png` shows the post-adopt «Bytt»). Pruned from this log.
+**Verified fixed → pruned:** the pass-28 directive (**breed showcase wholly off the design system — charcoal/gold chrome, non-DS font, ≈1.03:1 disabled «Trener denne» CTA**)
+is **resolved** by 163. In my own pixels the showcase now reads as one system with the menu it launches from: the title/name/control bands are DS **INK** @ .72 (not charcoal),
+title/name/hint/buttons draw in the DS fonts (Baloo 2 / Nunito), the name pill is bright **paper** with dark ink (no gold), and **no chrome element is gold** (the two discs
+by the dog are actual garden coins). Both CTA states clear WCAG AA: the **disabled** active-dog «Trener denne» is now dark **INK** on a muted pale-slate pill (#cfd6dd, sampled
+`srgb(207,214,221)`), clearly legible (`/tmp/p29_ctrl2.png`) — the ~1.03:1 gold-on-gold defect is gone; the **enabled** «Tren denne» (previewing the adopted «Brun lab») is the
+DS **blue gradient pill** with a crisp white label — the BRA / «Fortsett treningen» palette from 153 (`/tmp/p29_enabled.png`). Pruned from this log.
 
 **Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream Labrador on green grass
 with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … %» learned bar (159), «Triks»/
-«Kennel»/coin HUD pills, big blue BRA (153). (b) The completion menu reads as one system — «Sitt» «Trener nå» pale-blue active row (152), «Ligg»/«Legg deg»
-«Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + the fixed «Brun lab» price row, all Norwegian and AA-legible (154). **No structural regression** in the
-signed-off phases (1/2/3/5/6/8/9).
+«Kennel»/coin HUD pills, big blue BRA (153). (b) The completion menu (`P26-02-menu-full.png`) reads as one system — «Sitt» «Trener nå» pale-blue active row (152),
+«Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + the «Brun lab» «● Adopter 30» slate-ink+coin-pip price row (162), the outline «Vis frem hundene»/
+«Gi tilbakemelding» secondary pills, and the blue-gradient «Fortsett treningen» primary — all Norwegian and AA-legible (154). (c) The **kennel grid** (`P24-03-kennel-grid.png`)
+— 8 cells, corner rarity badges + white price chips with the gold coin pip (146/149), names/breeds — is clean and consistent (the full-body framing on this **local CC0** build
+is a stand-in artifact; the real hero-bust portraits render on the deployed **licensed** site, verified clean in the Phase-8 sign-off and pass 24/25 after the 160 MSAA fix).
+**No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The breed showcase («Vis frem hundene», P3-4) is the one persistent surface still entirely outside the design system — off-DS chrome, gold-as-non-coin button
-  fills, non-DS font, AND an illegible ~1.03:1 disabled primary CTA.** *What I saw:* opening «Vis frem hundene» from the completion-menu «Raser» section spotlights
-  the owned dog on the garden under a dark charcoal control panel (`.screenshots/P28-01-showcase.png`, control-panel zoom `/tmp/p28_showctrl2.png`). Against the
-  light-paper DS card it was just launched from, it reads as a **different app**: a charcoal band `BAND_BG` = `Color(0.06,0.08,0.12,0.72)`, grey chevrons, a **gold**
-  «Labrador» name pill, and a **gold** «Trener denne» primary button — none of it the DS paper/blue/coin system. Sampled pixels: the panel bg is charcoal ~#515653,
-  the commit-button fill is gold **#F6D54D**, and the disabled «Trener denne» label is washed pale-gold **#EBDA96** on that gold — a measured **≈1.03:1** contrast, i.e.
-  effectively **invisible** (I could barely read the word at 3× zoom). Because a new player owns exactly one dog, the showcase's **default** state is this active dog
-  with the disabled, illegible «Trener denne» CTA — so this is the first thing they see. *Why it's wrong:* (1) `scripts/breed_showcase_view.gd` (built at task 087,
-  **before** the 096+ DS arc) references **no `DesignSystem`** at all — it hardcodes local charcoal/gold colours (`:19-30`), builds flat `StyleBoxFlat` boxes
-  (`:192-205`), and never applies the DS font (Baloo 2 / Nunito) that the completion menu and kennel use, so it's the sole live surface the whole 129→162 DS/AA polish
-  arc skipped; (2) **gold is used as a button/pip/name FILL** in three places (`NAME_ACTIVE`/`PIP_ON`/`BTN_PRIMARY` = `Color(1.0,0.86,0.30)`, `:21,24,26`), violating
-  the "**gold is reserved for the coin**" DS rule every recent pass (146/162 …) has enforced; (3) the disabled CTA is illegible because `_make_button` reuses the same
-  gold stylebox for the `disabled` state (`:204`) and sets `font_color/hover/pressed` but **never `font_disabled_color`** (`:207`), so `_commit_btn.disabled = is_active`
-  (`:268`) leaves Godot's default washed disabled font over gold → the ~1.03:1. *What "good" looks like:* bring the showcase controls into the design system, exactly as
-  the completion menu and kennel already are (keep the nice dark-**stage spotlight** concept — the clear centre so the lit dog stays visible — that part is good; only the
-  chrome needs DS-ifying). Concretely: draw the panel/pills/buttons via the DS components + tokens in the DS font; make the **primary CTA the DS blue gradient pill**
-  (the `GRAD_PILL_*` used by BRA / «Fortsett treningen» in 153), not a gold fill; take **gold off the name pill and commit button** (reserve it to an actual coin glyph
-  as the price chip does), using a warm accent only where it isn't a coin-conflicting fill; and give the **disabled «Trener denne» state an explicit AA-legible font
-  colour** (a dark ink on a muted/light disabled fill, mirroring the kennel's own «Trener nå» non-tappable style from 151 — dark `C_TAG_INK` on a muted wash ≥4.5:1),
-  never a washed label on gold. Verify in-pixel that both the disabled «Trener denne» (active dog) and the enabled «Tren denne» (previewed dog) states clear 4.5:1, that
-  no non-coin element is gold, and that the panel reads as one system with the completion menu it launches from.
+- **The breed showcase's ◀ ▶ cycle chevrons render as fully active, tappable pills — and the hint invites their use — in the single-dog default state, where they are
+  verified no-ops.** *What I saw:* «Vis frem hundene» is offered from the completion menu regardless of how many dogs you own, and a new player owns exactly **one** dog, so
+  its **default / most-common initial state** is a single-dog roster. In that state (`.screenshots/P28-01-showcase.png`, control-band zoom `/tmp/p29_ctrl2.png`) both the left
+  ◀ and right ▶ chevrons draw as **normal active white-on-band pills** — pixel-identical to the 2-dog enabled state (`/tmp/p29_enabled.png`) — and the hint under the single
+  «Labrador» pip reads **«Bla med pilene eller trykk en hund»** ("scroll with the arrows or tap a dog"), explicitly telling the player to use the arrows. But there is nothing
+  to cycle to: I drove a real tap on ▶ twice and the spotlight never moved (`__bra_showcase_spotlit` stayed `labrador` across `next` and `next2`), because the showcase
+  spotlights only **owned** breeds and there is just one. *Why it's wrong:* this is a wrong empty-state (the prompt's touch-targets/states criterion — "missing or wrong …
+  empty … states"): two prominent controls are presented as active and a hint actively instructs the player to use them, yet they do nothing — the single-dog showcase
+  becomes a mild dead-end (the only working action is «Tilbake», since «Trener denne» is also correctly disabled for the already-active dog). Dead controls that look live
+  read as a bug, and undercut the polish 163 just brought to this surface. *What "good" looks like:* make the chevron state honest — when the owned roster has **≤ 1** breed,
+  **disable** the ◀ ▶ chevrons (grey/muted, e.g. the same muted-pill treatment as the disabled «Trener denne», ≥4.5:1) or **hide** them, and drop/adjust the hint so it does
+  not instruct a no-op (e.g. «Trykk en hund» only, or a "adopter flere for å bla"-style single-dog line). With **2+** owned dogs the chevrons must stay fully active and cycle
+  exactly as they do today. Verify in-pixel: a single-dog showcase shows no active-looking dead chevrons and no "use the arrows" instruction, and a 2-dog showcase still
+  cycles ◀ ▶ between the owned breeds.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing
