@@ -84,7 +84,10 @@ const DARK_BAND_LUM  := 0.42    ## below this band luminance, lighten the dog so
 # Live portrait SubViewport (116, K-1) — renders the game's actual dog once, shared 8× (X-7).
 const DOG_SCENE_PATH   := "res://assets/models/dog.glb"           ## CC0 dog (verify/local)
 const LICENSED_DOG_PATH := "res://assets/models/dog_licensed.glb" ## licensed Labrador (deploy) — same pick as main._dog_path()
-const PORTRAIT_VP_SIZE := Vector2i(384, 340)   ## portrait-ish render target, matches the old bake aspect
+const PORTRAIT_VP_SIZE := Vector2i(768, 680)   ## portrait-ish render target (2× the old 384×340 — same aspect;
+                                                ## 160: high-res enough not to be upscaled in the ~2× modal)
+const PORTRAIT_MSAA := Viewport.MSAA_4X        ## 160: anti-alias the thin whisker/lip geometry that otherwise
+                                                ## aliased into dark speckle dots at the small portrait render size
 ## Neutral desaturated coat the dog is rendered at so the per-breed `modulate` reads cleanly. A mid
 ## grey < 1.0 (like the old baked portrait's base) — the coat atlas is MULTIPLIED by this, killing the
 ## CC0 brown / licensed yellow so each cell's band_tint modulate lands as a clean tinted silhouette.
@@ -707,6 +710,7 @@ func _build_one_portrait(packed: PackedScene, yaw_offset: float, idx: int) -> Te
 	vp.name = "KennelPortraitViewport_" + str(idx)
 	vp.size = PORTRAIT_VP_SIZE
 	vp.transparent_bg = true
+	vp.msaa_3d = PORTRAIT_MSAA                     # 160: AA the whisker/lip geometry (kills the muzzle speckle)
 	vp.own_world_3d = true                        # isolated world — no bleed to/from the main scene
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # keep the idle breathing; still cheap for a modal
 	add_child(vp)
