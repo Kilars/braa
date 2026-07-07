@@ -176,44 +176,51 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 27) — polish-lens pass: verified 161 («Brun lab» breed name) landed clean and pruned it; then stayed on the newly-opened **«Raser» breed section** and caught the **«Adopter 30» price badge failing WCAG AA** (gold text on the cream row, ~1.55:1) — the one badge the 149→156 AA sweep never measured, and the exact defect the kennel already fixed. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 28) — polish-lens pass: verified 162 («Adopter 30» price badge → dark-ink + gold coin pip) landed clean and pruned it; then opened the **breed showcase** («Vis frem hundene», P3-4) — the one persistent UI surface the entire 129→162 design-system / WCAG-AA arc **never touched** — and found it wholly off-system: a **charcoal panel with gold-filled buttons in the default (non-DS) font**, and an **illegible ~1.03:1 disabled «Trener denne» primary CTA** (its washed disabled label over the gold fill). One buildable cross-cutting directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Twenty-seventh pass, fresh and stateless under the polish/critique lens. HEAD is `614ba61` (the 161 «Brun lab» commit).
-Reviewed the **fresh local licensed bundle** (`build/web` at this HEAD — the pck produced by the post-161 verify run that went full-green this session),
-served over http and driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Booted
-`?bra_autotap=1&bra_coins=120` to **reveal the completion menu's «Raser» (breeds) section** (`MenuReveal.reveal_breeds` gates it on `balance ≥ adopt_cost`).
-`window.__bra_menu_open` = `true`, `__bra_balance` = 120, `__bra_breed_rows` = labrador (active) + chocolate_labrador (buyable 30). **Zero console errors**
-(exit 0). Evidence: this pass's screenshots (`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`) + a 2.5× breed-row crop (`/tmp/p27_breed2.png`) +
-the code I read (`scripts/trick_menu.gd:169-172,939-942`, `scripts/design_system.gd:20,29`, `scripts/kennel_screen.gd:919-964`), against the goal art.
+Twenty-eighth pass, fresh and stateless under the polish/critique lens. HEAD is `7918f0c` (the 162 breed-price-badge commit).
+Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and
+driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Booted `?bra_autotap=1&bra_coins=120`
+to reveal the completion menu's «Raser» section and then its **«Vis frem hundene» breed showcase**. `__bra_menu_open`=`true`, `__bra_showcase_open`=`true`,
+`__bra_showcase_spotlit`=`labrador`. **Zero console errors** on every run (exit 0). Evidence: this pass's screenshots (`.screenshots/P26-01-training.png`,
+`P26-02-menu-full.png`, `P28-01-showcase.png`) + zoom crops (`/tmp/p28_brunlab4.png` the fixed badge, `/tmp/p28_showctrl2.png` the showcase control panel) +
+sampled pixel colours + the code I read (`scripts/breed_showcase_view.gd:19-30,192-208,255-269`, `scripts/trick_menu.gd:173-179,954-976`), against the goal art + DS.
 
-**Verified fixed → pruned:** the pass-26 directive (**«Chocolate Labrador» English display name eliding to «Chocolate…»**) is **resolved** by 161. In my own
-pixels the buyable breed row now reads **«Brun lab»** in full — brown coat swatch to its left, complete, **no ellipsis**, sitting cleanly under the «Labrador ·
-Aktiv» active row, so the «Raser» section is now 100 % Norwegian (`.screenshots/P26-02-menu-full.png`, 2.5× crop `/tmp/p27_breed2.png`). Pruned from this log.
+**Verified fixed → pruned:** the pass-27 directive (**«Adopter 30» breed-price badge gold-on-cream ~1.55:1, sub-AA**) is **resolved** by 162. In my own pixels the
+buyable «Brun lab» row now reads **«Brun lab   ● Adopter 30»** — the price string in dark **slate** ink (`BADGE_PRICE_INK` = `DesignSystem.SLATE` #5a6b7d, ~4.78:1
+on cream) with a small **gold coin pip** to its left, so the "gold = coin" signal survives on a real glyph and the price is legible; name + price read as one system
+(`/tmp/p28_brunlab4.png`). I also confirmed the badge is state-correct: tapping the buyable row adopts the dog (balance 120→90) and the badge flips to the blue
+«Bytt» switch badge, and the ACTIVE «Aktiv» / LOCKED «Låst» badges are untouched (`.screenshots/P26-03-showcase.png` shows the post-adopt «Bytt»). Pruned from this log.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream Labrador on
-green grass with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … %» learned
-bar (159), «Triks»/«Kennel»/coin HUD pills, big blue BRA (153); the 160 kennel-portrait render still clean. (b) The rest of the completion menu reads as one
-system — «Sitt» «Trener nå» pale-blue active row (152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv», «Vis frem hundene» / «Gi
-tilbakemelding» ghost + «Fortsett treningen» primary, all Norwegian and AA-legible (154). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream Labrador on green grass
+with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … %» learned bar (159), «Triks»/
+«Kennel»/coin HUD pills, big blue BRA (153). (b) The completion menu reads as one system — «Sitt» «Trener nå» pale-blue active row (152), «Ligg»/«Legg deg»
+«Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + the fixed «Brun lab» price row, all Norwegian and AA-legible (154). **No structural regression** in the
+signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The «Adopter 30» breed-price badge fails WCAG AA — gold text on the cream row, ~1.55:1 — while every other badge on the same card clears AA.** *What I
-  saw:* in the menu's «Raser» section the buyable «Brun lab» row's right-aligned price badge **«Adopter 30»** renders as a pale warm **gold** that is visibly
-  washed-out and markedly fainter than the crisp blue **«Aktiv»** badge one row up (`.screenshots/P26-02-menu-full.png`; 2.5× crop `/tmp/p27_breed2.png` — the
-  «Adopter 30» barely separates from the row fill). *Why it's wrong:* the badge draws its whole string in `COIN_GOLD := DesignSystem.GOLD` #f5b841
-  (`scripts/trick_menu.gd:172`, applied at `:939-942`) over the CREAM row fill #f4efe6 (`ROW_BG`, `:151`). Gold-on-cream is **two light warm tones** →
-  measured contrast **≈1.55:1**, far under the 4.5:1 AA bar (and even `GOLD_DARK` reaches only ≈2.1:1 — gold is intrinsically too light to be legible **as
-  text** on cream). This is the **one** price/adopt badge the long 149→156 AA sweep never measured (it repointed BLUE-on-light → `BLUE_INK` in 154 and
-  GREY-on-light → `C_INK_SOFT` in 156, but left this GOLD-on-light badge untouched), so it's the last sub-AA label on an otherwise fully-legible card — and
-  it's the **first thing a would-be adopter needs to read** (the price), so illegibility here is doubly wrong. *What "good" looks like:* mirror the pattern the
-  **kennel already uses for exactly this** — `_make_price_chip` (`scripts/kennel_screen.gd:919-964`) draws a small **gold coin pip** (a `_CoinPip` disc, keeping
-  the "gold = coin" DS signal on an actual coin glyph) followed by the number in a **dark AA-legible ink** (`C_TAG_INK` #141c26), never gold text. Repoint the
-  menu breed-price badge the same way: render «Adopter»/the number in a dark ink that clears AA on CREAM — `DesignSystem.SLATE` #5a6b7d measures **4.78:1** (the
-  same ink the buyable breed *name* already uses, `BREED_NAME_BUYABLE`, `:216`), or the darker `INK`/`C_TAG_INK` for more headroom — and, to preserve the coin
-  signal now that the text is no longer gold, prefix a small gold coin pip before the amount (as the kennel price chip and the header CoinReadout both do). That
-  keeps GOLD reserved to a real coin glyph (the DS rule) **and** makes the adopt price legible. Verify in-pixel the «Adopter 30» badge clears 4.5:1 on the
-  «Brun lab» row and still reads as a coin-priced action.
+- **The breed showcase («Vis frem hundene», P3-4) is the one persistent surface still entirely outside the design system — off-DS chrome, gold-as-non-coin button
+  fills, non-DS font, AND an illegible ~1.03:1 disabled primary CTA.** *What I saw:* opening «Vis frem hundene» from the completion-menu «Raser» section spotlights
+  the owned dog on the garden under a dark charcoal control panel (`.screenshots/P28-01-showcase.png`, control-panel zoom `/tmp/p28_showctrl2.png`). Against the
+  light-paper DS card it was just launched from, it reads as a **different app**: a charcoal band `BAND_BG` = `Color(0.06,0.08,0.12,0.72)`, grey chevrons, a **gold**
+  «Labrador» name pill, and a **gold** «Trener denne» primary button — none of it the DS paper/blue/coin system. Sampled pixels: the panel bg is charcoal ~#515653,
+  the commit-button fill is gold **#F6D54D**, and the disabled «Trener denne» label is washed pale-gold **#EBDA96** on that gold — a measured **≈1.03:1** contrast, i.e.
+  effectively **invisible** (I could barely read the word at 3× zoom). Because a new player owns exactly one dog, the showcase's **default** state is this active dog
+  with the disabled, illegible «Trener denne» CTA — so this is the first thing they see. *Why it's wrong:* (1) `scripts/breed_showcase_view.gd` (built at task 087,
+  **before** the 096+ DS arc) references **no `DesignSystem`** at all — it hardcodes local charcoal/gold colours (`:19-30`), builds flat `StyleBoxFlat` boxes
+  (`:192-205`), and never applies the DS font (Baloo 2 / Nunito) that the completion menu and kennel use, so it's the sole live surface the whole 129→162 DS/AA polish
+  arc skipped; (2) **gold is used as a button/pip/name FILL** in three places (`NAME_ACTIVE`/`PIP_ON`/`BTN_PRIMARY` = `Color(1.0,0.86,0.30)`, `:21,24,26`), violating
+  the "**gold is reserved for the coin**" DS rule every recent pass (146/162 …) has enforced; (3) the disabled CTA is illegible because `_make_button` reuses the same
+  gold stylebox for the `disabled` state (`:204`) and sets `font_color/hover/pressed` but **never `font_disabled_color`** (`:207`), so `_commit_btn.disabled = is_active`
+  (`:268`) leaves Godot's default washed disabled font over gold → the ~1.03:1. *What "good" looks like:* bring the showcase controls into the design system, exactly as
+  the completion menu and kennel already are (keep the nice dark-**stage spotlight** concept — the clear centre so the lit dog stays visible — that part is good; only the
+  chrome needs DS-ifying). Concretely: draw the panel/pills/buttons via the DS components + tokens in the DS font; make the **primary CTA the DS blue gradient pill**
+  (the `GRAD_PILL_*` used by BRA / «Fortsett treningen» in 153), not a gold fill; take **gold off the name pill and commit button** (reserve it to an actual coin glyph
+  as the price chip does), using a warm accent only where it isn't a coin-conflicting fill; and give the **disabled «Trener denne» state an explicit AA-legible font
+  colour** (a dark ink on a muted/light disabled fill, mirroring the kennel's own «Trener nå» non-tappable style from 151 — dark `C_TAG_INK` on a muted wash ≥4.5:1),
+  never a washed label on gold. Verify in-pixel that both the disabled «Trener denne» (active dog) and the enabled «Tren denne» (previewed dog) states clear 4.5:1, that
+  no non-coin element is gold, and that the panel reads as one system with the completion menu it launches from.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

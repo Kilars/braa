@@ -15,23 +15,40 @@ signal focus_requested(id: String)  ## a breed pip was tapped — spotlight that
 signal commit_requested      ## "Tren denne" — make the spotlit breed active (persisted) + close
 signal dismissed             ## "Tilbake" — close without switching (main restores the active dog)
 
-## Layout, homed here (no scattered literals — cf. trick_menu.gd / 029). Bands only; the middle is clear.
-const BAND_BG := Color(0.06, 0.08, 0.12, 0.72)     ## the semi-opaque title / control bands
+## Layout + palette, homed here — all sourced from the design system (163, PO father-pass-28, X-4):
+## the showcase was the one live surface built (087) BEFORE the 096+ DS arc, so it hardcoded charcoal
+## + gold. The dark-STAGE spotlight concept stays (clear centre, lit dog visible) but every colour is
+## now a DS token, gold is OFF every non-coin fill (gold = coin only), and the CTA states clear WCAG AA.
+const BAND_BG := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.72)  ## dark stage band = DS INK @ .72
 const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
-const NAME_ACTIVE := Color(1.0, 0.86, 0.30)        ## the spotlit breed's name when it is the active dog — gold
+const NAME_ACTIVE := DesignSystem.PAPER            ## the spotlit breed's name (active) — bright paper-white, NOT gold
 const NAME_PREVIEW := Color(1.0, 1.0, 1.0)         ## a previewed (not-yet-active) breed's name — white
-const SUBTLE := Color(1.0, 1.0, 1.0, 0.66)
-const PIP_ON := Color(1.0, 0.86, 0.30, 0.95)       ## the active breed's pip — gold
-const PIP_OFF := Color(1.0, 1.0, 1.0, 0.12)
-const BTN_PRIMARY := Color(1.0, 0.86, 0.30, 0.95)  ## the "Tren denne" commit button — gold
-const BTN_PRIMARY_TEXT := Color(0.10, 0.08, 0.02, 1.0)
-const BTN_SECONDARY := Color(1.0, 1.0, 1.0, 0.12)
-const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.9)
+const SUBTLE := Color(1.0, 1.0, 1.0, 0.78)         ## caption/hint on the dark band — legible white
+const PIP_ON := DesignSystem.PAPER                 ## the active breed's pip — bright paper chip (dark INK text), NOT gold
+const PIP_OFF := Color(1.0, 1.0, 1.0, 0.14)        ## an inactive breed's pip — faint white chip
+const PIP_ON_TEXT := DesignSystem.INK              ## dark ink on the bright active pip (AA-clear)
+const BTN_SECONDARY := Color(1.0, 1.0, 1.0, 0.14)  ## «Tilbake» ghost pill over the dark band
+const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.92)
 const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)
+
+## Primary CTA — the DS blue gradient pill (GRAD_PILL_*, the BRA / «Fortsett treningen» palette, 153),
+## white label. Its DISABLED (active-dog «Trener denne») state is a muted light pill with a dark ink
+## label — the kennel «Trener nå» non-tappable style (151) — never a washed label on gold (~1.03:1 defect).
+const COMMIT_ENABLED_TEXT := Color(1.0, 1.0, 1.0)  ## white on the blue gradient (AA per 153)
+const COMMIT_DISABLED_INK := DesignSystem.INK      ## dark DS ink on the muted disabled fill
+const COMMIT_W := 280        ## commit-pill content width  (offset -140 .. +140)
+const COMMIT_H := 42         ## commit-pill content height (offset -88 .. -46)
+
+## The muted fill for the non-tappable active-dog «Trener denne» — a pale slate the dark INK clears AA on.
+static func commit_disabled_fill() -> Color:
+	return Color("cfd6dd")
 
 const TITLE_H := 92.0        ## the top title band height
 const CONTROL_H := 190.0     ## the bottom control-bar band height
 const SWATCH_R := 16.0
+
+## Cached DS blue-gradient stylebox for the commit pill (baked once — the per-pixel baker must never run per-frame).
+var _commit_grad: StyleBoxTexture = null
 
 ## The rows main fed in: [{id, name, tint}] in roster order, plus the spotlit + active ids.
 var _entries: Array = []
@@ -81,6 +98,7 @@ func _build_ui() -> void:
 	_title = Label.new()
 	_title.text = "Mine hunder"
 	_title.add_theme_color_override("font_color", TITLE_COLOR)
+	_title.add_theme_font_override("font", DesignSystem.font_display())
 	_title.add_theme_font_size_override("font_size", 30)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.anchor_right = 1.0
@@ -90,6 +108,7 @@ func _build_ui() -> void:
 
 	# The spotlit breed's big name (under the title, over the dog).
 	_name_label = Label.new()
+	_name_label.add_theme_font_override("font", DesignSystem.font_display())
 	_name_label.add_theme_font_size_override("font_size", 26)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.anchor_right = 1.0
@@ -151,7 +170,7 @@ func _build_ui() -> void:
 	add_child(_next_btn)
 
 	# "Tren denne" (train the spotlit dog — commit + persist) and "Tilbake" (back) at the band foot.
-	_commit_btn = _make_button("Tren denne", BTN_PRIMARY, BTN_PRIMARY_TEXT)
+	_commit_btn = _make_commit_button()
 	_commit_btn.anchor_left = 0.5
 	_commit_btn.anchor_right = 0.5
 	_commit_btn.anchor_top = 1.0
@@ -160,7 +179,6 @@ func _build_ui() -> void:
 	_commit_btn.offset_right = 140.0
 	_commit_btn.offset_top = -88.0
 	_commit_btn.offset_bottom = -46.0
-	_commit_btn.add_theme_font_size_override("font_size", 19)
 	_commit_btn.pressed.connect(func(): commit_requested.emit())
 	add_child(_commit_btn)
 
@@ -179,6 +197,7 @@ func _build_ui() -> void:
 	_hint = Label.new()
 	_hint.text = "Bla med pilene eller trykk en hund"
 	_hint.add_theme_color_override("font_color", SUBTLE)
+	_hint.add_theme_font_override("font", DesignSystem.font_body())
 	_hint.add_theme_font_size_override("font_size", 13)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.anchor_right = 1.0
@@ -193,6 +212,7 @@ func _make_button(text: String, bg: Color, fg: Color) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_override("font", DesignSystem.font_body_bold())   # DS font, not the fallback (163)
 	b.add_theme_font_size_override("font_size", 17)
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
@@ -206,6 +226,30 @@ func _make_button(text: String, bg: Color, fg: Color) -> Button:
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	for fc in ["font_color", "font_hover_color", "font_pressed_color"]:
 		b.add_theme_color_override(fc, fg)
+	return b
+
+## The primary «Tren denne» / «Trener denne» commit pill (163). Its normal/hover/pressed states are the DS
+## blue gradient pill (baked once, cached) with a white label; its DISABLED state — the active dog, non-
+## tappable — is a muted light pill with a dark INK label (the kennel «Trener nå» treatment, 151). Godot
+## picks the disabled stylebox automatically when `.disabled` is set, so `_refresh` only toggles `.disabled`.
+func _make_commit_button() -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_override("font", DesignSystem.font_display())     # Baloo 2 — the primary-CTA face
+	b.add_theme_font_size_override("font_size", 19)
+	if _commit_grad == null:
+		_commit_grad = DesignSystem.gradient_pill(COMMIT_W, COMMIT_H, COMMIT_H * 0.5)
+	for st in ["normal", "hover", "pressed"]:
+		b.add_theme_stylebox_override(st, _commit_grad)
+	var muted := StyleBoxFlat.new()
+	muted.bg_color = commit_disabled_fill()
+	muted.set_corner_radius_all(int(COMMIT_H * 0.5))
+	b.add_theme_stylebox_override("disabled", muted)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.add_theme_color_override("font_color", COMMIT_ENABLED_TEXT)
+	b.add_theme_color_override("font_hover_color", COMMIT_ENABLED_TEXT)
+	b.add_theme_color_override("font_pressed_color", COMMIT_ENABLED_TEXT)
+	b.add_theme_color_override("font_disabled_color", COMMIT_DISABLED_INK)  # was never set → the ~1.03:1 defect
 	return b
 
 ## A ◀ / ▶ cycle button whose arrow is a DRAWN chevron, not a font glyph (089, PO 2026-07-03 Bugfix 1):
@@ -257,7 +301,7 @@ func _refresh() -> void:
 		var e: Dictionary = entry
 		var id: String = e.id
 		var pip := _make_button(str(e.get("name", id)), PIP_ON if id == _active else PIP_OFF,
-			BTN_PRIMARY_TEXT if id == _active else BTN_SECONDARY_TEXT)
+			PIP_ON_TEXT if id == _active else BTN_SECONDARY_TEXT)
 		pip.add_theme_font_size_override("font_size", 15)
 		if id == _spotlit:
 			pip.add_theme_constant_override("outline_size", 2)
