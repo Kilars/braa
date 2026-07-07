@@ -166,10 +166,18 @@ const BADGE_LOCKED := DesignSystem.SLATE_SOFT
 ## dark ink label + badge that clears WCAG AA on that wash (the legibility bar the loop set in 149/151).
 const ROW_BG_ACTIVE := Color(0.902, 0.933, 0.988)   ## opaque pale-blue wash (CREAM lerped toward BLUE ~14%)
 const ROW_ACTIVE_INK := Color("141c26")             ## the shared dark status/badge ink (== kennel C_TAG_INK)
-## Coin GOLD reserved for the Buyable breed-price badge (the header balance is now the shared
-## CoinReadout pill, 129 — not a bespoke hand-draw). GOLD_DARK / the number colour moved into
-## CoinReadout, so only the price-badge GOLD remains here.
+## Coin GOLD reserved for the Buyable breed-price PIP (a real coin glyph) — never the text.
+## The header balance is the shared CoinReadout pill (129); the price badge draws its own small
+## gold coin disc, exactly like the kennel _make_price_chip. GOLD is intrinsically too light to
+## read as TEXT on the CREAM row (~1.55:1, sub-AA), so the price WORDS/number use a dark ink.
 const COIN_GOLD := DesignSystem.GOLD
+## The buyable «Adopter 30» price-badge TEXT ink (162, PO father-pass-27, X-6). Was COIN_GOLD —
+## gold-on-cream ~1.55:1 failed WCAG AA. SLATE #5a6b7d clears 4.78:1 on the CREAM row and is the
+## SAME ink the buyable breed NAME already uses (BREED_NAME_BUYABLE), so the row reads as one.
+const BADGE_PRICE_INK := DesignSystem.SLATE
+## The price-badge coin pip radius + gap — small gold disc drawn before the text (kennel pattern).
+const PRICE_PIP_R := 6.0
+const PRICE_PIP_GAP := 5.0
 ## Action button colours. The primary CTA ("Fortsett treningen") is drawn with the SAME raised-blue
 ## gradient treatment as the BRA button (130, via DesignSystem.gradient_pill), so the two dominant
 ## actions read identically — not the old flat pale-BLUE pill that read as secondary. White ≥700 label.
@@ -940,9 +948,13 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var badge: String = BREED_BADGE[st]
 	if st == BreedState.BUYABLE or st == BreedState.LOCKED:
 		badge = "%s %d" % [badge, int(b.get("price", 0))]
+	# A buyable row prefixes a small gold coin pip before its price text (162, X-6) — the "gold =
+	# coin" DS signal on a real coin glyph — so reserve its width when eliding the name too.
+	var show_pip := st == BreedState.BUYABLE
+	var pip_reserve := (PRICE_PIP_R * 2.0 + PRICE_PIP_GAP) if show_pip else 0.0
 	# Elide the name so a long breed ("Chocolate Labrador") never runs under the badge on the card.
 	var badge_w := f_badge.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_SIZE).x
-	var name_max_w := (rect.position.x + rect.size.x - 14.0 - badge_w) - name_x - 10.0
+	var name_max_w := (rect.position.x + rect.size.x - 14.0 - badge_w - pip_reserve) - name_x - 10.0
 	_draw_text(f_name, Vector2(name_x, name_baseline), _elide(f_name, str(b.get("name", b.id)), NAME_SIZE, name_max_w), NAME_SIZE, name_col)
 	var badge_col := BREED_NAME_LOCKED
 	if st == BreedState.ACTIVE:
@@ -950,10 +962,18 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	elif st == BreedState.OWNED:
 		badge_col = BADGE_AVAILABLE
 	elif st == BreedState.BUYABLE:
-		badge_col = COIN_GOLD
+		badge_col = BADGE_PRICE_INK  # 162: dark AA-legible ink (was COIN_GOLD ~1.55:1 on CREAM)
 	var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
+	var badge_right := rect.position.x + rect.size.x - 14.0
 	_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
+	# The gold coin pip, just left of the price text (kennel _make_price_chip / CoinReadout pattern):
+	# gold face + darker rim, no font glyph — keeps GOLD reserved to a real coin, off the text.
+	if show_pip:
+		var pip_c := Vector2(badge_right - badge_w - PRICE_PIP_GAP - PRICE_PIP_R,
+			rect.position.y + rect.size.y * 0.5)
+		draw_circle(pip_c, PRICE_PIP_R, DesignSystem.GOLD_DARK)
+		draw_circle(pip_c, PRICE_PIP_R - 1.5, COIN_GOLD)
 
 ## One marker-word row (092/093/095): the display text on the left and the state badge on the right.
 ## ACTIVE row highlighted BLUE (the firing word — DS primary accent); UNLOCKED SLATE (tap to switch);

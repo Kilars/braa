@@ -176,40 +176,44 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 26) — polish-lens pass: verified 160 (kennel-portrait render) still clean; drove the **completion menu with its «Raser» breed section revealed** (`?bra_coins=120`) — a surface the recent AA/render arc never opened — and caught the one remaining English string in the otherwise fully-Norwegian menu, rendered **truncated** to boot. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 27) — polish-lens pass: verified 161 («Brun lab» breed name) landed clean and pruned it; then stayed on the newly-opened **«Raser» breed section** and caught the **«Adopter 30» price badge failing WCAG AA** (gold text on the cream row, ~1.55:1) — the one badge the 149→156 AA sweep never measured, and the exact defect the kennel already fixed. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Twenty-sixth pass, fresh and stateless under the polish/critique lens. HEAD is `5050877` (the 160 kennel-portrait commit).
-Reviewed the **fresh local licensed bundle** (`build/web` at this HEAD, gate green earlier this session), served over http and driven in headless
-Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). This pass I booted with
-`?bra_autotap=1&bra_coins=120` specifically to **reveal the completion menu's «Raser» (breeds) section** — `MenuReveal.reveal_breeds` gates it on
-`balance ≥ adopt_cost`, so every prior polish pass (fresh-save, Triks-only) never saw it. `window.__bra_menu_open` = `true`, `window.__bra_balance`
-= 120, `window.__bra_breed_rows` = Labrador (active) + chocolate_labrador (buyable 30). **Zero console errors** (exit 0). Evidence: this pass's
-screenshots (`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`) + a 3× crop (`/tmp/p26_choc_row.png`) + the code I read
-(`scripts/breed_personality.gd:52`, `scripts/trick_menu.gd:943`), against the goal art (`.docs/specs/assets/goal-training-screen.png`).
+Twenty-seventh pass, fresh and stateless under the polish/critique lens. HEAD is `614ba61` (the 161 «Brun lab» commit).
+Reviewed the **fresh local licensed bundle** (`build/web` at this HEAD — the pck produced by the post-161 verify run that went full-green this session),
+served over http and driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Booted
+`?bra_autotap=1&bra_coins=120` to **reveal the completion menu's «Raser» (breeds) section** (`MenuReveal.reveal_breeds` gates it on `balance ≥ adopt_cost`).
+`window.__bra_menu_open` = `true`, `__bra_balance` = 120, `__bra_breed_rows` = labrador (active) + chocolate_labrador (buyable 30). **Zero console errors**
+(exit 0). Evidence: this pass's screenshots (`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`) + a 2.5× breed-row crop (`/tmp/p27_breed2.png`) +
+the code I read (`scripts/trick_menu.gd:169-172,939-942`, `scripts/design_system.gd:20,29`, `scripts/kennel_screen.gd:919-964`), against the goal art.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream
-Labrador on green grass with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque
-«Sitt … %» learned bar (159), «Triks»/«Kennel»/coin HUD pills, big blue BRA (153); the 160 kennel-portrait render remains clean from pass 25 (grid +
-modal muzzles smooth). (b) The rest of the completion menu reads as one system (`P26-02-menu-full.png`) — «Sitt» «Trener nå» pale-blue active row
-(152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Vis frem hundene» / «Gi tilbakemelding» ghost + «Fortsett treningen» primary, all
-Norwegian and AA-legible (154). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Verified fixed → pruned:** the pass-26 directive (**«Chocolate Labrador» English display name eliding to «Chocolate…»**) is **resolved** by 161. In my own
+pixels the buyable breed row now reads **«Brun lab»** in full — brown coat swatch to its left, complete, **no ellipsis**, sitting cleanly under the «Labrador ·
+Aktiv» active row, so the «Raser» section is now 100 % Norwegian (`.screenshots/P26-02-menu-full.png`, 2.5× crop `/tmp/p27_breed2.png`). Pruned from this log.
+
+**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream Labrador on
+green grass with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … %» learned
+bar (159), «Triks»/«Kennel»/coin HUD pills, big blue BRA (153); the 160 kennel-portrait render still clean. (b) The rest of the completion menu reads as one
+system — «Sitt» «Trener nå» pale-blue active row (152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv», «Vis frem hundene» / «Gi
+tilbakemelding» ghost + «Fortsett treningen» primary, all Norwegian and AA-legible (154). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The adoptable breed's display name is English — «Chocolate Labrador» — and, being long, elides to an ugly «Chocolate…» in the Norwegian
-  completion menu.** *What I saw:* in the menu's «Raser» section the buyable second breed renders as **«Chocolate…»** (truncated, trailing ellipsis)
-  directly beneath the un-elided **«Labrador»** active row (`.screenshots/P26-02-menu-full.png`; 3× crop `/tmp/p26_choc_row.png`). The source string
-  is the literal English `"Chocolate Labrador"` (`scripts/breed_personality.gd:52`), and `trick_menu.gd:943` `_elide()`s it to fit under the
-  right-aligned «Adopter 30» badge, so the tail is dropped. *Why it's wrong:* (1) **localization** — this is the **one** English string left in a menu
-  that is otherwise 100 % Norwegian («Triks», «Sitt», «Ligg», «Legg deg», «Tilgjengelig», «Låst», «Raser», «Aktiv», «Adopter», «Trener nå», «Vis frem
-  hundene», «Gi tilbakemelding», «Fortsett treningen»); it's exactly the class of slip the 138 (menu→Norwegian) and 157 («Kan laere»→«Kan lære»)
-  passes set out to eliminate, and it sits right next to «Labrador» so the language clash is obvious. (2) **typography** — the ellipsis reads as a
-  render defect, drops the identifying word, and looks broken beside the fully-shown «Labrador» one row up. *What "good" looks like:* repoint the
-  display name (`breed_personality.gd:52`, the second `BreedPersonality.new(...)` arg — the `id` stays `chocolate_labrador`, this is display-only) to a
-  **Norwegian** name that is **short enough to render un-elided** within the row's `name_max_w` (≈ half the ~200 px card row, left of the «Adopter 30»
-  badge) — e.g. «Brun labrador» or «Sjokoladelab». Note the fully-correct «Sjokoladelabrador» is *longer* than the English string and would still
-  truncate, so a fitting short form is required, not just a 1:1 translation. Verify in-pixel that the chosen name shows **complete, no ellipsis** in the
-  «Raser» row (and, since the same display name feeds the spotlit breed showcase, that it reads clean there too).
+- **The «Adopter 30» breed-price badge fails WCAG AA — gold text on the cream row, ~1.55:1 — while every other badge on the same card clears AA.** *What I
+  saw:* in the menu's «Raser» section the buyable «Brun lab» row's right-aligned price badge **«Adopter 30»** renders as a pale warm **gold** that is visibly
+  washed-out and markedly fainter than the crisp blue **«Aktiv»** badge one row up (`.screenshots/P26-02-menu-full.png`; 2.5× crop `/tmp/p27_breed2.png` — the
+  «Adopter 30» barely separates from the row fill). *Why it's wrong:* the badge draws its whole string in `COIN_GOLD := DesignSystem.GOLD` #f5b841
+  (`scripts/trick_menu.gd:172`, applied at `:939-942`) over the CREAM row fill #f4efe6 (`ROW_BG`, `:151`). Gold-on-cream is **two light warm tones** →
+  measured contrast **≈1.55:1**, far under the 4.5:1 AA bar (and even `GOLD_DARK` reaches only ≈2.1:1 — gold is intrinsically too light to be legible **as
+  text** on cream). This is the **one** price/adopt badge the long 149→156 AA sweep never measured (it repointed BLUE-on-light → `BLUE_INK` in 154 and
+  GREY-on-light → `C_INK_SOFT` in 156, but left this GOLD-on-light badge untouched), so it's the last sub-AA label on an otherwise fully-legible card — and
+  it's the **first thing a would-be adopter needs to read** (the price), so illegibility here is doubly wrong. *What "good" looks like:* mirror the pattern the
+  **kennel already uses for exactly this** — `_make_price_chip` (`scripts/kennel_screen.gd:919-964`) draws a small **gold coin pip** (a `_CoinPip` disc, keeping
+  the "gold = coin" DS signal on an actual coin glyph) followed by the number in a **dark AA-legible ink** (`C_TAG_INK` #141c26), never gold text. Repoint the
+  menu breed-price badge the same way: render «Adopter»/the number in a dark ink that clears AA on CREAM — `DesignSystem.SLATE` #5a6b7d measures **4.78:1** (the
+  same ink the buyable breed *name* already uses, `BREED_NAME_BUYABLE`, `:216`), or the darker `INK`/`C_TAG_INK` for more headroom — and, to preserve the coin
+  signal now that the text is no longer gold, prefix a small gold coin pip before the amount (as the kennel price chip and the header CoinReadout both do). That
+  keeps GOLD reserved to a real coin glyph (the DS rule) **and** makes the adopt price legible. Verify in-pixel the «Adopter 30» badge clears 4.5:1 on the
+  «Brun lab» row and still reads as a coin-priced action.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing
