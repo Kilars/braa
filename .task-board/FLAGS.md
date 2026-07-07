@@ -39,13 +39,6 @@ Entry format:
 
 ## Open
 
-### FLAG 2026-07-05 — Build host disk is CRITICALLY FULL (0 bytes free); the loop cleared regenerable caches to proceed
-- **Source:** task 107 (the portrait bake needed to write build/web + a PNG). `df` showed `/` at 100%, **0 MB free** — this fails the verify **export** leg and blocks any `nix` download.
-- **What the loop did to keep going (non-destructive):** deleted only **regenerable package caches** — `~/.cache/pypoetry/{cache,artifacts}`, `~/.cache/pip`, `~/.cache/nix` (~7.5 GB freed). **Left untouched:** `~/.cache/pypoetry/virtualenvs` (real envs), the Playwright/Chromium browsers (used by capture), and — deliberately — your **`~/.local/share/Trash` (28 GB)**.
-- **Decision needed (user-only):** reclaim real space — the **28 GB Trash** is the biggest single win (empty it), plus consider old `build/` artifacts / local licensed-dog copies. The 7.5 GB the loop freed will slowly refill as caches rebuild; without a durable cleanup the disk will hit 100% again and break the export gate.
-- **Why it's user-only:** emptying your Trash and deciding what large personal data to remove is your call, not the loop's — it only touched clearly-regenerable caches.
-- **2026-07-06 knock-on (task 141):** this recurring 0-bytes-free condition is the most likely cause of the PO father-pass-6 "Bella modal still full-body" finding — a disk-full/partial `verify.sh` **export** leg leaves a **stale `build/web`** on disk (in this case a *pre-140* bundle whose modal still reused the grid cell). A clean fresh export of HEAD renders all 8 modals — Bella included — as consistent hero busts (montage `.screenshots/141-modal-8dog-fresh.png`). **Durably reclaiming disk (empty the 28 GB Trash) also stops these stale-build false regressions.**
-
 ### FLAG 2026-07-05 — Kennel cell portraits use the CC0 blocky dog, not the licensed Labrador (deliberate, licensing-clean)  ·  **RESOLVED by task 116 (live SubViewport, no baked PNG)**
 - **RESOLUTION (task 116, 2026-07-05):** the baked-PNG route is retired. The kennel now renders the game's ACTUAL dog (licensed on deploy, CC0 locally — same pick as `main._dog_path()`) through a single live `SubViewport` in `kennel_screen.gd`, shared across all 8 cells + the modal header (X-7), face-on via `DogBounds`/`DogFraming`, at a neutral coat so the per-breed `modulate` reads. This keeps the licensed dog's pixels OUT of public git (no committed PNG — the whole point) while the kennel reads as the stylized-realism Labrador on the deployed build. `assets/kennel/dog_portrait.png` + `.import` + `tools/bake_kennel_portrait.mjs` + `main._bake_portrait` deleted. No owner decision needed. **Flag closed.**
 - **Source:** task 107 (K-1 dog render). The committed `assets/kennel/dog_portrait.png` is baked from the **CC0** `dog.glb`, so the kennel shows a blocky stylised dog while the **training page shows the realistic licensed Labrador** — a visible style mismatch on the shipped site.
@@ -156,6 +149,10 @@ Entry format:
   "just deploy," so it shipped.)
 
 ## Resolved
+
+### FLAG 2026-07-05 — Build host disk was CRITICALLY FULL (0 bytes free) — RESOLVED 2026-07-07 (owner reclaimed the space)
+- **Outcome:** the owner emptied the **28 GB Trash** (`~/.local/share/Trash` now **240 KB**), so `/` is back to a healthy **30 GB free (87% used)** — no longer at 100%/0-bytes. The recurring 0-bytes-free condition that plagued the export leg overnight (and caused the stale-`build/web` false regressions, e.g. the pass-6 "Bella modal still full-body" ghost) is gone: the verify **export** leg now writes a clean fresh bundle and the father's pass-25 rebuild at HEAD `5050877` was gate-green.
+- **What the loop did while it was open (non-destructive):** cleared only **regenerable package caches** (`~/.cache/pypoetry/{cache,artifacts}`, `~/.cache/pip`, `~/.cache/nix`, ~7.5 GB); left the real virtualenvs, Playwright/Chromium, and the owner's Trash untouched. The durable reclaim (emptying the Trash) was the owner action the flag asked for. **Flag closed** — reopen only if `/` returns to <~2 GB free.
 
 ### FLAG 2026-06-30 — Coat seam + belly "sliver" (licensed-asset UV/tangent seam) — RESOLVED 2026-06-30 (PO accepted as-is)
 - **Outcome:** the owner (larssski) reviewed the **live deployed build** and judged the coat
