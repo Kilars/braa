@@ -236,7 +236,7 @@ const BREED_BADGE := {
 	BreedState.BUYABLE: "Adopter",
 	BreedState.LOCKED: "Låst",
 }
-const BREED_NAME_ACTIVE  := DesignSystem.BLUE_INK    ## the running dog — primary accent (154: BLUE_INK, AA on CREAM)
+const BREED_NAME_ACTIVE  := ROW_ACTIVE_INK           ## the running dog — dark current-state ink on the active wash (170: matches the active trick name + badge, not the action-blue)
 const BREED_NAME_OWNED   := DesignSystem.SLATE       ## owned, tap to switch — slate body text
 const BREED_NAME_BUYABLE := DesignSystem.SLATE       ## affordable — slate body text
 const BREED_NAME_LOCKED  := DesignSystem.SLATE_SOFT  ## can't afford — greyed, clearly not tappable
@@ -249,7 +249,8 @@ const WORD_BADGE := {
 	WordState.UNLOCKED: "Bytt",
 	WordState.LOCKED:   "Låst",
 }
-const WORD_NAME_ACTIVE   := DesignSystem.BLUE_INK    ## the firing word — primary accent (154: BLUE_INK, AA on CREAM)
+const WORD_NAME_ACTIVE   := ROW_ACTIVE_INK           ## the firing word — dark current-state ink on the active wash (170: matches the active trick name + badge, not the action-blue)
+const WORD_PIP_ACTIVE    := DesignSystem.BLUE_INK    ## the active word's leading differentiation pip stays Bra-Blue (170: decoupled from the now-dark name so only the NAME moved)
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
 const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
 const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
@@ -257,7 +258,7 @@ const WORD_COST_HINT     := DesignSystem.SLATE  ## cost hint (095, P5-2) — Ink
 
 ## Difficulty-row palette + badges (118, DS tokens). Mirrors the breed/word row treatment.
 const DIFF_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Vanskelighet" subheading — secondary
-const DIFF_NAME_ACTIVE   := DesignSystem.BLUE_INK    ## the selected mode — primary accent (154: BLUE_INK, AA on CREAM)
+const DIFF_NAME_ACTIVE   := ROW_ACTIVE_INK           ## the selected mode — dark current-state ink on the active wash (170: matches the active trick name + badge, not the action-blue)
 const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active mode — slate body text
 const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed
 const DIFF_BADGE_ACTIVE  := "Valgt"                  ## the chosen mode's badge
@@ -1028,7 +1029,7 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	# marker-word rows from trick rows at a glance (134: visual differentiation within the section).
 	var pip_x := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R
 	var pip_y := rect.position.y + rect.size.y * 0.5
-	var pip_col := WORD_NAME_ACTIVE if st == WordState.ACTIVE else (WORD_NAME_UNLOCKED if st == WordState.UNLOCKED else WORD_NAME_LOCKED)
+	var pip_col := WORD_PIP_ACTIVE if st == WordState.ACTIVE else (WORD_NAME_UNLOCKED if st == WordState.UNLOCKED else WORD_NAME_LOCKED)
 	draw_circle(Vector2(pip_x, pip_y), WORD_PIP_R, pip_col)
 	# Left offset for name text: past the pip + a small gap.
 	var name_left := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R * 2.0 + 6.0
@@ -1040,10 +1041,11 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	# The word display text (e.g. "Dyktig!"), left-aligned.
 	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
 	# so it reads as "loaded but unavailable this round" rather than fully locked.
-	## Cooling: BLUE_INK at 0.45 alpha — same hue as the active word ink but clearly resting.
+	## Cooling: the active-word ink at 0.45 alpha — same dark current-state hue as the active name
+	## (170), just dimmed so it reads "loaded but resting" without hue-flipping to blue.
 	var name_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE:
-		name_col = WORD_NAME_ACTIVE if not cooling else Color(DesignSystem.BLUE_INK.r, DesignSystem.BLUE_INK.g, DesignSystem.BLUE_INK.b, 0.45)
+		name_col = WORD_NAME_ACTIVE if not cooling else Color(WORD_NAME_ACTIVE.r, WORD_NAME_ACTIVE.g, WORD_NAME_ACTIVE.b, 0.45)
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
 	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
@@ -1075,7 +1077,7 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 		HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 14.0)
 
 ## One difficulty row (118): the mode name on the left and a state badge on the right. The ACTIVE mode
-## reads BLUE + "Valgt" (chosen — DS primary accent); a selectable non-active mode reads SLATE with no
+## reads dark current-state ink + "Valgt" (chosen — 170: matches the active trick/breed/word row); a selectable non-active mode reads SLATE with no
 ## badge (tap to pick). When the row is LOCKED (special dog, 119) every row greys to SLATE_SOFT and the
 ## fixed mode shows "Låst" so the player understands the challenge is fixed, not broken. Mirrors
 ## _draw_breed_row / _draw_word_row so the section reads consistent with the rest of the menu.
