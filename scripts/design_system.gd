@@ -184,9 +184,14 @@ static func pill(bg: Color, radius: int = R_PILL) -> StyleBoxFlat:
 ## completion-menu primary CTA (130), so the two dominant actions read identically. These
 ## are the goal-art samples the BRA bake was tuned to; homed here as tokens so no surface
 ## re-hardcodes the blue gradient math.
-const GRAD_PILL_TOP := Color(0.475, 0.690, 0.980)   ## ~(121,176,250) — glossy top sheen
-const GRAD_PILL_BOT := Color(0.349, 0.553, 0.878)   ## ~(89,141,224)  — deep bottom
-const GRAD_PILL_LIP := Color(0.239, 0.424, 0.737)   ## ~(61,108,188)  — darker 3D lower lip
+## Deepened for WCAG AA (153, X-6): the old range topped out at ~(121,176,250) — LIGHTER than
+## the BLUE token itself — so the WHITE CTA label measured only ~2.7:1, failing AA (4.5:1) on the
+## most-tapped surface in the game. The range is now shifted darker so even the lightest face
+## colour the label touches (TOP) clears AA (white on TOP ≈ 4.9:1, on BOT ≈ 7.1:1), while keeping
+## the blue identity, the bright-top→deep-bottom gradient depth, and the darker 3D lower lip.
+const GRAD_PILL_TOP := Color("3472bd")   ## ~(52,114,189)  — top sheen, white ≈ 4.9:1 (AA)
+const GRAD_PILL_BOT := Color("24589a")   ## ~(36,88,154)   — deep bottom, white ≈ 7.1:1
+const GRAD_PILL_LIP := Color("1b4278")   ## ~(27,66,120)   — darker 3D lower lip
 
 ## Signed distance to a rounded rect (negative inside). Standard SDF — lets us anti-alias the
 ## pill edge and soften the drop shadow with one cheap formula. Shared by gradient_pill (130).
@@ -241,6 +246,25 @@ static func gradient_pill(content_w: int, content_h: int, radius: float,
 	sb.expand_margin_top    = pad
 	sb.expand_margin_bottom = pad
 	return sb
+
+# ---------------------------------------------------------------------------
+# WCAG contrast (153, X-6) — canonical helper so any DS component can pin its own
+# AA compliance (the kennel work grew its own copy; this is the shared home).
+# ---------------------------------------------------------------------------
+## WCAG 2.1 relative-contrast ratio between two colours (1.0 .. 21.0).
+static func wcag_contrast(a: Color, b: Color) -> float:
+	var la := _rel_luminance(a)
+	var lb := _rel_luminance(b)
+	var hi: float = maxf(la, lb)
+	var lo: float = minf(la, lb)
+	return (hi + 0.05) / (lo + 0.05)
+
+## WCAG relative luminance of a colour (linearized sRGB, Rec. 709 weights).
+static func _rel_luminance(c: Color) -> float:
+	return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b)
+
+static func _lin(ch: float) -> float:
+	return ch / 12.92 if ch <= 0.03928 else pow((ch + 0.055) / 1.055, 2.4)
 
 # ---------------------------------------------------------------------------
 # Godot Theme — applied at the scene root so all Control text uses real fonts

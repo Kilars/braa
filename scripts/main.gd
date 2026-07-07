@@ -1776,10 +1776,12 @@ func _setup_bra_button() -> void:
 ## distortion — the StyleBoxTexture's expand_margins map the pad 1:1 back outside the layout rect.
 const BRA_PILL_PAD := 56                                                          ## shadow/AA bleed
 const BRA_PILL_RADIUS := 46.0                                                     ## rounded-pill corner
-## Face gradient (goal art sample): bright top → deep bottom, over a darker-blue 3D lower lip.
-const BRA_PILL_TOP  := Color(0.475, 0.690, 0.980)   ## ~(121,176,250) — glossy top sheen
-const BRA_PILL_BOT  := Color(0.349, 0.553, 0.878)   ## ~(89,141,224)  — deep bottom
-const BRA_PILL_LIP  := Color(0.239, 0.424, 0.737)   ## ~(61,108,188)  — darker 3D lower lip
+## Face gradient — the SAME palette as the completion-menu primary CTA (153): sourced from the
+## DS tokens so the two dominant blue actions stay ONE component and the WCAG-AA fix can never
+## drift between them (deepened so the white «BRA» label clears AA; see DesignSystem.GRAD_PILL_*).
+const BRA_PILL_TOP  := DesignSystem.GRAD_PILL_TOP   ## top sheen (white ≈ 4.9:1, AA)
+const BRA_PILL_BOT  := DesignSystem.GRAD_PILL_BOT   ## deep bottom
+const BRA_PILL_LIP  := DesignSystem.GRAD_PILL_LIP   ## darker 3D lower lip
 const BRA_PILL_LIP_H := 14.0                          ## height of the lip band
 const BRA_PILL_SHADOW_DY := 14.0                      ## how far the shadow drops below the pill
 const BRA_PILL_SHADOW_BLUR := 30.0                    ## shadow softness (px)

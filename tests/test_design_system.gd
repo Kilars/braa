@@ -187,3 +187,37 @@ func test_pill_with_different_color_and_radius() -> void:
 func test_pill_default_radius_is_pill() -> void:
 	var sb = DesignSystem.pill(DesignSystem.DANGER)
 	assert_eq(sb.corner_radius_top_left, DesignSystem.R_PILL, "pill(DANGER) default radius == R_PILL (9999)")
+
+# Primary-CTA gradient WCAG-AA contrast (153, X-6). The BRA button + the completion-menu
+# «Fortsett treningen» primary both bake through gradient_pill with the GRAD_PILL_* palette
+# and draw a WHITE label. The label was ~2.7:1 on the old too-light gradient (top ran
+# lighter than BLUE itself). Pin: the LIGHTEST face colour the white label can touch
+# (GRAD_PILL_TOP) still clears AA (4.5:1), so the label is AA-legible everywhere on the face.
+
+func test_wcag_contrast_white_on_black_is_max() -> void:
+	assert_true(is_equal_approx(DesignSystem.wcag_contrast(Color.WHITE, Color.BLACK), 21.0),
+		"wcag_contrast(white, black) == 21:1 (the canonical AA helper is correct)")
+
+func test_primary_cta_gradient_top_clears_wcag_aa_for_white_label() -> void:
+	var ratio := DesignSystem.wcag_contrast(Color.WHITE, DesignSystem.GRAD_PILL_TOP)
+	assert_true(ratio >= 4.5,
+		"white CTA label on the LIGHTEST gradient face (GRAD_PILL_TOP) clears WCAG AA 4.5:1 (got %.2f:1)" % ratio)
+
+func test_primary_cta_gradient_bottom_clears_wcag_aa_for_white_label() -> void:
+	var ratio := DesignSystem.wcag_contrast(Color.WHITE, DesignSystem.GRAD_PILL_BOT)
+	assert_true(ratio >= 4.5,
+		"white CTA label on the gradient bottom (GRAD_PILL_BOT) clears WCAG AA 4.5:1 (got %.2f:1)" % ratio)
+
+func test_primary_cta_gradient_still_darkens_top_to_bottom() -> void:
+	# Identity/depth kept: the face is still a bright-top → deep-bottom gradient, not flat.
+	var lum_top := DesignSystem._rel_luminance(DesignSystem.GRAD_PILL_TOP)
+	var lum_bot := DesignSystem._rel_luminance(DesignSystem.GRAD_PILL_BOT)
+	assert_true(lum_bot < lum_top, "the CTA gradient still darkens top→bottom (3D depth preserved)")
+
+func test_bra_button_shares_the_design_system_cta_palette() -> void:
+	# The BRA button and the menu CTA are ONE component — main.gd's BRA_PILL_* must be the
+	# SAME palette as DesignSystem.GRAD_PILL_*, so the AA fix can never drift between them.
+	var main_script := load("res://scripts/main.gd")
+	assert_eq(main_script.BRA_PILL_TOP, DesignSystem.GRAD_PILL_TOP, "BRA_PILL_TOP == DesignSystem.GRAD_PILL_TOP")
+	assert_eq(main_script.BRA_PILL_BOT, DesignSystem.GRAD_PILL_BOT, "BRA_PILL_BOT == DesignSystem.GRAD_PILL_BOT")
+	assert_eq(main_script.BRA_PILL_LIP, DesignSystem.GRAD_PILL_LIP, "BRA_PILL_LIP == DesignSystem.GRAD_PILL_LIP")

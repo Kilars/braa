@@ -176,65 +176,62 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 15) — polish-lens pass: pass-14 directive (150 modal-band → calm DS neutral surface) verified landed; ONE new buildable X-6 defect — the owned dog's «Trener nå» current-dog status pill draws a green label over a 14 %-opacity green wash, a **1.39:1** contrast that leaves the label near-invisible (the AA legibility bar the loop set in 149, missed on the one status that says "this is your dog")
+### PO Review — 2026-07-07 (PO, father pass 17) — polish-lens pass: pass-16 directive (152 trick-selector ACTIVE state → «Trener nå») verified landed and correct; ONE new buildable X-6 defect — the game's two **primary blue CTAs** (the BRA mark button + the menu's «Fortsett treningen») render their white labels at only **~2.7:1** contrast against a too-light blue gradient, failing WCAG AA (4.5:1) and even the 3:1 large-text bar, while the badges/pills around them were just held to 4.5:1 (149/151)
 
-Fifteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `a583d31` (the 150 modal-band commit).
-I reviewed the **fresh local licensed bundle** — `build/web` (pck built 05:32, after the 05:14 source edit, so it
-carries 150), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
-renderer) — via `?bra_autotap=1` → training → kennel grid → eight inspect modals (bella/nova/sol/trulte/balder/pontus/
-sniff/lykke, spanning owned·common·rare·epic·secret) with real canvas taps → completion menu. `window.__bra_kennel_cells`
-reports all 8 cells; **zero console errors** on every run. Evidence for every claim is a screenshot I captured this pass
-(`.screenshots/P15-*`) plus PIL pixel crops and WCAG contrast calcs.
+Seventeenth pass, run fresh and stateless under the polish/critique lens. HEAD is `0b1cd0a` (the 152 trick-ACTIVE commit).
+I reviewed the **fresh local licensed bundle** — `build/web` (pck built 06:38, after the 06:34 `trick_menu.gd`/`main.gd` edits, so
+it carries 152), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
+renderer) — via `?bra_autotap=1` → training → the completion/pause **Triks** menu, and a separate no-autotap boot to judge the BRA
+button in its resting (non-cooldown) state. `window.__bra_menu_open` confirms the menu, `window.__bra_current_trick` reports
+`sitt`; **zero console errors** on every run. Evidence for every claim is a screenshot I captured this pass (`.screenshots/P17-*`)
+plus PIL pixel crops + WCAG contrast maths and the code paths/tokens I read.
 
-**Re-verified fixed (pruned) — the pass-14 modal-band directive (150) landed and is correct:** the inspect modal header
-band no longer paints the loud per-dog `band_tint`; it now draws `_cell_surface(detail)` (`kennel_screen.gd:1137`), the
-**same calm DS neutral surface the grid cells use** — Warm-Sand base, a faint green wash for owned, faint coral for
-secret. Confirmed in my own pixels across every tier: Bella's modal band is calm cream-green (`.screenshots/P15-modal-bella.png`),
-Nova's is calm cream (`-nova`, the saturated violet slab is **gone**), **Sol's is calm cream — the golden/amber slab
-that trespassed on the gold-reserved-for-coin rule is gone** (`-sol`), Trulte's is a faint coral (`-trulte`). Grid↔modal
-now read as one calm system: the coat + the calm corner rarity badge («Din hund»/«Vanlig»/«Sjelden»/«Episk»/«★ Påskeegg»)
-do the talking. The 139/140 hero-bust framing, steel bars, and dark nameplate strip are untouched. Directive resolved —
-removed.
+**Re-verified fixed (pruned) — the pass-16 trick-selector directive (152) landed and is correct:** the completion-menu **Triks**
+selector now marks the currently-trained trick. Opening the menu while training **Sitt**, the «Sitt» row is drawn distinctly — an
+opaque pale-blue wash `ROW_BG_ACTIVE` `#e6eefc` with the dark ink `ROW_ACTIVE_INK`/`#141c26` badge **«Trener nå»** (the same wording
+the kennel uses), while «Ligg»/«Legg deg» stay cream pills badged blue «Tilgjengelig» and «Gi labb» stays greyed «Låst»
+(`.screenshots/P17-02-menu.png`, zoom `/tmp/p17_card.png`). `TrickMenu.classify` now takes `active` and returns `State.ACTIVE`
+(`trick_menu.gd:48,77,287-293`), fed `_current_trick` from `main._menu_rows()`; the ACTIVE row is non-tappable and absorbs its tap,
+mirroring `BreedState.ACTIVE`/`WordState.ACTIVE` and the kennel's «Trener nå» — so all four selection surfaces (tricks · breeds ·
+words · kennel) finally read as one system. Directive resolved — removed.
 
-**Also re-verified clean (no new directive):** the pass-13 badge WCAG-AA fix (149) still holds — every corner badge draws
-its dark-ink `#141c26` label legibly on its pastel pill, hues unchanged, Bella's «Din hund» de-duped to one badge
-(`/tmp/*_badge.png` crops, `.screenshots/P15-02-kennel-grid.png`); the training page still matches the goal (pale-blue
-sky + sun, cream Labrador centred facing camera on bright even green grass, dark-ink «Sitt %» readout legible on the sky,
-tan path → blue-roof cottage, white picket fence both sides, small grounded garden coins + the rose accent, blue BRA CTA
-— `.screenshots/P15-01-training.png`); the completion menu is the DS paper card with legible rows and a **solid blue
-«Fortsett treningen»** primary (`.screenshots/P15-menu.png`); the modal body holds (blurb, 4 stat meters, Raseegenskaper
-chips, Unikt-trekk card, «Kan lære: Sitt · Ligg · Legg deg», the correctly-disabled grey «Har ikke råd · mangler 🪙 N»
-and the punchy coral «Adopter gratis ♥» CTAs); the 146 coin-component prices and 147 cool/warm coat parity still hold
-grid↔modal. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
+facing camera on bright even grass, dark-ink «Sitt %» readout legible on the sky, tan path → blue-roof cottage, white picket fence
+both sides, small grounded garden coins + rose accent — `.screenshots/P17-01-training.png`); the completion **Triks** menu is the DS
+paper card with legible pale-pill rows, a right-aligned status badge per row, an outlined «Gi tilbakemelding» secondary and a solid
+blue «Fortsett treningen» primary (`.screenshots/P17-02-menu.png`); the pass-12/13/14 kennel rarity ladder + calm modal band and the
+pass-15 owned-status pills (148/149/150/151) are untouched — 152's diff is confined to `trick_menu.gd` + `main.gd`'s `_menu_rows`,
+so `kennel_screen.gd` is byte-identical. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The owned dog's «Trener nå» current-dog status pill is near-illegible — its green label sits on a 14 %-opacity wash
-   of the *same* green, a measured 1.39:1 contrast, far below the AA legibility bar the loop itself set for the kennel in
-   149 (X-6 legibility on the signed-off Phase-8 kennel surface).** *What I saw:* opening the owned dog Bella's inspect
-   modal, the bottom action slot shows a pale mint pill whose «Trener nå» label is barely visible — pale-green text on a
-   paler-green fill (`.screenshots/P15-modal-bella.png`, and the zoom `/tmp/bella_cta.png` where the words all but vanish).
-   I sampled it: fill `(228,242,225)`, darkest label pixel `(166,216,167)` → **contrast 1.39:1** (AA needs 4.5:1; even the
-   3:1 large-text floor fails). By contrast the *disabled* «Har ikke råd» pill on Nova reads more clearly, and the coral
-   «Adopter gratis ♥» and the completion menu's blue «Fortsett treningen» are both punchy and legible — so the ONE
-   element a player sees when they open **their own dog** (the payoff of ownership, the "this is your dog, you train it
-   now" moment) is the weakest, least-readable control on the card. The cause is in `_build_active_state`
-   (`kennel_screen.gd:1506-1523`): `font_disabled_color = C_STATUS_OWNED` (the full green) painted over
-   `bg_color = C_STATUS_OWNED @ alpha 0.14` (the same green, 14 % on cream) — label and fill are the same hue with almost
-   no separation. *Why it falls short:* (a) it fails the exact AA legibility standard the loop just enforced on the
-   adjacent rarity badges (149) — a status you can't read is not a status; (b) it's the emotional high point of the kennel
-   (your dog, ready to train) rendered as the faintest thing on screen — no juice, reads as broken/disabled rather than
-   "yours"; (c) the same illegible treatment will hit the owned-but-not-active «Tren med [navn]» pill once a second dog is
-   adopted (same green-on-green family), so fix both. *What "good" looks like:* keep the **muted, non-tappable** surface
-   (correct — it must NOT look like a dead pressable button), but make the label **legible and clear AA (≥4.5:1)** on that
-   wash — draw «Trener nå» in a dark ink (e.g. the shared `C_TAG_INK` `#141c26` used for the 149 badge fix, or a
-   deep-green ink) instead of the same-hue `C_STATUS_OWNED`, and consider a small ✓/owned glyph so the current-dog state
-   reads as a confident "yours · trener nå", not a washed-out ghost. Do the same for «Tren med [navn]». Do NOT turn it
-   into a saturated pressable-looking button (it isn't tappable) or change the coral/blue CTA treatments. Buildable, no
-   owner asset — a colour-override change in `_build_active_state` (and the matching owned-switch pill).
+1. **The game's two primary blue CTAs — the BRA mark button and the menu's «Fortsett treningen» — render their white labels at
+   only ~2.7:1 contrast against a too-light blue gradient, failing WCAG AA (and even the 3:1 large-text bar). This is the same
+   AA-fail class the last three passes just fixed on the kennel badges/pills (149/151 → ≥4.5:1), now sitting unaddressed on the
+   single most important, most-tapped surface in the whole game (X-6 cross-cutting contrast, on the signed-off Phase-1/Phase-6
+   training page + completion menu).** *What I saw:* on a clean no-autotap boot the **BRA** button (`.screenshots/P17-03-rest.png`,
+   zoom `/tmp/p17_bra_rest.png`) draws its white «BRA» word, but the button's own fill is a light cornflower-blue gradient that runs
+   **lighter than the DS BLUE token itself** — I sampled the fill vertically at ~[118,172,247] (top) → ~[93,145,227] (bottom), and
+   the label sits mid-button on ~[105,158,236], i.e. it never even reaches `DesignSystem.BLUE` `#4a90e2` [74,144,226]. White on that
+   mid-fill measures **~2.73:1** (true-white letter pixels vs local fill; anti-aliased edges drag it to ~1.96:1). The menu's primary
+   **«Fortsett treningen»** button shares the exact same gradient and near-white label and measures **~1.99:1** (`.screenshots/P17-02-menu.png`,
+   zoom `/tmp/p17_cta.png`). *Why it falls short:* (a) **AA fail on the primary action** — WCAG AA needs 4.5:1 for normal text and
+   3:1 for large text; ~2.7:1 fails both, so the label the player stares at and taps every single rep is the *weakest*-contrast
+   text on the screen; (b) **inconsistency** — the last three passes explicitly held the kennel rarity badges (149) and owned-status
+   pills (151) to ≥4.5:1 with a new `wcag_contrast` helper + pinned tests, yet the biggest CTA on the biggest surface sits at ~2.7:1;
+   it is incoherent to enforce AA on a small corner badge but not on the BRA button; (c) **hierarchy/juice** — a primary CTA should
+   read as unmistakably primary; a near-white label washing into a pale-blue fill makes the BRA button read slightly *soft/disabled*
+   rather than punchy (compare the crisp dark-ink badges beside it). *What "good" looks like:* darken the CTA blue so the white label
+   clears AA. Concretely, anchor the button gradient at the DS token and go **darker**, not lighter — e.g. `DesignSystem.BLUE`
+   `#4a90e2` (top) → `BLUE_DARK` `#2f6fbf` (bottom) instead of the current `BLUE_LIGHT`→`BLUE`-ish range, so the label sits on a fill
+   dark enough that white clears ≥4.5:1 (white on `#2f6fbf` ≈ 4.98:1; on `#4a90e2` ≈ 3.29:1, so bias the label toward the darker
+   lower half or deepen the whole range). Keep the blue identity, the rounded shape, the gradient depth and the bottom-lip — only
+   shift the range darker (and apply the same fix to both the BRA button and the «Fortsett treningen» primary so they stay one
+   component). Optionally pin it with the existing `wcag_contrast` helper the kennel work already added. Buildable, no owner asset —
+   a token/gradient-range change on the shared primary-button style.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the «Trener nå» status-legibility directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the primary-CTA contrast directive above; the owner still owns the Phase-10 spec + the asset flags.
