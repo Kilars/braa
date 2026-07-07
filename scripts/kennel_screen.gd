@@ -1128,10 +1128,13 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	# Tinted background.
+	# Tinted background — the SAME calm DS neutral surface the grid cell uses (_cell_surface, 133),
+	# tinted only by ownership state, NOT the loud per-dog band_tint (150, PO father-pass-14 X-4).
+	# So a dog's portrait band reads as one calm system across grid↔modal — the coat + the calm
+	# corner rarity badge do the talking, not an off-palette full-band fill.
 	var bg := ColorRect.new()
 	bg.name = "ModalBandBg"
-	bg.color = detail["band_tint"]
+	bg.color = _cell_surface(detail)
 	bg.anchor_right  = 1.0
 	bg.anchor_bottom = 1.0
 	# Round only the top corners to match the card's radius-24 top edge.

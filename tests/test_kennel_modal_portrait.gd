@@ -69,3 +69,46 @@ func test_owned_active_dog_shares_the_same_modal_portrait_texture() -> void:
 		"owned/active dog and unowned dog share the identical dedicated modal portrait texture")
 
 	ks.queue_free()
+
+## Find the CURRENT modal's header band background ColorRect, or null. Searches within the
+## live _modal_overlay (not the whole tree) — close_detail()'s queue_free() is deferred, so a
+## prior overlay lingers in the tree for a frame; searching from the root would return its stale band.
+func _modal_band_bg(ks: KennelScreen) -> ColorRect:
+	if ks._modal_overlay == null:
+		return null
+	var node := _find_named(ks._modal_overlay, "ModalBandBg")
+	return node as ColorRect
+
+func test_modal_band_bg_uses_calm_cell_surface_not_loud_band_tint() -> void:
+	## 150, PO father-pass-14 (X-4). The inspect modal's header band must paint the SAME calm
+	## DS neutral surface the grid cell uses (_cell_surface, task 133) — NOT the raw saturated
+	## per-dog band_tint. Otherwise a dog reads calm-neutral in the grid but garish in the modal,
+	## re-introducing the "eight clashing fills" the PO removed. This guards that the band bg is
+	## driven by ownership state, not the loud rarity tint.
+	var ks := KennelScreen.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(ks)
+	var rows: Array = KennelDog.classify_kennel_dogs(["bella"], "bella", 0)
+	ks.render(rows, 0)
+
+	# Neutral (unowned, not secret) — must be the plain Warm Sand base, NOT Nova's saturated violet.
+	ks.open_detail("nova")
+	var nova_bg := _modal_band_bg(ks)
+	assert_true(nova_bg != null, "modal header has a ModalBandBg ColorRect")
+	assert_true(nova_bg.color.is_equal_approx(ks.C_SURFACE_SAND),
+		"neutral dog's modal band bg is the calm Warm Sand surface")
+	assert_false(nova_bg.color.is_equal_approx(KennelDog.by_id("nova").band_tint),
+		"neutral dog's modal band bg is NOT the loud per-dog band_tint")
+
+	# Owned (Bella) — the faint green-warm owned wash, matching her grid cell.
+	ks.open_detail("bella")
+	assert_true(_modal_band_bg(ks).color.is_equal_approx(ks.C_SURFACE_OWNED),
+		"owned dog's modal band bg is the faint owned wash (matches the grid cell)")
+
+	# Secret (Trulte) — the faint coral egg wash, matching its grid cell.
+	ks.open_detail("trulte")
+	assert_true(_modal_band_bg(ks).color.is_equal_approx(ks.C_SURFACE_EGG),
+		"secret dog's modal band bg is the faint egg wash (matches the grid cell)")
+
+	ks.close_detail()
+	ks.queue_free()
