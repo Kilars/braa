@@ -40,7 +40,6 @@ const C_STATUS_OWNED := Color("57b85c")   ## «Din hund» green
 const C_STATUS_EGG   := Color("ff7a85")   ## «Påskeegg» coral (star drawn as geometry — no U+2605 font glyph, 106)
 const C_STATUS_NEUTRAL := Color("9aa6b0") ## neutral «Ny» tag
 const C_PRICE_OWN    := Color("57b85c")   ## «Din» owned price chip
-const C_PRICE_GOLD   := Color("f5b841")   ## buyable price chip (gold)
 const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
 const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
 const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed in code)
@@ -801,9 +800,18 @@ func _find_all_cameras(n: Node) -> Array:
 ## warm tinted silhouette. A DARK coat (luminance < DARK_BAND_LUM) would leave a near-black dog, so
 ## we lighten it toward white — a light silhouette that still reads. Either way the dog carries a
 ## natural coat colour, never the raw band background.
-func _band_dog_tint(coat_hue: Color) -> Color:
-	if coat_hue.get_luminance() < DARK_BAND_LUM:
-		return coat_hue.lerp(Color.WHITE, 0.7)
+static func _band_dog_tint(coat_hue: Color) -> Color:
+	var lum := coat_hue.get_luminance()
+	if lum < DARK_BAND_LUM:
+		# Brighten toward a readable target luminance while PRESERVING hue/chroma — scale the RGB
+		# channels (keeps the r:g:b ratios) instead of lerping toward pure white. So a cool coat
+		# (Nova) stays cool and a warm coat (Pontus) stays warm in BOTH the small grid cell and the
+		# zoomed modal hero bust. The old lerp→white(0.7) desaturated dark cool coats to near-neutral,
+		# which the bright modal bust read as cream while the grid read as grey — the pass-11 "breed
+		# flip" (147, X-6). Because both surfaces share this function, fixing it here fixes both.
+		var target := DARK_BAND_LUM + 0.20
+		var s := target / maxf(lum, 0.001)
+		return Color(minf(coat_hue.r * s, 1.0), minf(coat_hue.g * s, 1.0), minf(coat_hue.b * s, 1.0), coat_hue.a)
 	return coat_hue
 
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
@@ -858,39 +866,58 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 
 	return panel
 
-## Price chip (Label in a PanelContainer pill): colour from rarity / ownership.
+## Price chip (146, X-4): a buyable dog draws its price with the readout's coin component — a PAPER
+## pill + gold coin pip + INK number — so the gold reads as "the coin" (the DS reserves gold to the
+## coin) and «900» carries an unmistakable unit. Owned «Din» (green) and secret «Gratis» (coral)
+## are status WORDS, not prices → no coin, their existing coloured pills stay.
 func _make_price_chip(row: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = "PriceChip"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var chip_color: Color
-	if row.owned:
-		chip_color = C_PRICE_OWN
-	elif row.secret:
-		chip_color = C_PRICE_FREE
-	else:
-		chip_color = C_PRICE_GOLD
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = chip_color
 	sb.set_corner_radius_all(int(CHIP_RADIUS))
 	sb.content_margin_left   = 7.0
 	sb.content_margin_right  = 7.0
 	sb.content_margin_top    = 3.0
 	sb.content_margin_bottom = 3.0
-	# Dark scrim border so any fill (gold, green, coral) holds on every band bg (tan/orange/blue/grey).
+	# Dark scrim border so the pill holds on every band bg (tan/orange/blue/grey).
 	sb.border_width_left   = 1
 	sb.border_width_right  = 1
 	sb.border_width_top    = 1
 	sb.border_width_bottom = 1
 	sb.border_color = C_PRICE_SCRIM
-	panel.add_theme_stylebox_override("panel", sb)
-	var lbl := Label.new()
-	lbl.text = row.price_label
-	lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
-	lbl.add_theme_font_size_override("font_size", 11)
-	lbl.add_theme_color_override("font_color", Color.WHITE if row.owned or row.secret else C_COIN_TEXT)
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(lbl)
+
+	if price_shows_coin(row):
+		# Buyable → the coin component: PAPER pill, gold coin pip, INK number.
+		sb.bg_color = DesignSystem.PAPER
+		panel.add_theme_stylebox_override("panel", sb)
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 4)
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var pip := _CoinPip.new()
+		pip.name = "CoinPip"
+		pip.custom_minimum_size = Vector2(14.0, 14.0)
+		pip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(pip)
+		var lbl := Label.new()
+		lbl.text = row.price_label
+		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		lbl.add_theme_font_size_override("font_size", 11)
+		lbl.add_theme_color_override("font_color", C_COIN_TEXT)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(lbl)
+		panel.add_child(hbox)
+	else:
+		# Status word pill (owned green «Din» / secret coral «Gratis») — no coin.
+		sb.bg_color = C_PRICE_OWN if row.owned else C_PRICE_FREE
+		panel.add_theme_stylebox_override("panel", sb)
+		var lbl := Label.new()
+		lbl.text = row.price_label
+		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		lbl.add_theme_font_size_override("font_size", 11)
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(lbl)
 	return panel
 
 ## Cell footer: name (Baloo 2 700) + breed (Nunito muted) in a PanelContainer for bg fill.
@@ -1441,15 +1468,23 @@ func _build_active_state(_detail: Dictionary) -> Control:
 ## priced blue path only.
 const C_ADOPT_BLUE := Color("4a90e2")    ## blue adopt button bg
 
-## Pure static helper: maps (price, balance, affordable) → the adopt button label string.
-## Affordable + priced  → "Adopter  N mynt" (two spaces before number, matching legacy label_text).
-## Affordable + free    → "Adopter"
-## Not affordable       → "Har ikke råd · mangler N" where N = max(0, price − balance).
-## TDD: tests/test_kennel_modal_cta.gd (135).
-static func adopt_button_label(price: int, balance: int, affordable: bool) -> String:
+## Pure static helper (146, X-4): splits the adopt CTA into (prefix words, coin amount) so the
+## button can render [prefix][coin pip][amount] — the price drawn with the SAME coin component as
+## the readout, not a bare number. amount == -1 → no coin (the free/priceless case).
+## Affordable + priced  → {"Adopter", price}          (coin conveys the unit; old " mynt" dropped)
+## Affordable + free    → {"Adopter", -1}              (nothing to charge → no coin)
+## Not affordable       → {"Har ikke råd · mangler", max(0, price − balance)}
+## TDD: tests/test_kennel_modal_cta.gd.
+static func adopt_button_parts(price: int, balance: int, affordable: bool) -> Dictionary:
 	if affordable:
-		return "Adopter  %d mynt" % price if price > 0 else "Adopter"
-	return "Har ikke råd · mangler %d" % max(0, price - balance)
+		return {"prefix": "Adopter", "amount": price} if price > 0 else {"prefix": "Adopter", "amount": -1}
+	return {"prefix": "Har ikke råd · mangler", "amount": max(0, price - balance)}
+
+## Pure static helper (146, X-4): does this grid row's price tag draw the coin component? Only a
+## buyable dog (not owned, not secret) shows a numeric coin price; owned («Din») and secret
+## («Gratis») are status words, not prices. TDD: tests/test_kennel_modal_cta.gd.
+static func price_shows_coin(row: Dictionary) -> bool:
+	return not row.get("owned", false) and not row.get("secret", false)
 
 func _build_adopt_button(detail: Dictionary) -> Control:
 	var price: int = detail.get("price", 0)
@@ -1459,9 +1494,9 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 
 	var btn := Button.new()
 	btn.name = "AdoptButton"
-	btn.text = adopt_button_label(price, balance, affordable)
-	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
-	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	# Visual content is the CenterContainer overlay below ([prefix][coin pip][amount]) — the price
+	# drawn with the coin component (146, X-4), not a bare number. btn.text stays empty.
+	btn.text = ""
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -1502,6 +1537,41 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 	# On press emit the new adopt_requested signal — main wires to _on_kennel_adopt.
 	if affordable:
 		btn.pressed.connect(func(): adopt_requested.emit(dog_id))
+
+	# Content overlay (146, X-4): centred [prefix][coin pip][amount] so the price renders with the
+	# coin component. Non-interactive so the Button underneath still receives the press. The pip is
+	# gold (reads on both the blue affordable fill and the grey disabled fill); text is white when
+	# affordable, Ink-Soft when disabled — matching the button's own font colours.
+	var parts := adopt_button_parts(price, balance, affordable)
+	var text_col: Color = Color.WHITE if affordable else C_INK_SOFT
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 6)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(hbox)
+	var prefix_lbl := Label.new()
+	prefix_lbl.text = parts["prefix"]
+	prefix_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+	prefix_lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+	prefix_lbl.add_theme_color_override("font_color", text_col)
+	prefix_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(prefix_lbl)
+	if int(parts["amount"]) >= 0:
+		var pip := _CoinPip.new()
+		pip.name = "CoinPip"
+		pip.custom_minimum_size = Vector2(17.0, 17.0)
+		pip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(pip)
+		var amount_lbl := Label.new()
+		amount_lbl.text = str(int(parts["amount"]))
+		amount_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
+		amount_lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
+		amount_lbl.add_theme_color_override("font_color", text_col)
+		amount_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(amount_lbl)
+	btn.add_child(center)
 
 	return btn
 
@@ -1764,3 +1834,21 @@ class _HeartPip extends Control:
 			tip,
 		])
 		draw_colored_polygon(pts, col)
+
+# ---------------------------------------------------------------------------
+# Inner class: drawn gold coin pip for price tags + the adopt CTA (146, X-4).
+# The SAME coin component the readout draws (CoinReadout): gold face + darker
+# rim + inner ring — no font glyph (the coin emoji U+1FA99 tofus, 069 lesson),
+# GL-Compat safe. Reused so every price reads «coin + number» like the readout.
+# ---------------------------------------------------------------------------
+class _CoinPip extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		var r := minf(size.x, size.y) * 0.5
+		var c := Vector2(size.x * 0.5, size.y * 0.5)
+		draw_circle(c, r, DesignSystem.GOLD_DARK)
+		draw_circle(c, r - 1.5, DesignSystem.GOLD)
+		draw_arc(c, r * 0.55, 0.0, TAU, 20, DesignSystem.GOLD_DARK, 1.2)

@@ -176,67 +176,78 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 10) — polish-lens pass: foreground-grass fix (144) verified landed; ONE new measured X-4/X-6 legibility gap — the training progress readout (Sitt label + bar + %) washes out into the bright sky
+### PO Review — 2026-07-07 (PO, father pass 11) — polish-lens pass: readout-legibility fix (145) verified landed; TWO new buildable X-4/X-6 defects — coin-price component is inconsistent across screens, and Nova's coat identity flips between grid and inspect modal
 
-Tenth pass, run fresh and stateless under the polish/critique lens. Built the current HEAD (`fd79dc8`;
-`build/web` is the fresh `verify.sh` output at this HEAD, gate green: import·boot·test·export) and drove the
-**real** game with real taps in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
-renderer). This local bundle boots the **licensed Labrador** (`?bra_autotap=1` mark burst, completion menu via
-the Triks pill, kennel grid → scroll → owned / unaffordable / secret modals → close). **Zero console errors on
-every run.** Evidence for every claim is a screenshot I captured this pass (`.screenshots/PO9-*`, `ZOOM-*`).
+Eleventh pass, run fresh and stateless under the polish/critique lens. Rebuilt the current HEAD (`64bc92f`) with
+`nix develop -c bash verify.sh` — gate green (import·boot·test·export), 690 tests — so `build/web` is the fresh
+output at this HEAD (the prior artefact was ~20 min stale relative to the 145 commit). Served over http and drove
+the **real** game with real canvas taps in headless Chromium at 390×844 (SwiftShader == the deployed GL
+Compatibility renderer); this local bundle boots the **licensed Labrador**. Drove: `?bra_autotap=1` mark burst →
+top-readout zoom → completion menu via the Triks pill → kennel grid → owned/unaffordable/secret inspect modals →
+close. **Zero console errors on every run.** Evidence for every claim is a screenshot I captured this pass
+(`.screenshots/P11-*`).
 
-**Re-verified fixed (pruned) — the foreground-grass directive (task 144) landed and is correct:** on the
-training frame (`.screenshots/PO9-01-training-a.png`, `PO9-03-training-c.png`) the **foreground/lower lawn now
-reads even and bright** — the dark muddy blotches are gone; the near grass is bright green, at least as bright as
-the mid-field, with only a tight grounding smudge remaining under the paws (the oversized contact-shadow disc was
-the root cause, now snugged to `GARDEN_SHADOW_SPREAD 1.1` with a concentrated falloff). The lower-lawn-darkening
-half of the prior directive is resolved — removed.
+**Re-verified fixed (pruned) — the training-readout legibility directive (task 145) landed and is correct:** on
+the top readout (`.screenshots/P11-readout-zoom2.png`, 3× zoom) the «Sitt» label and the «%» number now render in
+a **dark slate ink** and read cleanly against the bright pale-blue sky; the progress track is an **opaque light
+(paper) rail**, no longer a translucent near-sky white; and a **scrim halo** sits behind the readout so the sun
+disc (143) no longer bleaches its midsection. The three sky-coloured ghosts from pass 10 are gone — the primary
+in-session feedback is legible at a glance. Prior directive resolved — removed.
 
-**Also re-verified fixed / clean (no new directive):** the **atmosphere/sky fix (143) still holds** — clean pale
-blue sky, bright sunny exposure. The **garden-coin scatter (142) still holds** — a small, spaced, two-tone
-scatter (gold discs + a rose/pink accent coin on the right flank), no oversized HUD orbs. The **modal hero-bust
-arc (135→141) holds** — every inspect modal opens on the identical front-¾ hero bust: owned Bella (green «Trener
-nå», `PO9-07-modal-bella.png`), unaffordable Nova (greyed «$900»), Trulte easter egg (pink «Påskeegg» banner,
-`PO9-07-modal-trulte.png`); only the coat tint differs, nameplate clears the legs, stat meters + Raseegenskaper
-chips + Unikt-trekk card + «Kan lære» line all legible. The **BRA button** primary CTA is punchy — near-white
-label on the raised blue pill, high contrast, matches the goal. The **completion menu** is a clean DS paper card
-(Triks heading + coin chip + trick rows + «Gi tilbakemelding» / «Fortsett treningen»), correct progressive
-disclosure. The **kennel grid** renders 8 clean distinct cells with «Din hund»/«Påskeegg»/«$30» tags + header +
-coin chip (`PO9-05-kennel-grid.png`) and reads bright and clean. Core loop lands — seated dog facing camera on
-even green grass, sunny sky, cottage + fence + path. **No structural regression** in the signed-off phases.
+**Also re-verified fixed / clean (no new directive):** the **sky/atmosphere (143)** holds — clean pale-blue sunny
+sky; the **foreground grass (144)** holds — even and bright, no muddy blotches, only a tight grounding smudge
+under the paws; the **garden-coin scatter (142)** holds — small, spaced, two-tone (gold discs + a rose accent on
+the right flank), no oversized HUD orbs. The **BRA button** primary CTA is punchy — near-white label on the raised
+blue pill (`.screenshots/P11-01-training.png`). The **completion menu** is a clean DS paper card (Triks heading +
+coin chip + Sitt/Ligg/Legg deg rows + «Gi labb · Låst» + «Gi tilbakemelding» / «Fortsett treningen»,
+`P11-03-menu.png`). The **kennel grid** renders 8 clean distinct cells with header + coin chip
+(`P11-04-kennel-grid.png`). The **modal hero-bust framing (135→141)** holds — every modal opens on the front-¾
+hero bust with the nameplate clear of the legs (Balder `P11-bust-balder.png`, Sol `P11-bust-sol.png`, Bella owned
+«Trener nå»). **No structural regression** in the signed-off phases.
 
 **Improvements**
 
-1. **The training progress readout — the «Sitt» trick label, its progress-bar track, and the mastery «%» number —
-   washes out into the bright sky and is effectively illegible; the sun sits directly behind the bar and bleaches
-   its midsection (X-4 "typography/legibility" + X-6, on the Phase-6 hero surface, newly exposed by 143's brighter
-   sky).** *What I saw:* on the training frame (`.screenshots/PO9-01-training-a.png` and `PO9-03-training-c.png`,
-   390×844; zoom `.screenshots/ZOOM-hud.png`) the whole top-of-screen training readout sits over the open pale-blue
-   sky with almost no contrast. A 1×1 region-average reads: «Sitt» label `(151,192,237)`, the progress-bar track
-   `(153,193,239)`, and the «%» readout `(151,191,236)` — **all within a few points of the bare sky itself**
-   `(168,197,228)`. Identical values on both the fresh frame and the later frame, so it is **not** a 0 %-fill
-   artefact — the label text is a faint near-sky grey, the track is a translucent near-sky white, and the number is
-   nearly invisible. Worse, the bright sun disc (143) is positioned **right behind the bar**, bleaching its
-   midsection to a washed `(192,201,188)`. *Why it falls short:* this bar is the **primary in-session feedback** —
-   how close the current trick is to mastered — and in the goal art (`.docs/specs/assets/goal-training-screen.png`)
-   it is clearly legible: a dark slate «Sitt» label, a distinct opaque light-grey track with a solid blue fill, and
-   a dark, readable «60 %». The build renders the same element as three sky-coloured ghosts, so a player can't read
-   their progress at a glance, and the sun bleeding through the bar makes the one-world read look unfinished right
-   under the crisp HUD pills. It fails AA contrast against the sky by a wide margin. *What "good" looks like:* give
-   the readout proper DS contrast so it reads on the bright sky exactly like the goal — a **dark slate «Sitt» label**
-   (DS ink, not a pale sky grey), an **opaque light track** (e.g. a DS paper/`SURFACE` pill, not a translucent
-   white that dissolves into the sky) with a solid **blue** fill, and a **dark, legible «%»** — and keep the sun
-   clear of / behind the bar (or add a subtle scrim behind the readout) so nothing bleaches it. Verify by
-   re-sampling: the «Sitt» label and the «%» glyphs should differ from the adjacent sky by a clear luminance margin
-   (target ≥ AA, ~4.5:1 for the text), and the track should read as a distinct opaque band, not sky. This is a
-   signed Phase-6 surface, so it is a cross-cutting **X-4/X-6** polish directive (the polish lens explicitly permits
-   these on signed surfaces) — buildable with no owner asset (HUD label/progress-bar styling + sun placement/scrim)
-   — and it **preempts** the owner-gated terminal state so the loop keeps improving the hero surface rather than
-   idling.
+1. **The coin currency is rendered as two different components across screens — a glyphed pill in the HUD/header
+   readout, but a bare unlabelled number everywhere a price appears in the kennel (X-4 "same component rendered
+   differently across screens" + "gold reserved to the coin").** *What I saw:* the coin **readout** (training HUD
+   pill and kennel header, `.screenshots/P11-header-chip.png`) is a **white pill with a gold coin glyph + the
+   count** («🪙 0») — the canonical coin component. But **every price** is a **bare number with no coin glyph**: the
+   grid price tags are just «900» / «50» in a solid-gold pill (`.screenshots/P11-price-zoom.png`), and the modal
+   adopt/afford action reads «Har ikke råd · mangler 900» (`.screenshots/P11-06-modal-nova.png`) — again a bare
+   number. *Why it falls short:* the same quantity (an amount of coins) is drawn one way in the readout and another
+   way at the point of purchase, and the price «900» carries **no unit** — a new player reading «900» can't tell
+   it's 900 coins vs kroner vs points, and the DS's coin identity (established by the glyphed readout) is dropped
+   exactly where affordability matters most. It also spends a full-gold pill on a plain number while the DS reserves
+   gold to *the coin* — so the gold no longer reads as "coins", just "a tag". This is a cross-cutting DS-consistency
+   gap the polish lens explicitly names. *What "good" looks like:* draw price using the **same coin component** as
+   the readout — prefix every price (grid tags, modal action, any store cost) with the **gold coin glyph** so it
+   reads «🪙 900», unambiguously coins, visually consistent with the header/HUD readout; keep the glyph + number
+   pairing identical across all four surfaces (HUD, kennel header, grid tag, modal action). Buildable, no owner
+   asset (it reuses the existing coin glyph already drawn in the readout).
+
+2. **Nova's coat identity flips between the kennel grid and her inspect modal — grey Border-collie in the grid,
+   warm cream Labrador in the modal — so the same dog reads as two different animals (X-6 cohesion, on the
+   signed-off Phase-8 kennel surface).** *What I saw:* in the grid, Nova's cell reads as a **cool grey/taupe** dog
+   (`.screenshots/P11-04-kennel-grid.png`, `P11-nova-grid.png`; coat region-average ≈ `(70,60,55)`, near-neutral).
+   Her **inspect-modal hero bust**, however, renders as a **warm cream/butter** coat (`.screenshots/P11-nova-bust.png`;
+   coat ≈ `(112,101,88)`, clearly warmer/lighter). This is **not** a global modal look: Balder keeps his **brown**
+   (`P11-bust-balder.png`, ≈ `(96,65,36)`) and Sol his **golden** (`P11-bust-sol.png`, ≈ `(128,96,52)`) into the
+   modal — only the **cool/grey** coats fail to carry through, defaulting toward the base cream rig. *Why it falls
+   short:* the modal is where the player commits to a dog's identity, and Nova visibly changes breed-colour between
+   the cell she tapped and the card that opens — the grid says "grey Border collie", the modal says "cream
+   Labrador". It breaks the one-world cohesion and undercuts the per-dog portrait tint that the grid already gets
+   right. It is **not** the owner-gated per-breed *model* gap (all dogs share the one rig by design, and that's
+   fine) — it is a **tint-parity** bug: the modal bust isn't applying the same `portrait_tint` the grid cell uses.
+   Likely also affects the other cool-coated dogs (Pontus, Trulte grey-tan). *What "good" looks like:* the modal
+   hero bust uses the **same per-dog portrait tint as the grid cell**, so a grey dog stays grey when its card opens
+   and every dog's coat is identical across the two views; verify by re-sampling Nova's coat in grid vs modal (they
+   should match within a small margin) and eyeballing Nova/Pontus/Trulte cards as cool, not cream. Buildable, no
+   owner asset (wire the existing grid tint into the modal bust render). *(Distinct from the resolved 135→141
+   framing/full-body/Bella arc — the framing and nameplate are correct; this is only the coat hue on cool dogs.)*
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
-inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-
-facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's
-next buildable work is the training-readout legibility directive above; the owner still owns the Phase-10 spec +
-the asset flags.
+inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
+**signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next
+buildable work is the two directives above (coin-component consistency + Nova/cool-coat modal tint parity); the
+owner still owns the Phase-10 spec + the asset flags.

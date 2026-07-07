@@ -1,29 +1,53 @@
 extends "res://tests/test_case.gd"
-## TDD for kennel modal CTA label helper (135, K-7 CTA states). The adopt button shows
-## different labels depending on affordability: when affordable, "Adopter  N mynt" in
-## full Bra-Blue + white; when not, a greyed disabled token with "Har ikke råd · mangler N"
-## showing the coin shortfall. This pure static helper maps price/balance/affordable → label.
+## TDD for the kennel price/CTA coin component (146, X-4). Prices must render with the SAME coin
+## component as the readout (a drawn gold coin + number), not a bare number. Two pure helpers back
+## the render glue:
+##   - price_shows_coin(row)  → does a grid price tag draw the coin? (buyable numeric price only)
+##   - adopt_button_parts(...) → splits the adopt CTA into (prefix words, coin amount) so the modal
+##     action draws [prefix][coin][amount]; amount == -1 → no coin (the free case).
 
-func test_affordable_priced_dog_shows_adopter_label() -> void:
-	## When a dog is affordable (affordable==true), the label shows "Adopter  " + price + " mynt"
-	## (note the two spaces between "Adopter" and the price, matching the existing label format).
-	var label: String = KennelScreen.adopt_button_label(300, 500, true)
-	assert_eq(label, "Adopter  300 mynt", "affordable dog (price=300, balance=500) shows 'Adopter  300 mynt'")
+# --- adopt_button_parts (modal action) ---------------------------------------
 
-func test_unaffordable_shows_shortfall_label() -> void:
-	## When not affordable (affordable==false), the label shows "Har ikke råd · mangler " + shortfall.
-	## Shortfall = price - balance (e.g. 300 - 0 = 300 coins short).
-	var label: String = KennelScreen.adopt_button_label(300, 0, false)
-	assert_eq(label, "Har ikke råd · mangler 300", "unaffordable dog (price=300, balance=0) shows shortfall of 300")
+func test_affordable_priced_dog_splits_into_prefix_and_amount() -> void:
+	## Affordable + priced → «Adopter» prefix + the price as a coin amount (the coin conveys the
+	## unit, so the old trailing " mynt" word is dropped).
+	var parts := KennelScreen.adopt_button_parts(300, 500, true)
+	assert_eq(parts["prefix"], "Adopter", "affordable prefix is 'Adopter'")
+	assert_eq(parts["amount"], 300, "affordable amount is the price (300)")
 
-func test_unaffordable_partial_balance_shows_remaining_shortfall() -> void:
-	## When the player has partial coins but still can't afford, the shortfall is price - balance.
-	## E.g. price=300, balance=120 → shortfall = 300-120 = 180.
-	var label: String = KennelScreen.adopt_button_label(300, 120, false)
-	assert_eq(label, "Har ikke råd · mangler 180", "unaffordable partial (price=300, balance=120) shows shortfall of 180")
+func test_unaffordable_splits_into_shortfall_amount() -> void:
+	## Not affordable → «Har ikke råd · mangler» prefix + the shortfall (price − balance) as a coin.
+	var parts := KennelScreen.adopt_button_parts(300, 0, false)
+	assert_eq(parts["prefix"], "Har ikke råd · mangler", "unaffordable prefix names the shortfall")
+	assert_eq(parts["amount"], 300, "unaffordable amount is the full shortfall (300)")
 
-func test_shortfall_never_negative_guards_edge_case() -> void:
-	## Guard: if price <= balance, the shortfall should never go negative. Edge case where
-	## balance==price (player has exactly enough but affordable==false, defensive).
-	var label: String = KennelScreen.adopt_button_label(50, 50, false)
-	assert_eq(label, "Har ikke råd · mangler 0", "shortfall floors at 0 when balance==price (edge case)")
+func test_unaffordable_partial_balance_shortfall() -> void:
+	var parts := KennelScreen.adopt_button_parts(300, 120, false)
+	assert_eq(parts["amount"], 180, "shortfall = price − balance (300−120 = 180)")
+
+func test_shortfall_never_negative() -> void:
+	var parts := KennelScreen.adopt_button_parts(50, 50, false)
+	assert_eq(parts["amount"], 0, "shortfall floors at 0 when balance == price")
+
+func test_free_affordable_shows_no_coin_amount() -> void:
+	## A price-0 affordable dog gets no coin (amount == -1) — nothing to charge.
+	var parts := KennelScreen.adopt_button_parts(0, 500, true)
+	assert_eq(parts["prefix"], "Adopter", "free dog still says 'Adopter'")
+	assert_eq(parts["amount"], -1, "free dog has no coin amount (-1)")
+
+# --- price_shows_coin (grid tag) ---------------------------------------------
+
+func test_buyable_dog_price_shows_coin() -> void:
+	## A buyable dog (not owned, not secret) renders its numeric price with the coin component.
+	assert_true(KennelScreen.price_shows_coin({"owned": false, "secret": false}),
+		"buyable dog draws the coin on its price tag")
+
+func test_owned_dog_price_shows_no_coin() -> void:
+	## Owned shows the «Din» status word, not a price → no coin.
+	assert_false(KennelScreen.price_shows_coin({"owned": true, "secret": false}),
+		"owned dog («Din») is a status word, not a coin price")
+
+func test_secret_dog_price_shows_no_coin() -> void:
+	## Secret shows «Gratis» → no coin.
+	assert_false(KennelScreen.price_shows_coin({"owned": false, "secret": true}),
+		"secret dog («Gratis») is a status word, not a coin price")
