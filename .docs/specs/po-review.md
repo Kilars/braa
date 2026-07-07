@@ -176,59 +176,42 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 24) — polish-lens pass: pass-23 directive (159 opaque learned-bar backing panel) verified landed and correct in-pixel; ONE new buildable X-4/X-7 defect — the **kennel grid + modal portraits** render with dark **speckle noise around every dog's muzzle** (fine whisker/lip detail aliasing) because the shared portrait SubViewport is a low-res 384×340 target with no MSAA, then upscaled into the cells
+### PO Review — 2026-07-07 (PO, father pass 26) — polish-lens pass: verified 160 (kennel-portrait render) still clean; drove the **completion menu with its «Raser» breed section revealed** (`?bra_coins=120`) — a surface the recent AA/render arc never opened — and caught the one remaining English string in the otherwise fully-Norwegian menu, rendered **truncated** to boot. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Twenty-fourth pass, run fresh and stateless under the polish/critique lens. HEAD is `e1c0f9a` (the 159 opaque-panel commit).
-I reviewed the **fresh local licensed bundle** — `build/web` at this HEAD (pck built 11:16, no source newer; `SCRIM_COLOR` = `DesignSystem.PAPER`
-confirmed in `learned_bar.gd:48`), served over http and driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (near-native, no
-downscale wash; SwiftShader == the deployed GL Compatibility renderer) — via a `?bra_autotap=1` boot (bar fills to «Sitt 23%»), the
-**completion/trick menu** (`window.__bra_menu_open` = `true`), the **kennel grid** (`window.__bra_kennel_cells` = all 8 cell centres), and the
-**Nova** inspect modal (buyable/«Episk» → unaffordable adopt). `window.__bra_current_trick` = `sitt`; **zero console errors** on every run.
-Evidence is screenshots I captured this pass (`.screenshots/P24-*`) plus PIL pixel crops + the code tokens I read, and the goal art
-(`.docs/specs/assets/goal-training-screen.png`).
+Twenty-sixth pass, fresh and stateless under the polish/critique lens. HEAD is `5050877` (the 160 kennel-portrait commit).
+Reviewed the **fresh local licensed bundle** (`build/web` at this HEAD, gate green earlier this session), served over http and driven in headless
+Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). This pass I booted with
+`?bra_autotap=1&bra_coins=120` specifically to **reveal the completion menu's «Raser» (breeds) section** — `MenuReveal.reveal_breeds` gates it on
+`balance ≥ adopt_cost`, so every prior polish pass (fresh-save, Triks-only) never saw it. `window.__bra_menu_open` = `true`, `window.__bra_balance`
+= 120, `window.__bra_breed_rows` = Labrador (active) + chocolate_labrador (buyable 30). **Zero console errors** (exit 0). Evidence: this pass's
+screenshots (`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`) + a 3× crop (`/tmp/p26_choc_row.png`) + the code I read
+(`scripts/breed_personality.gd:52`, `scripts/trick_menu.gd:943`), against the goal art (`.docs/specs/assets/goal-training-screen.png`).
 
-**Re-verified fixed (pruned) — the pass-23 learned-bar-opacity directive (159) landed and the backing panel is now fully opaque:** I sampled
-the «Sitt … 0/23%» readout panel across its full width on the training HUD (`.screenshots/P24-01-training.png` + HUD crop; `/tmp/train_mid.png`
-confirms the sun sits right behind the bar's mid-section). Every x from 30→360 — including the mid-section directly over the sun — now reads a
-**uniform `(251,251,247)` = DS `PAPER`** (was warm `(251,238,195)` over the sun, blue `(173,192,212)` over sky). No sky or sun bleeds through at
-any point; the readout is now a crisp opaque white chip that reads as one system with the nav «Triks»/«Kennel» + coin pills beside it (all
-`(251,251,247)`). The dark `INK` «Sitt»/«%» labels, the opaque inner progress track (blue fill at 23%), and the text scrim from 145 are all
-kept. Directive resolved — removed.
-
-**Also re-verified clean (no new directive):** (a) **158 adopt button** — Nova's «Har ikke råd · mangler 🪙 900» renders dark `C_TAG_INK` on
-grey `C_ADOPT_DISABLED` with a gold coin pip, clearly legible (`.screenshots/P24-04-modal-nova.png`, crop `/tmp/nova_adopt2.png`); (b) **157
-spelling** — the modal's «Kan lære: Sitt · Ligg · Legg deg» renders the real æ; (c) the **149→158 WCAG AA sweep** holds — rarity/status/owned
-badges, trait chips, secondary text (156), menu blue-on-light (154), CTAs (153), owned-status pills (151), HUD nav pills all clear 4.5:1; (d)
-the **completion/trick menu** reads as one system (`.screenshots/P24-02-menu.png`) — «Sitt» «Trener nå» pale-blue active row (152),
-«Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA; the fresh-save menu correctly
-shows only the Triks section (breeds/words/difficulty progressive-disclosure-gated, verified in prior passes); (e) the **kennel grid** — front-¾
-yaw (155), calm owned/secret cell tints (150), corner rarity badges (148/149), 8 cells legible with grounding shadow ellipses
-(`.screenshots/P24-03-kennel-grid.png`). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream
+Labrador on green grass with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque
+«Sitt … %» learned bar (159), «Triks»/«Kennel»/coin HUD pills, big blue BRA (153); the 160 kennel-portrait render remains clean from pass 25 (grid +
+modal muzzles smooth). (b) The rest of the completion menu reads as one system (`P26-02-menu-full.png`) — «Sitt» «Trener nå» pale-blue active row
+(152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Vis frem hundene» / «Gi tilbakemelding» ghost + «Fortsett treningen» primary, all
+Norwegian and AA-legible (154). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The kennel portraits (all 8 grid cells *and* the inspect-modal hero bust) render with dark speckle noise scattered around each dog's
-   muzzle/mouth — fine whisker/lip detail aliasing into dirt-like dots at the small render size — because the shared portrait SubViewport is a
-   low-resolution 384×340 target with no multisampling, then upscaled to fill a ~195 px cell (and ~2× in the modal). It reads as noise on the
-   one surface whose whole job is to show the dog off.** *What I saw:* zooming 3× into Bella's and Nova's muzzles in the grid
-   (`.screenshots/P24-03-kennel-grid.png`; crops `/tmp/bella_mouth.png`, `/tmp/nova_mouth.png`) shows a peppering of small dark dots across the
-   lower muzzle/jaw **and floating in the empty cell air just past the mouth** (whisker tips extending off the snout, aliased into disconnected
-   specks) — the same speckle recurs on the modal hero bust (`.screenshots/P24-04-modal-nova.png`). By contrast, at the **large training-scale**
-   the exact same licensed rig renders **clean, smooth fur** under the identical SwiftShader renderer (`/tmp/train_muzzle.png` — no speckle), so
-   this is not the asset or a capture artifact: it is specifically the **small portrait render** aliasing. *Why it's caused by the render config
-   (I read the code):* `kennel_screen.gd:87` `PORTRAIT_VP_SIZE := Vector2i(384, 340)` and the SubViewport built at `:706` sets no `msaa_3d` /
-   `screen_space_aa` — so the dog is rasterised at 384 px with no anti-aliasing and then magnified into the cell, turning thin whisker geometry
-   into stair-stepped dark dots. *Why it falls short:* the portrait is the kennel's hero element (the reason all 8 cells exist), and the prompt's
-   "cohesion & feel — dog… should read as one stylized-realistic world" / "zoom in and compare pixel-for-pixel before you accept it" bar: clean
-   at training scale, gritty in the kennel is an inconsistency, and the muzzle dirt cheapens an otherwise-polished grid. *What "good" looks like:*
-   raise the portrait render quality so the muzzle/whiskers resolve as clean detail with no floating specks — enable MSAA (`vp.msaa_3d =
-   Viewport.MSAA_4X`) and/or bump `PORTRAIT_VP_SIZE` so the SubViewport renders at (or above) the cell's on-screen pixel size instead of being
-   upscaled from 384. Verify in a 3× muzzle crop of a grid cell that the whiskers read as clean lines and no dark specks float in the cell
-   background. Buildable, no owner asset — a SubViewport render-quality change confined to `kennel_screen.gd`, orthogonal to the 155 yaw / 117
-   tint / 140 modal-framing work (do not change the pose, yaw, coat tint, or framing).
+- **The adoptable breed's display name is English — «Chocolate Labrador» — and, being long, elides to an ugly «Chocolate…» in the Norwegian
+  completion menu.** *What I saw:* in the menu's «Raser» section the buyable second breed renders as **«Chocolate…»** (truncated, trailing ellipsis)
+  directly beneath the un-elided **«Labrador»** active row (`.screenshots/P26-02-menu-full.png`; 3× crop `/tmp/p26_choc_row.png`). The source string
+  is the literal English `"Chocolate Labrador"` (`scripts/breed_personality.gd:52`), and `trick_menu.gd:943` `_elide()`s it to fit under the
+  right-aligned «Adopter 30» badge, so the tail is dropped. *Why it's wrong:* (1) **localization** — this is the **one** English string left in a menu
+  that is otherwise 100 % Norwegian («Triks», «Sitt», «Ligg», «Legg deg», «Tilgjengelig», «Låst», «Raser», «Aktiv», «Adopter», «Trener nå», «Vis frem
+  hundene», «Gi tilbakemelding», «Fortsett treningen»); it's exactly the class of slip the 138 (menu→Norwegian) and 157 («Kan laere»→«Kan lære»)
+  passes set out to eliminate, and it sits right next to «Labrador» so the language clash is obvious. (2) **typography** — the ellipsis reads as a
+  render defect, drops the identifying word, and looks broken beside the fully-shown «Labrador» one row up. *What "good" looks like:* repoint the
+  display name (`breed_personality.gd:52`, the second `BreedPersonality.new(...)` arg — the `id` stays `chocolate_labrador`, this is display-only) to a
+  **Norwegian** name that is **short enough to render un-elided** within the row's `name_max_w` (≈ half the ~200 px card row, left of the «Adopter 30»
+  badge) — e.g. «Brun labrador» or «Sjokoladelab». Note the fully-correct «Sjokoladelabrador» is *longer* than the English string and would still
+  truncate, so a fitting short form is required, not just a 1:1 translation. Verify in-pixel that the chosen name shows **complete, no ellipsis** in the
+  «Raser» row (and, since the same display name feeds the spotlit breed showcase, that it reads clean there too).
 
-**No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
-**empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
-inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
-**signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the kennel-portrait render-quality fix above; the owner still owns the Phase-10 spec + the asset flags.
+**No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
+cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing
+asset flags (distinct per-breed **models**, camera-facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated.
+The build loop turns the directive above into the next task.

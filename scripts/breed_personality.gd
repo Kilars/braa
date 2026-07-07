@@ -49,7 +49,14 @@ static func chocolate_labrador() -> BreedPersonality:
 	# Coat tint tuned against the REAL render (076 Visual Review): the bust's computed ~#AA7D51 came out
 	# a light, reddish milk-chocolate under the bright scene sun — darkened toward a deeper coffee brown
 	# (~#805E42) so it reads unmistakably as a Chocolate Lab, not a fox-red / muddy-yellow lab.
-	return BreedPersonality.new("chocolate_labrador", "Chocolate Labrador",
+	# Display name is Norwegian AND short (076/138/157 localization; PO father-pass-26): the English
+	# "Chocolate Labrador" was the one English string left in the otherwise 100%-Norwegian «Raser» menu,
+	# and it elided to «Chocolate…» under the «Adopter 30» badge. The breed-row name budget is only ~132 px
+	# at NAME_SIZE 26 (Nunito Bold) once the wide «Adopter 30» badge is subtracted — measured in-engine, so
+	# «Brun labrador» (155 px) and even the PO's «Sjokoladelab» (145 px) still elide. «Brun lab» (96 px) —
+	# "brown lab", the everyday Norwegian short form, matching the brown coat swatch beside it and pairing
+	# cleanly with «Labrador» one row up — renders COMPLETE. The id stays "chocolate_labrador" (display-only).
+	return BreedPersonality.new("chocolate_labrador", "Brun lab",
 		1.1, 1.1, 1.0, 1.1, Color(0.50, 0.37, 0.26))
 
 ## Resolved levers (callers use these, not the raw multipliers) — each composes a trait with the

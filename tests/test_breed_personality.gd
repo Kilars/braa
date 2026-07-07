@@ -69,6 +69,28 @@ func test_chocolate_labrador_is_a_distinct_breed() -> void:
 	assert_true(choc.perfect_gain() > TrickProgress.PERFECT_GAIN,
 		"still very trainable (a retriever base — learns faster than the neutral baseline)")
 
+func test_chocolate_labrador_display_name_is_norwegian_and_short() -> void:
+	# PO father-pass-26: the «Raser» menu row rendered the English literal "Chocolate Labrador",
+	# which elided to «Chocolate…» beside the un-elided «Labrador» — the one English string left in
+	# an otherwise 100%-Norwegian menu, dropping the identifying word to boot. The display name must be
+	# Norwegian AND short enough to render un-elided (fully-correct «Sjokoladelabrador» is LONGER than
+	# the English and would still truncate under the «Adopter 30» badge). The id stays untouched.
+	var choc := BreedPersonality.chocolate_labrador()
+	assert_eq(choc.id, "chocolate_labrador", "the id is unchanged — this is a display-only repoint")
+	assert_false("Chocolate" in choc.display_name,
+		"no English 'Chocolate' left in the display name (localization slip)")
+	assert_false("Labrador" in choc.display_name,
+		"the English 'Labrador' spelling is gone too — a Norwegian name, not a mixed string")
+	# Rendered narrow enough to sit un-elided in the «Raser» buyable row. The row's name budget is only
+	# ~132 px at NAME_SIZE (Nunito Bold 26) once the wide «Adopter 30» badge is subtracted (trick_menu.gd
+	# _draw_breed_row / name_max_w) — a font-accurate guard, not a char count, because «Brun labrador» is
+	# 13 chars yet renders 155 px and elides. Assert ≤ 120 px so the fix keeps a safe margin under 132.
+	var f := DesignSystem.font_body_bold()
+	var name_w := f.get_string_size(choc.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		DesignSystem.T_TITLE).x
+	assert_true(name_w <= 120.0,
+		"renders un-elided in the breed row (%.0f px ≤ 120, under the ~132 px name budget)" % name_w)
+
 # ---- the catalog / resolver the roster + adopt-select menu read (079) ------------------------------
 
 func test_by_id_resolves_known_breeds() -> void:
