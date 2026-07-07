@@ -42,7 +42,10 @@ signal difficulty_chosen(id: String)
 
 ## Each known trick's standing in the collection. LOCKED covers both the owner-gated absent tricks and
 ## anything the loaded dog simply can't perform (the honest CC0 read) — neither is ever trainable.
-enum State { LEARNED, AVAILABLE, LOCKED }
+## ACTIVE = the trick currently being trained (the HUD's trick) — muted + non-tappable, absorbs its
+## tap (mirrors BreedState.ACTIVE / WordState.ACTIVE + the kennel's «Trener nå», 151/152). Appended so
+## the existing LEARNED/AVAILABLE/LOCKED ordinals are unchanged.
+enum State { LEARNED, AVAILABLE, LOCKED, ACTIVE }
 
 ## Each breed's standing in the roster (079, P3-D3/P3-4). ACTIVE = the running dog (absorbs a tap);
 ## OWNED = adopted but not active (tap → switch); BUYABLE = unowned + affordable (tap → adopt, spends
@@ -71,6 +74,7 @@ const BADGE := {
 	State.LEARNED: "Lært",
 	State.AVAILABLE: "Tilgjengelig",
 	State.LOCKED: "Låst",
+	State.ACTIVE: "Trener nå",   ## the trick you're training now — same wording the kennel uses (151)
 }
 
 ## Layout, homed here (no scattered literals — cf. 029). Design space; the panel centres in whatever
@@ -154,6 +158,12 @@ const NAME_LOCKED := DesignSystem.SLATE_SOFT
 const BADGE_LEARNED := DesignSystem.BLUE
 const BADGE_AVAILABLE := DesignSystem.BLUE
 const BADGE_LOCKED := DesignSystem.SLATE_SOFT
+## The ACTIVE (currently-trained) trick row (152, X-6): the 151 owned-status treatment carried into
+## the trick selector so all four selection surfaces (tricks·breeds·words·kennel) read as one system.
+## A muted, OPAQUE pale-BLUE wash (non-tappable — it must NOT look like a live pressable button) with a
+## dark ink label + badge that clears WCAG AA on that wash (the legibility bar the loop set in 149/151).
+const ROW_BG_ACTIVE := Color(0.902, 0.933, 0.988)   ## opaque pale-blue wash (CREAM lerped toward BLUE ~14%)
+const ROW_ACTIVE_INK := Color("141c26")             ## the shared dark status/badge ink (== kennel C_TAG_INK)
 ## Coin GOLD reserved for the Buyable breed-price badge (the header balance is now the shared
 ## CoinReadout pill, 129 — not a bespoke hand-draw). GOLD_DARK / the number colour moved into
 ## CoinReadout, so only the price-badge GOLD remains here.
@@ -270,17 +280,24 @@ func _init() -> void:
 
 ## Classify each known trick for the menu (pure — the honesty split is unit-locked). `performable` are
 ## the ids the loaded dog can actually do; `mastered` maps id→bool; `locked` are the genuinely-absent
-## roadmap ids that must ALWAYS read Locked (never trainable) regardless of anything else.
-static func classify(all_ids: Array, performable: Array, mastered: Dictionary, locked: Array) -> Array:
+## roadmap ids that must ALWAYS read Locked (never trainable) regardless of anything else. `active` is
+## the trick currently being trained (152): a performable, non-locked id equal to `active` reads ACTIVE,
+## taking precedence over LEARNED/AVAILABLE so a mastered active trick isn't an anonymous «Lært» row.
+## Default "" marks nothing active — old callers/tests are byte-for-byte unchanged.
+static func classify(all_ids: Array, performable: Array, mastered: Dictionary, locked: Array, active := "") -> Array:
 	var rows: Array = []
 	for id in all_ids:
 		var st := State.LOCKED
 		if not locked.has(id) and performable.has(id):
-			st = State.LEARNED if mastered.get(id, false) else State.AVAILABLE
+			if id == active:
+				st = State.ACTIVE
+			else:
+				st = State.LEARNED if mastered.get(id, false) else State.AVAILABLE
 		rows.append({"id": id, "state": st})
 	return rows
 
-## Whether a state is choosable (a Locked trick never is — the never-fake gate).
+## Whether a state is choosable. Only LEARNED/AVAILABLE emit — a Locked trick never is (the never-fake
+## gate), and the ACTIVE (currently-trained) trick absorbs its tap (152, mirrors breed/word ACTIVE).
 static func is_selectable(state: int) -> bool:
 	return state == State.LEARNED or state == State.AVAILABLE
 
@@ -860,12 +877,17 @@ func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var rect := _row_rect(i)
 	var st: int = r.state
 	var locked := st == State.LOCKED
-	# DS pill row background: CREAM for active/available, near-invisible SLATE_SOFT tint for locked.
-	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	var active := st == State.ACTIVE
+	# DS pill row background: the muted pale-BLUE wash for the ACTIVE (currently-trained) trick (152),
+	# CREAM for available/learned, near-invisible SLATE_SOFT tint for locked.
+	var row_bg := ROW_BG_ACTIVE if active else (ROW_BG_LOCKED if locked else ROW_BG)
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
-	# Trick name, left; state badge, right.
+	# Trick name, left; state badge, right. The ACTIVE row draws its label in the dark 151 status ink
+	# on the muted wash (clears AA, reads as the confident current-trick row — not a live button).
 	var name_col := NAME_LOCKED
-	if st == State.LEARNED:
+	if st == State.ACTIVE:
+		name_col = ROW_ACTIVE_INK
+	elif st == State.LEARNED:
 		name_col = NAME_LEARNED
 	elif st == State.AVAILABLE:
 		name_col = NAME_AVAILABLE
@@ -874,7 +896,9 @@ func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 		display_name(r.id), NAME_SIZE, name_col)
 	var badge: String = BADGE[st]
 	var badge_col := BADGE_LOCKED
-	if st == State.LEARNED:
+	if st == State.ACTIVE:
+		badge_col = ROW_ACTIVE_INK
+	elif st == State.LEARNED:
 		badge_col = BADGE_LEARNED
 	elif st == State.AVAILABLE:
 		badge_col = BADGE_AVAILABLE

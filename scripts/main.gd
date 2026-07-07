@@ -2312,7 +2312,9 @@ func _menu_rows() -> Array:
 	for id in KNOWN_TRICKS:
 		var p: TrickProgress = _progress_by_trick.get(id)
 		mastered[id] = p != null and p.mastered
-	return TrickMenu.classify(all_ids, _selectable_tricks(), mastered, ROADMAP_LOCKED_TRICKS)
+	# Mark the trick we're training now (152, X-6) so the selector shows an ACTIVE state like its
+	# breed/word siblings + the kennel — instead of the current trick reading as an anonymous row.
+	return TrickMenu.classify(all_ids, _selectable_tricks(), mastered, ROADMAP_LOCKED_TRICKS, _current_trick)
 
 ## Feed the current trick rows + breed rows + word rows + coin balance into the menu (called just before it shows).
 func _refresh_trick_menu() -> void:

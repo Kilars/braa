@@ -59,6 +59,39 @@ func test_is_selectable_only_for_learned_and_available() -> void:
 	assert_true(TrickMenu.is_selectable(TrickMenu.State.AVAILABLE), "an available trick can be picked")
 	assert_false(TrickMenu.is_selectable(TrickMenu.State.LOCKED), "a locked trick can never be picked")
 
+# ---- ACTIVE: the currently-trained trick is marked, muted + non-tappable (152, X-6) ----------------
+
+func test_classify_active_trick_reads_active_even_when_mastered() -> void:
+	# The trick you're training (`active`) reads ACTIVE, taking precedence over LEARNED/AVAILABLE —
+	# so a mastered active trick no longer reads the identical «Lært» as any other learned trick.
+	var rows := TrickMenu.classify(
+		[SITT, LIGG, "gi_labb"],
+		[SITT, LIGG],
+		{SITT: true, LIGG: false},    # SITT mastered
+		LOCKED,
+		SITT)                          # SITT is the active trick
+	assert_eq(rows[0].state, TrickMenu.State.ACTIVE, "the active trick reads ACTIVE (over LEARNED)")
+	assert_eq(rows[1].state, TrickMenu.State.AVAILABLE, "a non-active performable trick is unchanged")
+	assert_eq(rows[2].state, TrickMenu.State.LOCKED, "a locked trick is unaffected by active")
+
+func test_classify_active_defaults_to_none() -> void:
+	# No active arg → nothing reads ACTIVE (byte-for-byte the pre-152 behaviour for old callers).
+	var rows := TrickMenu.classify([SITT, LIGG], [SITT, LIGG], {SITT: true}, LOCKED)
+	assert_eq(rows[0].state, TrickMenu.State.LEARNED, "no active arg → mastered reads LEARNED, not ACTIVE")
+
+func test_active_trick_is_not_selectable() -> void:
+	# The active row absorbs its tap — it must NOT re-emit trick_chosen (mirrors breed/word ACTIVE).
+	assert_false(TrickMenu.is_selectable(TrickMenu.State.ACTIVE), "the active trick absorbs its tap")
+
+func test_active_badge_uses_kennel_wording() -> void:
+	assert_eq(TrickMenu.BADGE[TrickMenu.State.ACTIVE], "Trener nå", "ACTIVE badge matches the kennel «Trener nå»")
+
+func test_active_row_label_clears_wcag_aa() -> void:
+	# The 151 style: dark C_TAG_INK ink on the muted wash must clear WCAG AA 4.5:1 (the legibility
+	# bar the loop set for status pills in 149/151), so the current-trick row is never a ghost.
+	var ratio := KennelScreen.wcag_contrast(TrickMenu.ROW_ACTIVE_INK, TrickMenu.ROW_BG_ACTIVE)
+	assert_true(ratio >= 4.5, "active-row ink on its wash clears AA (got %.2f:1)" % ratio)
+
 # ---- hit-map: a tap → the trick id under it (selectable only) --------------------------------------
 
 func test_id_at_maps_a_tap_to_a_selectable_row() -> void:
