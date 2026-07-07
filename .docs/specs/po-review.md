@@ -176,63 +176,67 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 9) — polish-lens pass: sky/atmosphere fix (143) verified landed; ONE new measured X-4 gap — foreground grass reads dark/muddy/blotchy vs the goal's even bright lawn
+### PO Review — 2026-07-07 (PO, father pass 10) — polish-lens pass: foreground-grass fix (144) verified landed; ONE new measured X-4/X-6 legibility gap — the training progress readout (Sitt label + bar + %) washes out into the bright sky
 
-Ninth pass, run fresh and stateless under the polish/critique lens. Built the current HEAD (`4b212ed`;
+Tenth pass, run fresh and stateless under the polish/critique lens. Built the current HEAD (`fd79dc8`;
 `build/web` is the fresh `verify.sh` output at this HEAD, gate green: import·boot·test·export) and drove the
 **real** game with real taps in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
 renderer). This local bundle boots the **licensed Labrador** (`?bra_autotap=1` mark burst, completion menu via
 the Triks pill, kennel grid → scroll → owned / unaffordable / secret modals → close). **Zero console errors on
-every run.** Evidence for every claim is a screenshot I captured this pass (`.screenshots/PO9-*`).
+every run.** Evidence for every claim is a screenshot I captured this pass (`.screenshots/PO9-*`, `ZOOM-*`).
 
-**Re-verified fixed (pruned) — the atmosphere/sky directive (task 143) landed and is correct:** on the training
-frame (`.screenshots/PO9-01-training-a.png`, `PO9-03-training-c.png`) the **sky now reads a clean pale blue** —
-an upper-sky region scan gives `(168,193,206)` (B > G > R by a clear margin, was a grey-brown `(166,156,127)`
-haze last pass) with a small contained sun disc instead of a blown-out white blob; overall exposure is lifted and
-the scene reads as a **bright sunny day**, no longer dusk/overcast. The grey-brown-sky half of the prior
-directive is resolved — removed. (The grass half is only partly closed — see the new directive below.)
+**Re-verified fixed (pruned) — the foreground-grass directive (task 144) landed and is correct:** on the
+training frame (`.screenshots/PO9-01-training-a.png`, `PO9-03-training-c.png`) the **foreground/lower lawn now
+reads even and bright** — the dark muddy blotches are gone; the near grass is bright green, at least as bright as
+the mid-field, with only a tight grounding smudge remaining under the paws (the oversized contact-shadow disc was
+the root cause, now snugged to `GARDEN_SHADOW_SPREAD 1.1` with a concentrated falloff). The lower-lawn-darkening
+half of the prior directive is resolved — removed.
 
-**Also re-verified fixed / clean (no new directive):** the **garden-coin scatter (task 142) still holds** — the
-training frame shows a small, spaced, two-tone scatter (gold discs + a rose/pink accent coin on the right flank),
-no oversized HUD orbs. The **modal hero-bust arc (135→141) holds** — every inspect modal opens on the identical
-front-¾ hero bust: owned Bella (green «Trener nå», `PO9-07-modal-bella.png`), unaffordable Nova (greyed «$900»),
-Trulte easter egg (pink «Påskeegg» banner, `PO9-07-modal-trulte.png`); only the coat tint differs, nameplate
-clears the legs, stat meters + Raseegenskaper chips + Unikt-trekk card + «Kan lære» line all legible. The **BRA
-button** primary CTA is punchy — near-white label on the raised blue pill `(105,159,237)`, high contrast, matches
-the goal. The **completion menu** is a clean DS paper card (Triks heading + coin chip + trick rows + «Gi
-tilbakemelding» / «Fortsett treningen»), correct progressive disclosure. The **kennel grid** renders 8 clean
-distinct cells with «Din hund»/«Påskeegg»/«$30» tags + header + coin chip (`PO9-05-kennel-grid.png`) and reads
-bright and clean. Core loop lands — seated dog facing camera on green grass, sunny sky, cottage + fence + path.
-**No structural regression** in the signed-off phases.
+**Also re-verified fixed / clean (no new directive):** the **atmosphere/sky fix (143) still holds** — clean pale
+blue sky, bright sunny exposure. The **garden-coin scatter (142) still holds** — a small, spaced, two-tone
+scatter (gold discs + a rose/pink accent coin on the right flank), no oversized HUD orbs. The **modal hero-bust
+arc (135→141) holds** — every inspect modal opens on the identical front-¾ hero bust: owned Bella (green «Trener
+nå», `PO9-07-modal-bella.png`), unaffordable Nova (greyed «$900»), Trulte easter egg (pink «Påskeegg» banner,
+`PO9-07-modal-trulte.png`); only the coat tint differs, nameplate clears the legs, stat meters + Raseegenskaper
+chips + Unikt-trekk card + «Kan lære» line all legible. The **BRA button** primary CTA is punchy — near-white
+label on the raised blue pill, high contrast, matches the goal. The **completion menu** is a clean DS paper card
+(Triks heading + coin chip + trick rows + «Gi tilbakemelding» / «Fortsett treningen»), correct progressive
+disclosure. The **kennel grid** renders 8 clean distinct cells with «Din hund»/«Påskeegg»/«$30» tags + header +
+coin chip (`PO9-05-kennel-grid.png`) and reads bright and clean. Core loop lands — seated dog facing camera on
+even green grass, sunny sky, cottage + fence + path. **No structural regression** in the signed-off phases.
 
 **Improvements**
 
-1. **The foreground/lower grass reads dark, muddy, and blotchy — the closest, most prominent lawn is the
-   darkest part of the scene, the opposite of the goal art's even bright green (X-4 "cohesion & feel"; the
-   remaining half of the owner's background-vs-mockup gap).** *What I saw:* on the training frame
-   (`.screenshots/PO9-03-training-c.png`, 390×844) the sky and the mid-field grass near the dog are now bright
-   (mid-band open grass ≈ `(112,171,110)`), but a vertical scan down the left grass column shows the grass
-   **darkening sharply toward the foreground** — green channel falls from ≈175 at mid-height (y≈0.45) to
-   **≈92 at y≈0.65 and ≈106 at y≈0.75**, and a region-average of the whole lower grass band reads a dark muddy
-   `(48–74, 76–115, 48–72)`. A 2× zoom of the lower-left grass (I captured it) shows irregular **dark cloud-like
-   blotches** — high-contrast FBM noise — rather than a clean lawn. *Why it falls short:* the goal art
-   (`.docs/specs/assets/goal-training-screen.png`) grass is a near-**uniform bright green** across the entire
-   field — region-averages `(132–142, 182–190, 100–111)` at both mid-height and foreground, with only subtle
-   variation and **no dark patches**. The build inverts this: the nearest grass (which should read brightest,
-   sunlit, and inviting) is the murkiest, so the hero surface looks shadowed/dirty at the bottom and fights the
-   sunny sky that 143 just delivered — the one-world read still breaks against the clean, evenly-lit kennel grid.
-   *What "good" looks like:* even out the grass lighting/tone so the foreground is **at least as bright** as the
-   mid-field, and tame the FBM dark-patch contrast (raise the dark end of the grass colour ramp / `GRASS_TONES`
-   so the darkest blotches aren't muddy) toward the goal's clean near-uniform lawn. Verify by re-sampling: open
-   foreground grass green channel should be within ~15 % of the mid-field and **never drop below ≈100**, with no
-   region reading darker than a subtle variation of the goal green `(≈135,185,105)`. This is a signed Phase-6
-   surface, so it is a cross-cutting **X-4** polish directive (the polish lens explicitly permits these on signed
-   surfaces) — buildable with no owner asset (grass material / colour-ramp + ambient/vignette tuning), and it
-   **preempts** the owner-gated terminal state so the loop keeps improving the hero surface rather than idling.
+1. **The training progress readout — the «Sitt» trick label, its progress-bar track, and the mastery «%» number —
+   washes out into the bright sky and is effectively illegible; the sun sits directly behind the bar and bleaches
+   its midsection (X-4 "typography/legibility" + X-6, on the Phase-6 hero surface, newly exposed by 143's brighter
+   sky).** *What I saw:* on the training frame (`.screenshots/PO9-01-training-a.png` and `PO9-03-training-c.png`,
+   390×844; zoom `.screenshots/ZOOM-hud.png`) the whole top-of-screen training readout sits over the open pale-blue
+   sky with almost no contrast. A 1×1 region-average reads: «Sitt» label `(151,192,237)`, the progress-bar track
+   `(153,193,239)`, and the «%» readout `(151,191,236)` — **all within a few points of the bare sky itself**
+   `(168,197,228)`. Identical values on both the fresh frame and the later frame, so it is **not** a 0 %-fill
+   artefact — the label text is a faint near-sky grey, the track is a translucent near-sky white, and the number is
+   nearly invisible. Worse, the bright sun disc (143) is positioned **right behind the bar**, bleaching its
+   midsection to a washed `(192,201,188)`. *Why it falls short:* this bar is the **primary in-session feedback** —
+   how close the current trick is to mastered — and in the goal art (`.docs/specs/assets/goal-training-screen.png`)
+   it is clearly legible: a dark slate «Sitt» label, a distinct opaque light-grey track with a solid blue fill, and
+   a dark, readable «60 %». The build renders the same element as three sky-coloured ghosts, so a player can't read
+   their progress at a glance, and the sun bleeding through the bar makes the one-world read look unfinished right
+   under the crisp HUD pills. It fails AA contrast against the sky by a wide margin. *What "good" looks like:* give
+   the readout proper DS contrast so it reads on the bright sky exactly like the goal — a **dark slate «Sitt» label**
+   (DS ink, not a pale sky grey), an **opaque light track** (e.g. a DS paper/`SURFACE` pill, not a translucent
+   white that dissolves into the sky) with a solid **blue** fill, and a **dark, legible «%»** — and keep the sun
+   clear of / behind the bar (or add a subtle scrim behind the readout) so nothing bleaches it. Verify by
+   re-sampling: the «Sitt» label and the «%» glyphs should differ from the adjacent sky by a clear luminance margin
+   (target ≥ AA, ~4.5:1 for the text), and the track should read as a distinct opaque band, not sky. This is a
+   signed Phase-6 surface, so it is a cross-cutting **X-4/X-6** polish directive (the polish lens explicitly permits
+   these on signed surfaces) — buildable with no owner asset (HUD label/progress-bar styling + sun placement/scrim)
+   — and it **preempts** the owner-gated terminal state so the loop keeps improving the hero surface rather than
+   idling.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-
 facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's
-next buildable work is the foreground-grass directive above; the owner still owns the Phase-10 spec + the
-asset flags.
+next buildable work is the training-readout legibility directive above; the owner still owns the Phase-10 spec +
+the asset flags.

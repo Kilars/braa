@@ -32,3 +32,28 @@ func test_advance_is_inert_without_a_setback() -> void:
 	var bar := LearnedBar.new()
 	bar.advance(1.0)
 	assert_false(bar.is_flashing(), "advancing with no pending setback does nothing")
+
+# ── 145 (PO father-pass-10, X-4/X-6): the readout must READ on 143's bright sky ──────
+# The label/% washed into the pale sky (mid-grey SLATE) and the track was translucent
+# (BORDER @ .9) so the sun bled through it. These render-free asserts lock the fix:
+# dark ink text, an opaque light rail, and a scrim behind the readout.
+
+func test_label_and_percent_are_dark_ink_for_contrast_on_sky() -> void:
+	# INK on the pale sky (~luminance 0.52) clears AA; mid-grey SLATE (the old value,
+	# luminance ~0.16) did not. Guard the label + % stay dark.
+	assert_true(LearnedBar.LABEL_COLOR.get_luminance() < 0.20,
+		"the trick label is dark ink, not a pale sky grey")
+	assert_true(LearnedBar.PCT_COLOR.get_luminance() < 0.20,
+		"the percentage is dark ink, legible against the bright sky")
+
+func test_track_is_opaque_and_light_so_the_sun_cannot_bleed_through() -> void:
+	assert_eq(LearnedBar.TRACK_COLOR.a, 1.0,
+		"the track is opaque — a translucent track let the sun bleach its midsection")
+	assert_true(LearnedBar.TRACK_COLOR.get_luminance() > 0.80,
+		"the track is a light rail so the blue fill reads against it")
+
+func test_a_scrim_backs_the_readout_against_the_sun() -> void:
+	assert_true(LearnedBar.SCRIM_COLOR.a > 0.0,
+		"a light scrim sits behind the readout so the label reads and the sun cannot bleach it")
+	assert_true(LearnedBar.SCRIM_COLOR.get_luminance() > 0.80,
+		"the scrim is a light DS surface (dark ink text reads on it)")

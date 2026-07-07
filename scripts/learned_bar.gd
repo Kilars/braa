@@ -27,6 +27,19 @@ const FLASH_FADE := 0.45
 const TRACK_RADIUS := DesignSystem.R_PILL
 const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 
+## 145 (PO father-pass-10, X-4/X-6): the readout washed into 143's brighter sky. The label/%
+## were mid-grey SLATE (~sky luminance) and the track was BORDER @ .9 — a translucent cream
+## that dissolved into the sky and let the sun disc bleed through and bleach its midsection.
+## Fix: dark INK text (AA on the pale sky), an OPAQUE PAPER rail (the sun can't show through),
+## and a subtle light scrim behind the whole readout so the label text also has backing and
+## nothing bleaches — matching the goal art's legible readout + soft top halo.
+const LABEL_COLOR := DesignSystem.INK        ## dark slate «Sitt» label — reads on sky/sun
+const PCT_COLOR   := DesignSystem.INK         ## dark, legible «%» readout
+const TRACK_COLOR := DesignSystem.PAPER       ## opaque light rail (was BORDER @ 0.9)
+const SCRIM_COLOR := Color(DesignSystem.PAPER.r, DesignSystem.PAPER.g, DesignSystem.PAPER.b, 0.55)
+const SCRIM_PAD_X := 14.0     ## scrim padding beyond the label/track, horizontal
+const SCRIM_PAD_Y := 6.0      ## scrim padding beyond the readout, vertical
+
 var value: float = 0.0      ## learned fraction in [0, 1] — the fill length
 var mastered: bool = false  ## drawn as a full gold bar
 var _flash := 0.0           ## current setback-wash intensity in [0, 1]
@@ -82,6 +95,11 @@ static func _display_name(id: String) -> String:
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
+	# ── Scrim: a subtle light halo behind the whole readout (145) ─────────────
+	# Backs the label text and defeats the sun disc bleeding through, matching the
+	# goal art's soft top halo. Padded beyond the readout so it reads as a halo, not a box.
+	var scrim := Rect2(-SCRIM_PAD_X, -SCRIM_PAD_Y, w + 2.0 * SCRIM_PAD_X, h + 2.0 * SCRIM_PAD_Y)
+	DesignSystem.pill(SCRIM_COLOR, TRACK_RADIUS).draw(get_canvas_item(), scrim)
 	# ── Label row: trick name left, percentage right ──────────────────────────
 	var font_label := DesignSystem.font_body_bold()
 	var label_size := DesignSystem.T_HEAD  ## 18px — readable without eating too much height
@@ -91,10 +109,11 @@ func _draw() -> void:
 		pct_str = "100%"
 	# Vertically centre text in the label row.
 	var label_y := _label_row_h * 0.5 + font_label.get_ascent(label_size) * 0.5 - font_label.get_descent(label_size) * 0.5
+	# Dark INK (145): reads on the bright sky / behind the sun where the old SLATE washed out.
 	draw_string(font_label, Vector2(0.0, label_y), name_str,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, DesignSystem.SLATE)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, LABEL_COLOR)
 	draw_string(font_label, Vector2(0.0, label_y), pct_str,
-		HORIZONTAL_ALIGNMENT_RIGHT, w, label_size, DesignSystem.SLATE_SOFT)
+		HORIZONTAL_ALIGNMENT_RIGHT, w, label_size, PCT_COLOR)
 	# ── Track: rounded rect, starts at label row bottom + gap ────────────────
 	var track_y := _label_row_h + _label_gap
 	var track_h := maxf(0.0, h - track_y)
@@ -102,10 +121,9 @@ func _draw() -> void:
 		return
 	var track := Rect2(0.0, track_y, w, track_h)
 	# Rounded background track — use StyleBoxFlat.draw() for rounded corners.
-	# BORDER at full opacity gives a warm cream-white track that reads against the sky
-	# without being harsh. The pill shape makes it look like a slider rail (097).
-	var track_color := Color(DesignSystem.BORDER.r, DesignSystem.BORDER.g, DesignSystem.BORDER.b, 0.9)
-	var track_sb := DesignSystem.pill(track_color, TRACK_RADIUS)
+	# OPAQUE PAPER (145): an opaque light rail so the sun can't bleach it and the blue fill
+	# reads. The pill shape makes it look like a slider rail (097).
+	var track_sb := DesignSystem.pill(TRACK_COLOR, TRACK_RADIUS)
 	track_sb.draw(get_canvas_item(), track)
 	# Fill.
 	var fill_w := maxf(0.0, (w - 2.0 * CORNER_INSET) * value)
