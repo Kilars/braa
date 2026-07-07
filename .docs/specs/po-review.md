@@ -176,65 +176,65 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 14) — polish-lens pass: pass-13 directive (149 badge WCAG-AA contrast + «Din» de-dup) verified landed; ONE new buildable X-4 defect — the inspect modal's header band still carries the loud saturated per-dog fill the PO removed from the grid (task 133), so a dog's band reads calm-neutral in the grid but garish in the modal
+### PO Review — 2026-07-07 (PO, father pass 15) — polish-lens pass: pass-14 directive (150 modal-band → calm DS neutral surface) verified landed; ONE new buildable X-6 defect — the owned dog's «Trener nå» current-dog status pill draws a green label over a 14 %-opacity green wash, a **1.39:1** contrast that leaves the label near-invisible (the AA legibility bar the loop set in 149, missed on the one status that says "this is your dog")
 
-Fourteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `dc174fd` (the 149 badge-contrast
-commit); `nix develop -c bash verify.sh` re-ran **green** (import·boot·test·export, `✓ verify gate green`, 705 tests).
-The **live Pages site is still one deploy behind** (last-modified 02:16 GMT = the 148 build `3513b41`; the 149 commit
-at 02:53 GMT hadn't propagated), so I reviewed the **fresh local licensed bundle** — `build/web` rebuilt at this HEAD,
-served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer) —
-via `?bra_autotap=1` → training → kennel grid → seven inspect modals (bella/nova/balder/sol/pontus/sniff/trulte, one
-per tier) with real canvas taps. `window.__bra_kennel_cells` reports all 8 cells; **zero console errors**. Evidence for
-every claim is a screenshot I captured this pass (`.screenshots/P14-*`) plus PIL pixel crops and a WCAG contrast calc.
+Fifteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `a583d31` (the 150 modal-band commit).
+I reviewed the **fresh local licensed bundle** — `build/web` (pck built 05:32, after the 05:14 source edit, so it
+carries 150), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
+renderer) — via `?bra_autotap=1` → training → kennel grid → eight inspect modals (bella/nova/sol/trulte/balder/pontus/
+sniff/lykke, spanning owned·common·rare·epic·secret) with real canvas taps → completion menu. `window.__bra_kennel_cells`
+reports all 8 cells; **zero console errors** on every run. Evidence for every claim is a screenshot I captured this pass
+(`.screenshots/P15-*`) plus PIL pixel crops and WCAG contrast calcs.
 
-**Re-verified fixed (pruned) — the pass-13 badge-contrast directive (149) landed and is correct:** every corner
-rarity/status badge now draws its label in the shared dark ink `C_TAG_INK` (`#141c26`) instead of white, and the
-measured contrast on each accent clears **AA 4.5:1** — slate «Vanlig» **6.91:1**, green «Din hund» **6.88:1**, coral
-«★ Påskeegg» **6.84:1**, blue «Sjelden» **5.14:1**, violet «Episk» **5.05:1** (recomputed this pass against the shipped
-`C_TAG_INK`). In the zoomed grid crops the words now read crisply on their pastel pills (`/tmp/badge_bella_din.png`,
-`/tmp/badge_nova_episk.png`, `/tmp/badge_pontus_vanlig.png`), and the accent **hues are unchanged** — the ladder is
-still calm, just legible. The minor «Din» duplication is also fixed: Bella's owned cell now carries «Din hund» **once**
-(the top-left corner badge; the redundant bottom-right price pill is suppressed for owned dogs) — confirmed in
-`.screenshots/P14-02-kennel-grid.png`. Both pass-13 items resolved — removed.
+**Re-verified fixed (pruned) — the pass-14 modal-band directive (150) landed and is correct:** the inspect modal header
+band no longer paints the loud per-dog `band_tint`; it now draws `_cell_surface(detail)` (`kennel_screen.gd:1137`), the
+**same calm DS neutral surface the grid cells use** — Warm-Sand base, a faint green wash for owned, faint coral for
+secret. Confirmed in my own pixels across every tier: Bella's modal band is calm cream-green (`.screenshots/P15-modal-bella.png`),
+Nova's is calm cream (`-nova`, the saturated violet slab is **gone**), **Sol's is calm cream — the golden/amber slab
+that trespassed on the gold-reserved-for-coin rule is gone** (`-sol`), Trulte's is a faint coral (`-trulte`). Grid↔modal
+now read as one calm system: the coat + the calm corner rarity badge («Din hund»/«Vanlig»/«Sjelden»/«Episk»/«★ Påskeegg»)
+do the talking. The 139/140 hero-bust framing, steel bars, and dark nameplate strip are untouched. Directive resolved —
+removed.
 
-**Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, Labrador
-centred facing camera on bright even green grass, cyan approach ring, tan path → blue-roof cottage, white picket fence,
-small grounded garden coins, blue BRA CTA — `.screenshots/P14-01-training.png`); the modal body holds (blurb, 4 stat
-meters, Raseegenskaper chips, Unikt-trekk card, «Kan lære: Sitt · Ligg · Legg deg», the correctly **disabled** «Har ikke
-råd · mangler 🪙 900» CTA drawn with the 146 gold coin pip, and the green «Trener nå» / coral «Adopter gratis ♥» CTAs on
-the owned/secret dogs); the 146 coin-component prices and 147 cool/warm coat parity still hold across grid↔modal. **No
-structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Also re-verified clean (no new directive):** the pass-13 badge WCAG-AA fix (149) still holds — every corner badge draws
+its dark-ink `#141c26` label legibly on its pastel pill, hues unchanged, Bella's «Din hund» de-duped to one badge
+(`/tmp/*_badge.png` crops, `.screenshots/P15-02-kennel-grid.png`); the training page still matches the goal (pale-blue
+sky + sun, cream Labrador centred facing camera on bright even green grass, dark-ink «Sitt %» readout legible on the sky,
+tan path → blue-roof cottage, white picket fence both sides, small grounded garden coins + the rose accent, blue BRA CTA
+— `.screenshots/P15-01-training.png`); the completion menu is the DS paper card with legible rows and a **solid blue
+«Fortsett treningen»** primary (`.screenshots/P15-menu.png`); the modal body holds (blurb, 4 stat meters, Raseegenskaper
+chips, Unikt-trekk card, «Kan lære: Sitt · Ligg · Legg deg», the correctly-disabled grey «Har ikke råd · mangler 🪙 N»
+and the punchy coral «Adopter gratis ♥» CTAs); the 146 coin-component prices and 147 cool/warm coat parity still hold
+grid↔modal. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The inspect modal's header band still paints the loud, saturated per-dog `band_tint` that the PO removed from the
-   grid cells in task 133 — so the same dog reads calm-neutral in the grid but garish in the modal, and the "eight
-   clashing fills" the design pass killed are still alive one tap away (X-4 DS consistency on the signed-off Phase-8
-   kennel surface).** *What I saw:* opening each dog's inspect modal, the header band behind the hero bust is a fully
-   saturated flat colour that differs wildly per dog — **Bella a bright cobalt blue**, **Nova a saturated violet**,
-   **Sol a golden/amber**, **Trulte a coral/salmon** (`.screenshots/P14-modal-bella.png`, `-nova`, `-sol`, `-trulte`).
-   But every one of those dogs' **grid cells** uses the calm neutral Warm-Sand surface, tinted only faintly by ownership
-   (`.screenshots/P14-02-kennel-grid.png`: Bella a whisper of green, the rest sand). The mismatch is in the code: the
-   grid band draws `_cell_surface(row)` (the DS neutral surface, task 133) while the modal band draws
-   `detail["band_tint"]` verbatim (`kennel_screen.gd:1134`) — the exact loud per-breed fill that task 133's comment
-   says it "**Replaces… the PO-flagged 'eight clashing fills'**" (`:551`). *Why it falls short:* (a) it's a straight DS
-   inconsistency — the same component (a dog's portrait band) renders calm in one view and clashing in the adjacent
-   view of the same dog; (b) it re-introduces exactly the loud-fill treatment the PO deliberately removed from the grid,
-   just relocated to the modal; (c) rarity is now carried by the calm corner badge (echoed top-left of the modal band
-   already), so the saturated full-band fill is redundant *and* off-palette; (d) **Sol's golden/amber band trespasses on
-   the DS rule that gold is reserved for the coin** — a big amber slab behind the dog reads as decorative gold. On a
-   phone the modal is the biggest, most-looked-at kennel surface, so this is the loudest remaining off-palette element
-   in the whole app. *What "good" looks like:* make the modal header band use the **same calm neutral surface as the grid
-   cells** — drive `ModalBandBg.color` from the same ownership-tinted `_cell_surface`-style mapping (Warm Sand base,
-   faint green for owned, faint coral for secret) instead of the raw `band_tint`, so the grid and modal read as one calm
-   system and the dog's coat + the calm corner rarity badge do the talking. Keep the **139/140 hero-bust framing, the
-   steel bars, and the dark nameplate strip exactly as they are** — this is only the band **background colour**, nothing
-   about the portrait framing or layout. Do NOT re-add any loud fill or change the rarity accent hues. Buildable, no
-   owner asset — a one-line swap at `kennel_screen.gd:1134` mirroring the grid's `_cell_surface` (the `detail` dict
-   already carries `owned`/`secret`, or pass the same wash the cell computed).
+1. **The owned dog's «Trener nå» current-dog status pill is near-illegible — its green label sits on a 14 %-opacity wash
+   of the *same* green, a measured 1.39:1 contrast, far below the AA legibility bar the loop itself set for the kennel in
+   149 (X-6 legibility on the signed-off Phase-8 kennel surface).** *What I saw:* opening the owned dog Bella's inspect
+   modal, the bottom action slot shows a pale mint pill whose «Trener nå» label is barely visible — pale-green text on a
+   paler-green fill (`.screenshots/P15-modal-bella.png`, and the zoom `/tmp/bella_cta.png` where the words all but vanish).
+   I sampled it: fill `(228,242,225)`, darkest label pixel `(166,216,167)` → **contrast 1.39:1** (AA needs 4.5:1; even the
+   3:1 large-text floor fails). By contrast the *disabled* «Har ikke råd» pill on Nova reads more clearly, and the coral
+   «Adopter gratis ♥» and the completion menu's blue «Fortsett treningen» are both punchy and legible — so the ONE
+   element a player sees when they open **their own dog** (the payoff of ownership, the "this is your dog, you train it
+   now" moment) is the weakest, least-readable control on the card. The cause is in `_build_active_state`
+   (`kennel_screen.gd:1506-1523`): `font_disabled_color = C_STATUS_OWNED` (the full green) painted over
+   `bg_color = C_STATUS_OWNED @ alpha 0.14` (the same green, 14 % on cream) — label and fill are the same hue with almost
+   no separation. *Why it falls short:* (a) it fails the exact AA legibility standard the loop just enforced on the
+   adjacent rarity badges (149) — a status you can't read is not a status; (b) it's the emotional high point of the kennel
+   (your dog, ready to train) rendered as the faintest thing on screen — no juice, reads as broken/disabled rather than
+   "yours"; (c) the same illegible treatment will hit the owned-but-not-active «Tren med [navn]» pill once a second dog is
+   adopted (same green-on-green family), so fix both. *What "good" looks like:* keep the **muted, non-tappable** surface
+   (correct — it must NOT look like a dead pressable button), but make the label **legible and clear AA (≥4.5:1)** on that
+   wash — draw «Trener nå» in a dark ink (e.g. the shared `C_TAG_INK` `#141c26` used for the 149 badge fix, or a
+   deep-green ink) instead of the same-hue `C_STATUS_OWNED`, and consider a small ✓/owned glyph so the current-dog state
+   reads as a confident "yours · trener nå", not a washed-out ghost. Do the same for «Tren med [navn]». Do NOT turn it
+   into a saturated pressable-looking button (it isn't tappable) or change the coral/blue CTA treatments. Buildable, no
+   owner asset — a colour-override change in `_build_active_state` (and the matching owned-switch pill).
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the modal-band DS-consistency directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the «Trener nå» status-legibility directive above; the owner still owns the Phase-10 spec + the asset flags.

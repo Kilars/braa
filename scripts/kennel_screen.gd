@@ -1481,9 +1481,11 @@ func _build_train_with_button(detail: Dictionary) -> Control:
 	btn.text = "Tren med %s" % dog_name
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	btn.add_theme_color_override("font_color", Color.WHITE)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 0.75))
+	# Dark ink over the owned green (151, X-6): white-on-green was ~2.49:1 — below AA; C_TAG_INK
+	# clears 4.5:1 on the full green while keeping the tappable owned-green pill treatment.
+	btn.add_theme_color_override("font_color", C_TAG_INK)
+	btn.add_theme_color_override("font_hover_color", C_TAG_INK)
+	btn.add_theme_color_override("font_pressed_color", Color(C_TAG_INK.r, C_TAG_INK.g, C_TAG_INK.b, 0.75))
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := StyleBoxFlat.new()
@@ -1500,9 +1502,20 @@ func _build_train_with_button(detail: Dictionary) -> Control:
 	btn.pressed.connect(func(): train_with_requested.emit(dog_id))
 	return btn
 
+## The active-pill wash alpha — C_STATUS_OWNED laid faintly over the modal card surface (K-5).
+const C_ACTIVE_WASH_A := 0.14
+
+## Pure static helper (151, X-6): the opaque composite of the owned-green wash over the modal card
+## surface — the identical pixel the alpha-over-parent produced (PO-sampled (228,241,225)), but
+## deterministic so the label-ink contrast is testable and doesn't depend on what's behind the pill.
+static func active_state_fill() -> Color:
+	return C_MODAL_SURFACE.lerp(C_STATUS_OWNED, C_ACTIVE_WASH_A)
+
 ## K-5 active state (110): the dog the player already trains shows a non-tappable «Trener nå» pill —
 ## a muted, disabled surface (no dead green button that looks pressable but does nothing). Communicates
-## "this is your current dog" without offering a redundant switch.
+## "this is your current dog" without offering a redundant switch. The label is drawn in the shared
+## dark ink C_TAG_INK (151, X-6) — clears WCAG AA on the pale wash where the old same-hue green was
+## 1.39:1 (near-invisible); the muted, non-tappable surface is unchanged.
 func _build_active_state(_detail: Dictionary) -> Control:
 	var btn := Button.new()
 	btn.name = "ActiveState"
@@ -1510,11 +1523,11 @@ func _build_active_state(_detail: Dictionary) -> Control:
 	btn.disabled = true
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	btn.add_theme_color_override("font_disabled_color", C_STATUS_OWNED)
+	btn.add_theme_color_override("font_disabled_color", C_TAG_INK)
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(C_STATUS_OWNED.r, C_STATUS_OWNED.g, C_STATUS_OWNED.b, 0.14)
+	sb.bg_color = active_state_fill()
 	sb.set_corner_radius_all(int(CHIP_RADIUS))
 	sb.content_margin_top    = 14.0
 	sb.content_margin_bottom = 14.0
