@@ -43,6 +43,7 @@ const C_RARITY_RARE  := Color("5b8fd0")   ## RARE «Sjelden» — calm blue acce
 const C_RARITY_EPIC  := Color("9b7bd4")   ## EPIC «Episk» — calm violet accent (the prize tier)
 const C_PRICE_OWN    := Color("57b85c")   ## «Din» owned price chip
 const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
+const C_TAG_INK      := Color("141c26")   ## dark ink for status/rarity pill labels — clears WCAG AA 4.5:1 on every calm accent above (X-6, task 149)
 const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
 const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed in code)
 const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold (still used by the price chip label)
@@ -621,16 +622,19 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 
 	# Price chip — bottom-right, ~8px inset inside the band image area (clear of the caption strip).
 	# Status tag is top-left (see above) so these two elements are always at opposite corners.
-	var chip := _make_price_chip(row)
-	chip.anchor_left   = 1.0
-	chip.anchor_right  = 1.0
-	chip.anchor_top    = 1.0
-	chip.anchor_bottom = 1.0
-	chip.offset_left   = -88.0
-	chip.offset_right  = -8.0
-	chip.offset_top    = -30.0
-	chip.offset_bottom = -8.0
-	band.add_child(chip)
+	# The owned dog is the exception: its ownership is already carried by the top-left «Din» corner
+	# badge, so a second «Din» price pill would just repeat the word (149, X-6 minor de-dup) — skip it.
+	if not row.owned:
+		var chip := _make_price_chip(row)
+		chip.anchor_left   = 1.0
+		chip.anchor_right  = 1.0
+		chip.anchor_top    = 1.0
+		chip.anchor_bottom = 1.0
+		chip.offset_left   = -88.0
+		chip.offset_right  = -8.0
+		chip.offset_top    = -30.0
+		chip.offset_bottom = -8.0
+		band.add_child(chip)
 
 	return band
 
@@ -829,6 +833,22 @@ func _rarity_accent(rarity: int) -> Color:
 		KennelDog.Rarity.EPIC: return C_RARITY_EPIC
 		_: return C_STATUS_NEUTRAL
 
+## WCAG 2.x relative-luminance contrast ratio between two colours (order-independent). Keeps the
+## status/rarity pill labels legible: the dark C_TAG_INK must clear AA 4.5:1 on every calm accent a
+## badge can draw (small ~10-11px label text). Pure — unit-tested (task 149, X-6).
+static func wcag_contrast(a: Color, b: Color) -> float:
+	var la := _rel_luminance(a)
+	var lb := _rel_luminance(b)
+	var hi: float = max(la, lb)
+	var lo: float = min(la, lb)
+	return (hi + 0.05) / (lo + 0.05)
+
+static func _rel_luminance(c: Color) -> float:
+	return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b)
+
+static func _lin(ch: float) -> float:
+	return ch / 12.92 if ch <= 0.03928 else pow((ch + 0.055) / 1.055, 2.4)
+
 ## The corner badge (148, X-4): one component draws ownership AND rarity. Owned → green «Din hund»,
 ## secret → coral «★ Påskeegg» (star geometry), every buyable dog → its rarity word («Vanlig» /
 ## «Sjelden» / «Episk») on a calm rarity accent. So the rarity ladder reads at a glance on all eight
@@ -870,7 +890,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.add_theme_color_override("font_color", C_TAG_INK)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(lbl)
 	else:
@@ -878,7 +898,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.add_theme_color_override("font_color", C_TAG_INK)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(lbl)
 
@@ -933,7 +953,7 @@ func _make_price_chip(row: Dictionary) -> PanelContainer:
 		lbl.text = row.price_label
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 11)
-		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.add_theme_color_override("font_color", C_TAG_INK)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(lbl)
 	return panel

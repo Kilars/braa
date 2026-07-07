@@ -176,66 +176,62 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 12) — polish-lens pass: BOTH pass-11 directives (146 coin component, 147 cool-coat parity) verified landed; ONE new buildable X-4 defect — the roster's rarity ladder is invisible for the 6 buyable dogs
+### PO Review — 2026-07-07 (PO, father pass 13) — polish-lens pass: pass-12 directive (148 rarity ladder) verified landed on all 8 cells + modal echo; ONE new buildable X-6 defect — the corner-badge labels fail WCAG AA contrast (white text on calm accents)
 
-Twelfth pass, run fresh and stateless under the polish/critique lens. Rebuilt the current HEAD (`b4e348e`, the
-146+147 commit) with `nix develop -c bash verify.sh` — gate green (import·boot·test·export), 699 tests — so
-`build/web` is the fresh output at this HEAD. Served over http and drove the **real** game with real canvas taps in
-headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer); this local bundle boots the
-**licensed Labrador**. Drove: `?bra_autotap=1` mark burst → training HUD zoom → kennel grid → six inspect modals
-(nova/pontus/trulte cool + balder/sol/bella warm) → completion menu on mastery. **Zero console errors on every run.**
-Evidence for every claim is a screenshot I captured this pass (`.screenshots/P12-*`, `072-menu-open.png`).
+Thirteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `3513b41` (the 148 rarity-badge
+commit); `nix develop -c bash verify.sh` re-ran green (import·boot·test·export, 702 tests). Reviewed the **live
+deployed Pages site** (https://kilars.github.io/braa/, last-modified 02:16 GMT = this-HEAD deploy) at 390×844 in
+headless Chromium — the build that renders the **licensed Labrador** — driving `?bra_autotap=1` → training →
+kennel grid → seven inspect modals (nova/balder/sol/pontus/sniff/bella/trulte, one per tier) with real canvas taps.
+`window.__bra_kennel_cells` reports all 8 cells; **no real console errors** (the 3 logged lines are the benign Godot
+`wasm-instantiate` boot-dependency notices). Evidence for every claim is a screenshot I captured this pass
+(`.screenshots/P13-*`) plus PIL pixel samples.
 
-**Re-verified fixed (pruned) — both pass-11 directives landed and are correct:**
-- **146 (coin-component consistency):** every price now renders as the **same coin component** as the readout — a
-  paper pill with a gold coin pip + a dark-ink number. The grid price tag reads «🪙 900» (`/tmp` 3× zoom of
-  `.screenshots/P12-02-kennel-grid.png` — white pill, gold disc, ink «900», identical to the header chip «🪙 0»),
-  and the modal afford action reads «Har ikke råd · mangler 🪙 900» (`.screenshots/P12-modal-nova.png`) with the coin
-  pip in front of the amount. «Din» (owned) and Trulte's «Adopter gratis ♥» (free, heart pip) correctly stay
-  word/heart-only — no spurious coin on free actions. Gold now reads unambiguously as "coins" at the point of
-  purchase. Prior directive resolved — removed.
-- **147 (cool-coat tint parity grid↔modal):** Nova stays a **cool grey** into her modal — hero-bust coat samples
-  `(113,118,122)` (blue ≥ red, cool hue preserved), no longer the warm cream she flipped to in pass 11; the warm
-  dogs stay warm through the modal (Balder `(134,128,119)`, Sol `(147,142,128)`, red ≥ blue). Cool stays cool, warm
-  stays warm across both views (`.screenshots/P12-modal-{nova,pontus,trulte,balder,sol}.png`). Prior directive
-  resolved — removed.
+**Re-verified fixed (pruned) — the pass-12 rarity-ladder directive (148) landed and is correct:** every one of the
+8 grid cells now carries a corner rarity/status badge and the modal echoes it — green «Din» (Bella, owned), violet
+«Episk» (Nova, EPIC 900), blue «Sjelden» (Balder 650 / Sol 500, RARE), slate «Vanlig» (Pontus 350 / Lykke 300 /
+Sniff 320, COMMON), coral «★ Påskeegg» (Trulte, SECRET) — reusing the same corner-badge component, calm accents, no
+return to the loud full-cell band fills (`.screenshots/P13-02-kennel-grid.png`; the modal echo confirmed top-left of
+the hero band, e.g. violet «Episk» in `.screenshots/P13-modal-nova.png`). A browsing player can now read the
+Common→Rare→Epic ladder at a glance. Prior directive resolved — removed.
 
-**Also re-verified clean (no new directive):** training page matches the goal (pale-blue sky + sun, cream Labrador
-centred facing camera on green grass, tan path → cottage, white picket fence, small two-tone garden coins, blue BRA
-CTA — `.screenshots/P12-01-training.png`); the **145 readout** holds legible even with the sun disc directly behind
-it (dark-ink «Sitt»/«%» on the opaque paper rail, `/tmp` HUD zoom); the **completion menu** is a clean DS paper card
-(Triks heading + consistent coin chip «🪙 10» + trick rows + Markørord rows + outlined «Gi tilbakemelding» / filled
-«Fortsett treningen» CTA, `072-menu-open.png`); the kennel **modal hero-bust framing** holds for all six dogs.
-**No structural regression** in the signed-off phases.
+**Also re-verified clean (no new directive):** the training page matches the goal (pale-blue sky + sun, cream
+Labrador centred facing camera on green grass, cyan approach ring, tan path → blue-roof cottage, white picket fence,
+small garden coins, blue BRA CTA — `.screenshots/P13-01-training.png`); the modal body holds (blurb, 4 stat meters,
+Raseegenskaper chips, Unikt-trekk card, «Kan lære: Sitt · Ligg · Legg deg», and the correctly **disabled** «Har ikke
+råd · mangler 🪙 900» CTA with the 146 coin pip); the 146 coin-component prices and 147 cool/warm coat parity from
+pass 12 still hold. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The roster is built around a rarity ladder (OWNED · COMMON · RARE · EPIC · SECRET) but rarity is invisible to
-   the player for the six buyable dogs — only OWNED and SECRET get a corner badge, so a browsing player cannot tell
-   an EPIC dog from a COMMON one except by inferring from price (X-4 hierarchy / "collect fantasy legibility" on the
-   signed-off Phase-8 kennel surface).** *What I saw:* in the grid (`.screenshots/P12-02-kennel-grid.png`) only Bella
-   carries a corner badge («Din», owned) and Trulte one («Påskeegg», secret); the six purchasable dogs — Nova
-   (**EPIC**, 900), Balder (**RARE**, 650), Sol (**RARE**, 500), Pontus/Lykke/Sniff (**COMMON**, 350/300/320) —
-   carry **no rarity cue at all**, in the grid **or** the inspect modal (I opened all six and there is no rarity
-   name anywhere; grep-confirmed: `kennel_dog.gd` holds a real `enum Rarity { OWNED, COMMON, RARE, EPIC, SECRET }`
-   per dog, but no Norwegian rarity label string is ever rendered in `kennel_screen.gd`). *Why it falls short:* the
-   whole point of a browse-and-adopt roster is the rarity ladder — it is the axis that makes Nova (EPIC) feel like a
-   prize worth saving 900 coins for versus a 320-coin Beagle. Right now that axis is **data-only**: rarity drives
-   nothing the player can perceive (the old per-rarity band fills were deliberately unified away as "eight clashing
-   fills", and 146 made every price chip the identical paper-pill, so the price chip no longer carries rarity colour
-   either). The aspirational EPIC/RARE dogs read as visually interchangeable with the COMMON ones — the collect
-   hierarchy the phase is built on doesn't land. *What "good" looks like:* surface each dog's rarity as a small,
-   tasteful **text badge** reusing the **same corner-badge component** that OWNED («Din») and SECRET («Påskeegg»)
-   already use — map the enum to Norwegian labels (e.g. «Vanlig» / «Sjelden» / «Episk», with «Din»/«Påskeegg» kept as
-   the owned/secret cases) and place it in the grid cell (and echo it in the modal near the name), tinted to a calm
-   rarity accent (NOT a return to the loud full-cell band fills the PO removed). Then a browsing player can read the
-   ladder at a glance and the EPIC dogs feel special. Buildable, no owner asset — the badge component and the rarity
-   data both already exist; this only wires existing data into the existing badge on the six dogs that currently
-   lack one.
+1. **The rarity/status corner badges that 148 shipped are legible-but-soft — every one uses white label text on a
+   calm mid-tone accent, and measured contrast fails WCAG AA (X-6 colour/legibility on the signed-off Phase-8 kennel
+   surface).** *What I saw:* I sampled the badge fills from the live grid (`.screenshots/P13-02-kennel-grid.png`) with
+   PIL and computed the white-text contrast ratio for each tier — **COMMON «Vanlig» slate `#9aa6b0` = 2.48:1**,
+   **OWNED «Din» green `(87,184,92)` = 2.5:1**, **SECRET «★ Påskeegg» coral `(255,122,133)` = 2.51:1**, **EPIC «Episk»
+   violet `#9b7bd4` = 3.4:1**, **RARE «Sjelden» blue `#5b8fd0` ≈ 3.1:1**. The badge text is small (~10–11 px cap
+   height), so the applicable WCAG-AA threshold is **4.5:1** — **all five fail it**, and three (slate, green, coral)
+   fail even the 3:1 large-text floor. In the zoomed crops the labels wash out (`/tmp/badge_pontus.png` «Vanlig» on
+   slate is the worst — the text nearly dissolves into the pill). *Why it falls short:* 148 exists precisely so the
+   ladder "reads at a glance", but the labels sit right at the edge of legibility on a phone in daylight — the design
+   system's own X-cutting rule is to call out AA fails and unify a component, and here the one component that got
+   generalized across all 8 cells is below the contrast bar on every tier. It reads on a clean emulator capture; it
+   will not read reliably on a real sunlit phone. *What "good" looks like:* raise every corner-badge label to **≥4.5:1**
+   while **keeping the calm accent hues exactly as they are** (do NOT change the accent palette and do NOT return to
+   band fills — those are settled). The clean fix is to swap the badge **label colour from white to a dark ink** (a
+   near-black or a deeply-saturated dark shade of each accent) so «Vanlig»/«Sjelden»/«Episk»/«Din»/«Påskeegg» all clear
+   AA on their pastel pills; alternatively deepen only the fills enough for white to clear 4.5:1. Either way the ladder
+   stays calm but the words read crisply. Buildable, no owner asset — a one-property change on the `_make_tag`
+   component in `kennel_screen.gd`.
+
+*(Minor, same component — fold in if cheap, not a blocker):* on Bella's owned cell the word «Din» appears **twice** —
+once as the top-left corner badge and once as the bottom-right price-slot pill (`/tmp/crop_bella.png`). For every
+other dog those two slots carry **different** information (rarity word + price/coin, or «★ Påskeegg» + «Gratis»);
+only the owned dog duplicates the same word. Consider suppressing the redundant one (e.g. drop the corner badge for
+OWNED, or show «Trener» / a check in the price slot) so the owned cell doesn't repeat itself.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
-**signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next
-buildable work is the directive above (surface the rarity ladder on the six buyable kennel dogs); the owner still
-owns the Phase-10 spec + the asset flags.
+**signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
+work is the badge-contrast directive above; the owner still owns the Phase-10 spec + the asset flags.
