@@ -176,49 +176,51 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 35) — polish-lens pass: verified 169 (the breed-showcase hint caption «Bla med pilene eller trykk en hund» now clears WCAG AA over the bright-grass view — `SUBTLE` white 0.78→0.92) landed clean and pruned it; re-played training + completion-menu + **kennel** grid/modal + **breed showcase** for regressions (all clean). Turned the polish lens on the **completion menu's active-row treatment** and found the last un-unified piece of the 167/168 arc: 167 unified the active-row *wash* and 168 unified the trailing *badge* ink across all four selection sections, but the active row's **primary NAME** is still styled two ways — the active **trick** «Sitt» draws in the dark current-state ink `ROW_ACTIVE_INK`, while the active **breed/marker-word/difficulty** names draw in `BLUE_INK` (the action accent). One buildable X-4 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 36) — polish-lens pass: verified 170 (the completion-menu active breed/marker-word/difficulty row NAME now draws in the shared dark `ROW_ACTIVE_INK`, matching «Sitt»/«Trener nå» — all four selection sections now mark "you are here" with a dark name + dark badge identically) landed clean in-pixel and pruned it; re-played training + completion-menu + **kennel** grid/modal + **breed showcase** for regressions (all clean). Turned the polish lens on the **breed-showcase control bar** and found the AA sweep's blind spot: 169 fixed the hint caption (which sits directly on the dark band), but the «Tilbake» back button label and the ◀▶ chevron glyphs sit on the white@0.14 ghost *pills*, which lift the background — so those still read ~3.9–4.0:1 and fail WCAG AA. One buildable X-6 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-fifth pass, fresh and stateless under the polish/critique lens. HEAD is `21b2f31` (the 169 hint-caption commit).
+Thirty-sixth pass, fresh and stateless under the polish/critique lens. HEAD is `63da3ac` (the 170 active-name commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and driven in
 headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Three harness runs, **zero console errors** on every one:
-(1) `tools/po_pass35.mjs` booted `?bra_autotap=1&bra_coins=120` → training → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`)
-→ opened the **breed showcase** on the active Labrador and tight-cropped the hint caption; (2) `tools/po_pass32_kennel.mjs` → kennel grid → Nova modal. Evidence: this pass's
-screenshots (`.screenshots/P35-01-training.png`, `P35-02-menu.png`, `P35-03-showcase-active.png`, `P35-hintzoom.png`; `P32K-01-grid.png`, `P32K-02-modal.png`) + tight zoom crops
-(`/tmp/p35_menu_rows.png` / `/tmp/p35_menu_lower.png` the menu rows, `/tmp/p35_stats2.png` the modal stats) + per-pixel luminance samples + the code I read (`scripts/trick_menu.gd`
-name-colour tokens, `scripts/breed_showcase_view.gd` `SUBTLE`).
+(1) `tools/po_pass36_active_name.mjs` booted `?bra_autotap=1&bra_coins=120` → training → completion menu, dumped the breed-row coords + captured for the active-name sample;
+(2) `tools/po_pass35.mjs` → training → menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`) → opened the **breed showcase** on the active
+Labrador (chevrons now live with 2 owned dogs); (3) `tools/po_pass32_kennel.mjs` → kennel grid → Nova modal. Evidence: this pass's screenshots
+(`.screenshots/P36-menu-active-name.png`, `P35-01-training.png`, `P35-03-showcase-active.png`; `P32K-01-grid.png`, `P32K-02-modal.png`) + tight zoom crops
+(`/tmp/p36_raser.png` the breed rows, `/tmp/p36_showctl2.png` / `/tmp/p36_tilbake.png` the showcase control bar) + per-pixel luminance/CR samples + the code I read
+(`scripts/trick_menu.gd` name tokens, `scripts/breed_showcase_view.gd` `BTN_SECONDARY` / `BTN_SECONDARY_TEXT`).
 
-**Verified fixed → pruned:** the pass-34 directive (**the breed-showcase hint caption failed WCAG AA at ~4.1–4.3:1 over the bright-grass view**) is **resolved** by 169. In my own
-pixels (`.screenshots/P35-hintzoom.png`, HEAD `21b2f31`): the centered «Bla med pilene eller trykk en hund» line now reads crisply — brightest glyph stroke (235,236,236) against
-the darkest composited band pixel directly under it (90,102,102) measures **~5.0:1**, clearing the 4.5:1 bar (was ~4.1–4.3:1). 169 raised `SUBTLE` from white@0.78 to white@0.92
-(`breed_showcase_view.gd:30`) and left the band translucent (`BAND_BG` untouched) so the spotlight glow survives, exactly as directed. Pruned.
+**Verified fixed → pruned:** the pass-35 directive (**the completion menu titled its active-row NAME two ways — active trick «Sitt» dark, active breed/word/difficulty names in
+action-blue**) is **resolved** by 170. In my own pixels (`/tmp/p36_raser.png`, HEAD `63da3ac`): the active **Labrador** breed name now samples at **(20,28,38)** — an exact match
+for `ROW_ACTIVE_INK` #141c26, the same dark ink «Sitt» uses — with its «Aktiv» badge dark alongside, while the non-active «Brun lab» name stays slate + «Adopter 30» blue. Code
+confirms `BREED_NAME_ACTIVE` (`:239`), `WORD_NAME_ACTIVE` (`:252`), `DIFF_NAME_ACTIVE` (`:261`) all repointed to `ROW_ACTIVE_INK`, the word pip decoupled to stay `WORD_PIP_ACTIVE`
+blue (`:253`), exactly as directed. All four selection sections now read **dark name + dark badge on the pale-blue wash** identically. Pruned.
 
 **Re-verified clean (no new directive):** (a) **training page** (`P35-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (145/159 scrim + opaque panel intact), «Triks»/«Kennel»/coin-`120` HUD pills, big
-blue BRA. (b) **Kennel** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait, rarity badges/names/coin-pip price chips all read; grid↔modal price parity holds (Nova grid
+cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (dark text on cream, 145/159 scrim intact), «Triks»/«Kennel»/coin-`120` HUD pills,
+big blue BRA. (b) **Kennel** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait, rarity badges/names/coin-pip price chips all read; grid↔modal price parity holds (Nova grid
 «900», modal «Har ikke råd · mangler 780» = 900−120); Nova's modal stat rows show the blue filled / pale-empty max-track, «Raseegenskaper» chips, «Unikt trekk: Øyet», «Kan lære:
-Sitt · Ligg · Legg deg», muted non-tappable affordability gate — all AA-legible, no gold-as-text. (c) **Breed showcase** (`P35-03`): spotlit pip is the bright paper chip with the
-dark «aktiv» dot (165/166), «Trener denne» disabled pale-slate pill / «Tren denne» blue gradient pill (163), hint caption legible (169). **No structural regression** in the
-signed-off phases (1/2/3/5/6/8/9).
+Sitt · Ligg · Legg deg», muted non-tappable affordability gate — all AA-legible, no gold-as-text, calm neutral header band (150). (c) **Breed showcase** (`P35-03`): spotlit pip is
+the bright paper chip with the dark «aktiv» dot (165/166), «Trener denne» disabled pale-slate pill with dark ink (163), hint caption legible (169). **No structural regression** in
+the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The completion menu marks its active-row NAME two different ways — the active trick «Sitt» in dark current-state ink, the active breed/marker-word/difficulty names in the
-  action-blue — leaving the 167/168 "all four selection sections mark you-are-here identically" unification one step short.** *What I saw:* in the completion menu (`P35-02`,
-  `/tmp/p35_menu_rows.png` / `/tmp/p35_menu_lower.png`, HEAD `21b2f31`) all four selection sections now share the pale-blue active-row wash (167) and a dark trailing badge (168:
-  «Trener nå»/«Aktiv»/«Valgt» all render dark — I sampled «Trener nå» at (25,33,43) and the breed «Aktiv» at (35,43,53), both dark-neutral). But the **primary name** on the active
-  row does *not* match: I sampled the active **Sitt** name at **(21,29,39)** — the dark `ROW_ACTIVE_INK` #141c26 — while the active **Labrador** breed name samples at **(42,102,179)**,
-  an exact match for `BLUE_INK` #2a66b3. So on the very same card the active trick's name is dark charcoal and the active breed's name is blue. *Why it's short of good:* it's
-  confirmed structural in `scripts/trick_menu.gd` — the trick row paints its active name with `ROW_ACTIVE_INK` (`:916`), but `BREED_NAME_ACTIVE` (`:239`), `WORD_NAME_ACTIVE`
-  (`:252`) and `DIFF_NAME_ACTIVE` (`:260`) are all `= DesignSystem.BLUE_INK`. 167 unified the wash and 168 unified the trailing badge onto the trick row's dark current-state
-  treatment, but the *name* was never brought across, so three of the four active rows still title themselves in the action-accent blue while the fourth (the anchor) titles itself
-  dark. The card's own reasoning (`:173`) already argues the dark ink "reads stronger as the current selection" (14.7:1 on the wash vs the blue's 4.93:1) — the active name should
-  follow the same logic as its badge. This is the same "same component rendered differently across sections → unify them" defect the 167/168 passes were closing; the name is the
-  last piece. *What "good" looks like:* repoint the active-row NAME of the breed/marker-word/difficulty sections to the shared dark `ROW_ACTIVE_INK` (`= BREED_NAME_ACTIVE`/
-  `WORD_NAME_ACTIVE`/`DIFF_NAME_ACTIVE` → `ROW_ACTIVE_INK`, matching the trick row), so on the active pale-blue wash all four sections render **dark name + dark badge** identically.
-  Do **not** touch the AVAILABLE/LEARNED/UNLOCKED/IDLE (non-active) row names — those sit on the cream wash and must stay `BLUE_INK`/`SLATE` for AA (this is only the active-row
-  name, on the pale-blue wash, where dark reads ≥14:1). Keep the wash (167) and the badge ink (168) exactly as they are. Add/extend a TDD assert (alongside
-  `test_trick_menu_active_badge.gd`) that the active breed/word/difficulty NAME token == `ROW_ACTIVE_INK` (== the active trick name), and re-verify in-pixel at dsf3 that the active
-  Labrador name reads dark charcoal, matching «Sitt».
+- **The breed-showcase control bar's ghost-pill chrome fails WCAG AA — the «Tilbake» back-button label (~3.9:1) and the ◀▶ chevron glyphs (~4.0:1) wash out — because the 169 hint
+  fix only ever cleared the raw dark band, but these labels/glyphs sit on the white@0.14 pills, which lift the background above where a white@0.92 label clears 4.5:1.** *What I saw:*
+  in the breed showcase (`P35-03-showcase-active.png`, `/tmp/p36_showctl2.png` / `/tmp/p36_tilbake.png`, HEAD `63da3ac`, dsf3, with 2 owned dogs so the chevrons are live) the
+  bottom control bar reads: ◀ chevron · spotlit «Labrador» pip · ▶ chevron · hint «Bla med pilene …» · «Trener denne» (disabled, dark-on-pale, fine) · **«Tilbake»**. I sampled the
+  «Tilbake» label glyph at (242,243,243) over its pill background (116,123,126) = **3.87:1**, and the left-chevron glyph (244,245,245) over its pill center (112,123,122) = **4.0:1** —
+  both under the 4.5:1 AA bar for this normal-weight chrome. The hint caption right above them clears AA (169: ~5.3–5.7:1) *because it sits directly on the dark band*; these don't.
+  *Why it's wrong:* it's structural in `scripts/breed_showcase_view.gd` — `BTN_SECONDARY = Color(1,1,1,0.14)` (`:55`) is a *lightening* ghost fill, so over the ~90-grey band it
+  composites to a ~112–116-grey pill, and `BTN_SECONDARY_TEXT = Color(1,1,1,0.92)` (`:56`) — the same 0.92 secondary-white 169 tuned to clear ~5.3:1 *on the band* — only reaches
+  ~3.9–4.0:1 once it's sitting on that lifted pill instead of the band. So the exact AA sweep 149→169 has been running (kennel badges, CTAs, menu text, the showcase hint) skipped the
+  showcase's own pill-backed chrome: the «Tilbake» label and both chevron arrows are the last sub-AA text on any persistent surface — and on the active-dog view «Tilbake» is the
+  *only* tappable action, so the lowest-contrast element is also the primary exit. *What "good" looks like:* bring the showcase's ghost-pill chrome (the «Tilbake» label + the ◀▶
+  chevron glyphs) to **≥4.5:1 over its own composited pill** — e.g. deepen `BTN_SECONDARY` from a white@0.14 *lightening* fill to a *darkening* fill (a low-alpha black/ink overlay,
+  or a dark opaque slate) so the label/glyph sits on a genuinely dark pill the white@0.92 clears AA on, and/or push the label/glyph itself toward full opacity — whichever keeps the
+  quiet "ghost secondary" read but clears the bar. Keep the band translucency (169 — the spotlight glow must survive) and the pip/hint/«aktiv»-dot treatments (165/166/169) exactly
+  as they are; this is only the two pill-backed chrome controls. Add/extend a TDD assert (a `test_breed_showcase_*` alongside the existing showcase tests) that the composited
+  «Tilbake» label-over-pill and chevron-glyph-over-pill contrast is ≥4.5:1, and re-verify in-pixel at dsf3 that both the «Tilbake» label and the chevron arrows clear AA on their
+  pills.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

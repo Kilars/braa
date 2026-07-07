@@ -52,8 +52,28 @@ const ACTIVE_DOT_ON_LIGHT := DesignSystem.BLUE_INK   ## dot on the solid-paper s
 const ACTIVE_DOT_ON_DARK := DesignSystem.BLUE_LIGHT  ## dot on the faint over-dark-band active pip
 static func active_dot_color(on_bright_pip: bool) -> Color:
 	return ACTIVE_DOT_ON_LIGHT if on_bright_pip else ACTIVE_DOT_ON_DARK
-const BTN_SECONDARY := Color(1.0, 1.0, 1.0, 0.14)  ## «Tilbake» ghost pill over the dark band
-const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.92)
+## The «Tilbake» / ◀▶ chevron chrome sits on GHOST pills over the translucent stage band. The 169 AA
+## fix tuned the hint that sits DIRECTLY on the band, but these pills LIFT the background: a white@0.14
+## *lightening* fill composited to a ~112–116-grey pill, so the white@0.92 label/glyph only reached
+## ~3.9–4.0:1 (sub-AA, PO father-pass-36). Fixed (171) by making BTN_SECONDARY a *darkening* ink overlay
+## so the pill is genuinely dark and the near-opaque white chrome clears AA on it — the quiet "ghost
+## secondary" read survives (a subtle recessed pill on the dark band, not a bright lifted one).
+const BTN_SECONDARY := Color(0.0, 0.0, 0.0, 0.45)  ## «Tilbake»/chevron ghost pill — a DARKENING ink over the band
+const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.96)
+
+## The ghost pill's EFFECTIVE colour = BTN_SECONDARY composited over the translucent stage band, and the
+## label/glyph's EFFECTIVE colour = BTN_SECONDARY_TEXT composited over that pill. Pure so the contrast
+## test can pin the real composited chrome against the father's measured worst-case (bright-grass) band.
+static func _composite(fg: Color, bg: Color) -> Color:
+	var a := fg.a
+	return Color(
+		fg.r * a + bg.r * (1.0 - a),
+		fg.g * a + bg.g * (1.0 - a),
+		fg.b * a + bg.b * (1.0 - a))
+static func chrome_pill_over(band: Color) -> Color:
+	return _composite(BTN_SECONDARY, band)
+static func chrome_ink_over(band: Color) -> Color:
+	return _composite(BTN_SECONDARY_TEXT, chrome_pill_over(band))
 const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)
 
 ## Primary CTA — the DS blue gradient pill (GRAD_PILL_*, the BRA / «Fortsett treningen» palette, 153),

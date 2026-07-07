@@ -87,6 +87,27 @@ func test_hint_caption_clears_aa_over_bright_grass_band() -> void:
 	assert_true(ratio >= AA,
 		"hint caption must clear AA on the worst-case bright-grass band (got %.2f:1)" % ratio)
 
+func test_ghost_pill_chrome_clears_aa_over_bright_grass_band() -> void:
+	## 171 (PO father-pass-36): the «Tilbake» label + ◀▶ chevron glyphs sit on white@0.14 GHOST pills
+	## that LIFT the translucent band to a ~112–116-grey pill, so the white@0.92 chrome only read
+	## ~3.9–4.0:1 (sub-AA) — the 169 hint fix only ever cleared the raw band, not these pills. The
+	## EFFECTIVE (composited) chrome ink over its EFFECTIVE (composited) pill must clear AA on the same
+	## measured worst-case bright-grass band the hint uses.
+	var pill := BreedShowcaseView.chrome_pill_over(MEASURED_WORST_BAND)
+	var ink := BreedShowcaseView.chrome_ink_over(MEASURED_WORST_BAND)
+	var ratio := DesignSystem.wcag_contrast(ink, pill)
+	assert_true(ratio >= AA,
+		"«Tilbake»/chevron chrome must clear AA on its composited ghost pill (got %.2f:1)" % ratio)
+
+func test_ghost_pill_is_a_darkening_fill() -> void:
+	## The pill must be a DARKENING overlay (so the near-opaque white chrome clears AA on it), not the
+	## old white@0.14 LIGHTENING fill that lifted the band above where white@0.92 could clear 4.5:1.
+	var pill := BreedShowcaseView.chrome_pill_over(MEASURED_WORST_BAND)
+	var band_lum := DesignSystem._rel_luminance(MEASURED_WORST_BAND)
+	var pill_lum := DesignSystem._rel_luminance(pill)
+	assert_true(pill_lum < band_lum,
+		"ghost pill must darken the band (got pill %.3f vs band %.3f)" % [pill_lum, band_lum])
+
 func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	## The disabled label ink is a real dark DS ink (not a washed light gold) — luminance well below the fill.
 	var ink_lum := DesignSystem._rel_luminance(BreedShowcaseView.COMMIT_DISABLED_INK)
