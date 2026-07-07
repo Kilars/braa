@@ -176,61 +176,54 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 20) — polish-lens pass: pass-19 directive (155 kennel grid-portrait yaw → tight consistent front-¾) verified landed and correct in-pixel; ONE new buildable X-6 defect the entire 149→154 AA sweep missed because it only ever measured *blue-on-light* — the kennel's **grey `C_MUTED` secondary text** (breed subtitle under all 8 grid cells + modal, section headings, the «Unikt trekk» caption) renders at **2.1–2.5:1** on its light backgrounds, well under WCAG AA
+### PO Review — 2026-07-07 (PO, father pass 21) — polish-lens pass: pass-20 directive (156 kennel grey secondary text → AA-clear `C_INK_SOFT`) verified landed and correct at native resolution; ONE new buildable defect — a Norwegian **misspelling** on the kennel inspect modal: the trick line reads «**Kan laere**: Sitt · Ligg · Legg deg» (the æ written as bare "ae") directly under a correctly-spelled «Læreevne»
 
-Twentieth pass, run fresh and stateless under the polish/critique lens. HEAD is `e494302` (the 155 grid-portrait-yaw commit).
-I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green,
-pck rebuilt after the 155 commit so it carries the narrowed yaw spread), served over http and driven in headless Chromium at 390×844
-(SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap boot (training at rest), and the **kennel** (opened via the
-published `window.__bra_kennel_btn` centre → `window.__bra_kennel_active` reports `bella`, `window.__bra_kennel_cells` reports all 8
-cell centres, then a cell tap → Bella modal). `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run.
-Evidence for every claim is a screenshot I captured this pass (`.screenshots/P20-*`) plus PIL pixel crops + WCAG contrast maths and the
-code tokens I read.
+Twenty-first pass, run fresh and stateless under the polish/critique lens. HEAD is `0a1fe35` (the 156 grey-secondary-text commit).
+I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green),
+served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap
+boot (training at rest), the **completion menu** (opened via the HUD «Triks» pill → `window.__bra_menu_open` reports `true`), and the
+**kennel** (opened via `window.__bra_kennel_btn` → `window.__bra_kennel_active` = `bella`, `window.__bra_kennel_cells` = all 8 cell
+centres, then a Nova cell tap → modal). `window.__bra_current_trick` = `sitt`; **zero console errors** on every run. Evidence is
+screenshots I captured this pass (`.screenshots/P21-*`, incl. deviceScaleFactor-3 near-native crops) plus PIL pixel crops + WCAG contrast
+maths and the code tokens I read.
 
-**Re-verified fixed (pruned) — the pass-19 grid-portrait-yaw directive (155) landed and is correct:** in my own pixels all eight grid
-cells now read as one consistent, flattering **front-¾ with the face clearly toward the viewer** (`.screenshots/P20-02-kennel-grid.png`,
-crops `/tmp/p20_nova.png` / `/tmp/p20_trulte.png`). The old extremes are gone: **Nova** and **Trulte** — the former dead-front mugshots —
-now sit at a pleasing three-quarter, and **Pontus / Bella** — the former broadside side-profiles — now face the camera with the snout no
-longer at the cell edge. The narrowed `PORTRAIT_YAW_SPREAD [0.06,-0.14,0.14,-0.08,0.18,-0.05,0.10,-0.12]` (`kennel_screen.gd:113`) keeps
-every effective yaw inside the tight ~16°–34° band while preserving the per-cell variety (all dogs turn the same way for cohesion, but by
-visibly varying amounts), and it now **agrees with the modal** — Bella's grid cell and her front-¾ hero bust (`.screenshots/P20-03-kennel-modal.png`)
-are the same framing of the same dog. Directive resolved — removed.
+**Re-verified fixed (pruned) — the pass-20 grey-secondary-text directive (156) landed and is correct:** I re-measured at
+**near-native resolution** (deviceScaleFactor 3, framebuffer displayed ~1:1 so no downscale wash) and the kennel's secondary text now
+clears AA in my own pixels — the breed subtitle «Labrador retriever» darkest ink = `(95,111,129)` on white = **5.15:1**
+(`.screenshots/P21-hidpi-grid.png`, crop `/tmp/p21_hidpi_bella.png`), and the modal «Kan lære» line / «Unikt trekk» caption / section
+headings measure **5.28:1** on the modal surface (`.screenshots/P21-hidpi-modal.png`) — all comfortably over the 4.5:1 bar, matching the
+`C_INK_SOFT #5a6b7d` repoint, while staying visibly quieter than the dark `C_INK` title so the hierarchy holds. (Note for future passes:
+a *plain* 390×844 screenshot downsamples the 720-wide framebuffer and washes small text to a false ~1.8:1 — trust the near-native
+deviceScaleFactor-3 capture, not the downscaled frame; same class as the SwiftShader "trust the frame, not the counter" gotcha.)
+Directive resolved — removed. I also spot-checked the modal's Raseegenskaper trait chips (`C_TRAIT_INK #3a6a9a` on `C_TRAIT_BG #e8f0f8`
+= **4.92:1**) — they clear AA, so the kennel text-contrast sweep is now genuinely complete.
 
 **Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
 facing camera on bright even grass, deep-blue BRA button, tan path → blue-roof cottage, white picket fence, grounded garden coins + rose
-collar accent — `.screenshots/P20-01-training.png`); the modal's calm owned-band tint (150), «Trener nå» dark-ink-on-mint active pill
-(151), rarity corner badges (148/149) and stat bars all render correctly. **No structural regression** in the signed-off phases
-(1/2/3/5/6/8/9).
+accent — `.screenshots/P21-01-training.png`); the completion menu reads as one system — «Sitt» «Trener nå» active row (152), «Ligg»/«Legg
+deg» «Tilgjengelig», «Gi labb» «Låst», the «Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA all AA-legible (152/153/154,
+`.screenshots/P21-02-menu.png`); the grid's consistent front-¾ yaw (155), calm owned-band tint (150), «Trener nå» active pill (151),
+rarity corner badges (148/149) and stat bars all render correctly. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The kennel's grey secondary text — the `C_MUTED #9aa6b0` token used for the breed subtitle under every dog, the modal section
-   headings, and the «Unikt trekk» caption — fails WCAG AA badly (2.1–2.5:1), the exact accessibility bar the 149→154 sweep spent six
-   passes enforcing everywhere else. The sweep only ever measured *blue-on-light* text and never looked at this *grey-on-light*
-   secondary text, so it slipped through (X-6 contrast, on the signed-off Phase-8 kennel — same class of fix as 149/151/153/154, a
-   different token).** *What I saw* (`.screenshots/P20-02-kennel-grid.png`, crop `/tmp/p20_nova.png`; `.screenshots/P20-03-kennel-modal.png`,
-   crop `/tmp/p20_modal.png`): the breed line under each dog name — «Labrador retriever», «Border collie», «Gravhund», «Beagle», «Malchi»,
-   … — renders as a *faint, washed grey* clearly lighter than the dark dog name above it, and the same pale grey is used for the modal's
-   «Raseegenskaper» / «Kan lære» section headings and the «Unikt trekk» card caption. I read the token and computed the WCAG contrast:
-   `kennel_screen.gd:38 C_MUTED := Color("9aa6b0")` on the white cell footer = **2.31:1**, on the modal white body = **2.48:1**, and on the
-   cream Unikt-trekk card (`C_MODAL_CREAM #f4efe6`) = **2.17:1** — all three well under the 4.5:1 bar, and all three are **13px bold**
-   (`T_SMALL`, ~9.75pt), *below* WCAG's large-text threshold so the full 4.5:1 normal-text bar applies (they don't even clear the relaxed
-   3:1 large-text bar). *Why it falls short:* (a) it's **meaningful content, not decoration** — the breed name is the single most useful
-   fact under each of the eight cells when you're choosing a dog, and it's the least legible text on the screen; (b) it **breaks the
-   design system's own AA promise** — the last six passes made every other label on every other surface clear AA, so leaving the kennel's
-   grey secondary text at 2.2–2.5:1 is an inconsistency, not a deliberate de-emphasis (a caption can be quieter than a title and still be
-   legible); (c) the four usages (`:999` breed subtitle, `:1335` section label, `:1390` Unikt-trekk heading — plus the `:339` close-button
-   pressed colour, a transient state, optional) all point at one token, so it reads as an oversight. *What "good" looks like:* repoint the
-   `C_MUTED`-**as-text** usages to an AA-clear muted ink — the palette **already has** the right token, `C_INK_SOFT := Color("5a6b7d")`
-   (`kennel_screen.gd:60`, introduced for exactly this — "legible sub-labels / stat labels"), which I computed to **4.78:1** on cream /
-   **5.1:1** on the cell white / **5.48:1** on pure white while staying a visibly *muted* grey-blue (still clearly quieter than the `C_INK`
-   title, so the hierarchy is preserved). Point the breed subtitle, the modal section headings and the «Unikt trekk» caption at
-   `C_INK_SOFT` (or an equally AA-clear muted ink); keep it visibly secondary to the title, just legible. Verify in an in-pixel capture that
-   the breed line under a grid cell and the «Unikt trekk» caption both measure ≥4.5:1. Buildable, no owner asset — a token repoint, exactly
-   like the prior AA fixes.
+1. **The kennel inspect modal shows a Norwegian misspelling: the trick line reads «Kan laere: …» — the "æ" written as a bare ASCII "ae"
+   — sitting directly beneath a correctly-spelled «Læreevne» stat label, so the error is glaring, not subtle (correctness defect on the
+   signed-off Phase-8 kennel).** *What I saw* (`.screenshots/P21-04-kennel-modal.png`; near-native crops `/tmp/p21_kanlaere.png` shows
+   «Kan laere: Sitt · Ligg · Legg deg» and `/tmp/p21_laereevne.png` shows «Læreevne» with the æ ligature rendering perfectly a few rows
+   above it, in the same modal, same font). I traced it to a single string literal: `kennel_screen.gd:1419`
+   `lbl.text = "Kan laere: " + " · ".join(parts)`. Every *other* Norwegian string in the whole file is spelled correctly with real
+   æ/ø/å (19 lines carry those chars — «Læreevne», «Påskeegg», «Din», «Profesjonell fasilitet», …), and the Baloo 2 body font clearly
+   renders æ fine (proven by «Læreevne» right above), so this is a plain typo, **not** a deliberate glyph-avoidance. *Why it falls short:*
+   it's a visible spelling error in the product's own language on a headline data row — «Kan lære» ("can learn") is the modal's promise of
+   what the dog will do, and rendering it «Kan laere» reads as unpolished/amateur, exactly the kind of blemish the last several AA/polish
+   passes were tightening the screen to eliminate; a Norwegian player will read it as a mistake at a glance. *What "good" looks like:* fix
+   the one literal to the correct spelling — `"Kan lære: "` (real "æ", matching «Læreevne»/«Raseegenskaper» elsewhere). Verify in an
+   in-pixel modal capture that the line reads «Kan lære: Sitt · Ligg · Legg deg» with the æ ligature. Buildable, no owner asset — a
+   one-character orthography fix.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the kennel grey-secondary-text AA directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the «Kan lære» spelling fix above; the owner still owns the Phase-10 spec + the asset flags.

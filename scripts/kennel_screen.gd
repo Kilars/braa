@@ -1416,7 +1416,7 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 		parts.append(id_to_label.get(str(tid), str(tid)))
 	var lbl := Label.new()
 	lbl.name = "ModalTrickList"
-	lbl.text = "Kan laere: " + " · ".join(parts)
+	lbl.text = "Kan lære: " + " · ".join(parts)
 	lbl.add_theme_font_override("font", DesignSystem.font_body())
 	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
 	lbl.add_theme_color_override("font_color", C_INK_SOFT)
