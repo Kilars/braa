@@ -38,7 +38,9 @@ const C_INK          := Color("2b3742")   ## primary text ink
 const C_MUTED        := Color("9aa6b0")   ## muted / secondary text (breed, subtitle)
 const C_STATUS_OWNED := Color("57b85c")   ## «Din hund» green
 const C_STATUS_EGG   := Color("ff7a85")   ## «Påskeegg» coral (star drawn as geometry — no U+2605 font glyph, 106)
-const C_STATUS_NEUTRAL := Color("9aa6b0") ## neutral «Ny» tag
+const C_STATUS_NEUTRAL := Color("9aa6b0") ## neutral «Ny» tag / COMMON «Vanlig» rarity accent
+const C_RARITY_RARE  := Color("5b8fd0")   ## RARE «Sjelden» — calm blue accent (NOT a loud band fill)
+const C_RARITY_EPIC  := Color("9b7bd4")   ## EPIC «Episk» — calm violet accent (the prize tier)
 const C_PRICE_OWN    := Color("57b85c")   ## «Din» owned price chip
 const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
 const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
@@ -602,8 +604,9 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.add_child(bars)
 
-	# Status tag — top-left (owned / easter-egg / neutral).
-	if row.status_label != "":
+	# Corner badge — top-left. Owned/secret keep their status word; every buyable dog now surfaces
+	# its rarity («Vanlig» / «Sjelden» / «Episk») through the SAME component (148, X-4).
+	if row.status_label != "" or row.get("rarity_label", "") != "":
 		var tag := _make_tag(row)
 		tag.anchor_left   = 0.0
 		tag.anchor_right  = 0.0
@@ -817,6 +820,19 @@ static func _band_dog_tint(coat_hue: Color) -> Color:
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
 ## For the secret/easter row a drawn _StarPip is prepended before the word label —
 ## no font glyph (U+2605 is absent in Baloo 2 / Nunito; task 106 / 089 precedent).
+## Calm rarity accent for the buyable dogs' corner badge (148). COMMON→slate, RARE→calm blue,
+## EPIC→calm violet — a small, tasteful tint, deliberately NOT the loud per-cell band fills the PO
+## removed. Owned/secret don't route here (they keep their green/coral status colours).
+func _rarity_accent(rarity: int) -> Color:
+	match rarity:
+		KennelDog.Rarity.RARE: return C_RARITY_RARE
+		KennelDog.Rarity.EPIC: return C_RARITY_EPIC
+		_: return C_STATUS_NEUTRAL
+
+## The corner badge (148, X-4): one component draws ownership AND rarity. Owned → green «Din hund»,
+## secret → coral «★ Påskeegg» (star geometry), every buyable dog → its rarity word («Vanlig» /
+## «Sjelden» / «Episk») on a calm rarity accent. So the rarity ladder reads at a glance on all eight
+## cells, not just the two special ones.
 func _make_tag(row: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = "StatusTag"
@@ -827,7 +843,9 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 	elif row.secret:
 		bg_color = C_STATUS_EGG
 	else:
-		bg_color = C_STATUS_NEUTRAL
+		bg_color = _rarity_accent(row.get("rarity", KennelDog.Rarity.COMMON))
+	# Owned/secret carry their status word; every other dog carries its rarity word.
+	var badge_text: String = row.status_label if row.status_label != "" else row.get("rarity_label", "")
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg_color
 	sb.set_corner_radius_all(int(TAG_RADIUS))
@@ -849,7 +867,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(pip)
 		var lbl := Label.new()
-		lbl.text = row.status_label
+		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
 		lbl.add_theme_color_override("font_color", Color.WHITE)
@@ -857,7 +875,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		hbox.add_child(lbl)
 	else:
 		var lbl := Label.new()
-		lbl.text = row.status_label
+		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
 		lbl.add_theme_color_override("font_color", Color.WHITE)
@@ -1198,6 +1216,27 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	close_btn.offset_bottom = 8.0 + CLOSE_SIZE
 	close_btn.pressed.connect(close_detail)
 	band.add_child(close_btn)
+
+	# Rarity badge — top-left of the band, echoing the grid cell so the ladder reads in the modal
+	# too (148, X-4). Same corner-badge component: owned/secret keep green/coral, buyables get their
+	# rarity word + calm accent. Synthesized row forces the rarity_label path (owned shows «Din»).
+	if detail.get("rarity_label", "") != "":
+		var rtag := _make_tag({
+			"owned": detail.get("rarity", KennelDog.Rarity.COMMON) == KennelDog.Rarity.OWNED,
+			"secret": detail.get("secret", false),
+			"rarity": detail.get("rarity", KennelDog.Rarity.COMMON),
+			"status_label": "",
+			"rarity_label": detail.get("rarity_label", ""),
+		})
+		rtag.anchor_left   = 0.0
+		rtag.anchor_right  = 0.0
+		rtag.anchor_top    = 0.0
+		rtag.anchor_bottom = 0.0
+		rtag.offset_left   = 8.0
+		rtag.offset_top    = 8.0
+		rtag.offset_right  = 8.0 + 96.0
+		rtag.offset_bottom = 8.0 + 24.0
+		band.add_child(rtag)
 
 	return band
 

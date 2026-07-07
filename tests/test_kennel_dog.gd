@@ -209,6 +209,34 @@ func test_row_count_and_catalog_order() -> void:
 	for i in expected_ids.size():
 		assert_eq(rows[i]["id"], expected_ids[i], "row %d id is '%s' (catalog order)" % [i, expected_ids[i]])
 
+# --- rarity_label tests (148, PO father-pass-12 X-4: surface the rarity ladder) ---
+
+func test_rarity_label_maps_enum_to_norwegian() -> void:
+	# Pure map from the Rarity enum to the player-facing Norwegian badge label. Owned/secret keep
+	# their existing words; the three buyable rarities get «Vanlig» / «Sjelden» / «Episk».
+	assert_eq(KennelDog.rarity_label(KennelDog.Rarity.OWNED),  "Din",      "OWNED -> Din")
+	assert_eq(KennelDog.rarity_label(KennelDog.Rarity.COMMON), "Vanlig",   "COMMON -> Vanlig")
+	assert_eq(KennelDog.rarity_label(KennelDog.Rarity.RARE),   "Sjelden",  "RARE -> Sjelden")
+	assert_eq(KennelDog.rarity_label(KennelDog.Rarity.EPIC),   "Episk",    "EPIC -> Episk")
+	assert_eq(KennelDog.rarity_label(KennelDog.Rarity.SECRET), "Påskeegg", "SECRET -> Påskeegg")
+
+func test_classify_carries_rarity_label() -> void:
+	# K-1/K-3: every classify row exposes rarity_label so the grid cell can draw the rarity badge
+	# on the six buyable dogs (not just owned/secret) — reusing the existing corner-badge component.
+	var rows := KennelDog.classify_kennel_dogs(["bella"], "bella", 1000)
+	var want := {
+		"bella": "Din", "nova": "Episk", "balder": "Sjelden", "sol": "Sjelden",
+		"pontus": "Vanlig", "lykke": "Vanlig", "sniff": "Vanlig", "trulte": "Påskeegg",
+	}
+	for row in rows:
+		assert_eq(row["rarity_label"], want[row["id"]], "%s rarity_label is '%s'" % [row["id"], want[row["id"]]])
+
+func test_detail_carries_rarity_label() -> void:
+	# K-2: the inspect modal echoes the rarity near the name, so detail_for must carry rarity_label.
+	assert_eq(KennelDog.detail_for("nova")["rarity_label"],   "Episk",   "Nova detail rarity_label is Episk")
+	assert_eq(KennelDog.detail_for("pontus")["rarity_label"], "Vanlig",  "Pontus detail rarity_label is Vanlig")
+	assert_eq(KennelDog.detail_for("bella")["rarity_label"],  "Din",     "Bella detail rarity_label is Din")
+
 func test_purity_no_aliasing_into_dogs_const() -> void:
 	# The row's stats and band_tint arrays must be independent copies; mutating one call's
 	# returned row must not bleed into KennelDog.DOGS or a fresh classify() call.

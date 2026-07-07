@@ -102,6 +102,20 @@ func portrait_tint() -> Color:
 func locks_difficulty() -> bool:
 	return rarity == Rarity.RARE or rarity == Rarity.EPIC or rarity == Rarity.SECRET
 
+## The player-facing Norwegian rarity badge label (148, PO father-pass-12 X-4). Owned/secret keep
+## their existing words («Din» / «Påskeegg»); the three buyable rarities surface the ladder as
+## «Vanlig» / «Sjelden» / «Episk» so a browsing player can read Common→Rare→Epic at a glance.
+## Pure map off the enum — the grid cell + inspect modal both draw this through the SAME
+## corner-badge component (no per-cell band fill).
+static func rarity_label(rarity: int) -> String:
+	match rarity:
+		Rarity.OWNED:  return "Din"
+		Rarity.COMMON: return "Vanlig"
+		Rarity.RARE:   return "Sjelden"
+		Rarity.EPIC:   return "Episk"
+		Rarity.SECRET: return "Påskeegg"
+	return ""
+
 ## The fixed difficulty mode a special dog pins (119, P4-1). A special dog is a set challenge —
 ## Hard — never the free Normal. The exact mode is a product knob; it must name a known Difficulty id.
 func locked_difficulty_id() -> String:
@@ -168,6 +182,7 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 			"blurb": d.blurb, "traits": d.traits,
 			"owned": is_owned, "active": d.id == active, "secret": is_secret,
 			"affordable": affordable, "status_label": status_label, "price_label": price_label,
+			"rarity_label": rarity_label(d.rarity),
 		})
 	return rows
 
@@ -187,6 +202,7 @@ static func detail_for(id: String) -> Dictionary:
 		"traits": d.traits.duplicate(), "band_tint": d.band_tint,
 		"portrait_tint": d.portrait_tint(),
 		"secret": is_secret,
+		"rarity_label": rarity_label(d.rarity),
 	}
 
 static func _from_row(row: Array) -> KennelDog:

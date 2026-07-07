@@ -176,78 +176,66 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 11) — polish-lens pass: readout-legibility fix (145) verified landed; TWO new buildable X-4/X-6 defects — coin-price component is inconsistent across screens, and Nova's coat identity flips between grid and inspect modal
+### PO Review — 2026-07-07 (PO, father pass 12) — polish-lens pass: BOTH pass-11 directives (146 coin component, 147 cool-coat parity) verified landed; ONE new buildable X-4 defect — the roster's rarity ladder is invisible for the 6 buyable dogs
 
-Eleventh pass, run fresh and stateless under the polish/critique lens. Rebuilt the current HEAD (`64bc92f`) with
-`nix develop -c bash verify.sh` — gate green (import·boot·test·export), 690 tests — so `build/web` is the fresh
-output at this HEAD (the prior artefact was ~20 min stale relative to the 145 commit). Served over http and drove
-the **real** game with real canvas taps in headless Chromium at 390×844 (SwiftShader == the deployed GL
-Compatibility renderer); this local bundle boots the **licensed Labrador**. Drove: `?bra_autotap=1` mark burst →
-top-readout zoom → completion menu via the Triks pill → kennel grid → owned/unaffordable/secret inspect modals →
-close. **Zero console errors on every run.** Evidence for every claim is a screenshot I captured this pass
-(`.screenshots/P11-*`).
+Twelfth pass, run fresh and stateless under the polish/critique lens. Rebuilt the current HEAD (`b4e348e`, the
+146+147 commit) with `nix develop -c bash verify.sh` — gate green (import·boot·test·export), 699 tests — so
+`build/web` is the fresh output at this HEAD. Served over http and drove the **real** game with real canvas taps in
+headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer); this local bundle boots the
+**licensed Labrador**. Drove: `?bra_autotap=1` mark burst → training HUD zoom → kennel grid → six inspect modals
+(nova/pontus/trulte cool + balder/sol/bella warm) → completion menu on mastery. **Zero console errors on every run.**
+Evidence for every claim is a screenshot I captured this pass (`.screenshots/P12-*`, `072-menu-open.png`).
 
-**Re-verified fixed (pruned) — the training-readout legibility directive (task 145) landed and is correct:** on
-the top readout (`.screenshots/P11-readout-zoom2.png`, 3× zoom) the «Sitt» label and the «%» number now render in
-a **dark slate ink** and read cleanly against the bright pale-blue sky; the progress track is an **opaque light
-(paper) rail**, no longer a translucent near-sky white; and a **scrim halo** sits behind the readout so the sun
-disc (143) no longer bleaches its midsection. The three sky-coloured ghosts from pass 10 are gone — the primary
-in-session feedback is legible at a glance. Prior directive resolved — removed.
+**Re-verified fixed (pruned) — both pass-11 directives landed and are correct:**
+- **146 (coin-component consistency):** every price now renders as the **same coin component** as the readout — a
+  paper pill with a gold coin pip + a dark-ink number. The grid price tag reads «🪙 900» (`/tmp` 3× zoom of
+  `.screenshots/P12-02-kennel-grid.png` — white pill, gold disc, ink «900», identical to the header chip «🪙 0»),
+  and the modal afford action reads «Har ikke råd · mangler 🪙 900» (`.screenshots/P12-modal-nova.png`) with the coin
+  pip in front of the amount. «Din» (owned) and Trulte's «Adopter gratis ♥» (free, heart pip) correctly stay
+  word/heart-only — no spurious coin on free actions. Gold now reads unambiguously as "coins" at the point of
+  purchase. Prior directive resolved — removed.
+- **147 (cool-coat tint parity grid↔modal):** Nova stays a **cool grey** into her modal — hero-bust coat samples
+  `(113,118,122)` (blue ≥ red, cool hue preserved), no longer the warm cream she flipped to in pass 11; the warm
+  dogs stay warm through the modal (Balder `(134,128,119)`, Sol `(147,142,128)`, red ≥ blue). Cool stays cool, warm
+  stays warm across both views (`.screenshots/P12-modal-{nova,pontus,trulte,balder,sol}.png`). Prior directive
+  resolved — removed.
 
-**Also re-verified fixed / clean (no new directive):** the **sky/atmosphere (143)** holds — clean pale-blue sunny
-sky; the **foreground grass (144)** holds — even and bright, no muddy blotches, only a tight grounding smudge
-under the paws; the **garden-coin scatter (142)** holds — small, spaced, two-tone (gold discs + a rose accent on
-the right flank), no oversized HUD orbs. The **BRA button** primary CTA is punchy — near-white label on the raised
-blue pill (`.screenshots/P11-01-training.png`). The **completion menu** is a clean DS paper card (Triks heading +
-coin chip + Sitt/Ligg/Legg deg rows + «Gi labb · Låst» + «Gi tilbakemelding» / «Fortsett treningen»,
-`P11-03-menu.png`). The **kennel grid** renders 8 clean distinct cells with header + coin chip
-(`P11-04-kennel-grid.png`). The **modal hero-bust framing (135→141)** holds — every modal opens on the front-¾
-hero bust with the nameplate clear of the legs (Balder `P11-bust-balder.png`, Sol `P11-bust-sol.png`, Bella owned
-«Trener nå»). **No structural regression** in the signed-off phases.
+**Also re-verified clean (no new directive):** training page matches the goal (pale-blue sky + sun, cream Labrador
+centred facing camera on green grass, tan path → cottage, white picket fence, small two-tone garden coins, blue BRA
+CTA — `.screenshots/P12-01-training.png`); the **145 readout** holds legible even with the sun disc directly behind
+it (dark-ink «Sitt»/«%» on the opaque paper rail, `/tmp` HUD zoom); the **completion menu** is a clean DS paper card
+(Triks heading + consistent coin chip «🪙 10» + trick rows + Markørord rows + outlined «Gi tilbakemelding» / filled
+«Fortsett treningen» CTA, `072-menu-open.png`); the kennel **modal hero-bust framing** holds for all six dogs.
+**No structural regression** in the signed-off phases.
 
 **Improvements**
 
-1. **The coin currency is rendered as two different components across screens — a glyphed pill in the HUD/header
-   readout, but a bare unlabelled number everywhere a price appears in the kennel (X-4 "same component rendered
-   differently across screens" + "gold reserved to the coin").** *What I saw:* the coin **readout** (training HUD
-   pill and kennel header, `.screenshots/P11-header-chip.png`) is a **white pill with a gold coin glyph + the
-   count** («🪙 0») — the canonical coin component. But **every price** is a **bare number with no coin glyph**: the
-   grid price tags are just «900» / «50» in a solid-gold pill (`.screenshots/P11-price-zoom.png`), and the modal
-   adopt/afford action reads «Har ikke råd · mangler 900» (`.screenshots/P11-06-modal-nova.png`) — again a bare
-   number. *Why it falls short:* the same quantity (an amount of coins) is drawn one way in the readout and another
-   way at the point of purchase, and the price «900» carries **no unit** — a new player reading «900» can't tell
-   it's 900 coins vs kroner vs points, and the DS's coin identity (established by the glyphed readout) is dropped
-   exactly where affordability matters most. It also spends a full-gold pill on a plain number while the DS reserves
-   gold to *the coin* — so the gold no longer reads as "coins", just "a tag". This is a cross-cutting DS-consistency
-   gap the polish lens explicitly names. *What "good" looks like:* draw price using the **same coin component** as
-   the readout — prefix every price (grid tags, modal action, any store cost) with the **gold coin glyph** so it
-   reads «🪙 900», unambiguously coins, visually consistent with the header/HUD readout; keep the glyph + number
-   pairing identical across all four surfaces (HUD, kennel header, grid tag, modal action). Buildable, no owner
-   asset (it reuses the existing coin glyph already drawn in the readout).
-
-2. **Nova's coat identity flips between the kennel grid and her inspect modal — grey Border-collie in the grid,
-   warm cream Labrador in the modal — so the same dog reads as two different animals (X-6 cohesion, on the
-   signed-off Phase-8 kennel surface).** *What I saw:* in the grid, Nova's cell reads as a **cool grey/taupe** dog
-   (`.screenshots/P11-04-kennel-grid.png`, `P11-nova-grid.png`; coat region-average ≈ `(70,60,55)`, near-neutral).
-   Her **inspect-modal hero bust**, however, renders as a **warm cream/butter** coat (`.screenshots/P11-nova-bust.png`;
-   coat ≈ `(112,101,88)`, clearly warmer/lighter). This is **not** a global modal look: Balder keeps his **brown**
-   (`P11-bust-balder.png`, ≈ `(96,65,36)`) and Sol his **golden** (`P11-bust-sol.png`, ≈ `(128,96,52)`) into the
-   modal — only the **cool/grey** coats fail to carry through, defaulting toward the base cream rig. *Why it falls
-   short:* the modal is where the player commits to a dog's identity, and Nova visibly changes breed-colour between
-   the cell she tapped and the card that opens — the grid says "grey Border collie", the modal says "cream
-   Labrador". It breaks the one-world cohesion and undercuts the per-dog portrait tint that the grid already gets
-   right. It is **not** the owner-gated per-breed *model* gap (all dogs share the one rig by design, and that's
-   fine) — it is a **tint-parity** bug: the modal bust isn't applying the same `portrait_tint` the grid cell uses.
-   Likely also affects the other cool-coated dogs (Pontus, Trulte grey-tan). *What "good" looks like:* the modal
-   hero bust uses the **same per-dog portrait tint as the grid cell**, so a grey dog stays grey when its card opens
-   and every dog's coat is identical across the two views; verify by re-sampling Nova's coat in grid vs modal (they
-   should match within a small margin) and eyeballing Nova/Pontus/Trulte cards as cool, not cream. Buildable, no
-   owner asset (wire the existing grid tint into the modal bust render). *(Distinct from the resolved 135→141
-   framing/full-body/Bella arc — the framing and nameplate are correct; this is only the coat hue on cool dogs.)*
+1. **The roster is built around a rarity ladder (OWNED · COMMON · RARE · EPIC · SECRET) but rarity is invisible to
+   the player for the six buyable dogs — only OWNED and SECRET get a corner badge, so a browsing player cannot tell
+   an EPIC dog from a COMMON one except by inferring from price (X-4 hierarchy / "collect fantasy legibility" on the
+   signed-off Phase-8 kennel surface).** *What I saw:* in the grid (`.screenshots/P12-02-kennel-grid.png`) only Bella
+   carries a corner badge («Din», owned) and Trulte one («Påskeegg», secret); the six purchasable dogs — Nova
+   (**EPIC**, 900), Balder (**RARE**, 650), Sol (**RARE**, 500), Pontus/Lykke/Sniff (**COMMON**, 350/300/320) —
+   carry **no rarity cue at all**, in the grid **or** the inspect modal (I opened all six and there is no rarity
+   name anywhere; grep-confirmed: `kennel_dog.gd` holds a real `enum Rarity { OWNED, COMMON, RARE, EPIC, SECRET }`
+   per dog, but no Norwegian rarity label string is ever rendered in `kennel_screen.gd`). *Why it falls short:* the
+   whole point of a browse-and-adopt roster is the rarity ladder — it is the axis that makes Nova (EPIC) feel like a
+   prize worth saving 900 coins for versus a 320-coin Beagle. Right now that axis is **data-only**: rarity drives
+   nothing the player can perceive (the old per-rarity band fills were deliberately unified away as "eight clashing
+   fills", and 146 made every price chip the identical paper-pill, so the price chip no longer carries rarity colour
+   either). The aspirational EPIC/RARE dogs read as visually interchangeable with the COMMON ones — the collect
+   hierarchy the phase is built on doesn't land. *What "good" looks like:* surface each dog's rarity as a small,
+   tasteful **text badge** reusing the **same corner-badge component** that OWNED («Din») and SECRET («Påskeegg»)
+   already use — map the enum to Norwegian labels (e.g. «Vanlig» / «Sjelden» / «Episk», with «Din»/«Påskeegg» kept as
+   the owned/secret cases) and place it in the grid cell (and echo it in the modal near the name), tinted to a calm
+   rarity accent (NOT a return to the loud full-cell band fills the PO removed). Then a browsing player can read the
+   ladder at a glance and the EPIC dogs feel special. Buildable, no owner asset — the badge component and the rarity
+   data both already exist; this only wires existing data into the existing badge on the six dogs that currently
+   lack one.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next
-buildable work is the two directives above (coin-component consistency + Nova/cool-coat modal tint parity); the
-owner still owns the Phase-10 spec + the asset flags.
+buildable work is the directive above (surface the rarity ladder on the six buyable kennel dogs); the owner still
+owns the Phase-10 spec + the asset flags.
