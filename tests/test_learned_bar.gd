@@ -57,3 +57,20 @@ func test_a_scrim_backs_the_readout_against_the_sun() -> void:
 		"a light scrim sits behind the readout so the label reads and the sun cannot bleach it")
 	assert_true(LearnedBar.SCRIM_COLOR.get_luminance() > 0.80,
 		"the scrim is a light DS surface (dark ink text reads on it)")
+
+# ── 159 (PO father-pass-23, X-4): the backing panel must be FULLY OPAQUE, not a film ──
+# 145 made the panel light (luminance > 0.80) but left it translucent (alpha 0.55), so on
+# 143's bright HUD the sky bled blue through its edges and the sun bled warm-yellow through
+# its middle — it read as a see-through tinted film next to the crisp opaque white nav/coin
+# pills on the same HUD. Fix: raise the panel to fully opaque so it reads one neutral colour
+# regardless of what is behind it (sky or sun), matching the nav/coin pill surface exactly.
+
+func test_backing_panel_is_fully_opaque_like_the_nav_and_coin_pills() -> void:
+	assert_eq(LearnedBar.SCRIM_COLOR.a, 1.0,
+		"the backing panel is fully opaque — a translucent panel let the sky/sun bleed through it")
+
+func test_backing_panel_is_the_same_paper_surface_as_the_pills() -> void:
+	# The nav (Triks/Kennel) + coin pills are DesignSystem.PAPER; the learned bar's panel
+	# must be the same surface so the whole HUD reads as one set of opaque chips.
+	assert_eq(LearnedBar.SCRIM_COLOR, DesignSystem.PAPER,
+		"the backing panel is the DS PAPER surface the nav/coin pills use, at full opacity")

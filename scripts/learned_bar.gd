@@ -33,10 +33,22 @@ const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 ## Fix: dark INK text (AA on the pale sky), an OPAQUE PAPER rail (the sun can't show through),
 ## and a subtle light scrim behind the whole readout so the label text also has backing and
 ## nothing bleaches — matching the goal art's legible readout + soft top halo.
+##
+## 159 (PO father-pass-23, X-4): 145 left the backing panel TRANSLUCENT (alpha 0.55), so the
+## sky bled blue through its edges and the sun bled warm-yellow through its middle — a see-through
+## film sitting next to the crisp OPAQUE-white nav/coin pills on the same HUD. Fix: raise the
+## panel to fully opaque DS PAPER — the exact surface the nav (Triks/Kennel) + coin pills use —
+## and give it the pills' soft drop shadow, so the whole HUD reads as one set of solid floating
+## chips and nothing behind the bar (sky or sun) shows through. This EXTENDS 145's opacity work
+## from the text scrim to the whole panel; it does not revert 145 (dark INK labels, opaque inner
+## track, backing behind the text all kept).
 const LABEL_COLOR := DesignSystem.INK        ## dark slate «Sitt» label — reads on sky/sun
 const PCT_COLOR   := DesignSystem.INK         ## dark, legible «%» readout
 const TRACK_COLOR := DesignSystem.PAPER       ## opaque light rail (was BORDER @ 0.9)
-const SCRIM_COLOR := Color(DesignSystem.PAPER.r, DesignSystem.PAPER.g, DesignSystem.PAPER.b, 0.55)
+const SCRIM_COLOR := DesignSystem.PAPER       ## 159: fully OPAQUE backing panel (was PAPER @ 0.55)
+## The pills' soft drop shadow lifts the opaque panel off the scene (matches CoinReadout's 100
+## deepened HUD-pill shadow, INK @ 0.20, so no sky/sun shows through and it reads as one chip).
+const PANEL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.20)
 const SCRIM_PAD_X := 14.0     ## scrim padding beyond the label/track, horizontal
 const SCRIM_PAD_Y := 6.0      ## scrim padding beyond the readout, vertical
 
@@ -95,11 +107,15 @@ static func _display_name(id: String) -> String:
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
-	# ── Scrim: a subtle light halo behind the whole readout (145) ─────────────
-	# Backs the label text and defeats the sun disc bleeding through, matching the
-	# goal art's soft top halo. Padded beyond the readout so it reads as a halo, not a box.
+	# ── Backing panel: an OPAQUE PAPER chip behind the whole readout (145 → 159) ───
+	# Backs the label text and — now fully opaque (159) — defeats BOTH the sky and the sun
+	# disc bleeding through, so it reads as one solid floating chip matching the nav/coin
+	# pills. Padded beyond the readout so it frames the readout cleanly, with the pills'
+	# soft drop shadow lifting it off the scene.
 	var scrim := Rect2(-SCRIM_PAD_X, -SCRIM_PAD_Y, w + 2.0 * SCRIM_PAD_X, h + 2.0 * SCRIM_PAD_Y)
-	DesignSystem.pill(SCRIM_COLOR, TRACK_RADIUS).draw(get_canvas_item(), scrim)
+	var panel_sb := DesignSystem.panel(SCRIM_COLOR, TRACK_RADIUS)
+	panel_sb.shadow_color = PANEL_SHADOW
+	panel_sb.draw(get_canvas_item(), scrim)
 	# ── Label row: trick name left, percentage right ──────────────────────────
 	var font_label := DesignSystem.font_body_bold()
 	var label_size := DesignSystem.T_HEAD  ## 18px — readable without eating too much height

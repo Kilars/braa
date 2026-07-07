@@ -176,64 +176,64 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 22) — polish-lens pass: pass-21 directive (157 «Kan laere»→«Kan lære» modal spelling) verified landed and correct in-pixel; ONE new buildable X-6 defect — the kennel **adopt button** (the modal's primary CTA, the whole point of the kennel) fails WCAG AA in **all three** states, the last button the 149→156 AA sweep never measured
+### PO Review — 2026-07-07 (PO, father pass 23) — polish-lens pass: pass-22 directive (158 kennel adopt-button AA, all three states) verified landed and correct in-pixel; ONE new buildable X-4 defect — the training HUD **learned-progress bar** is a *translucent* backing panel the sun/sky bleed straight through, breaking cohesion with the opaque white nav/coin pills beside it (a residual of the 143 sun vs 145 scrim it never fully closed)
 
-Twenty-second pass, run fresh and stateless under the polish/critique lens. HEAD is `9f5ac36` (the 157 spelling-fix commit).
+Twenty-third pass, run fresh and stateless under the polish/critique lens. HEAD is `0659850` (the 158 adopt-button commit).
 I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green),
 served over http and driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (near-native, no downscale wash; SwiftShader ==
-the deployed GL Compatibility renderer) — via a no-autotap boot (training at rest), the **completion menu** (`window.__bra_menu_open` =
-`true`), the **kennel grid** (`window.__bra_kennel_cells` = all 8 cell centres), and two inspect modals (**Nova** buyable/«Episk», **Bella**
-owned). `window.__bra_current_trick` = `sitt`; **zero console errors** on every run. Evidence is screenshots I captured this pass
-(`.screenshots/P22-*`) plus PIL pixel crops + WCAG contrast maths and the code tokens I read.
+the deployed GL Compatibility renderer) — via a no-autotap boot (training at rest, balance 0), the **completion/trick menu**
+(`window.__bra_menu_open` = `true`), the **kennel grid** (`window.__bra_kennel_cells` = all 8 cell centres), and three inspect modals
+(**Nova** buyable/«Episk» → unaffordable adopt, **Trulte** «Påskeegg» → free-adopt, **Bella** owned → «Trener nå»). `window.__bra_current_trick`
+= `sitt`; **zero console errors** on every run. Evidence is screenshots I captured this pass (`.screenshots/P23-*`) plus PIL pixel crops +
+WCAG contrast maths, the code tokens I read, and the goal art (`.docs/specs/assets/goal-training-screen.png`).
 
-**Re-verified fixed (pruned) — the pass-21 spelling directive (157) landed and is correct:** the Nova and Bella inspect modals both render
-the trick line as «**Kan lære**: Sitt · Ligg · Legg deg» with the real æ ligature (`.screenshots/P22-04-kennel-modal-nova.png`, near-native
-crop `/tmp/p22_modal_bottom.png` — the æ renders identically to «Læreevne»/«Raseegenskaper» in the same modal). Code confirms the single
-literal at `kennel_screen.gd:1419` is now `"Kan lære: "`. Directive resolved — removed.
+**Re-verified fixed (pruned) — the pass-22 adopt-button directive (158) landed and every state now clears WCAG AA:** I drove the kennel to
+all three adopt states and measured them in my own near-native pixels + confirmed the tokens:
+- **Unaffordable** (Nova «Har ikke råd · mangler 🪙 900») — now dark `C_TAG_INK #141c26` on the muted grey `C_ADOPT_DISABLED #c3cdd6`
+  (`.screenshots/P23-03-modal-nova-unaffordable.png`, crop `/tmp/nova_bottom.png`) = **10.64:1** (was 3.4:1). Clearly legible.
+- **Free-adopt** (Trulte «Adopter gratis ♥») — now dark `C_TAG_INK` on the coral `C_ADOPT_FREE #ff7a85`, and the drawn heart pip switched to
+  the same ink (`.screenshots/P23-04-modal-trulte-free.png`, crop `/tmp/trulte_btn_crop.png`); measured in-pixel = **6.90:1** (was 2.51:1, the
+  worst offender), coral identity kept.
+- **Affordable** — white on `GRAD_PILL_BOT #24589a` (the deep face of the 153 primary-CTA gradient, replacing the flat `#4a90e2`) = **7.15:1**
+  (was 3.29:1); verified at the token level (a fresh 0-coin save can't reach the affordable render, but the deep-blue token is the same one the
+  BRA/«Fortsett treningen» CTAs use and is unit-asserted). Directive resolved — removed.
 
-**Also re-verified clean (no new directive):** (a) **grid↔modal coat parity holds** — I nearly filed a "Nova modal shows cream but grid
-shows grey" mismatch, but on measuring the *lit* coat pixels both read the same warm-neutral light-grey (grid Nova ≈ `(226,223,217)`, modal
-Nova ≈ `(228,225,218)`; the "cream vs grey" impression is a scale/lighting illusion — the large lit modal bust vs the small shadowed grid
-cell — not a tint bug; 147/150 intact). (b) The **HUD nav pills** «Triks»/«Kennel» use `DesignSystem.SLATE #5a6b7d` on the PAPER pill =
-**5.28:1**, AA-clear (a downsampled frame reads a false ~3.3:1 — trust the token + near-native capture, the prior pass's gotcha).
-(c) The **training page** matches the goal (pale-blue sky + sun, cream Labrador centred facing camera on even grass, deep-blue BRA button,
-tan path → blue-roof cottage, white picket fence, grounded gold + rose garden coins — `.screenshots/P22-01-training.png`). (d) The
-**completion menu** reads as one system — «Sitt» «Trener nå» active row (152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», the
-«Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA all AA-legible (152/153/154, `.screenshots/P22-02-menu.png`). (e) The kennel
-grid front-¾ yaw (155), calm owned-band tint (150), rarity corner badges (148/149), modal stat bars (the empty-slot indicator reads —
-Nova's Mot shows 4 filled + 1 pale slot) and trait chips (`C_TRAIT_INK` on `C_TRAIT_BG` = 4.92:1) all render correctly. **No structural
-regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Also re-verified clean (no new directive):** the entire 149→158 WCAG AA sweep is now genuinely exhaustive — I re-measured every kennel/menu
+text-on-fill pairing and each clears 4.5:1: rarity/status/owned badges `C_TAG_INK` on their accents (COMMON slate **6.91**, RARE blue **5.14**,
+EPIC violet **5.05**, OWNED green **6.88**, EGG coral **6.84**), trait chips **4.92**, secondary text `C_INK_SOFT` (156), menu blue-on-light
+`BLUE_INK` (154), primary CTAs `GRAD_PILL_*` (153), owned-status pills (151), HUD nav pills `SLATE` **5.28**. Other surfaces hold: (a) the
+**kennel grid** — front-¾ yaw (155), calm owned/secret cell tints (150), corner rarity badges (148/149), 8 cells legible; (b) the
+**completion/trick menu** reads as one system — «Sitt» «Trener nå» active row (152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst»,
+«Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA (`.screenshots/P23-06-menu.png`); (c) both inspect modals render clean.
+**No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The kennel inspect-modal ADOPT BUTTON — the modal's primary call-to-action, the entire purpose of the kennel — fails WCAG AA in all
-   three of its states; it is the one button the long 149→156 contrast sweep never measured.** *What I saw:* on the Nova modal the
-   unaffordable adopt CTA «Har ikke råd · mangler 🪙 900» is a muted grey pill whose label barely separates from its fill
-   (`.screenshots/P22-04-kennel-modal-nova.png`, near-native crop `/tmp/p22_modal_bottom.png`); measuring the rendered text in my own pixels
-   gives core `(101,118,135)` on fill `(209,216,222)` = **3.25:1**, well under the 4.5:1 AA bar. I then traced all three adopt-button states
-   in `kennel_screen.gd` and every one fails:
-   - **Unaffordable** (6 of the 8 dogs on a fresh 0-coin save — the default state a new player sees) — text `C_INK_SOFT #5a6b7d` on
-     `C_ADOPT_DISABLED #c3cdd6` (`:1604`/`:1605`) = **3.4:1**.
-   - **Affordable** — white on the flat `C_ADOPT_BLUE #4a90e2` (`:1591`, `text_col = Color.WHITE`) = **3.29:1**.
-   - **Free-adopt** (Trulte «Adopter gratis ♥») — white on the coral `C_ADOPT_FREE #ff7a85` (`:1674`) = **2.51:1**.
-   The label is `T_BODY` 15 px (`:1636`/`:1649`), below the large-text threshold → the full 4.5:1 bar applies to all three. *Why it falls
-   short:* these tokens were last touched at task **135** and the entire 149→156 AA sweep (badges, status pills, secondary text, section
-   headings, trait chips, menu blue-on-light text, and the 153 primary-CTA *gradient*) flowed right past them, because the adopt button
-   uses its own flat `C_ADOPT_*` fills, not the deepened `GRAD_PILL_*` gradient the BRA/«Fortsett treningen» CTAs got. So the single most
-   important interactive element in the kennel — the button you press to actually acquire a dog, and the price/affordability feedback that
-   tells a new player *why* they can't yet — is the least legible CTA in the whole app, directly contradicting the accessibility bar the
-   last eight passes enforced everywhere else. *What "good" looks like:* bring every adopt-button state to ≥4.5:1, reusing the patterns
-   the sweep already established — (i) **affordable:** deepen the blue fill so white clears AA, ideally by reusing the shared
-   `DesignSystem.GRAD_PILL_*` gradient the BRA + «Fortsett treningen» CTAs use (153) so the kennel's primary CTA becomes literally the same
-   component as the app's primary CTA, or at minimum darken `C_ADOPT_BLUE` until white ≥4.5:1; (ii) **free-adopt:** darken the coral (or put
-   a dark ink on it) so its label clears 4.5:1 — 2.51:1 is the worst offender; (iii) **unaffordable:** keep the muted-grey *fill* (it's the
-   correct disabled signal) but darken the *text* from `C_INK_SOFT` to the shared dark tag ink `C_TAG_INK #141c26`, which lands at **10.6:1**
-   on `C_ADOPT_DISABLED` (the same ink 149/151 already use for kennel badges/status, so it's the DS-consistent choice) — the coin pip stays
-   gold. Verify each state in an in-pixel modal capture at ≥4.5:1 (Nova = unaffordable, an affordable dog after granting coins, Trulte =
-   free). Buildable, no owner asset — a token/gradient repoint on the kennel's own CTA.
+1. **The training-page HUD learned-progress bar is a *translucent* backing panel — the sun and sky bleed straight through it — while the
+   nav/coin pills right beside it on the same HUD are crisp opaque white; it reads as a film laid over the scene, not a solid floating chip,
+   and it leaves a residual warm sun-glow shining through the bar exactly where task 145 set out to kill that bleed.** *What I saw:* on the
+   training page (`.screenshots/P23-01-training.png`, HUD crop `/tmp/hud_top.png`) the «Sitt … 0%» readout sits on a full-width light-blue
+   backing panel. Sampling that panel across its width proves it is translucent, not opaque: over blue sky it reads `(173,192,212)` /
+   `(202,222,243)` (the sky's blue showing through), but over the sun — which sits right behind the bar's mid-section (143 put the sun there)
+   — it reads warm yellow `(251,238,195)` / `(253,243,210)` (the sun glowing through). A truly opaque panel would read one neutral colour
+   everywhere regardless of what's behind it — which is exactly what the **nav pill** (`(251,251,247)` neutral white) and **coin chip** do a
+   few pixels above. So on one HUD, at one elevation, we have crisp opaque-white chips sitting next to a see-through tinted film. *Why it falls
+   short:* (i) **cohesion** — the prompt's "same component rendered differently across screens / weak surface" bar: the HUD should read as one
+   system of solid floating chips, and this bar breaks that by being the only translucent element among opaque ones; (ii) **residual bleed** —
+   task 145's whole purpose was to stop 143's brighter sun from washing out this readout, and it did protect the *labels* (it put a scrim
+   behind the text, so «Sitt»/«0%» stay dark-legible at the bar's *edges* over sky), but the panel itself is still translucent, so the sun now
+   glows through the bar's *middle* between the labels — a softer recurrence of the same defect. The **goal art**
+   (`.docs/specs/assets/goal-training-screen.png`, crop `/tmp/goal_top.png`) confirms the intended read: there the readout has **no**
+   see-through film — «Sitt»/«60%» sit cleanly with a **solid** pale progress track, on a calm sky with nothing bleeding through. *What "good"
+   looks like:* make the readout's backing panel **opaque** — the same solid white / DS `PAPER` surface (with the pills' soft drop shadow) as
+   the nav and coin pills — so no sky or sun shows through it at any point and the whole HUD reads as one set of crisp opaque chips. Keep
+   everything task 145 established (dark `INK` «Sitt»/«%» labels, the opaque inner progress track, the scrim behind the text) — this only
+   raises the *panel's* alpha to fully opaque; it does **not** revert 145 (it extends 145's opacity in the same direction, from the text scrim
+   to the whole panel). Verify in an in-pixel HUD capture that the bar backing reads one neutral colour whether it is over sky or over the sun.
+   Buildable, no owner asset — an alpha/colour change on the learned-bar's own backing panel.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the adopt-button AA fix above; the owner still owns the Phase-10 spec + the asset flags.
+work is the learned-bar opacity fix above; the owner still owns the Phase-10 spec + the asset flags.
