@@ -221,3 +221,29 @@ func test_bra_button_shares_the_design_system_cta_palette() -> void:
 	assert_eq(main_script.BRA_PILL_TOP, DesignSystem.GRAD_PILL_TOP, "BRA_PILL_TOP == DesignSystem.GRAD_PILL_TOP")
 	assert_eq(main_script.BRA_PILL_BOT, DesignSystem.GRAD_PILL_BOT, "BRA_PILL_BOT == DesignSystem.GRAD_PILL_BOT")
 	assert_eq(main_script.BRA_PILL_LIP, DesignSystem.GRAD_PILL_LIP, "BRA_PILL_LIP == DesignSystem.GRAD_PILL_LIP")
+
+# BLUE_INK — AA-legible blue text on light surfaces (154, X-6). The DS BLUE token (#4a90e2) is a
+# fill/identity accent; on the CREAM/PAPER menu surfaces it is only ~2.9-3.3:1, failing AA for the
+# menu's blue-on-light TEXT. BLUE_INK is the deeper blue that clears 4.5:1 on both CREAM and PAPER,
+# so every blue text label in the completion menu is legible while staying clearly blue.
+# NOTE: BLUE_DARK (#2f6fbf) is only 4.42:1 on CREAM — UNDER the bar — so it cannot serve this role.
+
+func test_blue_ink_clears_wcag_aa_on_cream() -> void:
+	var ratio := DesignSystem.wcag_contrast(DesignSystem.BLUE_INK, DesignSystem.CREAM)
+	assert_true(ratio >= 4.5, "BLUE_INK on CREAM clears WCAG AA 4.5:1 (got %.2f:1)" % ratio)
+
+func test_blue_ink_clears_wcag_aa_on_paper() -> void:
+	var ratio := DesignSystem.wcag_contrast(DesignSystem.BLUE_INK, DesignSystem.PAPER)
+	assert_true(ratio >= 4.5, "BLUE_INK on PAPER clears WCAG AA 4.5:1 (got %.2f:1)" % ratio)
+
+func test_blue_token_on_cream_is_the_failing_baseline() -> void:
+	# The bug 154 fixes: the plain BLUE accent on the menu's CREAM/PAPER fills fails AA.
+	assert_true(DesignSystem.wcag_contrast(DesignSystem.BLUE, DesignSystem.CREAM) < 4.5,
+		"BLUE-on-CREAM is the sub-AA baseline the menu shipped")
+	assert_true(DesignSystem.wcag_contrast(DesignSystem.BLUE_DARK, DesignSystem.CREAM) < 4.5,
+		"even BLUE_DARK on CREAM is under the bar (4.42:1) — why BLUE_INK is needed")
+
+func test_blue_ink_is_still_recognisably_blue() -> void:
+	# Identity kept: BLUE_INK's blue channel dominates and it stays in the BLUE family.
+	assert_true(DesignSystem.BLUE_INK.b > DesignSystem.BLUE_INK.r, "BLUE_INK is blue-dominant (b > r)")
+	assert_true(DesignSystem.BLUE_INK.b > DesignSystem.BLUE_INK.g, "BLUE_INK is blue-dominant (b > g)")

@@ -16,6 +16,7 @@ extends RefCounted
 const BLUE       := Color("4a90e2")   # primary — BRA button
 const BLUE_DARK  := Color("2f6fbf")   # primary depth / pressed / button bottom-lip
 const BLUE_LIGHT := Color("6fb6ff")
+const BLUE_INK   := Color("2a66b3")   # blue TEXT on light (CREAM/PAPER) — AA-legible ≥4.5:1; BLUE/BLUE_DARK stay <4.5 on CREAM (154)
 const GOLD       := Color("f5b841")   # accent — coins / mastery
 const GOLD_DARK  := Color("d99a2b")
 const GOLD_LIGHT := Color("ffdd8c")

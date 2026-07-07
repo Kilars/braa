@@ -150,13 +150,15 @@ const TITLE_COLOR := DesignSystem.SLATE
 ## Row backgrounds: a light CREAM fill for active/available rows, a near-invisible tint for locked.
 const ROW_BG := DesignSystem.CREAM
 const ROW_BG_LOCKED := Color(DesignSystem.SLATE_SOFT.r, DesignSystem.SLATE_SOFT.g, DesignSystem.SLATE_SOFT.b, 0.08)
-## Trick name colours: BLUE for active/learned (primary accent), SLATE for available, SLATE_SOFT for locked.
-const NAME_LEARNED := DesignSystem.BLUE
+## Trick name colours: BLUE_INK (AA-legible blue text on light, 154) for active/learned (primary
+## accent), SLATE for available, SLATE_SOFT for locked. Plain BLUE is a fill accent — on the CREAM
+## row it reads ~2.9:1 and fails WCAG AA, so all blue-on-CREAM TEXT uses the deeper BLUE_INK.
+const NAME_LEARNED := DesignSystem.BLUE_INK
 const NAME_AVAILABLE := DesignSystem.SLATE
 const NAME_LOCKED := DesignSystem.SLATE_SOFT
-## Badge colours: BLUE for learned/available, SLATE_SOFT for locked.
-const BADGE_LEARNED := DesignSystem.BLUE
-const BADGE_AVAILABLE := DesignSystem.BLUE
+## Badge colours: BLUE_INK for learned/available (AA on CREAM), SLATE_SOFT for locked.
+const BADGE_LEARNED := DesignSystem.BLUE_INK
+const BADGE_AVAILABLE := DesignSystem.BLUE_INK
 const BADGE_LOCKED := DesignSystem.SLATE_SOFT
 ## The ACTIVE (currently-trained) trick row (152, X-6): the 151 owned-status treatment carried into
 ## the trick selector so all four selection surfaces (tricks·breeds·words·kennel) read as one system.
@@ -186,8 +188,8 @@ const CLOSE_GRAD_SHADOW_MAX := 0.22
 ## Secondary footer pills (feedback / showcase) — demoted to a clear GHOST style so they never
 ## compete with the primary CTA: PAPER fill, a Bra-Blue hairline outline, Bra-Blue text.
 const SECONDARY_BG := DesignSystem.PAPER          ## paper fill (was CREAM) — lighter than the CTA
-const SECONDARY_TEXT := DesignSystem.BLUE         ## Bra-Blue text — reads as a link/ghost action
-const SECONDARY_OUTLINE := DesignSystem.BLUE      ## Bra-Blue hairline outline on the ghost pill
+const SECONDARY_TEXT := DesignSystem.BLUE_INK     ## Bra-Blue text (154: BLUE_INK, AA-legible on PAPER) — reads as a link/ghost action
+const SECONDARY_OUTLINE := DesignSystem.BLUE_INK  ## deeper Bra-Blue hairline outline on the ghost pill — matches the darker label (154)
 const SECONDARY_OUTLINE_W := 2.0                  ## outline thickness (px, design space)
 
 ## Section heading labels — all Norwegian (138), homed as named consts (no scattered literals).
@@ -209,7 +211,7 @@ const BREED_BADGE := {
 	BreedState.BUYABLE: "Adopter",
 	BreedState.LOCKED: "Låst",
 }
-const BREED_NAME_ACTIVE  := DesignSystem.BLUE        ## the running dog — primary accent
+const BREED_NAME_ACTIVE  := DesignSystem.BLUE_INK    ## the running dog — primary accent (154: BLUE_INK, AA on CREAM)
 const BREED_NAME_OWNED   := DesignSystem.SLATE       ## owned, tap to switch — slate body text
 const BREED_NAME_BUYABLE := DesignSystem.SLATE       ## affordable — slate body text
 const BREED_NAME_LOCKED  := DesignSystem.SLATE_SOFT  ## can't afford — greyed, clearly not tappable
@@ -222,7 +224,7 @@ const WORD_BADGE := {
 	WordState.UNLOCKED: "Bytt",
 	WordState.LOCKED:   "Låst",
 }
-const WORD_NAME_ACTIVE   := DesignSystem.BLUE        ## the firing word — primary accent
+const WORD_NAME_ACTIVE   := DesignSystem.BLUE_INK    ## the firing word — primary accent (154: BLUE_INK, AA on CREAM)
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
 const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
 const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
@@ -230,7 +232,7 @@ const WORD_COST_HINT     := DesignSystem.SLATE  ## cost hint (095, P5-2) — Ink
 
 ## Difficulty-row palette + badges (118, DS tokens). Mirrors the breed/word row treatment.
 const DIFF_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Vanskelighet" subheading — secondary
-const DIFF_NAME_ACTIVE   := DesignSystem.BLUE        ## the selected mode — primary accent
+const DIFF_NAME_ACTIVE   := DesignSystem.BLUE_INK    ## the selected mode — primary accent (154: BLUE_INK, AA on CREAM)
 const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active mode — slate body text
 const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed
 const DIFF_BADGE_ACTIVE  := "Valgt"                  ## the chosen mode's badge
@@ -999,10 +1001,10 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	# The word display text (e.g. "Dyktig!"), left-aligned.
 	# A cooling ACTIVE word is dimmed slightly — it IS the active choice but currently resting,
 	# so it reads as "loaded but unavailable this round" rather than fully locked.
-	## Cooling: BLUE at 0.45 alpha — same hue as BLUE but clearly resting.
+	## Cooling: BLUE_INK at 0.45 alpha — same hue as the active word ink but clearly resting.
 	var name_col := WORD_NAME_LOCKED
 	if st == WordState.ACTIVE:
-		name_col = WORD_NAME_ACTIVE if not cooling else Color(DesignSystem.BLUE.r, DesignSystem.BLUE.g, DesignSystem.BLUE.b, 0.45)
+		name_col = WORD_NAME_ACTIVE if not cooling else Color(DesignSystem.BLUE_INK.r, DesignSystem.BLUE_INK.g, DesignSystem.BLUE_INK.b, 0.45)
 	elif st == WordState.UNLOCKED:
 		name_col = WORD_NAME_UNLOCKED
 	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5

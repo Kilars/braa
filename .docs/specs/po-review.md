@@ -176,62 +176,63 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 17) — polish-lens pass: pass-16 directive (152 trick-selector ACTIVE state → «Trener nå») verified landed and correct; ONE new buildable X-6 defect — the game's two **primary blue CTAs** (the BRA mark button + the menu's «Fortsett treningen») render their white labels at only **~2.7:1** contrast against a too-light blue gradient, failing WCAG AA (4.5:1) and even the 3:1 large-text bar, while the badges/pills around them were just held to 4.5:1 (149/151)
+### PO Review — 2026-07-07 (PO, father pass 18) — polish-lens pass: pass-17 directive (153 primary-CTA contrast) verified landed and correct in-pixel; ONE new buildable X-6 defect — the completion menu's **secondary/available blue text** (the «Gi tilbakemelding» ghost button + the «Tilgjengelig» row status badges) is still `DesignSystem.BLUE` on a near-white/cream fill and measures **~2.9:1 / ~1.7:1**, failing WCAG AA — the last blue-on-light text the 149→151→153 sweep left behind
 
-Seventeenth pass, run fresh and stateless under the polish/critique lens. HEAD is `0b1cd0a` (the 152 trick-ACTIVE commit).
-I reviewed the **fresh local licensed bundle** — `build/web` (pck built 06:38, after the 06:34 `trick_menu.gd`/`main.gd` edits, so
-it carries 152), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility
-renderer) — via `?bra_autotap=1` → training → the completion/pause **Triks** menu, and a separate no-autotap boot to judge the BRA
-button in its resting (non-cooldown) state. `window.__bra_menu_open` confirms the menu, `window.__bra_current_trick` reports
-`sitt`; **zero console errors** on every run. Evidence for every claim is a screenshot I captured this pass (`.screenshots/P17-*`)
-plus PIL pixel crops + WCAG contrast maths and the code paths/tokens I read.
+Eighteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `58d78c9` (the 153 primary-CTA contrast commit).
+I reviewed the **fresh local licensed bundle** — `build/web` (pck built 07:16, after the 153 commit, so it carries 153), served over
+http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap boot to
+judge the BRA button at rest, and `?bra_autotap=1` → training → the completion/pause **Triks** menu (opened via the Triks pill).
+`window.__bra_menu_open` confirms the menu, `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run.
+Evidence for every claim is a screenshot I captured this pass (`.screenshots/P18-*`) plus PIL pixel crops + WCAG contrast maths and
+the code tokens I read.
 
-**Re-verified fixed (pruned) — the pass-16 trick-selector directive (152) landed and is correct:** the completion-menu **Triks**
-selector now marks the currently-trained trick. Opening the menu while training **Sitt**, the «Sitt» row is drawn distinctly — an
-opaque pale-blue wash `ROW_BG_ACTIVE` `#e6eefc` with the dark ink `ROW_ACTIVE_INK`/`#141c26` badge **«Trener nå»** (the same wording
-the kennel uses), while «Ligg»/«Legg deg» stay cream pills badged blue «Tilgjengelig» and «Gi labb» stays greyed «Låst»
-(`.screenshots/P17-02-menu.png`, zoom `/tmp/p17_card.png`). `TrickMenu.classify` now takes `active` and returns `State.ACTIVE`
-(`trick_menu.gd:48,77,287-293`), fed `_current_trick` from `main._menu_rows()`; the ACTIVE row is non-tappable and absorbs its tap,
-mirroring `BreedState.ACTIVE`/`WordState.ACTIVE` and the kennel's «Trener nå» — so all four selection surfaces (tricks · breeds ·
-words · kennel) finally read as one system. Directive resolved — removed.
+**Re-verified fixed (pruned) — the pass-17 primary-CTA directive (153) landed and is correct:** both primary blue CTAs now clear
+WCAG AA in my own pixels. The **BRA** button (`.screenshots/P18-01-training-rest.png`, zoom `/tmp/p18_bra2.png`) draws a deep-blue
+gradient fill — I sampled the mid-button fill at ~[44,100,169] (was a light ~[105,158,236]) — so the white «BRA» label measures
+**~5.42:1** (avg-white vs fill) / **~6.0:1** (pure white), well over the 4.5:1 bar, and the button now reads unmistakably primary
+with its 3D lower lip intact. The menu's **«Fortsett treningen»** primary shares the deepened gradient (fill ~[52,105,171]) and its
+white label measures **~4.81:1** / **~5.59:1** (`.screenshots/P18-02-menu.png`, zoom `/tmp/p18_cta.png`). The shared
+`GRAD_PILL_TOP/BOT/LIP` (`#3472bd`/`#24589a`/`#1b4278`) and the deduped `BRA_PILL_*`→DS-token wiring + the new `DesignSystem.wcag_contrast`
+helper are in place. Directive resolved — removed.
 
 **Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
 facing camera on bright even grass, dark-ink «Sitt %» readout legible on the sky, tan path → blue-roof cottage, white picket fence
-both sides, small grounded garden coins + rose accent — `.screenshots/P17-01-training.png`); the completion **Triks** menu is the DS
-paper card with legible pale-pill rows, a right-aligned status badge per row, an outlined «Gi tilbakemelding» secondary and a solid
-blue «Fortsett treningen» primary (`.screenshots/P17-02-menu.png`); the pass-12/13/14 kennel rarity ladder + calm modal band and the
-pass-15 owned-status pills (148/149/150/151) are untouched — 152's diff is confined to `trick_menu.gd` + `main.gd`'s `_menu_rows`,
-so `kennel_screen.gd` is byte-identical. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+both sides, small grounded garden coins + rose accent — `.screenshots/P18-01-training-rest.png`); the pass-16 trick-selector ACTIVE
+state (152) holds — opening the menu while training Sitt, the «Sitt» row is the crisp dark-ink-on-pale-blue **«Trener nå»** wash while
+«Ligg»/«Legg deg» sit on cream and «Gi labb» is greyed «Låst» (`.screenshots/P18-02-menu.png`, zoom `/tmp/p18_rows.png`); the
+pass-12/13/14/15 kennel rarity ladder + calm modal band + owned-status pills are untouched (153's diff is confined to
+`design_system.gd` + `main.gd`'s `BRA_PILL_*`). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The game's two primary blue CTAs — the BRA mark button and the menu's «Fortsett treningen» — render their white labels at
-   only ~2.7:1 contrast against a too-light blue gradient, failing WCAG AA (and even the 3:1 large-text bar). This is the same
-   AA-fail class the last three passes just fixed on the kennel badges/pills (149/151 → ≥4.5:1), now sitting unaddressed on the
-   single most important, most-tapped surface in the whole game (X-6 cross-cutting contrast, on the signed-off Phase-1/Phase-6
-   training page + completion menu).** *What I saw:* on a clean no-autotap boot the **BRA** button (`.screenshots/P17-03-rest.png`,
-   zoom `/tmp/p17_bra_rest.png`) draws its white «BRA» word, but the button's own fill is a light cornflower-blue gradient that runs
-   **lighter than the DS BLUE token itself** — I sampled the fill vertically at ~[118,172,247] (top) → ~[93,145,227] (bottom), and
-   the label sits mid-button on ~[105,158,236], i.e. it never even reaches `DesignSystem.BLUE` `#4a90e2` [74,144,226]. White on that
-   mid-fill measures **~2.73:1** (true-white letter pixels vs local fill; anti-aliased edges drag it to ~1.96:1). The menu's primary
-   **«Fortsett treningen»** button shares the exact same gradient and near-white label and measures **~1.99:1** (`.screenshots/P17-02-menu.png`,
-   zoom `/tmp/p17_cta.png`). *Why it falls short:* (a) **AA fail on the primary action** — WCAG AA needs 4.5:1 for normal text and
-   3:1 for large text; ~2.7:1 fails both, so the label the player stares at and taps every single rep is the *weakest*-contrast
-   text on the screen; (b) **inconsistency** — the last three passes explicitly held the kennel rarity badges (149) and owned-status
-   pills (151) to ≥4.5:1 with a new `wcag_contrast` helper + pinned tests, yet the biggest CTA on the biggest surface sits at ~2.7:1;
-   it is incoherent to enforce AA on a small corner badge but not on the BRA button; (c) **hierarchy/juice** — a primary CTA should
-   read as unmistakably primary; a near-white label washing into a pale-blue fill makes the BRA button read slightly *soft/disabled*
-   rather than punchy (compare the crisp dark-ink badges beside it). *What "good" looks like:* darken the CTA blue so the white label
-   clears AA. Concretely, anchor the button gradient at the DS token and go **darker**, not lighter — e.g. `DesignSystem.BLUE`
-   `#4a90e2` (top) → `BLUE_DARK` `#2f6fbf` (bottom) instead of the current `BLUE_LIGHT`→`BLUE`-ish range, so the label sits on a fill
-   dark enough that white clears ≥4.5:1 (white on `#2f6fbf` ≈ 4.98:1; on `#4a90e2` ≈ 3.29:1, so bias the label toward the darker
-   lower half or deepen the whole range). Keep the blue identity, the rounded shape, the gradient depth and the bottom-lip — only
-   shift the range darker (and apply the same fix to both the BRA button and the «Fortsett treningen» primary so they stay one
-   component). Optionally pin it with the existing `wcag_contrast` helper the kennel work already added. Buildable, no owner asset —
-   a token/gradient-range change on the shared primary-button style.
+1. **The completion menu's remaining blue-on-light text — the «Gi tilbakemelding» secondary/ghost button label and the row status
+   badges «Tilgjengelig» — is still drawn in `DesignSystem.BLUE` on a near-white/cream fill and fails WCAG AA (~2.9:1 and ~1.7:1),
+   the last unaddressed corner of the very AA-contrast sweep the last three passes ran (149 kennel badges / 151 owned-status pills /
+   153 primary CTAs, all pulled to ≥4.5:1). Enforcing AA on the primary CTA and the kennel badges but leaving the menu's secondary
+   action + availability badges below the bar is incoherent, and both are text the player actually reads (X-6 cross-cutting contrast,
+   on the signed-off Phase-6 completion menu).** *What I saw:* in the completion menu (`.screenshots/P18-02-menu.png`) — (a) the
+   **«Gi tilbakemelding»** ghost/outlined button (`trick_menu.gd:189 SECONDARY_TEXT := DesignSystem.BLUE`, on `SECONDARY_BG :=
+   DesignSystem.PAPER`) draws its label in the DS BLUE token — I sampled the letter cores at ~[84,150,227] on a ~[250,250,247] white
+   fill, measuring **~2.93:1** (zoom `/tmp/p18_secondary.png`); (b) the **«Tilgjengelig»** availability badges on the Ligg / Legg deg
+   rows (`trick_menu.gd:159 BADGE_AVAILABLE := DesignSystem.BLUE`, on the `ROW_BG := CREAM` fill) render in an even lighter blue —
+   the darkest letter-core pixel I could find is ~[157,190,228], only **~1.66:1** on the ~[240,238,232] cream (zoom
+   `/tmp/p18_rows.png`), so «Tilgjengelig» reads noticeably soft/washed next to the crisp dark-ink «Trener nå» beside it. *Why it
+   falls short:* (a) **AA fail** — WCAG AA needs 4.5:1 for normal text (3:1 for large text); ~2.9:1 and ~1.7:1 fail both, and DS BLUE
+   `#4a90e2` on white is only ~3.29:1 by construction, so any BLUE-on-CREAM/PAPER menu text is doomed to fail; (b) **inconsistency**
+   — 153 just added `DesignSystem.wcag_contrast` and held the primary CTA to ≥4.5:1, yet the same menu card still carries sub-AA blue
+   text one row away; the sweep should finish, not stop at the primary; (c) **legibility/hierarchy** — «Tilgjengelig» is the label
+   that tells the player a trick is *available to train*, and at 1.7:1 it barely reads; the secondary «Gi tilbakemelding» is a live
+   button whose own label is the weakest text in the card. *What "good" looks like:* darken these blue text inks so they clear AA on
+   the light fills they sit on, keeping the blue identity and the ghost/hierarchy styling. The DS already ships `BLUE_DARK` `#2f6fbf`
+   (≈5.06:1 on white, ≈4.7:1 on cream) and the `wcag_contrast` helper — repoint `SECONDARY_TEXT` (and, for identity, optionally
+   `SECONDARY_OUTLINE`) and `BADGE_AVAILABLE` (plus the sibling `NAME_LEARNED` / `BADGE_LEARNED` / `BREED_NAME_ACTIVE`, all
+   `DesignSystem.BLUE` on CREAM, `trick_menu.gd:154/158/212`) to the darker blue so every blue-on-light menu label clears ≥4.5:1.
+   Keep the ACTIVE row exactly as 152 left it (dark-ink `ROW_ACTIVE_INK` on the pale-blue wash — already AA-clear), keep the primary
+   CTA as 153 left it, and pin the new inks with the existing `wcag_contrast` helper. Buildable, no owner asset — a token swap on the
+   shared BLUE-on-light menu text, exactly parallel to 149/151/153.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the primary-CTA contrast directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the menu secondary/badge contrast directive above; the owner still owns the Phase-10 spec + the asset flags.
