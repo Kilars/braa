@@ -35,7 +35,7 @@ const C_CELL         := Color("ffffff")   ## individual cell background
 const C_HAIRLINE     := Color("dde3e8")   ## 1.5 px inset hairline on cells
 const C_STEEL        := Color("788794")   ## steel-bar tint (used at ~40% alpha in shader)
 const C_INK          := Color("2b3742")   ## primary text ink
-const C_MUTED        := Color("9aa6b0")   ## muted / secondary text (breed, subtitle)
+const C_MUTED        := Color("9aa6b0")   ## faint grey — transient close-button pressed tint only (secondary TEXT → C_INK_SOFT, AA-clear, task 156)
 const C_STATUS_OWNED := Color("57b85c")   ## «Din hund» green
 const C_STATUS_EGG   := Color("ff7a85")   ## «Påskeegg» coral (star drawn as geometry — no U+2605 font glyph, 106)
 const C_STATUS_NEUTRAL := Color("9aa6b0") ## neutral «Ny» tag / COMMON «Vanlig» rarity accent
@@ -996,7 +996,7 @@ func _make_footer(row: Dictionary) -> PanelContainer:
 	breed_lbl.text = row.breed
 	breed_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	breed_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	breed_lbl.add_theme_color_override("font_color", C_MUTED)
+	breed_lbl.add_theme_color_override("font_color", C_INK_SOFT)
 	breed_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	breed_lbl.clip_text = true
 	col.add_child(breed_lbl)
@@ -1332,7 +1332,7 @@ func _build_modal_traits(detail: Dictionary) -> VBoxContainer:
 	section_lbl.text = "Raseegenskaper"
 	section_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	section_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	section_lbl.add_theme_color_override("font_color", C_MUTED)
+	section_lbl.add_theme_color_override("font_color", C_INK_SOFT)
 	section_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(section_lbl)
 
@@ -1387,7 +1387,7 @@ func _build_modal_unique_trait(detail: Dictionary) -> PanelContainer:
 	heading.text = "Unikt trekk"
 	heading.add_theme_font_override("font", DesignSystem.font_body_bold())
 	heading.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	heading.add_theme_color_override("font_color", C_MUTED)
+	heading.add_theme_color_override("font_color", C_INK_SOFT)
 	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(heading)
 

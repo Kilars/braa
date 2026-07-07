@@ -176,68 +176,61 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 19) — polish-lens pass: pass-18 directive (154 menu blue-on-light text → AA) verified landed and correct in-pixel; the blue-on-light **contrast sweep has converged** (I re-measured the last-suspect kennel trait chips and they already clear AA by token); ONE new buildable X-4 defect on a DIFFERENT lens — the **kennel grid dog portraits swing from dead-front mugshot to full side-profile** across cells, violating the code's own "front-¾, face clearly to camera, never a side profile" invariant and disagreeing with the modal's front-¾ framing of the same dog
+### PO Review — 2026-07-07 (PO, father pass 20) — polish-lens pass: pass-19 directive (155 kennel grid-portrait yaw → tight consistent front-¾) verified landed and correct in-pixel; ONE new buildable X-6 defect the entire 149→154 AA sweep missed because it only ever measured *blue-on-light* — the kennel's **grey `C_MUTED` secondary text** (breed subtitle under all 8 grid cells + modal, section headings, the «Unikt trekk» caption) renders at **2.1–2.5:1** on its light backgrounds, well under WCAG AA
 
-Nineteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `1f5e899` (the 154 menu-contrast commit).
+Twentieth pass, run fresh and stateless under the polish/critique lens. HEAD is `e494302` (the 155 grid-portrait-yaw commit).
 I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green,
-pck 08:1x, so it carries 154), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL
-Compatibility renderer) — via a no-autotap boot (training at rest), the completion/pause **Triks** menu (opened via the Triks pill),
-and the **kennel** (opened via the published `window.__bra_kennel_btn` centre → `window.__bra_kennel_active` reports `bella`, then a
-cell tap → Bella modal). `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run. Evidence for every claim
-is a screenshot I captured this pass (`.screenshots/P19-*`) plus PIL pixel crops + WCAG contrast maths and the code tokens I read.
+pck rebuilt after the 155 commit so it carries the narrowed yaw spread), served over http and driven in headless Chromium at 390×844
+(SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap boot (training at rest), and the **kennel** (opened via the
+published `window.__bra_kennel_btn` centre → `window.__bra_kennel_active` reports `bella`, `window.__bra_kennel_cells` reports all 8
+cell centres, then a cell tap → Bella modal). `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run.
+Evidence for every claim is a screenshot I captured this pass (`.screenshots/P20-*`) plus PIL pixel crops + WCAG contrast maths and the
+code tokens I read.
 
-**Re-verified fixed (pruned) — the pass-18 menu-contrast directive (154) landed and is correct:** both offenders now read as a
-deeper, legible blue in my own pixels. The **«Gi tilbakemelding»** ghost button label measures **~5.55:1** on its ~[251,251,247]
-white fill (was ~2.9:1), and the **«Tilgjengelig»** availability badges now render in the deeper blue — the new `BLUE_INK` token
-`#2a66b3` computes to **4.96:1** on CREAM (I recomputed it; well over the 4.5:1 bar) and reads visibly crisper than the old
-`DesignSystem.BLUE` in the zoom (`.screenshots/P19-02-menu.png`, `/tmp/p19_rows.png`). The residual anti-alias softening on the
-thin small-font strokes is **uniform** — the intended dark «Ligg» title and dark-ink «Trener nå» measure the same way by darkest-pixel,
-so it's font rendering, not a blue-specific gap. `NAME_LEARNED / BADGE_LEARNED / BADGE_AVAILABLE / SECONDARY_TEXT+OUTLINE /
-BREED_NAME_ACTIVE / WORD_NAME_ACTIVE / DIFF_NAME_ACTIVE` are all repointed onto `BLUE_INK`; `BLUE` (fills) + `BLUE_DARK` (depth)
-untouched. Directive resolved — removed.
-
-**Contrast sweep converged (no new contrast directive):** I chased the last plausible blue-on-light hold-out — the kennel modal's
-**Raseegenskaper** trait chips (Snill · Tålmodig · Glupen), which *look* soft in the zoom (`.screenshots/P19-04-kennel-modal.png`,
-`/tmp/p19_chips.png`). They are **already AA**: `kennel_screen.gd:58/59` uses `C_TRAIT_INK #3a6a9a` on `C_TRAIT_BG #e8f0f8`, which I
-computed to **4.92:1** — the soft look is the same uniform small-font anti-alias as the (fixed) menu text, not a contrast fail. Stat
-labels are ~7.9:1. So the 149→151→153→154 blue-on-light AA arc is **done**; do not re-open it — there is no remaining sub-AA text.
+**Re-verified fixed (pruned) — the pass-19 grid-portrait-yaw directive (155) landed and is correct:** in my own pixels all eight grid
+cells now read as one consistent, flattering **front-¾ with the face clearly toward the viewer** (`.screenshots/P20-02-kennel-grid.png`,
+crops `/tmp/p20_nova.png` / `/tmp/p20_trulte.png`). The old extremes are gone: **Nova** and **Trulte** — the former dead-front mugshots —
+now sit at a pleasing three-quarter, and **Pontus / Bella** — the former broadside side-profiles — now face the camera with the snout no
+longer at the cell edge. The narrowed `PORTRAIT_YAW_SPREAD [0.06,-0.14,0.14,-0.08,0.18,-0.05,0.10,-0.12]` (`kennel_screen.gd:113`) keeps
+every effective yaw inside the tight ~16°–34° band while preserving the per-cell variety (all dogs turn the same way for cohesion, but by
+visibly varying amounts), and it now **agrees with the modal** — Bella's grid cell and her front-¾ hero bust (`.screenshots/P20-03-kennel-modal.png`)
+are the same framing of the same dog. Directive resolved — removed.
 
 **Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
-facing camera on bright even grass, deep-blue BRA button, tan path → blue-roof cottage, white picket fence both sides, small grounded
-garden coins + rose accent — `.screenshots/P19-01-training.png`); the pass-16 trick-selector ACTIVE state (152) holds (crisp dark-ink
-«Trener nå» on the Sitt row); the 153 primary CTAs are deep-blue with legible white labels. **No structural regression** in the
-signed-off phases (1/2/3/5/6/8/9).
+facing camera on bright even grass, deep-blue BRA button, tan path → blue-roof cottage, white picket fence, grounded garden coins + rose
+collar accent — `.screenshots/P20-01-training.png`); the modal's calm owned-band tint (150), «Trener nå» dark-ink-on-mint active pill
+(151), rarity corner badges (148/149) and stat bars all render correctly. **No structural regression** in the signed-off phases
+(1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The kennel grid renders the eight dog portraits at wildly inconsistent orientations — from a stiff dead-front mugshot to a full
-   broadside side-profile — instead of the consistent flattering front-¾ "face clearly to camera" the code intends and the inspect
-   modal already delivers. Several cells show the dog in pure profile with its face turned away toward the cell edge, which is both
-   the exact framing the code claims it prevents and a poorer, less inviting way to present a dog you're deciding whether to adopt
-   (X-4 layout/cohesion, on the signed-off Phase-8 kennel grid — this specific per-cell ANGLE was never reviewed by the contrast-
-   focused passes 12–18).** *What I saw* (`.screenshots/P19-03-kennel-grid.png`): **Pontus** (`/tmp/p19_pontus.png`) and **Bella**
-   (`/tmp/p19_toprow.png`) render as *full side-profiles* — the entire flank, all four legs side-on, the snout pointing at the cell
-   edge and the face NOT toward the viewer; meanwhile **Trulte** (`/tmp/p19_trulte.png`) and **Nova** render *dead-front* — symmetric
-   head-on mugshots. Only the mid-cells (Sol, Lykke) land in the intended flattering three-quarter. The per-cell yaw
-   (`kennel_screen.gd:101 PORTRAIT_THREE_QUARTER 0.42` + `:109 PORTRAIT_YAW_SPREAD [0.12,-0.40,0.34,-0.22,0.46,-0.14,0.26,-0.34]`)
-   resolves to a spread of roughly **1°→50°** off dead-on, so the low-|delta| cells (Nova/Trulte) sit at a stiff ~1–5° dead-front and
-   the high-|delta| cells (Pontus/Bella/Balder/Sniff) swing to ~31–50°, reading as side-profiles. *Why it falls short:* (a) **the code's
-   own invariant is violated** — `:106` says the spread is "kept within ±0.5 rad so every dog still reads front-¾ face-on, never a
-   rear/side profile" and `:101` "face clearly to camera", yet Pontus/Bella are unmistakable side-profiles with the face turned away;
-   (b) **grid↔modal inconsistency for the SAME dog** — tapping Bella's side-profile cell opens a correct front-¾ hero bust of Bella
-   (`.screenshots/P19-04-kennel-modal.png`, `MODAL_PORTRAIT_YAW 0.0`), so the two views of one dog disagree; (c) **worse merchandising**
-   — a dead-front mugshot is stiff and a side-profile hides the face, and the face is what makes a dog inviting to adopt; a consistent
-   flattering three-quarter across all eight cells reads as one cohesive, considered roster. *What "good" looks like:* re-centre and
-   **narrow** `PORTRAIT_YAW_SPREAD` so all eight cells stay inside a tight flattering front-¾ band (never the ~1° dead-on end, never the
-   ~50° side-profile end — e.g. keep every cell within ~15°–38° off face-on), matching the modal's front-¾ hero framing, while
-   **preserving the per-cell angle variety** that 131 deliberately added so no two identical-model Labradors read the same (the point of
-   the spread stands — just keep its range within "face clearly to camera"). Verify in capture on the 8-cell grid that no cell is a
-   dead-front mugshot and none is a side-profile; the dog's face should read toward the viewer in every cell. Buildable, no owner asset
-   — a tuning of the two existing yaw constants (the distinct-per-breed MODELS that would make orientation moot stay owner-gated,
-   BUST-068).
+1. **The kennel's grey secondary text — the `C_MUTED #9aa6b0` token used for the breed subtitle under every dog, the modal section
+   headings, and the «Unikt trekk» caption — fails WCAG AA badly (2.1–2.5:1), the exact accessibility bar the 149→154 sweep spent six
+   passes enforcing everywhere else. The sweep only ever measured *blue-on-light* text and never looked at this *grey-on-light*
+   secondary text, so it slipped through (X-6 contrast, on the signed-off Phase-8 kennel — same class of fix as 149/151/153/154, a
+   different token).** *What I saw* (`.screenshots/P20-02-kennel-grid.png`, crop `/tmp/p20_nova.png`; `.screenshots/P20-03-kennel-modal.png`,
+   crop `/tmp/p20_modal.png`): the breed line under each dog name — «Labrador retriever», «Border collie», «Gravhund», «Beagle», «Malchi»,
+   … — renders as a *faint, washed grey* clearly lighter than the dark dog name above it, and the same pale grey is used for the modal's
+   «Raseegenskaper» / «Kan lære» section headings and the «Unikt trekk» card caption. I read the token and computed the WCAG contrast:
+   `kennel_screen.gd:38 C_MUTED := Color("9aa6b0")` on the white cell footer = **2.31:1**, on the modal white body = **2.48:1**, and on the
+   cream Unikt-trekk card (`C_MODAL_CREAM #f4efe6`) = **2.17:1** — all three well under the 4.5:1 bar, and all three are **13px bold**
+   (`T_SMALL`, ~9.75pt), *below* WCAG's large-text threshold so the full 4.5:1 normal-text bar applies (they don't even clear the relaxed
+   3:1 large-text bar). *Why it falls short:* (a) it's **meaningful content, not decoration** — the breed name is the single most useful
+   fact under each of the eight cells when you're choosing a dog, and it's the least legible text on the screen; (b) it **breaks the
+   design system's own AA promise** — the last six passes made every other label on every other surface clear AA, so leaving the kennel's
+   grey secondary text at 2.2–2.5:1 is an inconsistency, not a deliberate de-emphasis (a caption can be quieter than a title and still be
+   legible); (c) the four usages (`:999` breed subtitle, `:1335` section label, `:1390` Unikt-trekk heading — plus the `:339` close-button
+   pressed colour, a transient state, optional) all point at one token, so it reads as an oversight. *What "good" looks like:* repoint the
+   `C_MUTED`-**as-text** usages to an AA-clear muted ink — the palette **already has** the right token, `C_INK_SOFT := Color("5a6b7d")`
+   (`kennel_screen.gd:60`, introduced for exactly this — "legible sub-labels / stat labels"), which I computed to **4.78:1** on cream /
+   **5.1:1** on the cell white / **5.48:1** on pure white while staying a visibly *muted* grey-blue (still clearly quieter than the `C_INK`
+   title, so the hierarchy is preserved). Point the breed subtitle, the modal section headings and the «Unikt trekk» caption at
+   `C_INK_SOFT` (or an equally AA-clear muted ink); keep it visibly secondary to the title, just legible. Verify in an in-pixel capture that
+   the breed line under a grid cell and the «Unikt trekk» caption both measure ≥4.5:1. Buildable, no owner asset — a token repoint, exactly
+   like the prior AA fixes.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the kennel grid-portrait orientation directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the kennel grey-secondary-text AA directive above; the owner still owns the Phase-10 spec + the asset flags.
