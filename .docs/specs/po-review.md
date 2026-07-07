@@ -176,49 +176,56 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 32) — polish-lens pass: verified 166 (the breed-showcase «aktiv» dot now seats cleanly ON its pip) landed clean and pruned it; re-played every surface incl. a fresh **kennel** grid + inspect-modal critique; found ONE cross-section hierarchy inconsistency in the completion menu (only the ACTIVE **trick** row gets the pale-blue active wash; the ACTIVE breed / word / difficulty rows don't). One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 33) — polish-lens pass: verified 167 (the ACTIVE breed / marker-word / SELECTED difficulty rows now get the SAME pale-blue wash the active trick row had) landed clean and pruned it; re-played every surface incl. a fresh **kennel** grid + inspect-modal critique (grid↔modal price parity re-checked in pixels). Found ONE remaining cross-section inconsistency the 167 wash-unification left behind — the active-row *badge ink* still diverges (active **trick** «Trener nå» is the dark "current-state" ink 151/152; active **breed/word/difficulty** badges are still action-blue). One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-second pass, fresh and stateless under the polish/critique lens. HEAD is `2a0cce0` (the 166 dot-seating commit).
+Thirty-third pass, fresh and stateless under the polish/critique lens. HEAD is `d6c9ae7` (the 167 active-row-wash commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and
-driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Two harness runs: (1) `tools/po_pass32.mjs`
-booted `?bra_autotap=1&bra_coins=120` → training page → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`) → opened the
-showcase (spotlit = active Labrador) → cycled ▶ to preview the **non-active** «Brun lab»; (2) `tools/po_pass32_kennel.mjs` booted `?bra_coins=120` → opened the **kennel**
-grid from the training HUD (`kennel_btn {204,32}`, 8 cells) → tapped Nova to open her inspect modal. **Zero console errors** on every run (both exit 0). Evidence: this pass's
-screenshots (`.screenshots/P32-01-training.png`, `P32-02-menu.png`, `P32-03-showcase-active.png` + band zoom `P32-03b-band-active.png`, `P32-04-showcase-preview.png` + band
-zoom `P32-04b-band-preview.png`; `P32K-01-grid.png` the 8-cell kennel grid, `P32K-02-modal.png` Nova's modal) + tight pip crops (`/tmp/P32-03b-band-active_pipcrop.png`,
-`/tmp/P32-04b-band-preview_pipcrop.png`) + menu-row background samples + the code I read (`scripts/breed_showcase_view.gd` `ActiveDot`, `scripts/trick_menu.gd`
-`_draw_row`/`_draw_breed_row`/`_draw_word_row`/`_draw_difficulty_row`), against the goal art + DS.
+driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Three harness runs: (1) `tools/po_pass33.mjs`
+booted `?bra_autotap=1&bra_coins=120` → training page → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`) → dumped all four
+row-sets and the full menu card; (2) `tools/po_pass33b.mjs` re-attempted a headless 2-mastery drive to force the marker-word (reveal ≥1 mastery) + Vanskelighet (reveal ≥2)
+sections into the menu — **autotap did not accumulate mastery headless** (the learned bar stayed 0 %, a known headless-harness limitation — `.play()`/sit-cycle marks don't
+land under SwiftShader), so words/difficulty stayed progressively-hidden as designed, and those two active rows were verified from **code + the 167 tests** instead of pixels
+(see below); (3) `tools/po_pass32_kennel.mjs` booted `?bra_coins=120` → opened the **kennel** grid → tapped Nova's modal. **Zero console errors** on every run. Evidence: this
+pass's screenshots (`.screenshots/P33-01-training.png`, `P33-02-menu-full.png`; `P32K-01-grid.png`, `P32K-02-modal.png`) + tight crops (`/tmp/menu_card.png` the completion
+card, `/tmp/hud.png` the training HUD, `/tmp/nova_cell.png` Nova's grid price, `/tmp/afford4.png` her modal affordability + stat pips) + the code I read (`scripts/trick_menu.gd`
+`row_fill` :176 + `_draw_row`/`_draw_breed_row`/`_draw_word_row`/`_draw_difficulty_row`, `tests/test_trick_menu.gd` row_fill asserts), against the goal art + DS.
 
-**Verified fixed → pruned:** the pass-31 directive (**the new «aktiv» dot floated off the pill's rounded top-right corner onto the dark band, reading as a detached dot**) is
-**resolved** by 166. In my own pixels, tight-cropped and enlarged: `ActiveDot.center_for()` now returns `(pip_size.x - CORNER - R, CORNER)` = `(w-16, 12)` with `CORNER=12`,
-`R=4` (`breed_showcase_view.gd:314-322`), so the whole disc lands on the pill's flat top-right region. In the **active** state the dark-blue dot sits fully on the solid-white
-«Labrador» pill (`/tmp/P32-03b-band-active_pipcrop.png`); cycling ▶ to preview «Brun lab», the light-blue dot sits fully on the faint over-band «Labrador» chip
-(`/tmp/P32-04b-band-preview_pipcrop.png`) — in both states the dot no longer bleeds onto the dark INK band and reads as a badge seated on the pip. Pruned.
+**Verified fixed → pruned:** the pass-32 directive (**only the ACTIVE trick row got the pale-blue wash; the ACTIVE breed / marker-word / SELECTED difficulty rows did not**) is
+**resolved** by 167. In my own pixels (`/tmp/menu_card.png`): the active **Sitt** trick row and the active **Labrador** breed row now sit on the **same** opaque pale-blue wash,
+visibly distinct from the warm-CREAM available «Ligg»/«Legg deg»/«Brun lab» rows — the two "currently-active" items read identically. Confirmed structural: 167 replaced the four
+per-section `row_bg = …` branches with one shared `TrickMenu.row_fill(active, dim)` helper (`trick_menu.gd:176`) called by all four draw functions (`:904/:939/:1010/:1086`), so
+ACTIVE → `ROW_BG_ACTIVE` everywhere; `tests/test_trick_menu.gd` locks the helper (active wins over locked) + AA of `BLUE_INK` on the wash (4.93:1). The word + difficulty rows are
+progressively hidden until their reveal thresholds and couldn't be forced headless this pass, but they route through the identical `row_fill` call — covered by construction +
+test. Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P32-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (145 scrim intact), «Triks»/«Kennel»/coin HUD pills, big blue BRA. (b) The
-showcase chrome (163) is intact — DS INK «Mine hunder / Brun lab» band, DS fonts, no gold on any chrome fill, disabled «Trener denne» dark-ink-on-muted-pill / enabled «Tren
-denne» blue-gradient-white (`P32-04`). (c) **Kennel re-inspected fresh under the polish lens** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait (Bella «Din hund» /
-Nova «Episk» / commons / Trulte «Påskeegg»), rarity badges + names + coin-pip price chips all render and read; Nova's inspect modal shows the violet «Episk» badge, bottom
-nameplate, warm blurb, four blue stat-pip rows, «Raseegenskaper» chips, «Unikt trekk: Øyet», «Kan lære: Sitt · Ligg · Legg deg», and the muted non-tappable **«Har ikke råd ·
-mangler 780»** affordability gate — all AA-legible, no off-token colour, no gold-as-text. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P33-01` + HUD crop `/tmp/hud.png`) still matches the goal — centered facing-camera cream Labrador on green
+grass, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (145 scrim intact, dark label + `%` legible),
+«Triks»/«Kennel»/coin-`120` HUD pills, big blue BRA. (b) **Kennel re-inspected fresh under the polish lens** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait (Bella
+«Din hund» / Nova «Episk» / commons / Trulte «Påskeegg»), rarity badges + names + coin-pip price chips all render and read; **grid↔modal price parity holds** — Nova's grid chip
+reads «900» (`/tmp/nova_cell.png`) and her modal affordability reads «Har ikke råd · mangler 780» (`/tmp/afford4.png`), i.e. 900−120 balance, consistent (I initially misread the
+small-scale grid chip as «300» and re-cropped to confirm — no bug). Her modal stat pips show a proper filled/empty **max-track** (Mot 4-blue+1-pale), «Raseegenskaper» chips,
+«Unikt trekk: Øyet», «Kan lære: Sitt · Ligg · Legg deg», and the muted non-tappable affordability gate — all AA-legible, no off-token colour, no gold-as-text. **No structural
+regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **In the completion/pause menu, only the ACTIVE trick row gets the pale-blue "active" wash — the ACTIVE breed, ACTIVE marker-word, and SELECTED difficulty rows do not,
-  so the four selection sections that were built to "read as one system" mark their current item inconsistently.** *What I saw:* in the menu (`P32-02`, crops
-  `/tmp/p32_menu_card.png` + `/tmp/p32_menu_breeds.png`) the active **Sitt** trick row sits on a distinct pale-blue pill (sampled bg ≈`(213,217,221)`, blue-biased) while the
-  active **Labrador** breed row («Aktiv») sits on the same warm CREAM pill as its siblings (sampled bg ≈`(218,221,214)`, warm — same as the available «Ligg» row), marked
-  active only by its blue name + «Aktiv» word. *Why it's short of good:* this is confirmed structural, not a lighting artifact — `_draw_row` sets `row_bg = ROW_BG_ACTIVE`
-  (the opaque pale-blue wash, task 152) for the active trick (`trick_menu.gd:893`), but `_draw_breed_row` (`:927`), `_draw_word_row` (`:997`) and `_draw_difficulty_row`
-  (`:1071`) all set `row_bg = ROW_BG_LOCKED if … else ROW_BG` — the ACTIVE breed / ACTIVE word / SELECTED difficulty never receive `ROW_BG_ACTIVE`. The whole pass-16→152 arc
-  explicitly set out to make tricks·breeds·words·difficulty "read as one system", and the active-row *emphasis* is the one place they diverge: scanning the card, the active
-  trick pops with a coloured wash while the active breed/word/mode blend into their section. That's the polish-lens "same component rendered differently across sections /
-  hierarchy" class. *What "good" looks like:* give the ACTIVE breed row, the ACTIVE marker-word row, and the SELECTED («Valgt») difficulty row the **same** `ROW_BG_ACTIVE`
-  pale-blue wash the active trick row already uses, so all four "currently-active/selected" items read identically across the menu. Keep each row's existing blue name +
-  badge word; only add the wash. Contrast is safe — I measured the blue name ink `BLUE_INK #2a66b3` on `ROW_BG_ACTIVE` = **4.93:1** (clears AA; the trick row's dark
-  `ROW_ACTIVE_INK #141c26` on the same wash is 14.7:1), so no legibility regression. Verify in-pixel at dsf3 that the active breed/word/difficulty rows now carry the pale-blue
-  wash and their labels stay ≥4.5:1.
+- **Now that 167 unified the active-row *wash*, the active-row *badge ink* is the one place the four selection sections still diverge: the active TRICK badge «Trener nå» is
+  the dark "current-state" ink the app established for "the item you're on" (kennel 151 + menu 152), but the active BREED «Aktiv», active WORD «Aktiv», and SELECTED difficulty
+  «Valgt» badges are still the SAME action-blue as the tappable «Tilgjengelig»/«Bytt» status badges — so on three of four sections the "you are here" marker is coloured
+  identically to an "available/actionable" one.** *What I saw:* in the completion card (`/tmp/menu_card.png`, HEAD `d6c9ae7`) all four active rows now share the pale-blue wash
+  (167 ✓), but the active **Sitt** row's «Trener nå» badge is dark charcoal while the active **Labrador** row's «Aktiv» badge is blue — the very same blue as the «Tilgjengelig»
+  badges on the available «Ligg»/«Legg deg» rows right above it. *Why it's short of good:* it's confirmed structural — the active-trick badge is drawn in `ROW_ACTIVE_INK`
+  (`#141c26`, `trick_menu.gd:921`), but the active-breed badge uses `BADGE_LEARNED` (= `DesignSystem.BLUE_INK`, `:973`), the active-word badge uses `BADGE_LEARNED` (`:1061`),
+  and the selected-difficulty badge uses `DIFF_NAME_ACTIVE` (= `BLUE_INK`, `:1119`) — and `BADGE_AVAILABLE` is *also* `BLUE_INK` (`:161`), so the active-state badge is
+  literally the same colour as the available-state badge on those three sections. The whole 151/152/167 arc set out to make "the currently-active item" read identically
+  everywhere (kennel «Trener nå» = dark non-tappable; menu active-trick «Trener nå» = dark non-tappable; and 167 gave all four the shared wash). The active badge — whose entire
+  job is to signal "this is current, and it's a state, not a tappable action" — is the last inconsistency: three sections still paint it in the action accent. That's the
+  polish-lens "same component (the active-state badge) rendered differently across sections" class. *What "good" looks like:* draw the active/selected badge on the breed,
+  marker-word, and difficulty rows in the **same** dark `ROW_ACTIVE_INK` the active trick's «Trener nå» already uses, so «Aktiv»/«Aktiv»/«Valgt»/«Trener nå» all read as one calm
+  dark "current-state" marker, visually distinct from the blue "available/actionable" badges — completing the "read as one system" unification 167 started on the wash. Keep the
+  breed/word/difficulty NAME colours as they are (section identity); change only the *active-state badge* ink. Contrast improves, not regresses: `ROW_ACTIVE_INK #141c26` on
+  `ROW_BG_ACTIVE` is ~14.7:1 (the trick row already ships this pairing) vs the current blue's 4.93:1 — both clear AA, dark reads stronger as "you are here". Verify in-pixel at
+  dsf3 (drive ≥2 masteries, or a code/test check) that the active breed/word/difficulty badges render dark on the wash and clear AA.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

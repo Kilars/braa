@@ -166,6 +166,12 @@ const BADGE_LOCKED := DesignSystem.SLATE_SOFT
 ## dark ink label + badge that clears WCAG AA on that wash (the legibility bar the loop set in 149/151).
 const ROW_BG_ACTIVE := Color(0.902, 0.933, 0.988)   ## opaque pale-blue wash (CREAM lerped toward BLUE ~14%)
 const ROW_ACTIVE_INK := Color("141c26")             ## the shared dark status/badge ink (== kennel C_TAG_INK)
+## The active/selected STATE badge ink (168, X-4): «Trener nå»/«Aktiv»/«Aktiv»/«Valgt» all draw in this
+## one dark current-state ink across tricks·breeds·words·difficulty — completing 167's wash unification
+## on the badge. It reads as "you are here, a state — not a tappable action", visibly distinct from the
+## action-blue BADGE_AVAILABLE/BADGE_LEARNED. Same dark ink the ACTIVE row already sits under (AA-clear
+## on ROW_BG_ACTIVE, ~14.7:1 vs the blue's 4.93:1 — darker reads stronger as the current selection).
+const BADGE_ACTIVE := ROW_ACTIVE_INK
 
 ## The one place a row's background wash is decided, shared by all four selection sections
 ## (tricks·breeds·words·difficulty) so the CURRENTLY-active/selected item reads identically everywhere
@@ -918,7 +924,7 @@ func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var badge: String = BADGE[st]
 	var badge_col := BADGE_LOCKED
 	if st == State.ACTIVE:
-		badge_col = ROW_ACTIVE_INK
+		badge_col = BADGE_ACTIVE
 	elif st == State.LEARNED:
 		badge_col = BADGE_LEARNED
 	elif st == State.AVAILABLE:
@@ -970,7 +976,7 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	_draw_text(f_name, Vector2(name_x, name_baseline), _elide(f_name, str(b.get("name", b.id)), NAME_SIZE, name_max_w), NAME_SIZE, name_col)
 	var badge_col := BREED_NAME_LOCKED
 	if st == BreedState.ACTIVE:
-		badge_col = BADGE_LEARNED
+		badge_col = BADGE_ACTIVE  # 168: dark current-state ink, not action-blue (matches «Trener nå»)
 	elif st == BreedState.OWNED:
 		badge_col = BADGE_AVAILABLE
 	elif st == BreedState.BUYABLE:
@@ -1058,7 +1064,7 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 		word_badge_col = Color(DesignSystem.SLATE_SOFT.r, DesignSystem.SLATE_SOFT.g, DesignSystem.SLATE_SOFT.b, 0.70)
 	elif st == WordState.ACTIVE:
 		word_badge = WORD_BADGE[WordState.ACTIVE]
-		word_badge_col = BADGE_LEARNED
+		word_badge_col = BADGE_ACTIVE  # 168: dark current-state ink, not action-blue (matches «Trener nå»)
 	elif st == WordState.UNLOCKED:
 		word_badge = WORD_BADGE[WordState.UNLOCKED]
 		word_badge_col = BADGE_AVAILABLE
@@ -1110,13 +1116,13 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 			trade, HINT_SIZE, DIFF_TRADE_HINT)
 	# The badge, right. Locked-active → "Låst"; unlocked-active → "Valgt"; other rows show no badge.
 	var badge := ""
-	var badge_col := DIFF_NAME_ACTIVE
+	var badge_col := BADGE_ACTIVE
 	if is_active and locked:
 		badge = DIFF_BADGE_LOCKED
 		badge_col = DIFF_NAME_LOCKED
 	elif is_active:
 		badge = DIFF_BADGE_ACTIVE
-		badge_col = DIFF_NAME_ACTIVE
+		badge_col = BADGE_ACTIVE  # 168: dark current-state ink «Valgt», not action-blue (matches «Trener nå»)
 	if badge != "":
 		var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
 		_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
