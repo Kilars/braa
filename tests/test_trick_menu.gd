@@ -92,6 +92,28 @@ func test_active_row_label_clears_wcag_aa() -> void:
 	var ratio := KennelScreen.wcag_contrast(TrickMenu.ROW_ACTIVE_INK, TrickMenu.ROW_BG_ACTIVE)
 	assert_true(ratio >= 4.5, "active-row ink on its wash clears AA (got %.2f:1)" % ratio)
 
+# ---- row_fill: the shared active/locked/idle wash all four sections share (166 → 167) -------------
+# PO father-pass-32 (X-4): the ACTIVE trick row already gets the pale-blue ROW_BG_ACTIVE wash, but
+# the ACTIVE breed / ACTIVE marker-word / SELECTED difficulty rows did not — the four "read as one
+# system" selection sections marked their current item inconsistently. `row_fill` is the one place
+# the wash is decided so all four sections stay identical.
+
+func test_row_fill_active_wins_over_locked() -> void:
+	assert_eq(TrickMenu.row_fill(true, false), TrickMenu.ROW_BG_ACTIVE, "an active row gets the pale-blue wash")
+	assert_eq(TrickMenu.row_fill(true, true), TrickMenu.ROW_BG_ACTIVE, "active beats dim — the current item always washes")
+
+func test_row_fill_dim_row_is_locked_tint() -> void:
+	assert_eq(TrickMenu.row_fill(false, true), TrickMenu.ROW_BG_LOCKED, "a dim/locked non-active row gets the faint tint")
+
+func test_row_fill_plain_row_is_cream() -> void:
+	assert_eq(TrickMenu.row_fill(false, false), TrickMenu.ROW_BG, "a plain selectable row stays CREAM")
+
+func test_active_breed_name_clears_aa_on_active_wash() -> void:
+	# The wash only ADDS behind the existing blue name — it must not regress legibility. BLUE_INK on
+	# the pale-blue ROW_BG_ACTIVE must still clear WCAG AA 4.5:1 (father measured ~4.93:1).
+	var ratio := DesignSystem.wcag_contrast(DesignSystem.BLUE_INK, TrickMenu.ROW_BG_ACTIVE)
+	assert_true(ratio >= 4.5, "blue active-name ink on the wash clears AA (got %.2f:1)" % ratio)
+
 # ---- hit-map: a tap → the trick id under it (selectable only) --------------------------------------
 
 func test_id_at_maps_a_tap_to_a_selectable_row() -> void:

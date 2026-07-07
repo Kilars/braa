@@ -176,52 +176,49 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 31) — polish-lens pass: verified 165 (breed showcase spotlit pip now reads as the dominant selection, active dog gets a quiet «aktiv» dot) landed clean and pruned it; re-played every surface incl. a fresh **kennel** grid + inspect-modal critique; found ONE small seating nit on the new «aktiv» dot. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 32) — polish-lens pass: verified 166 (the breed-showcase «aktiv» dot now seats cleanly ON its pip) landed clean and pruned it; re-played every surface incl. a fresh **kennel** grid + inspect-modal critique; found ONE cross-section hierarchy inconsistency in the completion menu (only the ACTIVE **trick** row gets the pale-blue active wash; the ACTIVE breed / word / difficulty rows don't). One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-first pass, fresh and stateless under the polish/critique lens. HEAD is `3424249` (the 165 spotlit-pip-hierarchy commit).
+Thirty-second pass, fresh and stateless under the polish/critique lens. HEAD is `2a0cce0` (the 166 dot-seating commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and
-driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Two harness runs: (1) `tools/po_pass31.mjs`
+driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Two harness runs: (1) `tools/po_pass32.mjs`
 booted `?bra_autotap=1&bra_coins=120` → training page → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`) → opened the
-showcase (spotlit = active Labrador) → cycled ▶ to preview the **non-active** «Brun lab»; (2) `tools/po_pass31_kennel.mjs` booted `?bra_coins=120` → opened the **kennel**
-grid from the training HUD → tapped Nova to open her inspect modal. **Zero console errors** on every run (both exit 0). Evidence: this pass's screenshots
-(`.screenshots/P31-01-training.png`, `P31-02-menu.png`, `P31-03-showcase-active.png` + band zoom `P31-03b-band-active.png`, `P31-04-showcase-preview.png` + band zoom
-`P31-04b-band-preview.png`; `P31K-01-grid.png` the 8-cell kennel grid, `P31K-02-modal.png` Nova's modal) + tight pip crops (`/tmp/p31_active_pip.png`,
-`/tmp/p31_preview_pip.png`) + the cycle probe (`MULTI open spotlit` = `labrador` == active; `MULTI spotlit after next` → `chocolate_labrador` != active) + the code I read
-(`scripts/breed_showcase_view.gd`, `scripts/main.gd` showcase wiring, `scripts/kennel_screen.gd` adopt/trait tokens, `scripts/breed_personality.gd` catalog), against the
-goal art + DS.
+showcase (spotlit = active Labrador) → cycled ▶ to preview the **non-active** «Brun lab»; (2) `tools/po_pass32_kennel.mjs` booted `?bra_coins=120` → opened the **kennel**
+grid from the training HUD (`kennel_btn {204,32}`, 8 cells) → tapped Nova to open her inspect modal. **Zero console errors** on every run (both exit 0). Evidence: this pass's
+screenshots (`.screenshots/P32-01-training.png`, `P32-02-menu.png`, `P32-03-showcase-active.png` + band zoom `P32-03b-band-active.png`, `P32-04-showcase-preview.png` + band
+zoom `P32-04b-band-preview.png`; `P32K-01-grid.png` the 8-cell kennel grid, `P32K-02-modal.png` Nova's modal) + tight pip crops (`/tmp/P32-03b-band-active_pipcrop.png`,
+`/tmp/P32-04b-band-preview_pipcrop.png`) + menu-row background samples + the code I read (`scripts/breed_showcase_view.gd` `ActiveDot`, `scripts/trick_menu.gd`
+`_draw_row`/`_draw_breed_row`/`_draw_word_row`/`_draw_difficulty_row`), against the goal art + DS.
 
-**Verified fixed → pruned:** the pass-30 directive (**previewing a non-active owned dog left the DOMINANT solid-white pip on the ACTIVE dog, not the spotlit one, and the
-spotlit cue was imperceptible**) is **resolved** by 165. In my own pixels: with 2 owned dogs, opening the showcase spotlights the active Labrador and its pip is the solid-white
-dominant pill **carrying a small dark-blue «aktiv» dot** top-right (`P31-03b`, `/tmp/p31_active_pip.png`); cycling ▶ to preview the **non-active** «Brun lab» now moves the
-solid-white dominant pill onto **«Brun lab»** while **«Labrador» drops to a faint chip retaining only the light-blue quiet dot** (`P31-04b`, `/tmp/p31_preview_pip.png`) — the eye
-now lands on the dog you are previewing, and the active dog stays quietly flagged. The invisible `outline_size` marker is gone; the pip fill is keyed to **spotlit**, the dot to
-**active** (`breed_showcase_view.gd:336-351`, adaptive `active_dot_color()` = dark BLUE_INK on the bright pill / light BLUE_LIGHT on the faint pill, both AA-clear). Pruned.
+**Verified fixed → pruned:** the pass-31 directive (**the new «aktiv» dot floated off the pill's rounded top-right corner onto the dark band, reading as a detached dot**) is
+**resolved** by 166. In my own pixels, tight-cropped and enlarged: `ActiveDot.center_for()` now returns `(pip_size.x - CORNER - R, CORNER)` = `(w-16, 12)` with `CORNER=12`,
+`R=4` (`breed_showcase_view.gd:314-322`), so the whole disc lands on the pill's flat top-right region. In the **active** state the dark-blue dot sits fully on the solid-white
+«Labrador» pill (`/tmp/P32-03b-band-active_pipcrop.png`); cycling ▶ to preview «Brun lab», the light-blue dot sits fully on the faint over-band «Labrador» chip
+(`/tmp/P32-04b-band-preview_pipcrop.png`) — in both states the dot no longer bleeds onto the dark INK band and reads as a badge seated on the pip. Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P31-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin HUD pills, big blue BRA. (b) The completion menu
-(`P31-02`) reads as one system — «Sitt» «Trener nå» active row, «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + «Brun lab» «● Adopter 30»
-slate-ink+coin-pip price row, outline «Vis frem hundene»/«Gi tilbakemelding» secondaries, blue-gradient «Fortsett treningen» primary — all Norwegian and AA-legible. (c) The
-showcase chrome (163) is intact — DS INK bands, DS fonts, no gold on any chrome fill, disabled «Trener denne» dark-ink-on-muted-pill / enabled «Tren denne»
-blue-gradient-white (`P31-04`). (d) **Kennel re-inspected fresh under the polish lens** (`P31K-01`/`P31K-02`): the 8-cell grid fills the portrait (Bella «Din hund» / Nova
-«Episk» / commons / Trulte «Påskeegg»), rarity badges + names + coin-pip price chips all render and read; Nova's inspect modal shows the violet «Episk» badge, bottom
-nameplate, warm blurb, four blue stat-pip rows, «Raseegenskaper» chips (measured `C_TRAIT_INK #3a6a9a` on `#e8f0f8` ≈**4.91:1**, AA-clear), «Unikt trekk» card, «Kan lære:
-Sitt · Ligg · Legg deg», and the muted non-tappable **«Har ikke råd · mangler 780»** affordability gate (dark `C_TAG_INK` on `#c3cdd6` ≈10.6:1, AA-clear). No AA fail, no
-off-token colour, no gold-as-text found. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9). (Also confirmed the pip row can't overflow: `BreedPersonality.catalog()`
-ships exactly two ownable breeds and kennel adoptions feed a separate roster, so the showcase never shows more than 2 pips — no scaling defect.)
+**Re-verified clean (no new directive):** (a) **training page** (`P32-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
+cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (145 scrim intact), «Triks»/«Kennel»/coin HUD pills, big blue BRA. (b) The
+showcase chrome (163) is intact — DS INK «Mine hunder / Brun lab» band, DS fonts, no gold on any chrome fill, disabled «Trener denne» dark-ink-on-muted-pill / enabled «Tren
+denne» blue-gradient-white (`P32-04`). (c) **Kennel re-inspected fresh under the polish lens** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait (Bella «Din hund» /
+Nova «Episk» / commons / Trulte «Påskeegg»), rarity badges + names + coin-pip price chips all render and read; Nova's inspect modal shows the violet «Episk» badge, bottom
+nameplate, warm blurb, four blue stat-pip rows, «Raseegenskaper» chips, «Unikt trekk: Øyet», «Kan lære: Sitt · Ligg · Legg deg», and the muted non-tappable **«Har ikke råd ·
+mangler 780»** affordability gate — all AA-legible, no off-token colour, no gold-as-text. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The new «aktiv» dot on the showcase pip does not sit cleanly on the pill — it floats off the rounded top-right corner onto the dark band, reading as a detached dot
-  rather than a badge seated on the pip.** *What I saw:* in both the active and preview states the small blue «aktiv» dot marking the currently-training dog sits at the pill's
-  top-right, but roughly its upper half is **above/outside** the pill's rounded corner, hovering on the dark INK band (tight crops `/tmp/p31_active_pip.png` dark-blue dot on the
-  solid «Labrador» pill; `/tmp/p31_preview_pip.png` light-blue dot on the faint «Labrador» chip). *Why it's short of good:* `ActiveDot._draw()` centres the dot at
-  `(size.x - INSET, INSET)` = `(w-8, 8)` with `R=4` (`breed_showcase_view.gd:314-323`), but the pill's corner radius is 12 — so at inset 8 the dot's centre already sits inside
-  the corner *curve*, and ~half the disc spills into the transparent rounded-corner region and paints over the band. The 165 hierarchy fix itself is correct; this is purely the
-  new marker's seating. A badge that visibly detaches from the element it badges is exactly the polish-lens "badge/label collision / wrong state rendering" class, and it's the
-  debut appearance of this marker. *What "good" looks like:* seat the dot cleanly **on** the pip — increase `INSET` (or anchor the dot to the pill's straight top edge just inside
-  the corner curve, e.g. inset ≈ corner-radius + R) so the full disc lands on the pill fill, tangent-to or just inside the corner, in both the solid-pill (active-spotlit) and
-  faint-pill (active-not-spotlit) states. Optionally give it a 1px band-coloured halo so it stays crisp if it ever kisses the pill edge. Verify in-pixel at dsf3: the whole dot
-  sits on the pill in both states, still AA-legible (dark BLUE_INK on the bright pill, light BLUE_LIGHT on the faint pill), and no longer bleeds onto the dark band.
+- **In the completion/pause menu, only the ACTIVE trick row gets the pale-blue "active" wash — the ACTIVE breed, ACTIVE marker-word, and SELECTED difficulty rows do not,
+  so the four selection sections that were built to "read as one system" mark their current item inconsistently.** *What I saw:* in the menu (`P32-02`, crops
+  `/tmp/p32_menu_card.png` + `/tmp/p32_menu_breeds.png`) the active **Sitt** trick row sits on a distinct pale-blue pill (sampled bg ≈`(213,217,221)`, blue-biased) while the
+  active **Labrador** breed row («Aktiv») sits on the same warm CREAM pill as its siblings (sampled bg ≈`(218,221,214)`, warm — same as the available «Ligg» row), marked
+  active only by its blue name + «Aktiv» word. *Why it's short of good:* this is confirmed structural, not a lighting artifact — `_draw_row` sets `row_bg = ROW_BG_ACTIVE`
+  (the opaque pale-blue wash, task 152) for the active trick (`trick_menu.gd:893`), but `_draw_breed_row` (`:927`), `_draw_word_row` (`:997`) and `_draw_difficulty_row`
+  (`:1071`) all set `row_bg = ROW_BG_LOCKED if … else ROW_BG` — the ACTIVE breed / ACTIVE word / SELECTED difficulty never receive `ROW_BG_ACTIVE`. The whole pass-16→152 arc
+  explicitly set out to make tricks·breeds·words·difficulty "read as one system", and the active-row *emphasis* is the one place they diverge: scanning the card, the active
+  trick pops with a coloured wash while the active breed/word/mode blend into their section. That's the polish-lens "same component rendered differently across sections /
+  hierarchy" class. *What "good" looks like:* give the ACTIVE breed row, the ACTIVE marker-word row, and the SELECTED («Valgt») difficulty row the **same** `ROW_BG_ACTIVE`
+  pale-blue wash the active trick row already uses, so all four "currently-active/selected" items read identically across the menu. Keep each row's existing blue name +
+  badge word; only add the wash. Contrast is safe — I measured the blue name ink `BLUE_INK #2a66b3` on `ROW_BG_ACTIVE` = **4.93:1** (clears AA; the trick row's dark
+  `ROW_ACTIVE_INK #141c26` on the same wash is 14.7:1), so no legibility regression. Verify in-pixel at dsf3 that the active breed/word/difficulty rows now carry the pale-blue
+  wash and their labels stay ≥4.5:1.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

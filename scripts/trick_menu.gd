@@ -166,6 +166,17 @@ const BADGE_LOCKED := DesignSystem.SLATE_SOFT
 ## dark ink label + badge that clears WCAG AA on that wash (the legibility bar the loop set in 149/151).
 const ROW_BG_ACTIVE := Color(0.902, 0.933, 0.988)   ## opaque pale-blue wash (CREAM lerped toward BLUE ~14%)
 const ROW_ACTIVE_INK := Color("141c26")             ## the shared dark status/badge ink (== kennel C_TAG_INK)
+
+## The one place a row's background wash is decided, shared by all four selection sections
+## (tricks·breeds·words·difficulty) so the CURRENTLY-active/selected item reads identically everywhere
+## (166→167, PO father-pass-32 X-4). `active` (the current item) always wins the pale-blue wash; a `dim`
+## (locked / unaffordable / not-the-fixed-mode) non-active row gets the faint tint; everything else stays
+## CREAM. The wash only sits BEHIND each row's existing blue name + badge — legibility is unchanged
+## (BLUE_INK on the wash ≈4.93:1, still AA).
+static func row_fill(active: bool, dim: bool) -> Color:
+	if active:
+		return ROW_BG_ACTIVE
+	return ROW_BG_LOCKED if dim else ROW_BG
 ## Coin GOLD reserved for the Buyable breed-price PIP (a real coin glyph) — never the text.
 ## The header balance is the shared CoinReadout pill (129); the price badge draws its own small
 ## gold coin disc, exactly like the kennel _make_price_chip. GOLD is intrinsically too light to
@@ -890,7 +901,7 @@ func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var active := st == State.ACTIVE
 	# DS pill row background: the muted pale-BLUE wash for the ACTIVE (currently-trained) trick (152),
 	# CREAM for available/learned, near-invisible SLATE_SOFT tint for locked.
-	var row_bg := ROW_BG_ACTIVE if active else (ROW_BG_LOCKED if locked else ROW_BG)
+	var row_bg := row_fill(active, locked)
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# Trick name, left; state badge, right. The ACTIVE row draws its label in the dark 151 status ink
 	# on the muted wash (clears AA, reads as the confident current-trick row — not a live button).
@@ -923,8 +934,9 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var rect := _breed_row_rect(i)
 	var st: int = b.state
 	var locked := st == BreedState.LOCKED
-	# DS pill row background: CREAM for active/available/owned, near-invisible tint for locked.
-	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	# DS pill row background: the ACTIVE breed gets the same pale-blue wash the active trick row uses so
+	# all four sections mark their current item identically (167); locked → faint tint, else CREAM.
+	var row_bg := row_fill(st == BreedState.ACTIVE, locked)
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# The coat swatch chip — a filled disc of the real coat colour with a thin BORDER rim so a pale coat
 	# still reads on the paper panel. An honest colour chip, never a faked breed image.
@@ -993,8 +1005,9 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var w_cooldown: int = int(w.get("cooldown", 0))
 	var w_window_scale: float = float(w.get("window_scale", 1.0))
 	var locked := st == WordState.LOCKED
-	# DS pill row background: CREAM for active/unlocked, near-invisible tint for locked.
-	var row_bg := ROW_BG_LOCKED if locked else ROW_BG
+	# DS pill row background: the ACTIVE marker-word gets the same pale-blue wash the active trick row
+	# uses (167) so the section marks its current item like the rest; locked → faint tint, else CREAM.
+	var row_bg := row_fill(st == WordState.ACTIVE, locked)
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# Show a cost hint for any stronger word on UNLOCKED or ACTIVE rows (095, P5-2).
 	# Base "bra" (cooldown == 0) shows no hint — it's the plain free default.
@@ -1068,7 +1081,9 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 	# DS pill row background: CREAM for a live/selectable row, near-invisible tint when the mode is
 	# locked-and-not-the-fixed-one (dimmed so the fixed mode reads as the single active choice).
 	var dim := locked and not is_active
-	var row_bg := ROW_BG_LOCKED if dim else ROW_BG
+	# The SELECTED («Valgt») mode gets the same pale-blue wash the active trick row uses (167) so the
+	# difficulty section marks its current item like tricks/breeds/words; dim → faint tint, else CREAM.
+	var row_bg := row_fill(is_active, dim)
 	draw_style_box(DesignSystem.pill(row_bg, DesignSystem.R_MD), rect)
 	# The dimmed trade subtitle (121, P4-3): reward × / window-tightening derived from the model.
 	# "" for Normal (baseline) → no subtitle; Hard/Expert show the trade before selecting.
