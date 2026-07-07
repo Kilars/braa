@@ -20,16 +20,21 @@ func test_modal_portrait_yaw_is_pure_front_three_quarter() -> void:
 		"modal portrait yaw offset is 0.0 (pure front-¾, no variety delta)")
 
 func test_modal_yaw_differs_from_side_facing_cells() -> void:
-	## Proof the fix actually decouples: the modal offset must differ from the most side-facing
-	## cell in the spread (the ones the PO flagged as side-profile modals — e.g. -0.40, 0.46).
+	## Proof the fix actually decouples: the modal uses NO per-cell delta (0.0 = pure
+	## front-¾), so it must be strictly more face-on than the most-turned grid cell — which,
+	## after 155 narrowed the spread into the flattering band, is a modest turn (no longer a
+	## ~0.46 side-profile), but still a real, non-trivial delta the modal deliberately drops.
 	var modal_y: float = KennelScreen.modal_portrait_yaw_offset(1)
 	var spread: Array = KennelScreen.PORTRAIT_YAW_SPREAD
 	var most_side := 0.0
 	for v in spread:
 		if absf(v) > absf(most_side):
 			most_side = v
-	assert_true(absf(modal_y - most_side) > 0.3,
-		"modal framing yaw clearly differs from the most side-facing cell yaw (%f)" % most_side)
+	assert_eq(modal_y, 0.0, "modal drops the per-cell delta entirely (pure front-¾)")
+	assert_true(absf(most_side) > 0.05,
+		"the most-turned grid cell still carries a real per-cell variety delta (%f)" % most_side)
+	assert_true(absf(modal_y) < absf(most_side),
+		"modal framing (%f) is strictly more face-on than the most-turned cell (%f)" % [modal_y, most_side])
 
 ## Find the modal header's live dog portrait TextureRect texture, or null (tint-only fallback).
 func _modal_portrait_texture(ks: KennelScreen) -> Texture2D:

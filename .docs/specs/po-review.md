@@ -176,63 +176,68 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 18) — polish-lens pass: pass-17 directive (153 primary-CTA contrast) verified landed and correct in-pixel; ONE new buildable X-6 defect — the completion menu's **secondary/available blue text** (the «Gi tilbakemelding» ghost button + the «Tilgjengelig» row status badges) is still `DesignSystem.BLUE` on a near-white/cream fill and measures **~2.9:1 / ~1.7:1**, failing WCAG AA — the last blue-on-light text the 149→151→153 sweep left behind
+### PO Review — 2026-07-07 (PO, father pass 19) — polish-lens pass: pass-18 directive (154 menu blue-on-light text → AA) verified landed and correct in-pixel; the blue-on-light **contrast sweep has converged** (I re-measured the last-suspect kennel trait chips and they already clear AA by token); ONE new buildable X-4 defect on a DIFFERENT lens — the **kennel grid dog portraits swing from dead-front mugshot to full side-profile** across cells, violating the code's own "front-¾, face clearly to camera, never a side profile" invariant and disagreeing with the modal's front-¾ framing of the same dog
 
-Eighteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `58d78c9` (the 153 primary-CTA contrast commit).
-I reviewed the **fresh local licensed bundle** — `build/web` (pck built 07:16, after the 153 commit, so it carries 153), served over
-http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap boot to
-judge the BRA button at rest, and `?bra_autotap=1` → training → the completion/pause **Triks** menu (opened via the Triks pill).
-`window.__bra_menu_open` confirms the menu, `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run.
-Evidence for every claim is a screenshot I captured this pass (`.screenshots/P18-*`) plus PIL pixel crops + WCAG contrast maths and
-the code tokens I read.
+Nineteenth pass, run fresh and stateless under the polish/critique lens. HEAD is `1f5e899` (the 154 menu-contrast commit).
+I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green,
+pck 08:1x, so it carries 154), served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL
+Compatibility renderer) — via a no-autotap boot (training at rest), the completion/pause **Triks** menu (opened via the Triks pill),
+and the **kennel** (opened via the published `window.__bra_kennel_btn` centre → `window.__bra_kennel_active` reports `bella`, then a
+cell tap → Bella modal). `window.__bra_current_trick` reports `sitt`; **zero console errors** on every run. Evidence for every claim
+is a screenshot I captured this pass (`.screenshots/P19-*`) plus PIL pixel crops + WCAG contrast maths and the code tokens I read.
 
-**Re-verified fixed (pruned) — the pass-17 primary-CTA directive (153) landed and is correct:** both primary blue CTAs now clear
-WCAG AA in my own pixels. The **BRA** button (`.screenshots/P18-01-training-rest.png`, zoom `/tmp/p18_bra2.png`) draws a deep-blue
-gradient fill — I sampled the mid-button fill at ~[44,100,169] (was a light ~[105,158,236]) — so the white «BRA» label measures
-**~5.42:1** (avg-white vs fill) / **~6.0:1** (pure white), well over the 4.5:1 bar, and the button now reads unmistakably primary
-with its 3D lower lip intact. The menu's **«Fortsett treningen»** primary shares the deepened gradient (fill ~[52,105,171]) and its
-white label measures **~4.81:1** / **~5.59:1** (`.screenshots/P18-02-menu.png`, zoom `/tmp/p18_cta.png`). The shared
-`GRAD_PILL_TOP/BOT/LIP` (`#3472bd`/`#24589a`/`#1b4278`) and the deduped `BRA_PILL_*`→DS-token wiring + the new `DesignSystem.wcag_contrast`
-helper are in place. Directive resolved — removed.
+**Re-verified fixed (pruned) — the pass-18 menu-contrast directive (154) landed and is correct:** both offenders now read as a
+deeper, legible blue in my own pixels. The **«Gi tilbakemelding»** ghost button label measures **~5.55:1** on its ~[251,251,247]
+white fill (was ~2.9:1), and the **«Tilgjengelig»** availability badges now render in the deeper blue — the new `BLUE_INK` token
+`#2a66b3` computes to **4.96:1** on CREAM (I recomputed it; well over the 4.5:1 bar) and reads visibly crisper than the old
+`DesignSystem.BLUE` in the zoom (`.screenshots/P19-02-menu.png`, `/tmp/p19_rows.png`). The residual anti-alias softening on the
+thin small-font strokes is **uniform** — the intended dark «Ligg» title and dark-ink «Trener nå» measure the same way by darkest-pixel,
+so it's font rendering, not a blue-specific gap. `NAME_LEARNED / BADGE_LEARNED / BADGE_AVAILABLE / SECONDARY_TEXT+OUTLINE /
+BREED_NAME_ACTIVE / WORD_NAME_ACTIVE / DIFF_NAME_ACTIVE` are all repointed onto `BLUE_INK`; `BLUE` (fills) + `BLUE_DARK` (depth)
+untouched. Directive resolved — removed.
+
+**Contrast sweep converged (no new contrast directive):** I chased the last plausible blue-on-light hold-out — the kennel modal's
+**Raseegenskaper** trait chips (Snill · Tålmodig · Glupen), which *look* soft in the zoom (`.screenshots/P19-04-kennel-modal.png`,
+`/tmp/p19_chips.png`). They are **already AA**: `kennel_screen.gd:58/59` uses `C_TRAIT_INK #3a6a9a` on `C_TRAIT_BG #e8f0f8`, which I
+computed to **4.92:1** — the soft look is the same uniform small-font anti-alias as the (fixed) menu text, not a contrast fail. Stat
+labels are ~7.9:1. So the 149→151→153→154 blue-on-light AA arc is **done**; do not re-open it — there is no remaining sub-AA text.
 
 **Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
-facing camera on bright even grass, dark-ink «Sitt %» readout legible on the sky, tan path → blue-roof cottage, white picket fence
-both sides, small grounded garden coins + rose accent — `.screenshots/P18-01-training-rest.png`); the pass-16 trick-selector ACTIVE
-state (152) holds — opening the menu while training Sitt, the «Sitt» row is the crisp dark-ink-on-pale-blue **«Trener nå»** wash while
-«Ligg»/«Legg deg» sit on cream and «Gi labb» is greyed «Låst» (`.screenshots/P18-02-menu.png`, zoom `/tmp/p18_rows.png`); the
-pass-12/13/14/15 kennel rarity ladder + calm modal band + owned-status pills are untouched (153's diff is confined to
-`design_system.gd` + `main.gd`'s `BRA_PILL_*`). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+facing camera on bright even grass, deep-blue BRA button, tan path → blue-roof cottage, white picket fence both sides, small grounded
+garden coins + rose accent — `.screenshots/P19-01-training.png`); the pass-16 trick-selector ACTIVE state (152) holds (crisp dark-ink
+«Trener nå» on the Sitt row); the 153 primary CTAs are deep-blue with legible white labels. **No structural regression** in the
+signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The completion menu's remaining blue-on-light text — the «Gi tilbakemelding» secondary/ghost button label and the row status
-   badges «Tilgjengelig» — is still drawn in `DesignSystem.BLUE` on a near-white/cream fill and fails WCAG AA (~2.9:1 and ~1.7:1),
-   the last unaddressed corner of the very AA-contrast sweep the last three passes ran (149 kennel badges / 151 owned-status pills /
-   153 primary CTAs, all pulled to ≥4.5:1). Enforcing AA on the primary CTA and the kennel badges but leaving the menu's secondary
-   action + availability badges below the bar is incoherent, and both are text the player actually reads (X-6 cross-cutting contrast,
-   on the signed-off Phase-6 completion menu).** *What I saw:* in the completion menu (`.screenshots/P18-02-menu.png`) — (a) the
-   **«Gi tilbakemelding»** ghost/outlined button (`trick_menu.gd:189 SECONDARY_TEXT := DesignSystem.BLUE`, on `SECONDARY_BG :=
-   DesignSystem.PAPER`) draws its label in the DS BLUE token — I sampled the letter cores at ~[84,150,227] on a ~[250,250,247] white
-   fill, measuring **~2.93:1** (zoom `/tmp/p18_secondary.png`); (b) the **«Tilgjengelig»** availability badges on the Ligg / Legg deg
-   rows (`trick_menu.gd:159 BADGE_AVAILABLE := DesignSystem.BLUE`, on the `ROW_BG := CREAM` fill) render in an even lighter blue —
-   the darkest letter-core pixel I could find is ~[157,190,228], only **~1.66:1** on the ~[240,238,232] cream (zoom
-   `/tmp/p18_rows.png`), so «Tilgjengelig» reads noticeably soft/washed next to the crisp dark-ink «Trener nå» beside it. *Why it
-   falls short:* (a) **AA fail** — WCAG AA needs 4.5:1 for normal text (3:1 for large text); ~2.9:1 and ~1.7:1 fail both, and DS BLUE
-   `#4a90e2` on white is only ~3.29:1 by construction, so any BLUE-on-CREAM/PAPER menu text is doomed to fail; (b) **inconsistency**
-   — 153 just added `DesignSystem.wcag_contrast` and held the primary CTA to ≥4.5:1, yet the same menu card still carries sub-AA blue
-   text one row away; the sweep should finish, not stop at the primary; (c) **legibility/hierarchy** — «Tilgjengelig» is the label
-   that tells the player a trick is *available to train*, and at 1.7:1 it barely reads; the secondary «Gi tilbakemelding» is a live
-   button whose own label is the weakest text in the card. *What "good" looks like:* darken these blue text inks so they clear AA on
-   the light fills they sit on, keeping the blue identity and the ghost/hierarchy styling. The DS already ships `BLUE_DARK` `#2f6fbf`
-   (≈5.06:1 on white, ≈4.7:1 on cream) and the `wcag_contrast` helper — repoint `SECONDARY_TEXT` (and, for identity, optionally
-   `SECONDARY_OUTLINE`) and `BADGE_AVAILABLE` (plus the sibling `NAME_LEARNED` / `BADGE_LEARNED` / `BREED_NAME_ACTIVE`, all
-   `DesignSystem.BLUE` on CREAM, `trick_menu.gd:154/158/212`) to the darker blue so every blue-on-light menu label clears ≥4.5:1.
-   Keep the ACTIVE row exactly as 152 left it (dark-ink `ROW_ACTIVE_INK` on the pale-blue wash — already AA-clear), keep the primary
-   CTA as 153 left it, and pin the new inks with the existing `wcag_contrast` helper. Buildable, no owner asset — a token swap on the
-   shared BLUE-on-light menu text, exactly parallel to 149/151/153.
+1. **The kennel grid renders the eight dog portraits at wildly inconsistent orientations — from a stiff dead-front mugshot to a full
+   broadside side-profile — instead of the consistent flattering front-¾ "face clearly to camera" the code intends and the inspect
+   modal already delivers. Several cells show the dog in pure profile with its face turned away toward the cell edge, which is both
+   the exact framing the code claims it prevents and a poorer, less inviting way to present a dog you're deciding whether to adopt
+   (X-4 layout/cohesion, on the signed-off Phase-8 kennel grid — this specific per-cell ANGLE was never reviewed by the contrast-
+   focused passes 12–18).** *What I saw* (`.screenshots/P19-03-kennel-grid.png`): **Pontus** (`/tmp/p19_pontus.png`) and **Bella**
+   (`/tmp/p19_toprow.png`) render as *full side-profiles* — the entire flank, all four legs side-on, the snout pointing at the cell
+   edge and the face NOT toward the viewer; meanwhile **Trulte** (`/tmp/p19_trulte.png`) and **Nova** render *dead-front* — symmetric
+   head-on mugshots. Only the mid-cells (Sol, Lykke) land in the intended flattering three-quarter. The per-cell yaw
+   (`kennel_screen.gd:101 PORTRAIT_THREE_QUARTER 0.42` + `:109 PORTRAIT_YAW_SPREAD [0.12,-0.40,0.34,-0.22,0.46,-0.14,0.26,-0.34]`)
+   resolves to a spread of roughly **1°→50°** off dead-on, so the low-|delta| cells (Nova/Trulte) sit at a stiff ~1–5° dead-front and
+   the high-|delta| cells (Pontus/Bella/Balder/Sniff) swing to ~31–50°, reading as side-profiles. *Why it falls short:* (a) **the code's
+   own invariant is violated** — `:106` says the spread is "kept within ±0.5 rad so every dog still reads front-¾ face-on, never a
+   rear/side profile" and `:101` "face clearly to camera", yet Pontus/Bella are unmistakable side-profiles with the face turned away;
+   (b) **grid↔modal inconsistency for the SAME dog** — tapping Bella's side-profile cell opens a correct front-¾ hero bust of Bella
+   (`.screenshots/P19-04-kennel-modal.png`, `MODAL_PORTRAIT_YAW 0.0`), so the two views of one dog disagree; (c) **worse merchandising**
+   — a dead-front mugshot is stiff and a side-profile hides the face, and the face is what makes a dog inviting to adopt; a consistent
+   flattering three-quarter across all eight cells reads as one cohesive, considered roster. *What "good" looks like:* re-centre and
+   **narrow** `PORTRAIT_YAW_SPREAD` so all eight cells stay inside a tight flattering front-¾ band (never the ~1° dead-on end, never the
+   ~50° side-profile end — e.g. keep every cell within ~15°–38° off face-on), matching the modal's front-¾ hero framing, while
+   **preserving the per-cell angle variety** that 131 deliberately added so no two identical-model Labradors read the same (the point of
+   the spread stands — just keep its range within "face clearly to camera"). Verify in capture on the 8-cell grid that no cell is a
+   dead-front mugshot and none is a side-profile; the dog's face should read toward the viewer in every cell. Buildable, no owner asset
+   — a tuning of the two existing yaw constants (the distinct-per-breed MODELS that would make orientation moot stay owner-gated,
+   BUST-068).
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the menu secondary/badge contrast directive above; the owner still owns the Phase-10 spec + the asset flags.
+work is the kennel grid-portrait orientation directive above; the owner still owns the Phase-10 spec + the asset flags.
