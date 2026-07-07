@@ -23,7 +23,22 @@ const BAND_BG := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.
 const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const NAME_ACTIVE := DesignSystem.PAPER            ## the spotlit breed's name (active) — bright paper-white, NOT gold
 const NAME_PREVIEW := Color(1.0, 1.0, 1.0)         ## a previewed (not-yet-active) breed's name — white
-const SUBTLE := Color(1.0, 1.0, 1.0, 0.78)         ## caption/hint on the dark band — legible white
+## 169 (PO father-pass-34): was white@0.78 → the hint «Bla med pilene …» read ~4.36:1 (sub-AA) once
+## the bright-grass scene bled through the translucent band and lightened it. Bumped to the same
+## secondary-white the «Tilbake»/chevron chrome uses (0.92) → ~5.3:1 on the father's measured worst-
+## case band, while keeping a hair of "secondary" vs the full-opaque white title. Band stays translucent.
+const SUBTLE := Color(1.0, 1.0, 1.0, 0.92)         ## caption/hint on the dark band — legible secondary white
+
+## The hint caption is drawn at <1.0 alpha over the translucent stage band, so its EFFECTIVE colour
+## is SUBTLE composited over whatever the band has become once the bright-grass scene bleeds through
+## it. Pure so the contrast test can pin the composited ink against the father's measured worst-case
+## (bright-grass) band (169, PO father-pass-34).
+static func hint_ink_over(band: Color) -> Color:
+	var a := SUBTLE.a
+	return Color(
+		SUBTLE.r * a + band.r * (1.0 - a),
+		SUBTLE.g * a + band.g * (1.0 - a),
+		SUBTLE.b * a + band.b * (1.0 - a))
 const PIP_ON := DesignSystem.PAPER                 ## the SPOTLIT (selected) breed's pip — bright paper chip (dark INK text), NOT gold
 const PIP_OFF := Color(1.0, 1.0, 1.0, 0.14)        ## a non-spotlit breed's pip — faint white chip
 const PIP_ON_TEXT := DesignSystem.INK              ## dark ink on the bright spotlit pip (AA-clear)

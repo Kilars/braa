@@ -73,6 +73,20 @@ func test_active_marker_dot_seats_fully_on_the_pill() -> void:
 	assert_true(c.x > size.x * 0.5 and c.y < size.y * 0.5,
 		"the dot still reads as a top-right badge")
 
+## The father measured the composited stage band directly under the hint at (91,102,103) in-pixel at
+## dsf3 over the default bright-grass showcase view — the band's translucent INK@.72 lets the lawn
+## bleed through and lighten it. This is the real worst case the caption ink must stay legible on.
+const MEASURED_WORST_BAND := Color8(91, 102, 103)
+
+func test_hint_caption_clears_aa_over_bright_grass_band() -> void:
+	## 169 (PO father-pass-34): «Bla med pilene …» read ~4.1–4.3:1 (sub-AA) because SUBTLE was only
+	## 78%-opacity white over the lightened band. The EFFECTIVE (composited) hint ink must clear AA on
+	## that measured worst-case band.
+	var ink := BreedShowcaseView.hint_ink_over(MEASURED_WORST_BAND)
+	var ratio := DesignSystem.wcag_contrast(ink, MEASURED_WORST_BAND)
+	assert_true(ratio >= AA,
+		"hint caption must clear AA on the worst-case bright-grass band (got %.2f:1)" % ratio)
+
 func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	## The disabled label ink is a real dark DS ink (not a washed light gold) — luminance well below the fill.
 	var ink_lum := DesignSystem._rel_luminance(BreedShowcaseView.COMMIT_DISABLED_INK)
