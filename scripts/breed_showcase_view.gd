@@ -312,7 +312,14 @@ class Chevron extends Control:
 ## pip and ignores mouse, so the pip underneath still takes the tap.
 class ActiveDot extends Control:
 	const R := 4.0
-	const INSET := 8.0
+	const CORNER := 12.0  ## mirrors the pip stylebox corner radius (_make_button set_corner_radius_all)
+	## Seat the disc on the pill's flat top-right region — its right edge tangent to where the corner
+	## curve begins (inset = CORNER + R) and its top under the flat top edge — so the WHOLE disc lands
+	## on the pill fill, in both the solid spotlit-pill and the faint over-band pill (166, father-pass-31).
+	## Was (size.x - 8, 8): at inset 8 the centre sat inside the corner CURVE, so ~half the disc spilled
+	## into the transparent rounded corner and painted onto the dark band.
+	static func center_for(pip_size: Vector2) -> Vector2:
+		return Vector2(pip_size.x - CORNER - R, CORNER)
 	var _color := Color(1, 1, 1)
 	func _init(color: Color) -> void:
 		_color = color
@@ -320,7 +327,7 @@ class ActiveDot extends Control:
 		set_anchors_preset(Control.PRESET_FULL_RECT)
 		resized.connect(queue_redraw)
 	func _draw() -> void:
-		draw_circle(Vector2(size.x - INSET, INSET), R, _color)
+		draw_circle(center_for(size), R, _color)
 
 ## Rebuild the pip row + the spotlit name/colour from the current model state.
 func _refresh() -> void:

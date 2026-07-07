@@ -54,6 +54,25 @@ func test_active_marker_dot_is_visible_on_both_backgrounds() -> void:
 	assert_ne(BreedShowcaseView.active_dot_color(true), BreedShowcaseView.active_dot_color(false),
 		"the dot adapts its colour to the pip background (dark on light, light on dark)")
 
+func test_active_marker_dot_seats_fully_on_the_pill() -> void:
+	## Task 166 (PO father-pass-31): the "aktiv" dot must sit fully on the pill fill, never bleeding
+	## onto the dark band. The pip stylebox corner radius is 12; a dot at inset 8 (the 165 bug) has its
+	## centre inside the corner CURVE, so half the disc spills into the transparent rounded corner. The
+	## seated centre keeps the whole disc left of the right corner-curve start and below the flat top.
+	var corner: float = BreedShowcaseView.ActiveDot.CORNER
+	var r: float = BreedShowcaseView.ActiveDot.R
+	# a representative pip: wide enough for a breed name, short pill height
+	var size := Vector2(120, 34)
+	var c := BreedShowcaseView.ActiveDot.center_for(size)
+	assert_true(c.x + r <= size.x - corner + 0.01,
+		"dot right edge must be at/left of the right corner-curve start, on the flat top (got x=%.1f)" % (c.x + r))
+	assert_true(c.y - r >= -0.01,
+		"dot top edge must be within the pill, on the flat top (got y=%.1f)" % (c.y - r))
+	assert_true(c.x - r >= -0.01 and c.y + r <= size.y + 0.01,
+		"the whole dot stays within the pill rect")
+	assert_true(c.x > size.x * 0.5 and c.y < size.y * 0.5,
+		"the dot still reads as a top-right badge")
+
 func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	## The disabled label ink is a real dark DS ink (not a washed light gold) — luminance well below the fill.
 	var ink_lum := DesignSystem._rel_luminance(BreedShowcaseView.COMMIT_DISABLED_INK)
