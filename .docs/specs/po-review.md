@@ -176,51 +176,48 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 36) — polish-lens pass: verified 170 (the completion-menu active breed/marker-word/difficulty row NAME now draws in the shared dark `ROW_ACTIVE_INK`, matching «Sitt»/«Trener nå» — all four selection sections now mark "you are here" with a dark name + dark badge identically) landed clean in-pixel and pruned it; re-played training + completion-menu + **kennel** grid/modal + **breed showcase** for regressions (all clean). Turned the polish lens on the **breed-showcase control bar** and found the AA sweep's blind spot: 169 fixed the hint caption (which sits directly on the dark band), but the «Tilbake» back button label and the ◀▶ chevron glyphs sit on the white@0.14 ghost *pills*, which lift the background — so those still read ~3.9–4.0:1 and fail WCAG AA. One buildable X-6 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-08 (PO, father pass 37) — polish-lens pass: verified 171 (the breed-showcase «Tilbake» back-button label + ◀▶ chevron glyphs now clear WCAG AA — the ghost pill flipped from a white@0.14 *lightening* fill to a black@0.45 *darkening* ink overlay, so the near-opaque white chrome sits on a genuinely dark pill) landed clean in-pixel and pruned it; re-played training + completion-menu + **breed showcase** for regressions (all clean). Turned the polish lens on the **breed-showcase dog presentation** and found a cohesion/framing gap: the showcase spotlights the LIVE training rig with its idle-wander still running, so the "hero" dog frequently walks itself out of frame, faces away, or is clipped at the edge — the opposite of the kennel's composed, centered portraits. One buildable X-4 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-sixth pass, fresh and stateless under the polish/critique lens. HEAD is `63da3ac` (the 170 active-name commit).
+Thirty-seventh pass, fresh and stateless under the polish/critique lens. HEAD is `d959615` (the 171 ghost-pill-chrome commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and driven in
-headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Three harness runs, **zero console errors** on every one:
-(1) `tools/po_pass36_active_name.mjs` booted `?bra_autotap=1&bra_coins=120` → training → completion menu, dumped the breed-row coords + captured for the active-name sample;
-(2) `tools/po_pass35.mjs` → training → menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`) → opened the **breed showcase** on the active
-Labrador (chevrons now live with 2 owned dogs); (3) `tools/po_pass32_kennel.mjs` → kennel grid → Nova modal. Evidence: this pass's screenshots
-(`.screenshots/P36-menu-active-name.png`, `P35-01-training.png`, `P35-03-showcase-active.png`; `P32K-01-grid.png`, `P32K-02-modal.png`) + tight zoom crops
-(`/tmp/p36_raser.png` the breed rows, `/tmp/p36_showctl2.png` / `/tmp/p36_tilbake.png` the showcase control bar) + per-pixel luminance/CR samples + the code I read
-(`scripts/trick_menu.gd` name tokens, `scripts/breed_showcase_view.gd` `BTN_SECONDARY` / `BTN_SECONDARY_TEXT`).
+headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Two harness runs, **zero console errors** on every one:
+(1) `tools/po_pass37.mjs` booted `?bra_autotap=1&bra_coins=120` → training → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`)
+→ opened the **breed showcase** on the active Labrador (chevrons live with 2 owned dogs), then sampled the control-bar chrome pixel-for-pixel from screenshot crops;
+(2) `tools/po_pass37_showcase_frame.mjs` re-opened the showcase and captured the spotlit dog at t≈0/1.5/3/4.5/6 s to watch the live wander. Evidence: this pass's screenshots
+(`.screenshots/P37-01-training.png`, `P37-02-menu.png`, `P37-03-showcase.png`, `P37-03c-controlbar.png`; `P37F-t0.png` … `P37F-t6000.png`) + per-pixel luminance/CR samples + the
+code I read (`scripts/breed_showcase_view.gd` `BTN_SECONDARY`/`chrome_ink_over`; `scripts/main.gd` `_on_showcase_requested`/`_render_showcase` and the wander path).
 
-**Verified fixed → pruned:** the pass-35 directive (**the completion menu titled its active-row NAME two ways — active trick «Sitt» dark, active breed/word/difficulty names in
-action-blue**) is **resolved** by 170. In my own pixels (`/tmp/p36_raser.png`, HEAD `63da3ac`): the active **Labrador** breed name now samples at **(20,28,38)** — an exact match
-for `ROW_ACTIVE_INK` #141c26, the same dark ink «Sitt» uses — with its «Aktiv» badge dark alongside, while the non-active «Brun lab» name stays slate + «Adopter 30» blue. Code
-confirms `BREED_NAME_ACTIVE` (`:239`), `WORD_NAME_ACTIVE` (`:252`), `DIFF_NAME_ACTIVE` (`:261`) all repointed to `ROW_ACTIVE_INK`, the word pip decoupled to stay `WORD_PIP_ACTIVE`
-blue (`:253`), exactly as directed. All four selection sections now read **dark name + dark badge on the pale-blue wash** identically. Pruned.
+**Verified fixed → pruned:** the pass-36 directive (**the showcase «Tilbake» label + ◀▶ chevron glyphs failed WCAG AA on their white@0.14 lifted pills, ~3.9–4.0:1**) is
+**resolved** by 171. In my own pixels (`P37-03c-controlbar.png`, HEAD `d959615`, dsf3): the «Tilbake» pill now samples label(247,247,247) over pill(46,56,54) = **11.30:1**, the
+◀ left-chevron **11.22:1** and the ▶ right-chevron **11.30:1** — all far past the 4.5:1 bar (was ~3.9–4.0:1). Code confirms `BTN_SECONDARY = Color(0,0,0,0.45)` (`:61`, a *darkening*
+ink over the band → a genuinely dark #2e3836-ish pill) with `BTN_SECONDARY_TEXT = white@0.96` (`:62`), pure `chrome_pill_over`/`chrome_ink_over` compositing helpers, and the band
+translucency kept (169 spotlight glow survives). The quiet "ghost secondary" read holds — a recessed dark pill on the dark band, not a bright lifted one. Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P35-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar (dark text on cream, 145/159 scrim intact), «Triks»/«Kennel»/coin-`120` HUD pills,
-big blue BRA. (b) **Kennel** (`P32K-01`/`P32K-02`): the 8-cell grid fills the portrait, rarity badges/names/coin-pip price chips all read; grid↔modal price parity holds (Nova grid
-«900», modal «Har ikke råd · mangler 780» = 900−120); Nova's modal stat rows show the blue filled / pale-empty max-track, «Raseegenskaper» chips, «Unikt trekk: Øyet», «Kan lære:
-Sitt · Ligg · Legg deg», muted non-tappable affordability gate — all AA-legible, no gold-as-text, calm neutral header band (150). (c) **Breed showcase** (`P35-03`): spotlit pip is
-the bright paper chip with the dark «aktiv» dot (165/166), «Trener denne» disabled pale-slate pill with dark ink (163), hint caption legible (169). **No structural regression** in
-the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P37-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
+cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin-`120` HUD pills, big blue BRA. (b) **Completion menu**
+(`P37-02`): all four selection sections mark their current item as **dark name + dark badge on the pale-blue wash** — «Sitt» «Trener nå» / «Labrador» «Aktiv» — identically
+(167/168/170 unification intact); «Fortsett treningen» reads as the solid-blue primary, the two ghost buttons below it as blue-outlined secondaries. (c) **Breed showcase** control
+bar (`P37-03c`): dark chevrons with white glyphs, bright-white spotlit «Labrador» pip with its seated blue «aktiv» dot (165/166), faint «Brun lab» non-spotlit pip (interior text
+5.76:1), legible hint, muted «Trener denne» disabled CTA. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The breed-showcase control bar's ghost-pill chrome fails WCAG AA — the «Tilbake» back-button label (~3.9:1) and the ◀▶ chevron glyphs (~4.0:1) wash out — because the 169 hint
-  fix only ever cleared the raw dark band, but these labels/glyphs sit on the white@0.14 pills, which lift the background above where a white@0.92 label clears 4.5:1.** *What I saw:*
-  in the breed showcase (`P35-03-showcase-active.png`, `/tmp/p36_showctl2.png` / `/tmp/p36_tilbake.png`, HEAD `63da3ac`, dsf3, with 2 owned dogs so the chevrons are live) the
-  bottom control bar reads: ◀ chevron · spotlit «Labrador» pip · ▶ chevron · hint «Bla med pilene …» · «Trener denne» (disabled, dark-on-pale, fine) · **«Tilbake»**. I sampled the
-  «Tilbake» label glyph at (242,243,243) over its pill background (116,123,126) = **3.87:1**, and the left-chevron glyph (244,245,245) over its pill center (112,123,122) = **4.0:1** —
-  both under the 4.5:1 AA bar for this normal-weight chrome. The hint caption right above them clears AA (169: ~5.3–5.7:1) *because it sits directly on the dark band*; these don't.
-  *Why it's wrong:* it's structural in `scripts/breed_showcase_view.gd` — `BTN_SECONDARY = Color(1,1,1,0.14)` (`:55`) is a *lightening* ghost fill, so over the ~90-grey band it
-  composites to a ~112–116-grey pill, and `BTN_SECONDARY_TEXT = Color(1,1,1,0.92)` (`:56`) — the same 0.92 secondary-white 169 tuned to clear ~5.3:1 *on the band* — only reaches
-  ~3.9–4.0:1 once it's sitting on that lifted pill instead of the band. So the exact AA sweep 149→169 has been running (kennel badges, CTAs, menu text, the showcase hint) skipped the
-  showcase's own pill-backed chrome: the «Tilbake» label and both chevron arrows are the last sub-AA text on any persistent surface — and on the active-dog view «Tilbake» is the
-  *only* tappable action, so the lowest-contrast element is also the primary exit. *What "good" looks like:* bring the showcase's ghost-pill chrome (the «Tilbake» label + the ◀▶
-  chevron glyphs) to **≥4.5:1 over its own composited pill** — e.g. deepen `BTN_SECONDARY` from a white@0.14 *lightening* fill to a *darkening* fill (a low-alpha black/ink overlay,
-  or a dark opaque slate) so the label/glyph sits on a genuinely dark pill the white@0.92 clears AA on, and/or push the label/glyph itself toward full opacity — whichever keeps the
-  quiet "ghost secondary" read but clears the bar. Keep the band translucency (169 — the spotlight glow must survive) and the pip/hint/«aktiv»-dot treatments (165/166/169) exactly
-  as they are; this is only the two pill-backed chrome controls. Add/extend a TDD assert (a `test_breed_showcase_*` alongside the existing showcase tests) that the composited
-  «Tilbake» label-over-pill and chevron-glyph-over-pill contrast is ≥4.5:1, and re-verify in-pixel at dsf3 that both the «Tilbake» label and the chevron arrows clear AA on their
-  pills.
+- **The breed showcase — the game's "here is my dog, shown off" surface — presents the hero dog badly, because it spotlights the LIVE training rig with the idle-wander still
+  running, so the dog roams out of frame, turns away, and gets clipped at the edges instead of holding a composed portrait like the kennel does.** *What I saw:* opening the
+  showcase from the completion menu's «Vis frem hundene» and capturing the spotlit Labrador over ~6 s (`P37F-t0.png` … `P37F-t6000.png`, HEAD `d959615`, dsf3), the dog wanders
+  freely: at t≈0 it walks toward the **right** edge with its snout clipped by the frame border (`P37F-t0`); at t≈3 s it happens to be centered facing camera — a genuinely proud
+  read (`P37F-t3000`); but by t≈4.5 s it has drifted **far to the left**, facing left with its face near the left edge and its hindquarters cut off at the bottom (`P37F-t4500`). So
+  only ~one of the five sampled moments actually "shows off" the dog; the rest catch it mid-stride, off-center, or half out of frame. *Why it's wrong:* the showcase's explicit
+  purpose (per `breed_showcase_view.gd`'s own header — *"the roster reads as 'here is my dog, shown off', not a cut-out on a dark veil"*) is a proud presentation of the owned dog,
+  but `main.gd:_on_showcase_requested` (`:2044`) only brightens the stage light + re-tints the live rig — it never pauses the wander or poses the dog, so `_wander_active` stays
+  true and the hero keeps roaming its patch (`:611 _drive_wander`). This also breaks **cohesion** with the other "look at my dog" surface: the **kennel** already renders each dog as
+  a clean, centered, front-¾ posed portrait via its live SubViewport (116/155), while the showcase — same intent — lets the dog walk itself to the edge. The two disagree. *What
+  "good" looks like:* while the breed showcase is open, quiet the wander and gently pose the spotlit dog as a **portrait** — centered, camera-facing (or front-¾), whole body in
+  frame — so it holds still and reads as "shown off", matching the kennel modal's composed portrait; call `_pause_wander()` (and ease the facing to camera, as the sit path already
+  does via `_engage_face_for_sit`/`_release_face`) on `_on_showcase_requested`, and `_resume_wander()` on `_close_showcase`. The dog can keep its idle breath/blink; it just must not
+  walk off-frame or turn its back. Keep the spotlight brightening + live preview re-tint (087/163) and the control-bar chrome (171) exactly as they are. Add a test that opening the
+  showcase pauses the wander (`_wander_active == false`) and closing restores it, and re-verify in-pixel at dsf3 that across several seconds the spotlit dog stays centered and
+  camera-facing within the frame.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

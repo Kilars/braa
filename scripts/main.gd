@@ -2049,6 +2049,16 @@ func _on_showcase_requested() -> void:
 		_menu.hide()  # the showcase replaces the menu surface; the menu re-shows on Tilbake
 	_set_training_hud_visible(false)  # the showcase centre is transparent — hide the chrome that would ghost through (090)
 	_brighten_stage(true)
+	# Pose the spotlit dog as a composed, centred, camera-facing portrait (172, PO father-pass-37):
+	# stop the roam, recentre it to the patch centre, and turn to face the player — so the hero holds
+	# still and reads as "shown off", not caught mid-stride or half out of frame. _close_showcase undoes
+	# all three (resume the roam, release the facing) on both the commit and dismiss paths.
+	_pause_wander()
+	if _wander != null:
+		_wander.recenter()
+		if _dog != null:
+			_dog.transform = _wander_base()  # snap to the recentred base so the facing computes from centre
+	_engage_face_for_showcase()
 	_render_showcase()
 	_showcase.show()
 	_publish_showcase()
@@ -2104,6 +2114,8 @@ func _close_showcase() -> void:
 		_showcase.hide()
 	_set_training_hud_visible(true)  # restore the training chrome hidden on open (090)
 	_brighten_stage(false)
+	_release_face()   # ease the camera-facing pose back to the roam heading (172, mirrors the sit-end release)
+	_resume_wander()  # hand the dog back to roaming its patch (172) — behind the menu / into resumed training
 	_publish_showcase()
 
 # ---------------------------------------------------------------------------
@@ -3013,6 +3025,19 @@ func _engage_face_for_sit() -> void:
 		var deadline := maxf(FACE_MIN_DEADLINE, apex * FACE_APEX_FRACTION)
 		speed = maxf(FACE_ROAM_SPEED, turn / deadline)  # fast enough to beat the apex, never slower than natural
 	_face = FaceTurn.new(start, _sit_face_heading, speed)
+	_facing = true
+
+## Engage the face-the-camera turn for the breed showcase (172, PO father-pass-37): the showcase poses
+## the spotlit dog as a composed portrait, so — like a sit — it turns to face the player, but WITHOUT
+## the sit's apex-deadline timing (there is no scoring window here). Reuses the same `_facing`/`_face`
+## machinery `_advance_facing` drives, so the turn-in holds the camera heading regardless of the (now
+## paused) roam, and `_release_face` on close eases it back. A no-op on a dog with no wander/root.
+func _engage_face_for_showcase() -> void:
+	if _wander == null or _dog == null:
+		return
+	_sit_face_heading = _camera_facing_heading()
+	var speed := FACE_REDUCED_SPEED if _motion_scale < 1.0 else FACE_ROAM_SPEED
+	_face = FaceTurn.new(_dog_yaw(), _sit_face_heading, speed)
 	_facing = true
 
 ## Release the facing after the trick (061): stop holding the camera and drop to the natural roam

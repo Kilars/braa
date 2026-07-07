@@ -76,6 +76,18 @@ func advance(delta: float) -> void:
 	var step := minf(speed * delta, dist)
 	_pos = clamp_to_patch(_pos + to / dist * step)
 
+## Snap the roam back to the patch centre and hold it there (172, PO father-pass-37): the breed
+## showcase poses the spotlit dog as a composed, centred portrait, so it recentres the offset and
+## aims the (paused) target at the centre so the dog frames dead-centre instead of ambling off. main
+## additionally freezes the roam (`_wander_active = false`) while the showcase is open, so `advance`
+## is not called meanwhile — this just guarantees a centred base when the pose is engaged.
+func recenter() -> void:
+	_pos = Vector2.ZERO
+	_target = Vector2.ZERO
+	_heading = 0.0
+	_phase = Phase.PAUSING
+	_pause_elapsed = 0.0
+
 ## Pull a point back onto the patch boundary if it strays past it (same bearing) — the turn-back
 ## mechanism, and a belt-and-suspenders guard that the dog can never leave the patch.
 func clamp_to_patch(p: Vector2) -> Vector2:

@@ -69,3 +69,18 @@ func test_the_dog_pauses_at_a_target_then_ambles_on() -> void:
 	f.advance(0.5)  # wait out the pause
 	assert_true(f.is_moving(), "after the pause the dog ambles to a fresh target")
 	assert_ne(f.target(), paused_target, "a fresh target is drawn after the pause")
+
+func test_recenter_returns_the_dog_to_the_patch_centre_and_holds() -> void:
+	# 172 (PO father-pass-37): the breed showcase poses the hero dog as a composed portrait —
+	# recenter() snaps the roam offset back to the patch centre so the spotlit dog is framed
+	# centred, and leaves it PAUSED (target == centre) so it holds there instead of ambling off.
+	var f := WanderField.new(_rng(9), 0.5, 0.45, 1.0)
+	for i in 20:
+		f.advance(0.1)  # amble off-centre
+	assert_true(f.position().length() > 0.02, "the dog has ambled off the patch centre")
+	f.recenter()
+	assert_true(f.position().is_equal_approx(Vector2.ZERO), "recenter snaps the dog back to the patch centre")
+	assert_true(f.target().is_equal_approx(Vector2.ZERO), "recenter aims the dog at the centre so it holds")
+	assert_false(f.is_moving(), "recenter leaves the dog paused (a held portrait, not mid-stride)")
+	f.advance(0.5)  # a few frames pass while the showcase is open
+	assert_true(f.position().is_equal_approx(Vector2.ZERO), "the recentred dog holds at the centre")
