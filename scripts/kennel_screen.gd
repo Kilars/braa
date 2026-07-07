@@ -1545,7 +1545,7 @@ func _build_active_state(_detail: Dictionary) -> Control:
 ## not (135). On press emits adopt_requested(id) which main._on_kennel_adopt wires into the real
 ## spend+roster mutation. Trulte's free-adopt coral treatment is K-6 (task 111) — this ships the
 ## priced blue path only.
-const C_ADOPT_BLUE := Color("4a90e2")    ## blue adopt button bg
+const C_ADOPT_BLUE := Color("24589a")    ## deep adopt-button blue = DesignSystem.GRAD_PILL_BOT — white clears AA ~7.1:1 (was #4a90e2 @ 3.29:1; 158, X-6), ties the kennel CTA to the app's primary-CTA blue palette
 
 ## Pure static helper (146, X-4): splits the adopt CTA into (prefix words, coin amount) so the
 ## button can render [prefix][coin pip][amount] — the price drawn with the SAME coin component as
@@ -1599,12 +1599,14 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 			btn.add_theme_stylebox_override(st, sb)
 		btn.add_theme_stylebox_override("pressed", sb_pressed)
 	else:
-		# Distinct greyed disabled token (135): solid muted-grey fill + Ink-Soft text at full
-		# opacity — NOT a washed-out blue. Reads as a deliberate "Har ikke råd" state.
+		# Distinct greyed disabled token (135): solid muted-grey fill. Text is the shared dark
+		# tag ink C_TAG_INK (158, X-6) — C_INK_SOFT was only 3.4:1 on this fill; C_TAG_INK lands
+		# ~10.6:1 (same ink 149/151 use for kennel badges/status). Reads as a deliberate
+		# "Har ikke råd" state, now AA-legible.
 		sb.bg_color = C_ADOPT_DISABLED
-		btn.add_theme_color_override("font_color", C_INK_SOFT)
-		btn.add_theme_color_override("font_hover_color", C_INK_SOFT)
-		btn.add_theme_color_override("font_disabled_color", C_INK_SOFT)
+		btn.add_theme_color_override("font_color", C_TAG_INK)
+		btn.add_theme_color_override("font_hover_color", C_TAG_INK)
+		btn.add_theme_color_override("font_disabled_color", C_TAG_INK)
 		for st in ["normal", "hover", "pressed", "disabled"]:
 			btn.add_theme_stylebox_override(st, sb)
 
@@ -1622,7 +1624,7 @@ func _build_adopt_button(detail: Dictionary) -> Control:
 	# gold (reads on both the blue affordable fill and the grey disabled fill); text is white when
 	# affordable, Ink-Soft when disabled — matching the button's own font colours.
 	var parts := adopt_button_parts(price, balance, affordable)
-	var text_col: Color = Color.WHITE if affordable else C_INK_SOFT
+	var text_col: Color = Color.WHITE if affordable else C_TAG_INK  # dark tag ink AA-clears the grey fill (158, X-6)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1695,10 +1697,13 @@ func _build_free_adopt_button(detail: Dictionary) -> Control:
 	lbl.text = "Adopter gratis"
 	lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	lbl.add_theme_color_override("font_color", Color.WHITE)
+	# Dark tag ink on the coral fill (158, X-6): white-on-coral was 2.51:1 — the worst adopt
+	# state; C_TAG_INK on this exact coral is the pairing the «Påskeegg» badge already uses (AA-clear).
+	lbl.add_theme_color_override("font_color", C_TAG_INK)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl)
 	var heart := _HeartPip.new()
+	heart.tint = C_TAG_INK   # match the label ink (158) so the drawn heart reads on the coral too
 	heart.name = "HeartPip"
 	heart.custom_minimum_size = Vector2(17.0, 17.0)
 	hbox.add_child(heart)
@@ -1890,6 +1895,7 @@ class _StarPip extends Control:
 # via draw_colored_polygon / draw_circle — zero font dependency, GL-Compat safe.
 # ---------------------------------------------------------------------------
 class _HeartPip extends Control:
+	var tint: Color = Color.WHITE   ## fill colour — default white; free-adopt sets C_TAG_INK (158, X-6)
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		resized.connect(queue_redraw)
@@ -1901,7 +1907,7 @@ class _HeartPip extends Control:
 		var lobe_y := h * 0.34       ## vertical centre of the two lobes
 		var lx := w * 0.30           ## left lobe centre x
 		var rx := w * 0.70           ## right lobe centre x
-		var col := Color.WHITE
+		var col := tint
 		# Two top lobes.
 		draw_circle(Vector2(lx, lobe_y), r, col)
 		draw_circle(Vector2(rx, lobe_y), r, col)

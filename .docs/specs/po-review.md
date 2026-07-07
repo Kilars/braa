@@ -176,54 +176,64 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 21) — polish-lens pass: pass-20 directive (156 kennel grey secondary text → AA-clear `C_INK_SOFT`) verified landed and correct at native resolution; ONE new buildable defect — a Norwegian **misspelling** on the kennel inspect modal: the trick line reads «**Kan laere**: Sitt · Ligg · Legg deg» (the æ written as bare "ae") directly under a correctly-spelled «Læreevne»
+### PO Review — 2026-07-07 (PO, father pass 22) — polish-lens pass: pass-21 directive (157 «Kan laere»→«Kan lære» modal spelling) verified landed and correct in-pixel; ONE new buildable X-6 defect — the kennel **adopt button** (the modal's primary CTA, the whole point of the kennel) fails WCAG AA in **all three** states, the last button the 149→156 AA sweep never measured
 
-Twenty-first pass, run fresh and stateless under the polish/critique lens. HEAD is `0a1fe35` (the 156 grey-secondary-text commit).
+Twenty-second pass, run fresh and stateless under the polish/critique lens. HEAD is `9f5ac36` (the 157 spelling-fix commit).
 I reviewed the **fresh local licensed bundle** — `build/web`, rebuilt at this HEAD via `nix develop -c bash verify.sh` (gate green),
-served over http and driven in headless Chromium at 390×844 (SwiftShader == the deployed GL Compatibility renderer) — via a no-autotap
-boot (training at rest), the **completion menu** (opened via the HUD «Triks» pill → `window.__bra_menu_open` reports `true`), and the
-**kennel** (opened via `window.__bra_kennel_btn` → `window.__bra_kennel_active` = `bella`, `window.__bra_kennel_cells` = all 8 cell
-centres, then a Nova cell tap → modal). `window.__bra_current_trick` = `sitt`; **zero console errors** on every run. Evidence is
-screenshots I captured this pass (`.screenshots/P21-*`, incl. deviceScaleFactor-3 near-native crops) plus PIL pixel crops + WCAG contrast
-maths and the code tokens I read.
+served over http and driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (near-native, no downscale wash; SwiftShader ==
+the deployed GL Compatibility renderer) — via a no-autotap boot (training at rest), the **completion menu** (`window.__bra_menu_open` =
+`true`), the **kennel grid** (`window.__bra_kennel_cells` = all 8 cell centres), and two inspect modals (**Nova** buyable/«Episk», **Bella**
+owned). `window.__bra_current_trick` = `sitt`; **zero console errors** on every run. Evidence is screenshots I captured this pass
+(`.screenshots/P22-*`) plus PIL pixel crops + WCAG contrast maths and the code tokens I read.
 
-**Re-verified fixed (pruned) — the pass-20 grey-secondary-text directive (156) landed and is correct:** I re-measured at
-**near-native resolution** (deviceScaleFactor 3, framebuffer displayed ~1:1 so no downscale wash) and the kennel's secondary text now
-clears AA in my own pixels — the breed subtitle «Labrador retriever» darkest ink = `(95,111,129)` on white = **5.15:1**
-(`.screenshots/P21-hidpi-grid.png`, crop `/tmp/p21_hidpi_bella.png`), and the modal «Kan lære» line / «Unikt trekk» caption / section
-headings measure **5.28:1** on the modal surface (`.screenshots/P21-hidpi-modal.png`) — all comfortably over the 4.5:1 bar, matching the
-`C_INK_SOFT #5a6b7d` repoint, while staying visibly quieter than the dark `C_INK` title so the hierarchy holds. (Note for future passes:
-a *plain* 390×844 screenshot downsamples the 720-wide framebuffer and washes small text to a false ~1.8:1 — trust the near-native
-deviceScaleFactor-3 capture, not the downscaled frame; same class as the SwiftShader "trust the frame, not the counter" gotcha.)
-Directive resolved — removed. I also spot-checked the modal's Raseegenskaper trait chips (`C_TRAIT_INK #3a6a9a` on `C_TRAIT_BG #e8f0f8`
-= **4.92:1**) — they clear AA, so the kennel text-contrast sweep is now genuinely complete.
+**Re-verified fixed (pruned) — the pass-21 spelling directive (157) landed and is correct:** the Nova and Bella inspect modals both render
+the trick line as «**Kan lære**: Sitt · Ligg · Legg deg» with the real æ ligature (`.screenshots/P22-04-kennel-modal-nova.png`, near-native
+crop `/tmp/p22_modal_bottom.png` — the æ renders identically to «Læreevne»/«Raseegenskaper» in the same modal). Code confirms the single
+literal at `kennel_screen.gd:1419` is now `"Kan lære: "`. Directive resolved — removed.
 
-**Also re-verified clean (no new directive):** the training page still matches the goal (pale-blue sky + sun, cream Labrador centred
-facing camera on bright even grass, deep-blue BRA button, tan path → blue-roof cottage, white picket fence, grounded garden coins + rose
-accent — `.screenshots/P21-01-training.png`); the completion menu reads as one system — «Sitt» «Trener nå» active row (152), «Ligg»/«Legg
-deg» «Tilgjengelig», «Gi labb» «Låst», the «Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA all AA-legible (152/153/154,
-`.screenshots/P21-02-menu.png`); the grid's consistent front-¾ yaw (155), calm owned-band tint (150), «Trener nå» active pill (151),
-rarity corner badges (148/149) and stat bars all render correctly. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Also re-verified clean (no new directive):** (a) **grid↔modal coat parity holds** — I nearly filed a "Nova modal shows cream but grid
+shows grey" mismatch, but on measuring the *lit* coat pixels both read the same warm-neutral light-grey (grid Nova ≈ `(226,223,217)`, modal
+Nova ≈ `(228,225,218)`; the "cream vs grey" impression is a scale/lighting illusion — the large lit modal bust vs the small shadowed grid
+cell — not a tint bug; 147/150 intact). (b) The **HUD nav pills** «Triks»/«Kennel» use `DesignSystem.SLATE #5a6b7d` on the PAPER pill =
+**5.28:1**, AA-clear (a downsampled frame reads a false ~3.3:1 — trust the token + near-native capture, the prior pass's gotcha).
+(c) The **training page** matches the goal (pale-blue sky + sun, cream Labrador centred facing camera on even grass, deep-blue BRA button,
+tan path → blue-roof cottage, white picket fence, grounded gold + rose garden coins — `.screenshots/P22-01-training.png`). (d) The
+**completion menu** reads as one system — «Sitt» «Trener nå» active row (152), «Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», the
+«Gi tilbakemelding» ghost + «Fortsett treningen» primary CTA all AA-legible (152/153/154, `.screenshots/P22-02-menu.png`). (e) The kennel
+grid front-¾ yaw (155), calm owned-band tint (150), rarity corner badges (148/149), modal stat bars (the empty-slot indicator reads —
+Nova's Mot shows 4 filled + 1 pale slot) and trait chips (`C_TRAIT_INK` on `C_TRAIT_BG` = 4.92:1) all render correctly. **No structural
+regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-1. **The kennel inspect modal shows a Norwegian misspelling: the trick line reads «Kan laere: …» — the "æ" written as a bare ASCII "ae"
-   — sitting directly beneath a correctly-spelled «Læreevne» stat label, so the error is glaring, not subtle (correctness defect on the
-   signed-off Phase-8 kennel).** *What I saw* (`.screenshots/P21-04-kennel-modal.png`; near-native crops `/tmp/p21_kanlaere.png` shows
-   «Kan laere: Sitt · Ligg · Legg deg» and `/tmp/p21_laereevne.png` shows «Læreevne» with the æ ligature rendering perfectly a few rows
-   above it, in the same modal, same font). I traced it to a single string literal: `kennel_screen.gd:1419`
-   `lbl.text = "Kan laere: " + " · ".join(parts)`. Every *other* Norwegian string in the whole file is spelled correctly with real
-   æ/ø/å (19 lines carry those chars — «Læreevne», «Påskeegg», «Din», «Profesjonell fasilitet», …), and the Baloo 2 body font clearly
-   renders æ fine (proven by «Læreevne» right above), so this is a plain typo, **not** a deliberate glyph-avoidance. *Why it falls short:*
-   it's a visible spelling error in the product's own language on a headline data row — «Kan lære» ("can learn") is the modal's promise of
-   what the dog will do, and rendering it «Kan laere» reads as unpolished/amateur, exactly the kind of blemish the last several AA/polish
-   passes were tightening the screen to eliminate; a Norwegian player will read it as a mistake at a glance. *What "good" looks like:* fix
-   the one literal to the correct spelling — `"Kan lære: "` (real "æ", matching «Læreevne»/«Raseegenskaper» elsewhere). Verify in an
-   in-pixel modal capture that the line reads «Kan lære: Sitt · Ligg · Legg deg» with the æ ligature. Buildable, no owner asset — a
-   one-character orthography fix.
+1. **The kennel inspect-modal ADOPT BUTTON — the modal's primary call-to-action, the entire purpose of the kennel — fails WCAG AA in all
+   three of its states; it is the one button the long 149→156 contrast sweep never measured.** *What I saw:* on the Nova modal the
+   unaffordable adopt CTA «Har ikke råd · mangler 🪙 900» is a muted grey pill whose label barely separates from its fill
+   (`.screenshots/P22-04-kennel-modal-nova.png`, near-native crop `/tmp/p22_modal_bottom.png`); measuring the rendered text in my own pixels
+   gives core `(101,118,135)` on fill `(209,216,222)` = **3.25:1**, well under the 4.5:1 AA bar. I then traced all three adopt-button states
+   in `kennel_screen.gd` and every one fails:
+   - **Unaffordable** (6 of the 8 dogs on a fresh 0-coin save — the default state a new player sees) — text `C_INK_SOFT #5a6b7d` on
+     `C_ADOPT_DISABLED #c3cdd6` (`:1604`/`:1605`) = **3.4:1**.
+   - **Affordable** — white on the flat `C_ADOPT_BLUE #4a90e2` (`:1591`, `text_col = Color.WHITE`) = **3.29:1**.
+   - **Free-adopt** (Trulte «Adopter gratis ♥») — white on the coral `C_ADOPT_FREE #ff7a85` (`:1674`) = **2.51:1**.
+   The label is `T_BODY` 15 px (`:1636`/`:1649`), below the large-text threshold → the full 4.5:1 bar applies to all three. *Why it falls
+   short:* these tokens were last touched at task **135** and the entire 149→156 AA sweep (badges, status pills, secondary text, section
+   headings, trait chips, menu blue-on-light text, and the 153 primary-CTA *gradient*) flowed right past them, because the adopt button
+   uses its own flat `C_ADOPT_*` fills, not the deepened `GRAD_PILL_*` gradient the BRA/«Fortsett treningen» CTAs got. So the single most
+   important interactive element in the kennel — the button you press to actually acquire a dog, and the price/affordability feedback that
+   tells a new player *why* they can't yet — is the least legible CTA in the whole app, directly contradicting the accessibility bar the
+   last eight passes enforced everywhere else. *What "good" looks like:* bring every adopt-button state to ≥4.5:1, reusing the patterns
+   the sweep already established — (i) **affordable:** deepen the blue fill so white clears AA, ideally by reusing the shared
+   `DesignSystem.GRAD_PILL_*` gradient the BRA + «Fortsett treningen» CTAs use (153) so the kennel's primary CTA becomes literally the same
+   component as the app's primary CTA, or at minimum darken `C_ADOPT_BLUE` until white ≥4.5:1; (ii) **free-adopt:** darken the coral (or put
+   a dark ink on it) so its label clears 4.5:1 — 2.51:1 is the worst offender; (iii) **unaffordable:** keep the muted-grey *fill* (it's the
+   correct disabled signal) but darken the *text* from `C_INK_SOFT` to the shared dark tag ink `C_TAG_INK #141c26`, which lands at **10.6:1**
+   on `C_ADOPT_DISABLED` (the same ink 149/151 already use for kennel badges/status, so it's the DS-consistent choice) — the coin pip stays
+   gold. Verify each state in an in-pixel modal capture at ≥4.5:1 (Nova = unaffordable, an affordable dog after granting coins, Trulte =
+   free). Buildable, no owner asset — a token/gradient repoint on the kennel's own CTA.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still
 **empty/deferred** — owner-gated (no spec ⇒ cannot Visual-Review and cannot be given buildable stories without
 inventing scope, which is out of bounds). The standing asset flags (distinct per-breed **models**, camera-facing
 **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated. The loop's next buildable
-work is the «Kan lære» spelling fix above; the owner still owns the Phase-10 spec + the asset flags.
+work is the adopt-button AA fix above; the owner still owns the Phase-10 spec + the asset flags.
