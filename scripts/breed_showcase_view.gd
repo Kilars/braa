@@ -24,9 +24,19 @@ const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const NAME_ACTIVE := DesignSystem.PAPER            ## the spotlit breed's name (active) — bright paper-white, NOT gold
 const NAME_PREVIEW := Color(1.0, 1.0, 1.0)         ## a previewed (not-yet-active) breed's name — white
 const SUBTLE := Color(1.0, 1.0, 1.0, 0.78)         ## caption/hint on the dark band — legible white
-const PIP_ON := DesignSystem.PAPER                 ## the active breed's pip — bright paper chip (dark INK text), NOT gold
-const PIP_OFF := Color(1.0, 1.0, 1.0, 0.14)        ## an inactive breed's pip — faint white chip
-const PIP_ON_TEXT := DesignSystem.INK              ## dark ink on the bright active pip (AA-clear)
+const PIP_ON := DesignSystem.PAPER                 ## the SPOTLIT (selected) breed's pip — bright paper chip (dark INK text), NOT gold
+const PIP_OFF := Color(1.0, 1.0, 1.0, 0.14)        ## a non-spotlit breed's pip — faint white chip
+const PIP_ON_TEXT := DesignSystem.INK              ## dark ink on the bright spotlit pip (AA-clear)
+
+## The active dog gets a quiet "aktiv" DOT (165, PO father-pass-30) so the SPOTLIT pip can own the
+## dominant solid fill without the two states competing. The dot is DRAWN (never a font glyph — the
+## coin/chevron lesson) and its colour ADAPTS to the pip background: dark BLUE_INK on the bright
+## spotlit pill, light BLUE_LIGHT on a faint pill over the dark band. Blue echoes the trick-menu
+## ACTIVE row + BRA primary, so all four selection surfaces read as one system.
+const ACTIVE_DOT_ON_LIGHT := DesignSystem.BLUE_INK   ## dot on the solid-paper spotlit+active pip
+const ACTIVE_DOT_ON_DARK := DesignSystem.BLUE_LIGHT  ## dot on the faint over-dark-band active pip
+static func active_dot_color(on_bright_pip: bool) -> Color:
+	return ACTIVE_DOT_ON_LIGHT if on_bright_pip else ACTIVE_DOT_ON_DARK
 const BTN_SECONDARY := Color(1.0, 1.0, 1.0, 0.14)  ## «Tilbake» ghost pill over the dark band
 const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.92)
 const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)
@@ -297,6 +307,21 @@ class Chevron extends Control:
 			pts = PackedVector2Array([Vector2(cx + w, cy), Vector2(cx - w, cy - h), Vector2(cx - w, cy + h)])
 		draw_colored_polygon(pts, _color)
 
+## A small filled "aktiv" dot in the pip's top-right corner (165, PO father-pass-30) — the quiet
+## marker for the ACTIVE dog, drawn (not a font glyph) so it never renders as tofu. Fills its parent
+## pip and ignores mouse, so the pip underneath still takes the tap.
+class ActiveDot extends Control:
+	const R := 4.0
+	const INSET := 8.0
+	var _color := Color(1, 1, 1)
+	func _init(color: Color) -> void:
+		_color = color
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+		resized.connect(queue_redraw)
+	func _draw() -> void:
+		draw_circle(Vector2(size.x - INSET, INSET), R, _color)
+
 ## Rebuild the pip row + the spotlit name/colour from the current model state.
 func _refresh() -> void:
 	if _name_label == null:
@@ -304,17 +329,23 @@ func _refresh() -> void:
 	var is_active := _spotlit == _active
 	_name_label.text = _name_of(_spotlit) + (" — aktiv" if is_active else "")
 	_name_label.add_theme_color_override("font_color", NAME_ACTIVE if is_active else NAME_PREVIEW)
-	# Rebuild pips: one per owned breed, the active one gold, the spotlit one outlined.
+	# Rebuild pips: one per owned breed. The SPOTLIT (previewed) breed owns the solid dominant fill —
+	# it is the current selection; the ACTIVE dog carries a quiet "aktiv" dot (165, PO father-pass-30).
+	# (Was reversed: the fill keyed to active + an invisible `outline_size` on the spotlit pip, so
+	# previewing a non-active dog left the eye pulled to the wrong pip.)
 	for c in _pips.get_children():
 		c.queue_free()
 	for entry in _entries:
 		var e: Dictionary = entry
 		var id: String = e.id
-		var pip := _make_button(str(e.get("name", id)), PIP_ON if id == _active else PIP_OFF,
-			PIP_ON_TEXT if id == _active else BTN_SECONDARY_TEXT)
+		var is_spot := id == _spotlit
+		var pip := _make_button(str(e.get("name", id)), PIP_ON if is_spot else PIP_OFF,
+			PIP_ON_TEXT if is_spot else BTN_SECONDARY_TEXT)
 		pip.add_theme_font_size_override("font_size", 15)
-		if id == _spotlit:
-			pip.add_theme_constant_override("outline_size", 2)
+		if id == _active:
+			var dot := ActiveDot.new(active_dot_color(is_spot))
+			dot.name = "ActiveDot"
+			pip.add_child(dot)
 		var eid: String = id
 		pip.pressed.connect(func(): focus_requested.emit(eid))
 		_pips.add_child(pip)

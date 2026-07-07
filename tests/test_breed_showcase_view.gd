@@ -75,6 +75,17 @@ func test_single_dog_view_hides_cycle_chevrons() -> void:
 
 func test_multi_dog_view_shows_cycle_chevrons() -> void:
 	## A rendered two-owned-dog showcase keeps both chevrons live.
+	var view := _build_two_dog_view("labrador", "labrador")
+	assert_true(view._prev_btn.visible, "two-dog showcase shows the ◀ prev chevron")
+	assert_true(view._next_btn.visible, "two-dog showcase shows the ▶ next chevron")
+	view.queue_free()
+
+## --- Task 165 (PO father-pass-30): the SPOTLIT (previewed) pip is the dominant selection; the
+## ACTIVE dog gets a quieter marker — not the reverse. The pip fill was keyed to `active` and the
+## spotlit cue was an invisible outline, so previewing a non-active dog pulled the eye to the wrong
+## (active) pip. Below pins the fill to spotlit + a quiet drawn "aktiv" dot on the active pip.
+
+func _build_two_dog_view(spotlit: String, active: String) -> BreedShowcaseView:
 	var view := BreedShowcaseView.new()
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.add_child(view)
@@ -83,7 +94,45 @@ func test_multi_dog_view_shows_cycle_chevrons() -> void:
 	view.render([
 		{"id": "labrador", "name": "Labrador", "tint": Color(1, 1, 1)},
 		{"id": "chocolate_labrador", "name": "Brun lab", "tint": Color(0.7, 0.5, 0.3)},
-	], "labrador", "labrador")
-	assert_true(view._prev_btn.visible, "two-dog showcase shows the ◀ prev chevron")
-	assert_true(view._next_btn.visible, "two-dog showcase shows the ▶ next chevron")
+	], spotlit, active)
+	return view
+
+func _pip_named(view: BreedShowcaseView, name: String) -> Button:
+	for c in view._pips.get_children():
+		if c is Button and (c as Button).text == name:
+			return c as Button
+	return null
+
+func test_spotlit_pip_is_the_solid_dominant_fill() -> void:
+	## Previewing the non-active «Brun lab»: ITS pip carries the solid bright fill (the selection),
+	## while the active «Labrador» pip is the faint one — not the reverse (the pass-30 defect).
+	var view := _build_two_dog_view("chocolate_labrador", "labrador")
+	var spot := _pip_named(view, "Brun lab")
+	var act := _pip_named(view, "Labrador")
+	assert_ne(spot, null, "the spotlit pip exists")
+	assert_ne(act, null, "the active pip exists")
+	assert_eq(spot.get_theme_stylebox("normal").bg_color, BreedShowcaseView.PIP_ON,
+		"the SPOTLIT pip carries the solid dominant fill")
+	assert_eq(act.get_theme_stylebox("normal").bg_color, BreedShowcaseView.PIP_OFF,
+		"the non-spotlit ACTIVE pip is the faint one (not the dominant fill)")
+	view.queue_free()
+
+func test_active_pip_carries_a_quiet_active_marker() -> void:
+	## The active dog is still flagged — a small drawn dot — but quietly, so it never competes with
+	## the spotlit selection. The spotlit-but-not-active pip carries NO such marker.
+	var view := _build_two_dog_view("chocolate_labrador", "labrador")
+	var act := _pip_named(view, "Labrador")
+	var spot := _pip_named(view, "Brun lab")
+	assert_ne(act.get_node_or_null("ActiveDot"), null, "the active dog's pip mounts a quiet active marker")
+	assert_eq(spot.get_node_or_null("ActiveDot"), null, "the non-active spotlit pip carries no active marker")
+	view.queue_free()
+
+func test_spotlit_equals_active_pip_reads_as_both() -> void:
+	## Default single-active view (spotlit == active): the pip is BOTH the solid dominant fill AND
+	## carries the active marker — it reads cleanly as the selected AND active dog at once.
+	var view := _build_two_dog_view("labrador", "labrador")
+	var pip := _pip_named(view, "Labrador")
+	assert_eq(pip.get_theme_stylebox("normal").bg_color, BreedShowcaseView.PIP_ON,
+		"the spotlit==active pip is the solid dominant fill")
+	assert_ne(pip.get_node_or_null("ActiveDot"), null, "and still carries the active marker")
 	view.queue_free()

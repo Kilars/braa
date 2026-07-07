@@ -41,6 +41,19 @@ func test_no_non_coin_chrome_fill_is_gold() -> void:
 		assert_false(_is_goldish(pair[1] as Color),
 			"showcase chrome fill %s must not be gold (gold = coin only)" % pair[0])
 
+func test_active_marker_dot_is_visible_on_both_backgrounds() -> void:
+	## Task 165 (PO father-pass-30): the quiet "aktiv" dot must be visible whether its pip is the
+	## bright spotlit pill (dark dot on paper) or a faint pill over the dark band (light dot on ink) —
+	## a UI-graphic marker clears the ≥3:1 non-text bar on EITHER background, and the two colours differ.
+	var on_light := DesignSystem.wcag_contrast(BreedShowcaseView.active_dot_color(true), DesignSystem.PAPER)
+	assert_true(on_light >= 3.0,
+		"active dot on the solid-paper spotlit pip clears the 3:1 graphic bar (got %.2f:1)" % on_light)
+	var on_dark := DesignSystem.wcag_contrast(BreedShowcaseView.active_dot_color(false), DesignSystem.INK)
+	assert_true(on_dark >= 3.0,
+		"active dot on the dark band clears the 3:1 graphic bar (got %.2f:1)" % on_dark)
+	assert_ne(BreedShowcaseView.active_dot_color(true), BreedShowcaseView.active_dot_color(false),
+		"the dot adapts its colour to the pip background (dark on light, light on dark)")
+
 func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	## The disabled label ink is a real dark DS ink (not a washed light gold) — luminance well below the fill.
 	var ink_lum := DesignSystem._rel_luminance(BreedShowcaseView.COMMIT_DISABLED_INK)

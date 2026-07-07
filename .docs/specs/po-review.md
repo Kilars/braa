@@ -176,50 +176,51 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-07 (PO, father pass 29) — polish-lens pass: verified 163 (breed showcase joins the design system, illegible disabled CTA fixed) landed clean and pruned it; re-played every surface; found ONE remaining wrong-empty-state defect on the freshly-redesigned showcase — its ◀ ▶ cycle chevrons render as fully active pills (and the hint invites their use) in the **single-dog default state** where they are verified no-ops. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-07 (PO, father pass 30) — polish-lens pass: verified 164 (breed showcase single-dog chevrons/hint made honest) landed clean and pruned it; re-played every surface; found ONE remaining hierarchy/selected-state defect on the same showcase — when you preview a **non-active** owned dog, the pip that reads as visually dominant (solid-white fill) is the **active** dog, not the one you're spotlighting, and the spotlit cue is imperceptible. One buildable directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Twenty-ninth pass, fresh and stateless under the polish/critique lens. HEAD is `ba74328` (the 163 breed-showcase-DS commit).
+Thirtieth pass, fresh and stateless under the polish/critique lens. HEAD is `412ceff` (the 164 chevron-honesty commit).
 Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and
 driven in headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Booted `?bra_autotap=1&bra_coins=120`
-to reach the completion menu, the «Raser» section, the **«Vis frem hundene» breed showcase**, and the kennel grid; adopted the 2nd breed (balance 120→90) to reach
-the showcase's enabled state and to preview a non-active dog. **Zero console errors** on every run (exit 0). Evidence: this pass's screenshots
-(`.screenshots/P26-01-training.png`, `P26-02-menu-full.png`, `P28-01-showcase.png` the single-dog default, `P28b-02-preview-enabled.png` the 2-dog preview,
-`P24-03-kennel-grid.png`) + zoom crops (`/tmp/p29_ctrl2.png` single-dog control band, `/tmp/p29_enabled.png` 2-dog control band) + sampled pixel colours
-(disabled fill `srgb(207,214,221)` = #cfd6dd) + the harness no-op probe (`spotlit after next`/`next2` both stayed `labrador`) + the code I read
-(`scripts/breed_showcase_view.gd` in full), against the goal art + DS.
+to reach the training page, the completion menu, the **«Vis frem hundene» breed showcase** in its single-dog default, then adopted the 2nd breed (balance 120→90,
+owned = `[labrador, chocolate_labrador]`) and re-opened the showcase + cycled to preview «Brun lab». **Zero console errors** on every run (harness exit 0). Evidence:
+this pass's screenshots (`.screenshots/P30-01-training.png`, `P30-02-menu.png`, `P30-03-showcase-single.png` the single-dog default, `P30-04-showcase-multi.png` the
+2-dog roster spotlighting the active Labrador, `P30-05-showcase-multi-next.png` previewing the non-active «Brun lab») + zoom crops (`/tmp/p30_single_band.png`,
+`/tmp/p30_multi_band.png`, `/tmp/p30_p05_band.png` the pip/CTA bands; `/tmp/p30_hud.png` the training HUD; `/tmp/p30_menu_zoom.png` the menu card) + sampled pixel
+colours (nav «Triks»/«Kennel» + coin labels = SLATE `#5a6b7d` ≈4.78:1 on PAPER, AA-clear; «Sitt»/«0%» dark ink `#253140`/`#2e3948`) + the harness no-op/cycle probe
+(`SINGLE spotlit after next-tap` stayed `labrador`; `MULTI spotlit after next` → `chocolate_labrador`) + the code I read (`scripts/breed_showcase_view.gd`,
+`scripts/main.gd` HUD), against the goal art + DS.
 
-**Verified fixed → pruned:** the pass-28 directive (**breed showcase wholly off the design system — charcoal/gold chrome, non-DS font, ≈1.03:1 disabled «Trener denne» CTA**)
-is **resolved** by 163. In my own pixels the showcase now reads as one system with the menu it launches from: the title/name/control bands are DS **INK** @ .72 (not charcoal),
-title/name/hint/buttons draw in the DS fonts (Baloo 2 / Nunito), the name pill is bright **paper** with dark ink (no gold), and **no chrome element is gold** (the two discs
-by the dog are actual garden coins). Both CTA states clear WCAG AA: the **disabled** active-dog «Trener denne» is now dark **INK** on a muted pale-slate pill (#cfd6dd, sampled
-`srgb(207,214,221)`), clearly legible (`/tmp/p29_ctrl2.png`) — the ~1.03:1 gold-on-gold defect is gone; the **enabled** «Tren denne» (previewing the adopted «Brun lab») is the
-DS **blue gradient pill** with a crisp white label — the BRA / «Fortsett treningen» palette from 153 (`/tmp/p29_enabled.png`). Pruned from this log.
+**Verified fixed → pruned:** the pass-29 directive (**showcase ◀ ▶ chevrons render as fully active pills, and the hint «Bla med pilene …» invites their use, in the
+single-dog default where they are verified no-ops**) is **resolved** by 164. In my own pixels the single-dog showcase (`P30-03`, band zoom `/tmp/p30_single_band.png`)
+now shows **no chevrons at all** — both ◀ ▶ are hidden — and the hint reads the honest **«Adopter flere hunder for å bla»** (no "use the arrows" instruction). A real tap
+where ▶ used to sit is a confirmed no-op (`__bra_showcase_spotlit` stayed `labrador`). After adopting the 2nd dog the chevrons **return** and cycle correctly
+(`P30-04`/`P30-05`, `MULTI` probe → `chocolate_labrador`). Pruned from this log.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P26-01-training.png`) still matches the goal — centered facing-camera cream Labrador on green grass
-with the cyan approach ring, tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … %» learned bar (159), «Triks»/
-«Kennel»/coin HUD pills, big blue BRA (153). (b) The completion menu (`P26-02-menu-full.png`) reads as one system — «Sitt» «Trener nå» pale-blue active row (152),
-«Ligg»/«Legg deg» «Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + the «Brun lab» «● Adopter 30» slate-ink+coin-pip price row (162), the outline «Vis frem hundene»/
-«Gi tilbakemelding» secondary pills, and the blue-gradient «Fortsett treningen» primary — all Norwegian and AA-legible (154). (c) The **kennel grid** (`P24-03-kennel-grid.png`)
-— 8 cells, corner rarity badges + white price chips with the gold coin pip (146/149), names/breeds — is clean and consistent (the full-body framing on this **local CC0** build
-is a stand-in artifact; the real hero-bust portraits render on the deployed **licensed** site, verified clean in the Phase-8 sign-off and pass 24/25 after the 160 MSAA fix).
-**No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P30-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding
+path → cream/blue cottage, white picket fence, gold+rose coin scatter (142), opaque «Sitt … 0%» learned bar (159, sampled uniform PAPER, no sun bleed), «Triks»/«Kennel»/
+coin HUD pills whose SLATE labels sample `#5a6b7d` (≈4.78:1, AA-clear — the earlier lighter reading was a pill-edge/sky sampling artifact, not the text core), big blue BRA
+(153). (b) The completion menu (`P30-02`, zoom `/tmp/p30_menu_zoom.png`) reads as one system — «Sitt» «Trener nå» pale-blue active row (152), «Ligg»/«Legg deg»
+«Tilgjengelig», «Gi labb» «Låst», «Labrador» «Aktiv» + «Brun lab» «● Adopter 30» slate-ink+coin-pip price row (162), outline «Vis frem hundene»/«Gi tilbakemelding»
+secondaries, blue-gradient «Fortsett treningen» primary — all Norwegian and AA-legible (154). (c) The showcase chrome (163) is intact — DS INK bands, DS fonts, no gold
+on any chrome fill, disabled «Trener denne» dark-ink-on-muted-pill and enabled «Tren denne» blue-gradient-white (`P30-05`). **No structural regression** in the signed-off
+phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The breed showcase's ◀ ▶ cycle chevrons render as fully active, tappable pills — and the hint invites their use — in the single-dog default state, where they are
-  verified no-ops.** *What I saw:* «Vis frem hundene» is offered from the completion menu regardless of how many dogs you own, and a new player owns exactly **one** dog, so
-  its **default / most-common initial state** is a single-dog roster. In that state (`.screenshots/P28-01-showcase.png`, control-band zoom `/tmp/p29_ctrl2.png`) both the left
-  ◀ and right ▶ chevrons draw as **normal active white-on-band pills** — pixel-identical to the 2-dog enabled state (`/tmp/p29_enabled.png`) — and the hint under the single
-  «Labrador» pip reads **«Bla med pilene eller trykk en hund»** ("scroll with the arrows or tap a dog"), explicitly telling the player to use the arrows. But there is nothing
-  to cycle to: I drove a real tap on ▶ twice and the spotlight never moved (`__bra_showcase_spotlit` stayed `labrador` across `next` and `next2`), because the showcase
-  spotlights only **owned** breeds and there is just one. *Why it's wrong:* this is a wrong empty-state (the prompt's touch-targets/states criterion — "missing or wrong …
-  empty … states"): two prominent controls are presented as active and a hint actively instructs the player to use them, yet they do nothing — the single-dog showcase
-  becomes a mild dead-end (the only working action is «Tilbake», since «Trener denne» is also correctly disabled for the already-active dog). Dead controls that look live
-  read as a bug, and undercut the polish 163 just brought to this surface. *What "good" looks like:* make the chevron state honest — when the owned roster has **≤ 1** breed,
-  **disable** the ◀ ▶ chevrons (grey/muted, e.g. the same muted-pill treatment as the disabled «Trener denne», ≥4.5:1) or **hide** them, and drop/adjust the hint so it does
-  not instruct a no-op (e.g. «Trykk en hund» only, or a "adopter flere for å bla"-style single-dog line). With **2+** owned dogs the chevrons must stay fully active and cycle
-  exactly as they do today. Verify in-pixel: a single-dog showcase shows no active-looking dead chevrons and no "use the arrows" instruction, and a 2-dog showcase still
-  cycles ◀ ▶ between the owned breeds.
+- **In the breed showcase, when you preview a non-active owned dog, the pip that reads as visually dominant is the ACTIVE dog — not the one you are spotlighting — and the
+  spotlit pip carries no perceptible selection cue.** *What I saw:* with 2 owned dogs I cycled ▶ to spotlight «Brun lab» (the chocolate Labrador). The 3D stage re-tinted to
+  the brown dog, the title band read «Brun lab», and «Tren denne» went enabled-blue — all correct. But in the pip row (`P30-05`, zoom `/tmp/p30_p05_band.png`) the **«Labrador»**
+  pip is a **solid bright-white pill with bold dark text** while the currently-spotlit **«Brun lab»** pip is a **faint translucent chip** — visually *identical* to how it looked
+  when it was NOT spotlit (`P30-04`, `/tmp/p30_multi_band.png`). The eye is pulled to «Labrador», the dog you are *not* previewing. *Why it's wrong:* the pip fill is keyed to
+  **active** (`PIP_ON` solid PAPER for `id == _active`), and the only thing marking the **spotlit** pip is `add_theme_constant_override("outline_size", 2)` with **no
+  `font_outline_color` set** (`breed_showcase_view.gd:316-317`) — so over the dark INK band that 2px outline is imperceptible (the comment even still says "the active one gold,
+  the spotlit one outlined", but active is now solid white and the outline is invisible). Result: in a selector whose whole job is "which of my dogs am I about to train", the
+  pip row's strongest highlight sits on the wrong dog and the actual selection reads as secondary — a wrong selected-state (the polish lens's "missing or wrong … states" +
+  "hierarchy: the primary thing must read as primary"). It's mild at 2 dogs (you can infer from the 3D dog + title) but the ambiguity grows with every adopted breed. *What
+  "good" looks like:* make the **spotlit/previewed** pip the visually dominant one (it is the current selection) — e.g. a solid/high-contrast fill or a clearly-visible ring in a
+  DS token that clears AA — and give the **active** dog a distinct but quieter marker (a small «aktiv» dot/checkmark or a subtle accent) so the two states never compete. When
+  spotlit == active (the default single-active view) the pip should still read cleanly as both. Verify in-pixel: previewing a non-active dog makes *its* pip the obviously-selected
+  one, while the active dog stays quietly flagged, with no pip below 4.5:1.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing
