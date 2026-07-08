@@ -13,6 +13,16 @@ func test_tags_are_the_fixed_adr_set() -> void:
 	assert_true(f.TAGS.has("confusing"), "confusing tag present")
 	assert_true(f.TAGS.has("other"), "other tag present")
 
+func test_tag_labels_are_norwegian() -> void:
+	# 181 (PO father-pass-54): the whole game is Norwegian — the tag chips must be too.
+	var f: FeedbackForm = FeedbackForm.new()
+	assert_eq(f.TAG_LABELS["bug"], "Feil", "bug → Feil")
+	assert_eq(f.TAG_LABELS["idea"], "Idé", "idea → Idé")
+	assert_eq(f.TAG_LABELS["too_hard"], "For vanskelig", "too_hard → For vanskelig")
+	assert_eq(f.TAG_LABELS["too_easy"], "For lett", "too_easy → For lett")
+	assert_eq(f.TAG_LABELS["confusing"], "Forvirrende", "confusing → Forvirrende")
+	assert_eq(f.TAG_LABELS["other"], "Annet", "other → Annet")
+
 func test_toggle_tag_adds_then_removes() -> void:
 	var f: FeedbackForm = FeedbackForm.new()
 	assert_false(f.is_tag_on("bug"), "bug starts off")

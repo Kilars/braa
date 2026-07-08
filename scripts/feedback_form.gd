@@ -15,12 +15,12 @@ const TAGS := ["bug", "idea", "too_hard", "too_easy", "confusing", "other"]
 
 ## Player-facing labels for each tag, shown on the chip buttons in FeedbackFormView.
 const TAG_LABELS := {
-	"bug": "Bug",
-	"idea": "Idea",
-	"too_hard": "Too hard",
-	"too_easy": "Too easy",
-	"confusing": "Confusing",
-	"other": "Other",
+	"bug": "Feil",
+	"idea": "Idé",
+	"too_hard": "For vanskelig",
+	"too_easy": "For lett",
+	"confusing": "Forvirrende",
+	"other": "Annet",
 }
 
 ## The free-text field. strip_edges() is applied on build and has_text checks.

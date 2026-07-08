@@ -28,23 +28,33 @@ var _rating_buttons: Array   ## Array[Button] — only populated when _show_rati
 var _send_btn: Button
 var _rating_container: Control  ## the HFlowContainer holding the rating buttons, or null
 
+## 181: light DS PAPER card, one system with the completion menu it pops from. All colours are
+## DesignSystem tokens (INK on PAPER/CREAM, BORDER hairline), a BLUE primary CTA, and the 152/167
+## active-row pale-blue wash on selected chips. GOLD appears nowhere here — it is the coin only.
 const PANEL_MAX_W := 340.0
 const PANEL_MARGIN := 24.0
-const PANEL_BG := Color(0.10, 0.13, 0.18, 0.98)
-const PANEL_BORDER := Color(1.0, 0.86, 0.30, 0.85)
-const BACKDROP := Color(0.0, 0.0, 0.0, 0.6)
+const PANEL_BG := DesignSystem.PAPER
+const PANEL_BORDER := DesignSystem.BORDER
+const BACKDROP := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.55)  ## ink scrim
 const RADIUS := 14.0
-const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
-const CHIP_BG_ON := Color(1.0, 0.86, 0.30, 0.90)   ## selected chip — gold
-const CHIP_BG_OFF := Color(1.0, 1.0, 1.0, 0.10)    ## unselected chip — subtle
-const CHIP_TEXT_ON := Color(0.10, 0.08, 0.02, 1.0) ## dark text on gold
-const CHIP_TEXT_OFF := Color(1.0, 1.0, 1.0, 0.85)
-const SEND_BG := Color(1.0, 0.86, 0.30, 0.95)
-const SEND_TEXT := Color(0.10, 0.08, 0.02, 1.0)
-const CANCEL_BG := Color(1.0, 1.0, 1.0, 0.10)
-const CANCEL_TEXT := Color(1.0, 1.0, 1.0, 0.85)
-const RATING_ON_BG := Color(1.0, 0.86, 0.30, 0.90)
-const RATING_OFF_BG := Color(1.0, 1.0, 1.0, 0.10)
+const TITLE_COLOR := DesignSystem.INK
+const CHIP_BG_ON := TrickMenu.ROW_BG_ACTIVE        ## selected chip — the active-row pale-blue wash (152/167)
+const CHIP_BG_OFF := DesignSystem.CREAM            ## unselected chip — calm cream, BORDER hairline
+const CHIP_TEXT_ON := TrickMenu.ROW_ACTIVE_INK     ## dark shared active ink on the wash
+const CHIP_TEXT_OFF := DesignSystem.SLATE          ## muted-but-AA slate on cream
+const CHIP_BORDER_ON := DesignSystem.BLUE_INK      ## blue hairline on the selected chip
+const CHIP_BORDER_OFF := DesignSystem.BORDER       ## neutral hairline on the resting chip
+const SEND_BG := DesignSystem.GRAD_PILL_BOT        ## primary CTA — deep blue (white ≈7:1 AA), same family as the BRA/close pills
+const SEND_TEXT := DesignSystem.PAPER
+const CANCEL_BG := DesignSystem.PAPER              ## ghost secondary — paper + blue outline (mirrors the menu ghost pills)
+const CANCEL_TEXT := DesignSystem.BLUE_INK
+const CANCEL_BORDER := DesignSystem.BLUE_INK
+const RATING_ON_BG := TrickMenu.ROW_BG_ACTIVE
+const RATING_OFF_BG := DesignSystem.CREAM
+const FIELD_BG := DesignSystem.CREAM               ## text-area inset — cream well on the paper card
+const FIELD_TEXT := DesignSystem.INK
+const FIELD_PLACEHOLDER := DesignSystem.SLATE_SOFT
+const SECONDARY_LABEL := DesignSystem.SLATE        ## «Hurtigvalg:» / «Helhet:» / privacy — AA muted ink on paper
 
 func _init() -> void:
 	# Full-screen modal: eats all taps so nothing falls through to the trick menu behind it.
@@ -129,7 +139,7 @@ func _build_ui() -> void:
 
 	# Title.
 	var title := Label.new()
-	title.text = "Tell us what you think"
+	title.text = "Fortell oss hva du synes"
 	title.add_theme_color_override("font_color", TITLE_COLOR)
 	title.add_theme_font_size_override("font_size", 22)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -138,22 +148,22 @@ func _build_ui() -> void:
 	# Free-text area.
 	var te := TextEdit.new()
 	te.name = "TextEdit"
-	te.placeholder_text = "What's working? What's not?"
+	te.placeholder_text = "Hva funker? Hva funker ikke?"
 	te.custom_minimum_size = Vector2(0, 110)
 	te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	var te_style := StyleBoxFlat.new()
-	te_style.bg_color = Color(0.0, 0.0, 0.0, 0.35)
+	te_style.bg_color = FIELD_BG
 	te_style.set_corner_radius_all(8)
 	te_style.set_border_width_all(1)
-	te_style.border_color = Color(1.0, 1.0, 1.0, 0.18)
+	te_style.border_color = DesignSystem.BORDER
 	te_style.content_margin_left = 10.0
 	te_style.content_margin_right = 10.0
 	te_style.content_margin_top = 8.0
 	te_style.content_margin_bottom = 8.0
 	te.add_theme_stylebox_override("normal", te_style)
 	te.add_theme_stylebox_override("focus", te_style)
-	te.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.9))
-	te.add_theme_color_override("font_placeholder_color", Color(1.0, 1.0, 1.0, 0.35))
+	te.add_theme_color_override("font_color", FIELD_TEXT)
+	te.add_theme_color_override("font_placeholder_color", FIELD_PLACEHOLDER)
 	te.add_theme_color_override("background_color", Color(0, 0, 0, 0))
 	te.text_changed.connect(_on_text_changed)
 	vbox.add_child(te)
@@ -161,8 +171,8 @@ func _build_ui() -> void:
 
 	# Quick-tag chip row (HFlowContainer wraps on small widths).
 	var chip_label := Label.new()
-	chip_label.text = "Quick tags:"
-	chip_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.70))
+	chip_label.text = "Hurtigvalg:"
+	chip_label.add_theme_color_override("font_color", SECONDARY_LABEL)
 	chip_label.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(chip_label)
 
@@ -197,8 +207,8 @@ func _build_ui() -> void:
 	_rating_container = rating_cont
 
 	var star_label := Label.new()
-	star_label.text = "Overall:"
-	star_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.70))
+	star_label.text = "Helhet:"
+	star_label.add_theme_color_override("font_color", SECONDARY_LABEL)
 	star_label.add_theme_font_size_override("font_size", 14)
 	rating_cont.add_child(star_label)
 
@@ -228,8 +238,8 @@ func _build_ui() -> void:
 	# Privacy note — honest about data flow (ADR-0007 open items).
 	var privacy := Label.new()
 	privacy.name = "PrivacyNote"
-	privacy.text = "Free text may be processed to improve the game — nothing is stored on your device."
-	privacy.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.45))
+	privacy.text = "Fritekst kan brukes til å forbedre spillet — ingenting lagres på enheten din."
+	privacy.add_theme_color_override("font_color", SECONDARY_LABEL)
 	privacy.add_theme_font_size_override("font_size", 12)
 	privacy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(privacy)
@@ -241,11 +251,11 @@ func _build_ui() -> void:
 
 	var cancel := Button.new()
 	cancel.name = "CancelBtn"
-	cancel.text = "Cancel"
+	cancel.text = "Avbryt"
 	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cancel.focus_mode = Control.FOCUS_NONE
 	cancel.add_theme_font_size_override("font_size", 17)
-	_style_button(cancel, CANCEL_BG, CANCEL_TEXT)
+	_style_button(cancel, CANCEL_BG, CANCEL_TEXT, CANCEL_BORDER, 1)
 	cancel.pressed.connect(_on_cancel)
 	btn_row.add_child(cancel)
 
@@ -267,16 +277,21 @@ func _build_ui() -> void:
 func _apply_chip_style(btn: Button, on: bool) -> void:
 	var bg := CHIP_BG_ON if on else CHIP_BG_OFF
 	var fg := CHIP_TEXT_ON if on else CHIP_TEXT_OFF
-	_style_button(btn, bg, fg)
+	var bc := CHIP_BORDER_ON if on else CHIP_BORDER_OFF
+	_style_button(btn, bg, fg, bc, 1)
 
 func _apply_rating_style(btn: Button, on: bool) -> void:
 	var bg := RATING_ON_BG if on else RATING_OFF_BG
 	var fg := CHIP_TEXT_ON if on else CHIP_TEXT_OFF
-	_style_button(btn, bg, fg)
+	var bc := CHIP_BORDER_ON if on else CHIP_BORDER_OFF
+	_style_button(btn, bg, fg, bc, 1)
 
-func _style_button(btn: Button, bg: Color, fg: Color) -> void:
+func _style_button(btn: Button, bg: Color, fg: Color, border_col := Color(0, 0, 0, 0), border_w := 0) -> void:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
+	if border_w > 0:
+		s.set_border_width_all(border_w)
+		s.border_color = border_col
 	s.set_corner_radius_all(9999)
 	s.content_margin_left = 14.0
 	s.content_margin_right = 14.0
