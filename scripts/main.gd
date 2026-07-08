@@ -1729,7 +1729,10 @@ func _setup_bra_button() -> void:
 	# for the 3D-pressable depth, white Baloo 2 display text, and a card drop-shadow so it
 	# lifts off the grass. Replaces the translucent-white pill (073/P2-10). Tap→score logic
 	# is unchanged — only the visual style is updated here.
-	bra.add_theme_font_override("font", DesignSystem.font_display())
+	# 178 (X-6): the BRA hero uses the dedicated ExtraBold (wght 800) face at the bumped
+	# T_DISPLAY (74) so the one hero tap reads chunky/oversized against the goal art — the
+	# shared wght-600 font_display() (menu/coin/kennel/showcase) is untouched.
+	bra.add_theme_font_override("font", DesignSystem.font_display_black())
 	bra.add_theme_font_size_override("font_size", DesignSystem.T_DISPLAY)
 	bra.add_theme_color_override("font_color",         DesignSystem.PAPER)
 	bra.add_theme_color_override("font_pressed_color", DesignSystem.PAPER)

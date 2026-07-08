@@ -81,8 +81,11 @@ func test_radius_xl_constant_equals_twenty_two() -> void:
 func test_radius_pill_constant_equals_nine_thousand_nine_hundred_ninety_nine() -> void:
 	assert_eq(DesignSystem.R_PILL, 9999, "R_PILL == 9999")
 
-func test_type_display_constant_equals_fifty_two() -> void:
-	assert_eq(DesignSystem.T_DISPLAY, 52, "T_DISPLAY == 52")
+func test_type_display_constant_equals_seventy_four() -> void:
+	# 178 (X-6): the BRA hero label was bumped 52 → 74 (≈1.42×) so it reads as the hero
+	# vs the goal art (was a timid ~12% screen-width caption). T_DISPLAY is BRA-only.
+	assert_eq(DesignSystem.T_DISPLAY, 74, "T_DISPLAY == 74 (BRA hero, 178)")
+	assert_true(DesignSystem.T_DISPLAY > DesignSystem.T_TITLE, "BRA hero size dominates headings")
 
 func test_type_title_constant_equals_twenty_six() -> void:
 	assert_eq(DesignSystem.T_TITLE, 26, "T_TITLE == 26")
@@ -118,6 +121,17 @@ func test_font_display_returns_non_null_font() -> void:
 	var f = DesignSystem.font_display()
 	assert_true(f != null, "font_display() returns non-null")
 	assert_true(f is Font, "font_display() returns a Font")
+
+# 178 (X-6): the BRA hero uses a dedicated ExtraBold (wght 800) face so its heavier stroke
+# matches the goal art, WITHOUT changing the shared wght-600 font_display() the 8 other
+# display surfaces (menu / coin readout / kennel titles / showcase) consume.
+func test_font_display_black_is_distinct_extrabold_face() -> void:
+	var f = DesignSystem.font_display_black()
+	assert_true(f != null, "font_display_black() returns non-null")
+	assert_true(f is Font, "font_display_black() returns a Font")
+	assert_true(f is FontVariation, "font_display_black() is a weighted FontVariation")
+	assert_true(f != DesignSystem.font_display(), "font_display_black() is a distinct face from font_display()")
+	assert_eq((f as FontVariation).variation_opentype.get(&"wght"), 800, "BRA face wght == 800 (ExtraBold)")
 
 func test_font_body_returns_non_null_font() -> void:
 	var f = DesignSystem.font_body()

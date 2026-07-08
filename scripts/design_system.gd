@@ -51,7 +51,7 @@ static func space(step: int) -> int:
 # ---------------------------------------------------------------------------
 # Type scale (px)
 # ---------------------------------------------------------------------------
-const T_DISPLAY := 52   # Baloo 2 — hero (BRA)
+const T_DISPLAY := 74   # Baloo 2 ExtraBold — hero (BRA); 178 bumped 52→74 (≈1.42×) to match goal art
 const T_TITLE   := 26   # Baloo 2 — headings
 const T_HEAD    := 18   # Baloo 2 — sub-heading / badge
 const T_BODY    := 15   # Nunito — body
@@ -76,6 +76,7 @@ const F_MONO    := "res://assets/fonts/JetBrainsMono-Medium.ttf"
 static var _font_files: Dictionary = {}
 # Static cache for the four named faces
 static var _face_display: Font = null
+static var _face_display_black: Font = null
 static var _face_body:    Font = null
 static var _face_bold:    Font = null
 static var _face_mono:    Font = null
@@ -104,6 +105,22 @@ static func font_display() -> Font:
 	fv.set_variation_opentype({&"wght": 600})
 	_face_display = fv
 	return _face_display
+
+## Baloo 2 ExtraBold (wght 800) — the BRA hero label ONLY (178, X-6). A dedicated heavier
+## face so the one hero tap reads chunky/confident against the goal art, WITHOUT changing the
+## shared wght-600 font_display() the menu / coin readout / kennel titles / showcase consume.
+static func font_display_black() -> Font:
+	if _face_display_black != null:
+		return _face_display_black
+	var ff := _load_file(F_DISPLAY)
+	if ff == null:
+		_face_display_black = ThemeDB.fallback_font
+		return _face_display_black
+	var fv := FontVariation.new()
+	fv.base_font = ff
+	fv.set_variation_opentype({&"wght": 800})
+	_face_display_black = fv
+	return _face_display_black
 
 ## Nunito Regular (wght 400) — body text.
 static func font_body() -> Font:

@@ -35,8 +35,9 @@ const RING_WIDTH := 10.0   ## ring line width in px at the pinned 720-wide viewp
 ## resting ring radius is 160*RING_BASE ≈ 99 px — outside WORD_HALF_WIDTH. main.gd sizes
 ## and centres the marker from this single constant.
 const SIZE := 320.0
-## Half-width of the "BRA" glyph run at the button's font_size 96 — the clearance the ring
-## must beat so it frames the word. The invariant test below locks ring radius > this.
+## Half-width of the "BRA" glyph run — the clearance the ring must beat so it frames the
+## word. The invariant test below locks ring radius (≈99 px) > this. Comfortably clears the
+## hero label even after 178 bumped it to T_DISPLAY 74 ExtraBold (glyph half-width ≈70 px).
 const WORD_HALF_WIDTH := 90.0
 
 ## Radius growth: a soft halo and a crisp ring that each bloom slightly toward the apex.
