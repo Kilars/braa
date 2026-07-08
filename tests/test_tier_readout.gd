@@ -89,3 +89,10 @@ func test_emphasis_invariant_perfect_brightest() -> void:
 		"COLOR_PERFECT.v (%.2f) >= COLOR_OK.v (%.2f)" % [perfect_v, ok_v])
 	assert_true(ok_v >= miss_v,
 		"COLOR_OK.v (%.2f) >= COLOR_MISS.v (%.2f)" % [ok_v, miss_v])
+
+func test_perfect_gold_is_the_ds_gold_token() -> void:
+	# X-6 (183): the PERFECT praise gold must be the ONE reserved DS GOLD accent — the
+	# same hue the coin readout and mastery-bar latch use — not an off-token literal.
+	# Every gold in the game lands as one hue at the payoff beat.
+	assert_eq(TierReadout.COLOR_PERFECT, DesignSystem.GOLD,
+		"COLOR_PERFECT is the DesignSystem.GOLD token (one reserved gold accent)")

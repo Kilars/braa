@@ -12,7 +12,7 @@ extends Label
 const HOLD := 0.45          ## fully opaque + readable this long, then fade over FADE
 const FADE := 0.55          ## linear fade from opaque to fully transparent
 const RISE_PX := 64.0       ## how far the word floats UP over its life at full motion
-const COLOR_WORD := Color(1.0, 0.86, 0.30)            ## warm praise gold (agrees with PERFECT/mastery)
+const COLOR_WORD := DesignSystem.GOLD                 ## the ONE reserved gold — agrees with PERFECT + coin + mastery bar (183, X-6)
 const OUTLINE_COLOR := Color(0.07, 0.07, 0.10, 1.0)   ## near-black stroke, reads against any sky
 const OUTLINE_SIZE := 13                               ## firmer stroke to match PERFECT's legibility ratio
 const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.55)      ## solid drop-shadow, reads over bright grass

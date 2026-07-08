@@ -24,9 +24,11 @@ extends Label
 const HOLD := 0.6
 const FADE := 0.5
 
-## Tier colours. PERFECT is a bright triumphant gold; OK a calmer green; MISS a muted
-## grey. PERFECT.v >= OK.v keeps the readout's emphasis agreeing with the reward gate.
-const COLOR_PERFECT := Color(1.0, 0.86, 0.30)
+## Tier colours. PERFECT is the game's single reserved gold — the SAME DesignSystem.GOLD
+## the coin readout and mastery-bar latch use, so every gold lands as one hue at the
+## payoff (183, X-6); no off-token literal. OK a calmer green; MISS a muted grey.
+## GOLD.v (0.96) >= OK.v (0.85) keeps the readout's emphasis agreeing with the reward gate.
+const COLOR_PERFECT := DesignSystem.GOLD
 const COLOR_OK := Color(0.55, 0.85, 0.55)
 const COLOR_MISS := Color(0.72, 0.72, 0.74)
 

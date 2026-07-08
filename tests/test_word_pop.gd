@@ -16,6 +16,15 @@ func test_pop_shows_the_word() -> void:
 	assert_true(is_equal_approx(w.self_modulate.a, 1.0), "alpha is full opacity (1.0)")
 	w.free()
 
+func test_word_gold_is_the_ds_gold_token() -> void:
+	## X-6 (183): the fired-word pop gold must be the ONE reserved DS GOLD accent — the
+	## same hue as the coin readout, mastery-bar latch, and the PERFECT verdict — so
+	## every gold lands as one hue at the payoff, not an off-token literal.
+	assert_eq(WordPop.COLOR_WORD, DesignSystem.GOLD,
+		"COLOR_WORD is the DesignSystem.GOLD token (one reserved gold accent)")
+	assert_eq(WordPop.COLOR_WORD, TierReadout.COLOR_PERFECT,
+		"the word-pop gold agrees with the PERFECT verdict gold (same reserved accent)")
+
 func test_pop_empty_clears() -> void:
 	## pop("") is a defensive clear — the word is blanked and the pop becomes invisible.
 	var w := WordPop.new()
