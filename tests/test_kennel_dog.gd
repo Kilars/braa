@@ -399,3 +399,42 @@ func test_name_for_breed_is_empty_for_a_breed_with_no_kennel_individual() -> voi
 		"a breed with no kennel individual resolves to «» (caller keeps the breed name)")
 	assert_eq(KennelDog.name_for_breed("nonsense_breed"), "",
 		"an unknown breed id resolves to «» (never a dog-less crash)")
+
+# ---- 174 (PO father-pass-39 X-4): the ACTIVE show-off entry names the active KENNEL dog ----
+# 173 fixed the STARTER only. Training any other kennel dog (Nova) leaves the two show-off surfaces
+# (breed showcase header/pip + completion-menu «Raser» row) reading the stale breed roster («Bella» /
+# «Labrador») while the coat + kennel say «Nova». showoff_name repoints the ACTIVE entry to the active
+# kennel individual when the KENNEL is the roster driving training, for all 8 dogs — every other entry
+# keeps the 173 breed→individual bridge.
+
+func test_showoff_name_active_kennel_dog_wins_over_the_stale_breed() -> void:
+	# The bug: training Nova, the active breed entry is still «labrador» but must SHOW «Nova» / «Border collie».
+	var d := KennelDog.showoff_name("labrador", "Labrador", true, true, "nova")
+	assert_eq(d.get("name", "MISSING"), "Nova",
+		"the ACTIVE entry names the active kennel individual «Nova», not the breed roster «Bella»")
+	assert_eq(d.get("subtitle", "MISSING"), "Border collie",
+		"the breed subtitle is the active kennel dog's breed «Border collie», not «Labrador»")
+
+func test_showoff_name_active_starter_keeps_the_173_bridge() -> void:
+	# Kennel NOT driving (default starter): the active «labrador» entry stays «Bella» / «Labrador» (173).
+	var d := KennelDog.showoff_name("labrador", "Labrador", true, false, "bella")
+	assert_eq(d.get("name", "MISSING"), "Bella",
+		"with the kennel not driving, the starter keeps the 173 «Bella» bridge")
+	assert_eq(d.get("subtitle", "MISSING"), "Labrador",
+		"the starter subtitle stays the breed display name «Labrador» (173 layout preserved)")
+
+func test_showoff_name_non_active_entry_ignores_the_kennel_dog() -> void:
+	# A NON-active owned breed keeps the 173 bridge even while the kennel drives another dog.
+	var d := KennelDog.showoff_name("labrador", "Labrador", false, true, "nova")
+	assert_eq(d.get("name", "MISSING"), "Bella",
+		"a non-active entry resolves through the 173 breed bridge, never the active kennel dog")
+	assert_eq(d.get("subtitle", "MISSING"), "Labrador",
+		"a non-active entry keeps its own breed subtitle")
+
+func test_showoff_name_breed_without_a_kennel_individual_stays_single_line() -> void:
+	# «Brun lab» (chocolate_labrador) — active via a Phase-3 breed switch, no kennel individual, no subtitle.
+	var d := KennelDog.showoff_name("chocolate_labrador", "Brun lab", true, false, "bella")
+	assert_eq(d.get("name", "MISSING"), "Brun lab",
+		"a breed with no kennel individual keeps its breed name")
+	assert_eq(d.get("subtitle", "MISSING"), "",
+		"a breed with no kennel individual renders no subtitle (single-line row)")

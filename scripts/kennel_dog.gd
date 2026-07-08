@@ -157,6 +157,23 @@ static func name_for_breed(breed_id: String) -> String:
 		return by_id(BREED_TO_DOG[breed_id]).dog_name
 	return ""
 
+## The name + breed-subtitle a "show-off" surface (breed showcase header/pip + completion-menu «Raser»
+## row) should show for a legacy breed roster entry (174, PO father-pass-39 X-4). The Phase-3 breed roster
+## and the Phase-8 kennel roster are independent, last-writer-wins on the trained coat. When the KENNEL is
+## the roster driving training (`active_from_kennel`), the ACTIVE breed entry borrows the active kennel
+## individual's NAME + BREED — «Nova» / «Border collie» — so name, breed subtitle and the coat on screen all
+## agree with the kennel's «Trener nå», for all 8 dogs, not just the 173 starter. Every other entry keeps the
+## 173 breed→individual bridge (name_for_breed), breed demoted to a subtitle.
+static func showoff_name(breed_id: String, breed_display_name: String, is_active: bool,
+		active_from_kennel: bool, active_kennel_id: String) -> Dictionary:
+	if is_active and active_from_kennel:
+		var kd := by_id(active_kennel_id)
+		return {"name": kd.dog_name, "subtitle": kd.breed}
+	var indiv := name_for_breed(breed_id)
+	if indiv != "":
+		return {"name": indiv, "subtitle": breed_display_name}
+	return {"name": breed_display_name, "subtitle": ""}
+
 ## Build the 8-dog catalog (fresh instances each call — callers may mutate freely).
 static func catalog() -> Array:
 	var out: Array = []

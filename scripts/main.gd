@@ -227,6 +227,12 @@ const COIN_REWARD_MASTERY := 10  # coins per trick mastered (light — 3 tricks 
 var _roster := BreedRoster.new()
 const BREED_ADOPT_COST := 30  # the chocolate Lab's price: exactly the 3-trick mastery payout (3 × 10)
 
+## Which roster last set the trained dog on the rig (174, PO father-pass-39 X-4): the KENNEL switch
+## («Tren med Nova», _apply_active_kennel_dog) sets true, a Phase-3 BREED switch (_apply_active_breed) sets
+## false. Last-writer-wins mirrors the coat, so the "show-off" surfaces (breed showcase + «Raser» row) name
+## the dog actually on screen. Default false: the starter boot rides the Phase-3 breed default (K-7 gate).
+var _active_from_kennel := false
+
 ## The EFFECTIVE global difficulty mode (080, P4-1 "Choose how hard"). Pure value object; Normal =
 ## identity (reproduces today's tuning EXACTLY, no regression). Defaults to Normal on boot; set by the
 ## player via the completion-menu selector (118), overridable by `?bra_difficulty=`, and FORCED to a
@@ -2070,7 +2076,11 @@ func _showcase_move(id: String) -> void:
 	if id == "":
 		return
 	if _dog != null:
-		CoatTint.apply(_dog, BreedPersonality.by_id(id).coat_tint())  # preview tint (not persisted)
+		# Preview the spotlit breed's coat (not persisted) — but the ACTIVE entry restores the coat of the
+		# dog actually trained, so cycling back to it never repaints a trained kennel dog (174: e.g. moving
+		# back to the active «labrador» pip while training grey Nova must stay grey, not flip to cream Lab).
+		var tint := _active_coat_tint() if id == _roster.active else BreedPersonality.by_id(id).coat_tint()
+		CoatTint.apply(_dog, tint)
 	_render_showcase()
 	_publish_showcase()
 
@@ -2092,7 +2102,7 @@ func _on_showcase_commit() -> void:
 ## player came from (offers stay paused until they dismiss the menu).
 func _on_showcase_dismissed() -> void:
 	if _dog != null:
-		CoatTint.apply(_dog, _breed.coat_tint())  # restore the real active-breed coat (undo the preview)
+		CoatTint.apply(_dog, _active_coat_tint())  # restore the actually-trained dog's coat (kennel or breed), undo any preview (174)
 	_close_showcase()
 	if _menu != null and _menu_open:
 		_menu.show()
@@ -2105,14 +2115,11 @@ func _render_showcase() -> void:
 	var entries: Array = []
 	for id in _roster.owned:
 		var bp := BreedPersonality.by_id(id)
-		# Surface the adopted dog's individual kennel name (Bella) where one exists, with the breed
-		# (Labrador) demoted to a subtitle — so the "show off MY dog" surface stops calling her by her
-		# breed while the kennel calls her Bella (173, PO father-pass-38 X-4). A breed with no kennel
-		# individual keeps its breed name and no subtitle.
-		var indiv := KennelDog.name_for_breed(id)
-		var shown := indiv if indiv != "" else bp.display_name
-		var subtitle := bp.display_name if indiv != "" else ""
-		entries.append({"id": id, "name": shown, "subtitle": subtitle, "tint": bp.swatch_color()})
+		# Name the dog the player is actually SHOWING OFF: the active entry borrows the active kennel
+		# individual's name+breed («Nova» / «Border collie») when the kennel is driving training, else the
+		# 173 breed→individual bridge («Bella» / «Labrador»), breed demoted to a subtitle (174, pass-39 X-4).
+		var d := KennelDog.showoff_name(id, bp.display_name, id == _roster.active, _active_from_kennel, _kennel_roster.active)
+		entries.append({"id": id, "name": d.name, "subtitle": d.subtitle, "tint": bp.swatch_color()})
 	_showcase.render(entries, _showcase_model.spotlit_id(), _roster.active)
 
 ## Hide the showcase view and restore the garden lighting (shared by commit + dismiss).
@@ -2358,13 +2365,11 @@ func _breed_rows() -> Array:
 	var cat: Array = []
 	for entry in BreedPersonality.catalog():
 		var bp := entry as BreedPersonality
-		# Show the adopted dog's individual kennel name (Bella) with the breed (Labrador) as a subtitle,
-		# matching the kennel + showcase (173, PO father-pass-38 X-4). A breed with no kennel individual
-		# keeps its breed name and no subtitle.
-		var indiv := KennelDog.name_for_breed(bp.id)
-		var shown := indiv if indiv != "" else bp.display_name
-		var subtitle := bp.display_name if indiv != "" else ""
-		cat.append({"id": bp.id, "name": shown, "subtitle": subtitle, "tint": bp.swatch_color()})
+		# The «Raser» active-dog marker names the dog actually trained: the active entry borrows the active
+		# kennel individual's name+breed («Nova» / «Border collie») when the kennel is driving, else the 173
+		# breed→individual bridge, breed as subtitle — matching the kennel + showcase (174, pass-39 X-4).
+		var d := KennelDog.showoff_name(bp.id, bp.display_name, bp.id == _roster.active, _active_from_kennel, _kennel_roster.active)
+		cat.append({"id": bp.id, "name": d.name, "subtitle": d.subtitle, "tint": bp.swatch_color()})
 	return TrickMenu.classify_breeds(cat, _roster.owned, _roster.active, _purse.balance, BREED_ADOPT_COST)
 
 ## Build the completion-menu word rows (092, P5-4): the catalog classified against the unlocked set +
@@ -2512,6 +2517,7 @@ func _apply_difficulty() -> void:
 ## chance + offer cadence take the new temperament immediately; the timing-window radii apply on the next
 ## offer (read from _breed in _begin_sit). Dog-agnostic: a coatless/CC0 dog just isn't re-tinted.
 func _apply_active_breed() -> void:
+	_active_from_kennel = false  # 174: a Phase-3 breed switch now owns the coat → show-off surfaces read the breed
 	_apply_breed_personality(BreedPersonality.by_id(_roster.active))
 
 ## Switch which KENNEL dog is trained (110, K-5). The active kennel dog (KennelDog) maps to the SAME
@@ -2521,8 +2527,16 @@ func _apply_active_breed() -> void:
 ## bite, the honest BUST-068 stand-in — no faked new model, no parallel apply-system. Dog-agnostic: a
 ## coatless/CC0 dog just isn't re-tinted.
 func _apply_active_kennel_dog(id: String) -> void:
+	_active_from_kennel = true  # 174: the kennel now owns the coat → the show-off surfaces name this kennel individual
 	_apply_breed_personality(KennelDog.by_id(id).to_personality())
 	_recompute_difficulty()  # 119: a special dog forces its locked mode; a normal dog restores the player's chosen mode
+
+## The coat tint of the dog currently ON the training rig (174): the active KENNEL individual's coat when the
+## kennel is driving training, else the active BREED's coat. The showcase previews breeds by re-tinting the
+## live rig, so moving back to / dismissing onto the active dog must restore THIS coat, not blindly the breed
+## coat (which would repaint a trained kennel dog — e.g. turn grey Nova cream on «Tilbake»).
+func _active_coat_tint() -> Color:
+	return KennelDog.by_id(_kennel_roster.active).coat_tint() if _active_from_kennel else _breed.coat_tint()
 
 ## True iff the active TRAINING dog locks the global difficulty (119, P4-1). "Special" dogs
 ## (RARE/EPIC/SECRET) fix the challenge; the starter Bella + plain COMMON dogs stay choosable. The
