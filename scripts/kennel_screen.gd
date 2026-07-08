@@ -106,14 +106,21 @@ const PORTRAIT_THREE_QUARTER := 0.42  ## radians (~24°) — front-¾, flatterin
 ## gets its OWN live SubViewport with the dog posed to base-facing + this per-index delta. A distinct
 ## per-breed MODEL stays owner-gated (BUST-068); what's buildable is a distinct ANGLE per cell. The
 ## spread is deterministic (no randf — banned + captures must reproduce) and NON-monotonic so adjacent
-## grid cells clearly differ. NARROWED (155, PO father-pass-19): the old spread ran to ±0.46, which
-## on top of the 0.42 base swung cells from a ~1° dead-front mugshot to a ~50° side-profile — the exact
-## "never a rear/side profile" the comment promised but broke. Kept within [-0.14, +0.18] so every cell's
-## EFFECTIVE yaw (PORTRAIT_THREE_QUARTER + delta) lands in a tight flattering front-¾ band (~16°–34° off
-## dead-on, matching the modal's front-¾ hero framing) while the per-cell variety (both signs, non-monotonic,
-## no two adjacent equal) survives. One viewport per entry → up to this many live dog instances (kennel is a
-## modal, not the main loop, so the cost is acceptable; each renders a still one-shot frame, not per-frame).
-const PORTRAIT_YAW_SPREAD := [0.06, -0.14, 0.14, -0.08, 0.18, -0.05, 0.10, -0.12]
+## grid cells clearly differ. NARROWED (155, PO father-pass-19): the old spread ran to ±0.46. RE-BIASED
+## (177, PO father-pass-44): 155's [-0.14, +0.18] STILL rendered most cells broadside — verified in the
+## web-export renderer (the only truthful oracle; headless get_image() returns blank). Root cause is NOT
+## the rotation math (proven: the per-cell root basis spans only ~18° and every cell at delta=0 renders a
+## clean front-¾, identical to the modal) but the ASYMMETRIC SENSITIVITY of this fixed viewing geometry:
+## the portrait camera sits front-RIGHT of the dog (PORTRAIT_VIEW_DIR ≈ +X,+Z), so a POSITIVE delta turns
+## the nose FURTHER from the camera and the silhouette grazes to a full flank astonishingly fast — a mere
+## +0.10 already reads broadside — while a NEGATIVE delta turns the face back toward the viewer and stays
+## flattering out to ~-0.14. So the safe band is asymmetric: positives capped tight (≤ +0.06, the proven-
+## good Bella cell), negatives allowed to ~-0.14 (the proven-good Nova cell). Every value below was
+## re-verified front-¾ face-to-viewer in a fresh 390×844 capture. EFFECTIVE yaw (PORTRAIT_THREE_QUARTER +
+## delta) now lands in [~0.28, ~0.48] rad (~16°–27° off dead-on) — the modal's front-¾ hero band — while
+## the per-cell variety (both signs, non-monotonic, no two adjacent equal) survives. One viewport per entry
+## → up to this many live dog instances (kennel is a modal, not the main loop, so the cost is acceptable).
+const PORTRAIT_YAW_SPREAD := [0.06, -0.14, 0.04, -0.10, 0.02, -0.12, 0.05, -0.08]
 ## Modal-header framing yaw (140, PO father-pass-5): the inspect modal must open on ONE
 ## consistent front-¾ hero bust for EVERY dog — not the tapped cell's variety yaw, which made
 ## side-facing cells (Bella/Balder) render a zoomed side profile identical to their grid cell.
