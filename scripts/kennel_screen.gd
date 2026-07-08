@@ -646,7 +646,7 @@ func _make_band(row: Dictionary, band_h: float = BAND_H, cell_index: int = 0) ->
 		dog.texture = tex
 		dog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		dog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		dog.modulate = _band_dog_tint(row.portrait_tint)
+		dog.modulate = _band_dog_tint(row.portrait_tint, row.get("portrait_bias", Color(1, 1, 1)))
 		dog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Bottom-anchored, slightly inset from the band edges so the feet sit just above the
 		# bars' base frame and the silhouette doesn't touch the sides.
@@ -876,7 +876,7 @@ func _find_all_cameras(n: Node) -> Array:
 ## warm tinted silhouette. A DARK coat (luminance < DARK_BAND_LUM) would leave a near-black dog, so
 ## we lighten it toward white — a light silhouette that still reads. Either way the dog carries a
 ## natural coat colour, never the raw band background.
-static func _band_dog_tint(coat_hue: Color) -> Color:
+static func _band_dog_tint(coat_hue: Color, bias := Color(1, 1, 1)) -> Color:
 	var lum := coat_hue.get_luminance()
 	if lum < DARK_BAND_LUM:
 		# Brighten toward a readable target luminance while PRESERVING hue/chroma — scale the RGB
@@ -898,10 +898,17 @@ static func _band_dog_tint(coat_hue: Color) -> Color:
 		# brightens the 2D portrait texture (no clamp — the render pixel is well under 1). Applied in
 		# this SHARED tint so the grid cell and the modal hero move together (187 parity preserved); the
 		# dark coats never reach this branch, so Nova/Pontus/Balder/Sniff are untouched.
+		# 191 (PO father-pass-65 X-6/X-4): 190's single warm-cream branch flattened the three light
+		# coats to ONE hue (differ only in brightness), so the golden retriever read no more golden
+		# than the cream lab and the near-white Malchi read cream. The cream anchor below is Bella's
+		# preserved 190 result; `bias` (KennelDog.portrait_bias, default white) then re-hues each light
+		# breed on top so they're tellable apart: Bella stays neutral cream (white bias, untouched),
+		# Sol warms to golden-amber, Trulte cools to near-white. Applied in this SHARED tint so the grid
+		# cell and modal hero move together (187 parity).
 		var desat := coat_hue.lerp(Color(lum, lum, lum), LIGHT_COAT_DESAT)
-		return Color(desat.r * LIGHT_COAT_GAIN * LIGHT_COAT_WB.r,
-			desat.g * LIGHT_COAT_GAIN * LIGHT_COAT_WB.g,
-			desat.b * LIGHT_COAT_GAIN * LIGHT_COAT_WB.b, coat_hue.a)
+		return Color(desat.r * LIGHT_COAT_GAIN * LIGHT_COAT_WB.r * bias.r,
+			desat.g * LIGHT_COAT_GAIN * LIGHT_COAT_WB.g * bias.g,
+			desat.b * LIGHT_COAT_GAIN * LIGHT_COAT_WB.b * bias.b, coat_hue.a)
 	return coat_hue
 
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.
@@ -1242,7 +1249,7 @@ func _build_modal_band(detail: Dictionary) -> Control:
 		# the nameplate strip covers where the legs crop out.
 		mdog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		mdog.clip_contents = true
-		mdog.modulate = _band_dog_tint(detail["portrait_tint"])
+		mdog.modulate = _band_dog_tint(detail["portrait_tint"], detail.get("portrait_bias", Color(1, 1, 1)))
 		mdog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mdog.set_anchors_preset(Control.PRESET_FULL_RECT)
 		mdog.offset_left   = 8.0

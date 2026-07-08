@@ -475,3 +475,23 @@ func test_showoff_swatch_non_active_entry_keeps_breed_swatch() -> void:
 	var c := KennelDog.showoff_swatch(golden, false, true, "nova")
 	assert_true(c.is_equal_approx(golden),
 		"a non-active entry always keeps its own breed swatch, never the active kennel dog's coat")
+
+# --- 191 (PO father-pass-65 X-6/X-4): per-breed light-coat hue bias. The kennel light branch adds a
+# hue multiplier so the three LIGHT dogs read as distinct breeds, not one flat cream. Bella (the 190
+# reference) stays neutral (white bias); Sol warms toward golden-amber (r>b bias); Trulte cools toward
+# near-white (b>r bias). Every dark/tan/other dog keeps the neutral white bias (no-op).
+
+func test_portrait_bias_sol_is_warm_golden() -> void:
+	var b := KennelDog.by_id("sol").portrait_bias()
+	assert_true(b.r > b.b, "Sol's bias warms the coat toward golden: r(%.3f) > b(%.3f)" % [b.r, b.b])
+
+func test_portrait_bias_trulte_is_cool_white() -> void:
+	var b := KennelDog.by_id("trulte").portrait_bias()
+	assert_true(b.b > b.r, "Trulte's bias cools the coat toward near-white: b(%.3f) > r(%.3f)" % [b.b, b.r])
+
+func test_portrait_bias_bella_and_others_are_neutral_white() -> void:
+	# Bella is the fixed 190 cream reference — she must NOT be re-tinted (white bias). Same for every
+	# dark/tan dog so only the two light breeds that flattened get a hue.
+	for id in ["bella", "nova", "balder", "pontus", "lykke", "sniff"]:
+		assert_true(KennelDog.by_id(id).portrait_bias().is_equal_approx(Color(1, 1, 1)),
+			"%s keeps a neutral white portrait bias (only Sol/Trulte are re-hued)" % id)

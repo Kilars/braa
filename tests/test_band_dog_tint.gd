@@ -66,3 +66,48 @@ func test_light_coat_stays_above_dark_coats() -> void:
 	assert_true(KennelScreen._band_dog_tint(BELLA).get_luminance()
 		> KennelScreen._band_dog_tint(NOVA).get_luminance(),
 		"Bella (light) stays brighter than Nova (dark) after tint")
+
+## --- 191 (PO father-pass-65 X-6/X-4): per-breed hue WITHIN the light branch. 190's single
+## warm-cream branch flattened the three light coats to one hue (differ only in brightness); the fix
+## adds a per-breed hue BIAS (KennelDog.portrait_bias) multiplied onto the cream anchor in the light
+## branch only. Bella's bias is white (her 190 cream is the reference, preserved); Sol warms toward
+## golden-amber (must out-gold the cream lab); Trulte cools toward near-white/silver (Maltese).
+
+func test_light_bias_defaults_white_leaves_bella_untouched() -> void:
+	## The bias arg defaults to white so every existing call (and Bella) is byte-identical to 190 —
+	## no dark/tan/passthrough coat and no un-biased light coat moves.
+	var no_arg := KennelScreen._band_dog_tint(BELLA)
+	var white := KennelScreen._band_dog_tint(BELLA, Color(1, 1, 1))
+	assert_true(no_arg.is_equal_approx(white),
+		"Bella tint is identical with the default bias and an explicit white bias")
+
+func test_sol_out_golds_the_cream_lab() -> void:
+	## Sol (Golden retriever) must read a clearly GOLDEN coat — warm (r above b) AND warmer than
+	## Bella's neutral cream, so the golden retriever out-golds the cream Labrador (not under-golds it).
+	var sol := KennelScreen._band_dog_tint(SOL, KennelDog.by_id("sol").portrait_bias())
+	var bella := KennelScreen._band_dog_tint(BELLA, KennelDog.by_id("bella").portrait_bias())
+	assert_true(sol.r - sol.b > 0.10, "Sol reads warm/golden: r(%.3f) clearly > b(%.3f)" % [sol.r, sol.b])
+	assert_true(sol.r - sol.b > bella.r - bella.b + 0.10,
+		"Sol out-golds Bella: warm bias r-b %.3f >> Bella r-b %.3f" % [sol.r - sol.b, bella.r - bella.b])
+
+func test_trulte_reads_cool_near_white() -> void:
+	## Trulte (Maltese) must read a COOL near-white/silver coat — blue above red, and clearly cooler
+	## than Bella's neutral cream.
+	var trulte := KennelScreen._band_dog_tint(TRULTE, KennelDog.by_id("trulte").portrait_bias())
+	var bella := KennelScreen._band_dog_tint(BELLA, KennelDog.by_id("bella").portrait_bias())
+	assert_true(trulte.b - trulte.r > 0.10,
+		"Trulte reads cool near-white: b(%.3f) clearly > r(%.3f)" % [trulte.b, trulte.r])
+	assert_true(trulte.b - trulte.r > bella.b - bella.r + 0.10,
+		"Trulte cooler than Bella: b-r %.3f >> Bella b-r %.3f" % [trulte.b - trulte.r, bella.b - bella.r])
+
+func test_three_light_dogs_tellable_apart_by_hue() -> void:
+	## The whole point of the roster is to tell breeds apart by coat. The three light dogs must differ
+	## by HUE (distinct r-b), not merely by brightness: Sol warm, Bella neutral, Trulte cool.
+	var sol := KennelScreen._band_dog_tint(SOL, KennelDog.by_id("sol").portrait_bias())
+	var bella := KennelScreen._band_dog_tint(BELLA, KennelDog.by_id("bella").portrait_bias())
+	var trulte := KennelScreen._band_dog_tint(TRULTE, KennelDog.by_id("trulte").portrait_bias())
+	var sol_rb := sol.r - sol.b
+	var bella_rb := bella.r - bella.b
+	var trulte_rb := trulte.r - trulte.b
+	assert_true(sol_rb > bella_rb + 0.10 and bella_rb > trulte_rb + 0.10,
+		"warm→cool hue ladder Sol(%.3f) > Bella(%.3f) > Trulte(%.3f)" % [sol_rb, bella_rb, trulte_rb])

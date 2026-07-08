@@ -95,6 +95,25 @@ const STARTER_PORTRAIT_TINT := Color(0.905, 0.760, 0.470)
 func portrait_tint() -> Color:
 	return STARTER_PORTRAIT_TINT if id == STARTER_ID else band_tint
 
+## Per-breed hue bias for the kennel LIGHT-coat branch (191, PO father-pass-65 X-6/X-4). 190 lifted
+## the three light coats (Bella cream Lab, Sol golden, Trulte Malchi) back to a pale cream, but the
+## single warm-cream branch flattened them to ONE hue — differing only in brightness, so the golden
+## retriever read no more golden than the cream lab and the near-white Malchi read cream. This bias is
+## MULTIPLIED onto that shared cream anchor in `KennelScreen._band_dog_tint`'s light branch only, so
+## each light breed reads as its own coat: Bella stays the fixed neutral-cream reference (identity
+## white — her 190 cross-surface match is preserved untouched), Sol warms toward golden-amber (r up /
+## b down so she out-golds the cream lab), Trulte cools toward near-white/silver (b up / r down for
+## the Malchi). Every dark/tan dog keeps the identity white (it never reaches the light branch anyway),
+## so only the two flattened light breeds are re-hued. Pure + unit-tested; renders nothing itself.
+const PORTRAIT_BIAS := {
+	"sol":    Color(1.14, 0.96, 0.72),   ## golden retriever — warm/golden-amber, out-golds the cream lab
+	"trulte": Color(0.84, 0.98, 1.24),   ## Malchi — cool near-white / silver (strong cool bias to
+	                                     ## overcome the warm portrait rig; in-pixel R−B goes clearly
+	                                     ## negative, below Bella's neutral cream — a silver-white Malchi)
+}
+func portrait_bias() -> Color:
+	return PORTRAIT_BIAS.get(id, Color(1, 1, 1))
+
 ## Whether this dog LOCKS the global difficulty (119, P4-1 "for special dogs difficulty should be
 ## locked"). "Special" = a collectible/secret dog (RARE / EPIC / SECRET) — the challenge is part of
 ## the dog, so the player can't trade it away. The OWNED starter (Bella) and plain COMMON adoptables
@@ -223,7 +242,8 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 		rows.append({
 			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
 			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,
-			"band_tint": d.band_tint, "portrait_tint": d.portrait_tint(), "trick_ids": d.trick_ids,
+			"band_tint": d.band_tint, "portrait_tint": d.portrait_tint(),
+			"portrait_bias": d.portrait_bias(), "trick_ids": d.trick_ids,
 			"blurb": d.blurb, "traits": d.traits,
 			"owned": is_owned, "active": d.id == active, "secret": is_secret,
 			"affordable": affordable, "status_label": status_label, "price_label": price_label,
@@ -246,6 +266,7 @@ static func detail_for(id: String) -> Dictionary:
 		"trick_ids": d.trick_ids.duplicate(), "blurb": d.blurb,
 		"traits": d.traits.duplicate(), "band_tint": d.band_tint,
 		"portrait_tint": d.portrait_tint(),
+		"portrait_bias": d.portrait_bias(),
 		"secret": is_secret,
 		"rarity_label": rarity_label(d.rarity),
 	}
