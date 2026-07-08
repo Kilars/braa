@@ -822,6 +822,12 @@ const HAMBURGER_BAR_GAP := 4      ## px gap between bars
 ## pill lifts off the bright sun band instead of washing out (PO Phase-6 note #3).
 ## 125: bumped alpha 0.20 → 0.28 — extra lift for directive-5 HUD legibility after de-bloom.
 const HUD_PILL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.28)
+## The «Triks»/«Kennel» HUD nav pills + hamburger glyph ink (176, PO father-pass-41 X-6). Was
+## DesignSystem.SLATE, which at the small bold T_HEAD size anti-aliased toward the pale PAPER pill
+## and read only ~3.7:1 / ~2.9:1 against the bright sky (the faintest primary labels in the game).
+## BLUE_INK (#2a66b3, ~5.5:1 on PAPER) matches the goal art's crisp blue nav treatment and clears
+## AA with margin. One named source so both pill labels and the glyph can never drift apart.
+const HUD_NAV_INK := DesignSystem.BLUE_INK
 
 ## Learned bar (045, P2-4): a meter below the coin line holding the trick label + progress track.
 ## 097 (Phase 6): expanded to include the trick-name label row above the track itself. The label row
@@ -1955,15 +1961,16 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	var btn := Button.new()
 	btn.name = "TricksButton"
 	btn.text = "Triks"
-	# Design-system white pill (097, Phase 6): PAPER background with card shadow + slate
-	# Baloo 2 bold label. Matches the goal-screen top-left pill. 100 (Phase 6): a DRAWN
-	# hamburger glyph (baked SLATE bars, never a "☰" font string → no tofu, lesson from 089)
+	# Design-system white pill (097, Phase 6): PAPER background with card shadow + a BLUE_INK
+	# Baloo 2 bold label (176: was SLATE, too faint). Matches the goal-screen top-left pill.
+	# 100 (Phase 6): a DRAWN hamburger glyph (baked HUD_NAV_INK bars, never a "☰" font string
+	# → no tofu, lesson from 089)
 	# rides the button's native icon slot, left of the label, signalling "menu" like the goal.
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
-	btn.add_theme_color_override("font_color",         DesignSystem.SLATE)
-	btn.add_theme_color_override("font_pressed_color", DesignSystem.SLATE)
-	btn.add_theme_color_override("font_hover_color",   DesignSystem.SLATE)
+	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 176: BLUE_INK, was faint SLATE
+	btn.add_theme_color_override("font_pressed_color", HUD_NAV_INK)
+	btn.add_theme_color_override("font_hover_color",   HUD_NAV_INK)
 	btn.icon = _hamburger_texture()
 	btn.add_theme_constant_override("h_separation", TRICKS_GLYPH_GAP)  # space the glyph off the label
 	# 100: near-opaque PAPER fill (unchanged) + a STRONGER-than-default drop shadow so the pale
@@ -1995,7 +2002,7 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	_publish_menu_open()      # seed __bra_menu_open = false so a capture polls a defined value (072)
 	_publish_roster()         # seed the active breed + owned roster + balance for the 079 capture
 
-## The Triks pill's hamburger menu glyph (100): three short SLATE bars baked into an RGBA Image
+## The Triks pill's hamburger menu glyph (100): three short HUD_NAV_INK bars baked into an RGBA Image
 ## (never a "☰" font string — that risks tofu on the fallback font, per 089). Used as the button's
 ## native icon so it sits left of the "Triks" label. Headless-safe (baked Image, no shader).
 func _hamburger_texture() -> ImageTexture:
@@ -2008,7 +2015,7 @@ func _hamburger_texture() -> ImageTexture:
 	for _bar in 3:
 		for yy in range(y, y + HAMBURGER_BAR_H):
 			for xx in range(x0, x0 + HAMBURGER_BAR_W):
-				img.set_pixel(xx, yy, DesignSystem.SLATE)
+				img.set_pixel(xx, yy, HUD_NAV_INK)  # 176: BLUE_INK, matches the pill label
 		y += HAMBURGER_BAR_H + HAMBURGER_BAR_GAP
 	return ImageTexture.create_from_image(img)
 
@@ -2163,9 +2170,9 @@ func _setup_kennel_screen(ui: CanvasLayer) -> void:
 	btn.text = "Kennel"
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
-	btn.add_theme_color_override("font_color",         DesignSystem.SLATE)
-	btn.add_theme_color_override("font_pressed_color", DesignSystem.SLATE)
-	btn.add_theme_color_override("font_hover_color",   DesignSystem.SLATE)
+	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 176: BLUE_INK, was faint SLATE
+	btn.add_theme_color_override("font_pressed_color", HUD_NAV_INK)
+	btn.add_theme_color_override("font_hover_color",   HUD_NAV_INK)
 	var k_normal := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
 	k_normal.shadow_color = HUD_PILL_SHADOW
 	var k_pressed := DesignSystem.panel(DesignSystem.CREAM, DesignSystem.R_PILL)
