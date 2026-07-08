@@ -43,7 +43,7 @@ const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 ## from the text scrim to the whole panel; it does not revert 145 (dark INK labels, opaque inner
 ## track, backing behind the text all kept).
 const LABEL_COLOR := DesignSystem.INK        ## dark slate «Sitt» label — reads on sky/sun
-const PCT_COLOR   := DesignSystem.INK         ## dark, legible «%» readout
+const PCT_COLOR   := DesignSystem.BLUE_INK    ## blue «%» readout — tied to the blue fill, per goal art (180); AA-safe on the opaque 159 PAPER panel
 ## 179 (PO father-pass-50, X-4/X-6): 145/159 made BOTH the track rail AND the backing panel
 ## opaque PAPER — the same white — so the unfilled channel was invisible against its own panel
 ## and the meter never read as a meter (no track at 0 %, a fill floating in nothing when partly

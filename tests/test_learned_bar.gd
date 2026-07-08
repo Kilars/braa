@@ -38,13 +38,20 @@ func test_advance_is_inert_without_a_setback() -> void:
 # (BORDER @ .9) so the sun bled through it. These render-free asserts lock the fix:
 # dark ink text, an opaque light rail, and a scrim behind the readout.
 
-func test_label_and_percent_are_dark_ink_for_contrast_on_sky() -> void:
+func test_label_is_dark_ink_for_contrast_on_sky() -> void:
 	# INK on the pale sky (~luminance 0.52) clears AA; mid-grey SLATE (the old value,
-	# luminance ~0.16) did not. Guard the label + % stay dark.
+	# luminance ~0.16) did not. Guard the trick-name label stays dark.
 	assert_true(LearnedBar.LABEL_COLOR.get_luminance() < 0.20,
 		"the trick label is dark ink, not a pale sky grey")
-	assert_true(LearnedBar.PCT_COLOR.get_luminance() < 0.20,
-		"the percentage is dark ink, legible against the bright sky")
+
+func test_percent_is_blue_ink_matching_the_goal_art_and_the_fill() -> void:
+	# 180 (PO father-pass-51 X-6): the goal art draws «Sitt» dark but the «%» value BLUE,
+	# tying it to the blue fill so it reads as "this is your progress". Repoint PCT to the
+	# AA-safe blue-text token (154) — must stay ≥4.5:1 on the opaque 159 PAPER panel.
+	assert_eq(LearnedBar.PCT_COLOR, DesignSystem.BLUE_INK,
+		"the percentage is blue ink, tied to the blue fill, per the goal art")
+	assert_true(DesignSystem.wcag_contrast(LearnedBar.PCT_COLOR, LearnedBar.SCRIM_COLOR) >= 4.5,
+		"the blue percentage still clears WCAG AA on the opaque PAPER panel")
 
 func test_track_is_opaque_and_light_so_the_sun_cannot_bleed_through() -> void:
 	assert_eq(LearnedBar.TRACK_COLOR.a, 1.0,
