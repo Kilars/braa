@@ -240,7 +240,7 @@ const BREED_NAME_ACTIVE  := ROW_ACTIVE_INK           ## the running dog — dark
 const BREED_NAME_OWNED   := DesignSystem.SLATE       ## owned, tap to switch — slate body text
 const BREED_NAME_BUYABLE := DesignSystem.SLATE       ## affordable — slate body text
 const BREED_NAME_LOCKED  := DesignSystem.SLATE_SOFT  ## can't afford — greyed, clearly not tappable
-const BREED_SUBHEAD      := DesignSystem.SLATE_SOFT  ## the "Breeds" subheading — secondary
+const BREED_SUBHEAD      := DesignSystem.SLATE       ## the "Breeds" subheading — secondary, AA-clean on PAPER (186)
 const SWATCH_RIM         := DesignSystem.BORDER      ## hairline rim so a pale coat chip reads on paper
 
 ## Marker-word-row palette + badges (092, DS restyle 098).
@@ -253,11 +253,11 @@ const WORD_NAME_ACTIVE   := ROW_ACTIVE_INK           ## the firing word — dark
 const WORD_PIP_ACTIVE    := DesignSystem.BLUE_INK    ## the active word's leading differentiation pip stays Bra-Blue (170: decoupled from the now-dark name so only the NAME moved)
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
 const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
-const WORD_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Marker words" subheading — secondary
+const WORD_SUBHEAD       := DesignSystem.SLATE       ## the "Marker words" subheading — secondary, AA-clean on PAPER (186)
 const WORD_COST_HINT     := DesignSystem.SLATE  ## cost hint (095, P5-2) — Ink-Soft #5A6B7D, legible ≥12px (task 134)
 
 ## Difficulty-row palette + badges (118, DS tokens). Mirrors the breed/word row treatment.
-const DIFF_SUBHEAD       := DesignSystem.SLATE_SOFT  ## the "Vanskelighet" subheading — secondary
+const DIFF_SUBHEAD       := DesignSystem.SLATE       ## the "Vanskelighet" subheading — secondary, AA-clean on PAPER (186)
 const DIFF_NAME_ACTIVE   := ROW_ACTIVE_INK           ## the selected mode — dark current-state ink on the active wash (170: matches the active trick name + badge, not the action-blue)
 const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active mode — slate body text
 const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed

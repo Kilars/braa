@@ -40,3 +40,33 @@ func test_active_row_ink_still_dark_on_pale_wash() -> void:
 	# pale-blue wash, already AA-clear — 154 must not touch it.
 	var ratio := DesignSystem.wcag_contrast(TrickMenu.ROW_ACTIVE_INK, TrickMenu.ROW_BG_ACTIVE)
 	assert_true(ratio >= 4.5, "152 ACTIVE row ink still clears AA on its wash (got %.2f:1)" % ratio)
+
+# Task 186 (PO father-pass-60, X-6): the three completion-menu SECTION SUBHEADINGS («Raser» /
+# «Merkeord» / «Vanskelighet») are meaningful active labels on the PAPER card, not disabled
+# chrome, so they must clear WCAG AA. They rendered at SLATE_SOFT #8a97a4 = 2.87:1 on PAPER — the
+# same grey-on-light miss the kennel fixed (task 156). Fix = SLATE #5a6b7d (5.28:1 on PAPER).
+func _paper_subhead_tokens() -> Array:
+	return [
+		["BREED_SUBHEAD", TrickMenu.BREED_SUBHEAD],
+		["WORD_SUBHEAD", TrickMenu.WORD_SUBHEAD],
+		["DIFF_SUBHEAD", TrickMenu.DIFF_SUBHEAD],
+	]
+
+func test_section_subheadings_clear_aa_on_paper() -> void:
+	for pair in _paper_subhead_tokens():
+		var ratio := DesignSystem.wcag_contrast(pair[1], TrickMenu.PANEL_BG)
+		assert_true(ratio >= 4.5,
+			"%s (section subheading) must clear AA 4.5:1 on the PAPER card (got %.2f:1)" % [pair[0], ratio])
+
+func test_slate_soft_subhead_baseline_failed_before() -> void:
+	# SLATE_SOFT (what the subheadings used to be) fails AA on PAPER — the bug 186 fixes.
+	assert_true(DesignSystem.wcag_contrast(DesignSystem.SLATE_SOFT, TrickMenu.PANEL_BG) < 4.5,
+		"SLATE_SOFT on the PAPER card is the sub-AA baseline")
+
+func test_locked_row_labels_stay_soft() -> void:
+	# The locked-row names/badges are intentional disabled styling (WCAG exempt) — 186 must not
+	# touch them; they stay SLATE_SOFT.
+	assert_eq(TrickMenu.NAME_LOCKED, DesignSystem.SLATE_SOFT,
+		"locked-row name stays SLATE_SOFT (disabled styling)")
+	assert_eq(TrickMenu.BADGE_LOCKED, DesignSystem.SLATE_SOFT,
+		"locked-row badge stays SLATE_SOFT (disabled styling)")
