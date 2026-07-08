@@ -106,13 +106,12 @@ const BREED_ROW_H := 54.0       ## one breed row (swatch + name + state/price)
 const BREED_ROW_GAP := 8.0      ## gutter between breed rows
 const SWATCH_R := 13.0          ## the honest coat-colour chip radius
 
-## The marker words section (092, P5-4; typography 134): a distinct Baloo-2 heading + a divider rule
-## + one row per catalog word, seated between the breeds section and the showcase/footer pills.
+## The marker words section (092, P5-4; typography 134; headings unified 193): a subheading matching
+## its peer sections («Raser» / «Vanskelighet» — 18px Nunito body-bold SLATE, no divider) + one row per
+## catalog word, seated between the breeds section and the showcase/footer pills.
 ## Zero-height when no words are fed, so the trick-only + breeds-only geometry is unchanged.
-const WORDS_GAP := 18.0          ## gutter above the divider rule (from the breeds section, or trick rows if no breeds)
-const WORD_DIVIDER_H := 1.0      ## hairline divider rule height (134: section break before the heading)
-const WORD_DIVIDER_GAP := 8.0    ## gap between the divider rule and the heading text
-const WORD_HEADER_H := 38.0      ## the "Marker words" heading band — taller for the Baloo-2 display heading (was 30)
+const WORDS_GAP := 18.0          ## gutter above the subheading (from the breeds section, or trick rows if no breeds) — matches BREEDS_GAP/DIFFICULTY_GAP
+const WORD_HEADER_H := 30.0      ## the "Markørord" subheading band — matches BREED_HEADER_H/DIFFICULTY_HEADER_H (193: demoted from the 38px Baloo-2 display heading + divider)
 const WORD_ROW_H := 54.0         ## one word row (display text + state badge)
 const WORD_ROW_GAP := 8.0        ## gutter between word rows
 const WORD_ROW_INDENT := 8.0     ## extra left indent for marker-word rows (134: visually distinct from trick rows)
@@ -137,6 +136,7 @@ const DIFFICULTY_NOTE_H := 22.0  ## the locked-section reason note band (122) �
 const TITLE_SIZE := DesignSystem.T_TITLE   ## 26 px — Baloo 2 heading (panel title)
 const NAME_SIZE  := DesignSystem.T_TITLE   ## 26 px — Nunito Bold row name
 const BADGE_SIZE := DesignSystem.T_HEAD    ## 18 px — badge / sub-heading
+const SUBHEAD_SIZE := BADGE_SIZE           ## 18 px — the ONE size all three section subheadings share (193): «Raser»/«Markørord»/«Vanskelighet», subordinate to the 26px panel title
 const HINT_SIZE  := DesignSystem.T_SMALL   ## 13 px — secondary caption (cost / trade hint) ≥12px
 const CLOSE_SIZE := DesignSystem.T_TITLE   ## 26 px — primary CTA label
 
@@ -533,14 +533,14 @@ func _breeds_block_h() -> float:
 		return 0.0
 	return BREEDS_GAP + BREED_HEADER_H + n * BREED_ROW_H + (n - 1) * BREED_ROW_GAP
 
-## The marker words block height (092/134): the gutter + divider + divider-gap + heading + rows.
-## Zero when no word rows are fed, so the trick-only panel geometry (072) and the breeds layout
-## (079) are both unchanged when the section is absent.
+## The marker words block height (092/134; unified 193): the gutter + subheading band + rows — the same
+## shape as the breeds/difficulty blocks (no divider). Zero when no word rows are fed, so the trick-only
+## panel geometry (072) and the breeds layout (079) are both unchanged when the section is absent.
 func _words_block_h() -> float:
 	var n := _words.size()
 	if n == 0:
 		return 0.0
-	return WORDS_GAP + WORD_DIVIDER_H + WORD_DIVIDER_GAP + WORD_HEADER_H + n * WORD_ROW_H + (n - 1) * WORD_ROW_GAP
+	return WORDS_GAP + WORD_HEADER_H + n * WORD_ROW_H + (n - 1) * WORD_ROW_GAP
 
 ## The y where the words section (subheading) begins — just below breeds, or just below trick rows
 ## if there are no breeds.
@@ -548,12 +548,12 @@ func _words_top() -> float:
 	var panel := _panel_rect()
 	return panel.position.y + PANEL_PAD + HEADER_H + _rows_block_h() + _breeds_block_h() + WORDS_GAP
 
-## The i-th word row rect inside the panel (below the "Marker words" heading + divider).
-## _words_top() is the start of the section; skip divider + divider-gap + heading to reach the first row.
+## The i-th word row rect inside the panel (below the "Markørord" subheading).
+## _words_top() is the start of the section; skip the subheading band to reach the first row.
 func _word_row_rect(i: int) -> Rect2:
 	var panel := _panel_rect()
 	var x := panel.position.x + PANEL_PAD
-	var y := _words_top() + WORD_DIVIDER_H + WORD_DIVIDER_GAP + WORD_HEADER_H + i * (WORD_ROW_H + WORD_ROW_GAP)
+	var y := _words_top() + WORD_HEADER_H + i * (WORD_ROW_H + WORD_ROW_GAP)
 	return Rect2(x, y, panel.size.x - 2.0 * PANEL_PAD, WORD_ROW_H)
 
 ## The word row index under a point, or -1 if none.
@@ -784,33 +784,21 @@ func _draw() -> void:
 		_draw_row(f_bold, f_body, i)
 	# The breeds section (079): a subheading + one row per shipped breed (swatch, name, state/price).
 	if not _breeds.is_empty():
-		var sub_baseline := _breeds_top() + f_bold.get_ascent(BADGE_SIZE)
-		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, sub_baseline), LABEL_BREEDS,
-			BADGE_SIZE, BREED_SUBHEAD)
+		_draw_subheading(_breeds_top(), LABEL_BREEDS, BREED_SUBHEAD)
 		for i in _breeds.size():
 			_draw_breed_row(f_bold, f_body, i)
-	# The marker words section (092/134): a distinct Baloo-2 heading + a hairline divider rule above
-	# it (matching the DS section-break treatment), then one row per catalog word (Active/Unlocked/Locked).
-	# Zero-height when no words are fed, so the trick-only + breeds-only geometry (072/079) is unchanged.
+	# The marker words section (092/134; headings unified 193): a subheading matching its peers «Raser» /
+	# «Vanskelighet» — one shared _draw_subheading treatment (18px Nunito body-bold SLATE, no divider) —
+	# then one row per catalog word (Active/Unlocked/Locked). The word ROW treatment (indent + pip, 134)
+	# is untouched. Zero-height when no words are fed, so the trick-only + breeds-only geometry is unchanged.
 	if not _words.is_empty():
-		# Hairline divider rule above the heading — DS BORDER colour, full panel inner width.
-		var div_y := _words_top() + WORD_DIVIDER_H * 0.5
-		draw_line(
-			Vector2(panel.position.x + PANEL_PAD, div_y),
-			Vector2(panel.position.x + panel.size.x - PANEL_PAD, div_y),
-			PANEL_BORDER, WORD_DIVIDER_H)
-		# Baloo-2 display heading (heavier weight than the body-bold used for "Breeds" / "Vanskelighet").
-		var word_head_baseline := _words_top() + WORD_DIVIDER_H + WORD_DIVIDER_GAP + f_display.get_ascent(TITLE_SIZE)
-		_draw_text(f_display, Vector2(panel.position.x + PANEL_PAD, word_head_baseline), LABEL_WORDS,
-			TITLE_SIZE, TITLE_COLOR)
+		_draw_subheading(_words_top(), LABEL_WORDS, WORD_SUBHEAD)
 		for i in _words.size():
 			_draw_word_row(f_bold, f_body, i)
 	# The difficulty section (118): a "Vanskelighet" subheading + one row per mode (Normal/Hard/Expert).
 	# Zero-height when no rows are fed, so the trick/breeds/words geometry is unchanged when absent.
 	if not _difficulties.is_empty():
-		var diff_sub_baseline := _difficulty_top() + f_bold.get_ascent(BADGE_SIZE)
-		_draw_text(f_bold, Vector2(panel.position.x + PANEL_PAD, diff_sub_baseline), LABEL_DIFFICULTY,
-			BADGE_SIZE, DIFF_SUBHEAD)
+		_draw_subheading(_difficulty_top(), LABEL_DIFFICULTY, DIFF_SUBHEAD)
 		# On a special dog the mode is locked (119) — a dimmed one-liner tells the player WHY (122), so
 		# the greyed section reads as intentional, not broken. Shown only when locked (height reserved
 		# only then, so a normal dog's layout is unchanged).
@@ -845,6 +833,19 @@ func _draw() -> void:
 	var cb := cr.position.y + cr.size.y * 0.5 + f_bold.get_ascent(CLOSE_SIZE) * 0.5 - f_bold.get_descent(CLOSE_SIZE) * 0.5
 	_draw_text(f_bold, Vector2(cr.position.x, cb), LABEL_CLOSE, CLOSE_SIZE, CLOSE_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+
+## The ONE font every section subheading draws in (193): the Nunito body-bold face — subordinate to the
+## Baloo-2 display face the panel title («Triks») uses. Static so it's assertable without a render.
+static func subhead_font() -> Font:
+	return DesignSystem.font_body_bold()
+
+## Draw a section subheading — «Raser» / «Markørord» / «Vanskelighet» — in the ONE shared treatment
+## (193): subhead_font() at SUBHEAD_SIZE, left-aligned at the panel padding, baselined at `top_y`. The
+## single code path so the three peer sections read as one system and can't drift apart again.
+func _draw_subheading(top_y: float, label: String, color: Color) -> void:
+	var f := subhead_font()
+	var baseline := top_y + f.get_ascent(SUBHEAD_SIZE)
+	_draw_text(f, Vector2(_panel_rect().position.x + PANEL_PAD, baseline), label, SUBHEAD_SIZE, color)
 
 func _panel_box() -> StyleBoxFlat:
 	## PAPER card with hairline BORDER + card shadow via the DS builder (098, Phase 6).
