@@ -383,3 +383,19 @@ func test_locked_difficulty_id_is_a_known_mode() -> void:
 	var locked_id: String = KennelDog.by_id("nova").call("locked_difficulty_id")
 	assert_true(Difficulty.is_known(locked_id),
 		"locked_difficulty_id returns a known Difficulty mode id (never a ghost)")
+
+# ---- 173 (PO father-pass-38 X-4): the breed→kennel-individual name bridge ----
+# The showcase + completion-menu breeds row read the legacy BreedPersonality "breed" ids, so the
+# starter shows as «Labrador» while the kennel names her «Bella». name_for_breed bridges the two
+# naming systems for DISPLAY only: the one real player-reachable link is the starter (labrador → bella).
+
+func test_name_for_breed_resolves_the_starter_to_bella() -> void:
+	assert_eq(KennelDog.name_for_breed("labrador"), "Bella",
+		"the legacy starter breed 'labrador' surfaces the kennel individual «Bella»")
+
+func test_name_for_breed_is_empty_for_a_breed_with_no_kennel_individual() -> void:
+	# chocolate_labrador is a legacy breed-menu variant with no kennel individual → keep the breed name.
+	assert_eq(KennelDog.name_for_breed("chocolate_labrador"), "",
+		"a breed with no kennel individual resolves to «» (caller keeps the breed name)")
+	assert_eq(KennelDog.name_for_breed("nonsense_breed"), "",
+		"an unknown breed id resolves to «» (never a dog-less crash)")

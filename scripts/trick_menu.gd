@@ -345,8 +345,8 @@ static func classify_breeds(catalog: Array, owned: Array, active: String, balanc
 			st = BreedState.OWNED
 		elif balance >= price:
 			st = BreedState.BUYABLE
-		rows.append({"id": id, "name": b.get("name", id), "tint": b.get("tint", Color(1, 1, 1)),
-			"state": st, "price": price})
+		rows.append({"id": id, "name": b.get("name", id), "subtitle": b.get("subtitle", ""),
+			"tint": b.get("tint", Color(1, 1, 1)), "state": st, "price": price})
 	return rows
 
 ## Whether a breed row is tappable: OWNED switches to it, BUYABLE adopts it. ACTIVE (already running) and
@@ -962,7 +962,14 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	elif st == BreedState.BUYABLE:
 		name_col = BREED_NAME_BUYABLE
 	var name_x := sc.x + SWATCH_R + 12.0
-	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
+	# The breed subtitle (173): «Bella» name with «Labrador» dimmed beneath, matching the kennel +
+	# showcase. When present, shift the name up to leave room for the subtitle line (mirrors the
+	# word-row two-line cost-hint layout); "" (no kennel individual) stays a single centred line.
+	var subtitle := str(b.get("subtitle", ""))
+	var name_mid_y := rect.position.y + rect.size.y * 0.5
+	if subtitle != "":
+		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_badge.get_ascent(HINT_SIZE) * 0.5 - 1.0
+	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
 	# The state badge, right-aligned. Buyable/Locked append the coin price so the cost reads honestly.
 	var badge: String = BREED_BADGE[st]
 	if st == BreedState.BUYABLE or st == BreedState.LOCKED:
@@ -975,6 +982,11 @@ func _draw_breed_row(f_name: Font, f_badge: Font, i: int) -> void:
 	var badge_w := f_badge.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, BADGE_SIZE).x
 	var name_max_w := (rect.position.x + rect.size.x - 14.0 - badge_w - pip_reserve) - name_x - 10.0
 	_draw_text(f_name, Vector2(name_x, name_baseline), _elide(f_name, str(b.get("name", b.id)), NAME_SIZE, name_max_w), NAME_SIZE, name_col)
+	# The breed subtitle beneath the individual name (173): dimmed SLATE Ink-Soft, HINT_SIZE, elided to
+	# the same width so «Labrador» never runs under the badge. Only drawn when a subtitle was fed.
+	if subtitle != "":
+		var sub_baseline := name_baseline + f_badge.get_ascent(HINT_SIZE) + 2.0
+		_draw_text(f_badge, Vector2(name_x, sub_baseline), _elide(f_badge, subtitle, HINT_SIZE, name_max_w), HINT_SIZE, WORD_COST_HINT)
 	var badge_col := BREED_NAME_LOCKED
 	if st == BreedState.ACTIVE:
 		badge_col = BADGE_ACTIVE  # 168: dark current-state ink, not action-blue (matches «Trener nå»)

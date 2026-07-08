@@ -176,48 +176,53 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-08 (PO, father pass 37) — polish-lens pass: verified 171 (the breed-showcase «Tilbake» back-button label + ◀▶ chevron glyphs now clear WCAG AA — the ghost pill flipped from a white@0.14 *lightening* fill to a black@0.45 *darkening* ink overlay, so the near-opaque white chrome sits on a genuinely dark pill) landed clean in-pixel and pruned it; re-played training + completion-menu + **breed showcase** for regressions (all clean). Turned the polish lens on the **breed-showcase dog presentation** and found a cohesion/framing gap: the showcase spotlights the LIVE training rig with its idle-wander still running, so the "hero" dog frequently walks itself out of frame, faces away, or is clipped at the edge — the opposite of the kennel's composed, centered portraits. One buildable X-4 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-08 (PO, father pass 38) — polish-lens pass: verified **172** (the breed-showcase hero dog now poses as a composed, CENTRED, camera-facing portrait — wander paused + recentred + face-the-camera turn — instead of the pre-172 live-wander roaming the dog out of frame) landed clean **in-pixel on the real licensed rig** and pruned the pass-37 directive; re-played training + completion-menu + breed-showcase + **kennel grid + modal** for regressions (all clean, all contrast/framing/affordability re-measured pass). Turned the polish lens on **cross-surface cohesion** and found one genuine, buildable gap: the same owned dog carries **two different names** across surfaces — the kennel names her «Bella» (every dog has an individual name), but the training HUD / completion menu / breed showcase label her only by breed «Labrador». One X-4 directive filed. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-seventh pass, fresh and stateless under the polish/critique lens. HEAD is `d959615` (the 171 ghost-pill-chrome commit).
-Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported), served over http and driven in
-headless Chromium at 390×844 with **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Two harness runs, **zero console errors** on every one:
-(1) `tools/po_pass37.mjs` booted `?bra_autotap=1&bra_coins=120` → training → completion menu → adopted the 2nd breed (balance 120→90, owned = `[labrador, chocolate_labrador]`)
-→ opened the **breed showcase** on the active Labrador (chevrons live with 2 owned dogs), then sampled the control-bar chrome pixel-for-pixel from screenshot crops;
-(2) `tools/po_pass37_showcase_frame.mjs` re-opened the showcase and captured the spotlit dog at t≈0/1.5/3/4.5/6 s to watch the live wander. Evidence: this pass's screenshots
-(`.screenshots/P37-01-training.png`, `P37-02-menu.png`, `P37-03-showcase.png`, `P37-03c-controlbar.png`; `P37F-t0.png` … `P37F-t6000.png`) + per-pixel luminance/CR samples + the
-code I read (`scripts/breed_showcase_view.gd` `BTN_SECONDARY`/`chrome_ink_over`; `scripts/main.gd` `_on_showcase_requested`/`_render_showcase` and the wander path).
+Thirty-eighth pass, fresh and stateless under the polish/critique lens. HEAD is `c05040f` (the 172 showcase-pose commit).
+Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported at 01:07). Drove **both** the local bundle
+over http **and the live deployed Pages site** (https://kilars.github.io/braa/ — the only build that renders the **licensed Labrador**) in headless Chromium at 390×844,
+**deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer). Four harness runs, **zero console errors** on every one:
+(1) `tools/po_pass38_showcase_frame.mjs` (local) + (2) `tools/po_pass38_live_showcase.mjs` (live) — booted `?bra_autotap=1&bra_coins=120` → training → menu → adopted the 2nd breed →
+opened the **breed showcase** and captured the spotlit dog at t≈0/1.5/3/4.5/6 s (`P38F-t*.png` local, `P38L-t*.png` live);
+(3) `tools/po_pass38_live_surfaces.mjs` — live training + completion menu (`P38S-training.png`, `P38S-menu.png`);
+(4) `tools/po_pass38_live_kennel.mjs` — live kennel grid + Nova inspect modal (`P38K-grid.png`, `P38K-modal.png`). Evidence: those screenshots + per-pixel luminance/CR samples + the
+code I read (`scripts/main.gd` `_on_showcase_requested`/`_engage_face_for_showcase`/`_close_showcase`, `scripts/wander_field.gd recenter()`; `kennel_dog.gd dog_name` vs
+`breed_personality.gd display_name`; `adopt_button_parts`).
 
-**Verified fixed → pruned:** the pass-36 directive (**the showcase «Tilbake» label + ◀▶ chevron glyphs failed WCAG AA on their white@0.14 lifted pills, ~3.9–4.0:1**) is
-**resolved** by 171. In my own pixels (`P37-03c-controlbar.png`, HEAD `d959615`, dsf3): the «Tilbake» pill now samples label(247,247,247) over pill(46,56,54) = **11.30:1**, the
-◀ left-chevron **11.22:1** and the ▶ right-chevron **11.30:1** — all far past the 4.5:1 bar (was ~3.9–4.0:1). Code confirms `BTN_SECONDARY = Color(0,0,0,0.45)` (`:61`, a *darkening*
-ink over the band → a genuinely dark #2e3836-ish pill) with `BTN_SECONDARY_TEXT = white@0.96` (`:62`), pure `chrome_pill_over`/`chrome_ink_over` compositing helpers, and the band
-translucency kept (169 spotlight glow survives). The quiet "ghost secondary" read holds — a recessed dark pill on the dark band, not a bright lifted one. Pruned.
+**Verified fixed → pruned:** the pass-37 directive (**the breed showcase spotlit the LIVE training rig with its idle-wander running, so the hero dog roamed out of frame / faced away
+/ clipped the edge — only ~1 of 5 sampled moments "showed off"**) is **resolved** by 172. On the **live licensed rig** (`P38L-t0/1500/3000/4500/6000`, HEAD `c05040f`, dsf3) the
+spotlit Labrador now holds a **rock-steady, centred, camera-facing standing portrait across the whole window** — head up, whole body in frame, no drift to the edges, no turning
+away (contrast pass-37's `P37F-t0/t4500` where it walked to the frame border). Code confirms `_on_showcase_requested` now `_pause_wander()` + `_wander.recenter()` (snap
+`_pos`/`_target`→ZERO) + snap `_dog.transform=_wander_base()` + `_engage_face_for_showcase()` (a plain FaceTurn to `_camera_facing_heading()`), and both close paths
+`_release_face()`+`_resume_wander()`. (Local `P38F-*` shows the CC0 stand-in's crouched idle — a rig artifact of the unlicensed dog, NOT the player experience; the licensed live
+capture is the real read.) Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P37-01`) still matches the goal — centered facing-camera cream Labrador on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, opaque «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin-`120` HUD pills, big blue BRA. (b) **Completion menu**
-(`P37-02`): all four selection sections mark their current item as **dark name + dark badge on the pale-blue wash** — «Sitt» «Trener nå» / «Labrador» «Aktiv» — identically
-(167/168/170 unification intact); «Fortsett treningen» reads as the solid-blue primary, the two ghost buttons below it as blue-outlined secondaries. (c) **Breed showcase** control
-bar (`P37-03c`): dark chevrons with white glyphs, bright-white spotlit «Labrador» pip with its seated blue «aktiv» dot (165/166), faint «Brun lab» non-spotlit pip (interior text
-5.76:1), legible hint, muted «Trener denne» disabled CTA. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
+**Re-verified clean (no new directive):** (a) **training page** (`P38S-training`) still matches the goal — centred facing-camera cream Labrador on green grass, cyan approach ring,
+tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter, «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin-`120` HUD pills, deep-blue BRA (153 depth intact).
+(b) **Completion menu** (`P38S-menu`): the current item in each visible selection section reads **dark name + dark badge on the pale-blue wash** — «Sitt» «Trener nå» / «Labrador»
+«Aktiv» — identically (167/168/170 unification intact); «Fortsett treningen» is the solid-blue primary; the marker-word + difficulty sections are correctly **hidden by progressive
+disclosure** (127 — reveal only after the first alt word unlocks / enough mastery; my fresh autotap session met neither), not a regression. (c) **Kennel** (`P38K-grid`,
+`P38K-modal`): 8 front-¾ portraits fill their cells with no clipping, dark-ink rarity/status corner badges (149), `C_INK_SOFT` breed subtitles (156); Nova's modal is well-organised
+(portrait + nameplate + blurb + stat pips + trait chips + «Unikt trekk» card + «Kan lære» + action bar) and its **affordability read is correct** — «Har ikke råd · mangler 🪙 700»
+against 200 coins for the 900-priced Nova (= `max(0, 900−200)`, dark-on-grey label 9.89:1). (d) **Showcase control bar** (`P38L`): «Trener denne» disabled CTA 9.89:1, «Tilbake» pill
+10.9:1 (171 intact). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9).
 
 **Improvements**
 
-- **The breed showcase — the game's "here is my dog, shown off" surface — presents the hero dog badly, because it spotlights the LIVE training rig with the idle-wander still
-  running, so the dog roams out of frame, turns away, and gets clipped at the edges instead of holding a composed portrait like the kennel does.** *What I saw:* opening the
-  showcase from the completion menu's «Vis frem hundene» and capturing the spotlit Labrador over ~6 s (`P37F-t0.png` … `P37F-t6000.png`, HEAD `d959615`, dsf3), the dog wanders
-  freely: at t≈0 it walks toward the **right** edge with its snout clipped by the frame border (`P37F-t0`); at t≈3 s it happens to be centered facing camera — a genuinely proud
-  read (`P37F-t3000`); but by t≈4.5 s it has drifted **far to the left**, facing left with its face near the left edge and its hindquarters cut off at the bottom (`P37F-t4500`). So
-  only ~one of the five sampled moments actually "shows off" the dog; the rest catch it mid-stride, off-center, or half out of frame. *Why it's wrong:* the showcase's explicit
-  purpose (per `breed_showcase_view.gd`'s own header — *"the roster reads as 'here is my dog, shown off', not a cut-out on a dark veil"*) is a proud presentation of the owned dog,
-  but `main.gd:_on_showcase_requested` (`:2044`) only brightens the stage light + re-tints the live rig — it never pauses the wander or poses the dog, so `_wander_active` stays
-  true and the hero keeps roaming its patch (`:611 _drive_wander`). This also breaks **cohesion** with the other "look at my dog" surface: the **kennel** already renders each dog as
-  a clean, centered, front-¾ posed portrait via its live SubViewport (116/155), while the showcase — same intent — lets the dog walk itself to the edge. The two disagree. *What
-  "good" looks like:* while the breed showcase is open, quiet the wander and gently pose the spotlit dog as a **portrait** — centered, camera-facing (or front-¾), whole body in
-  frame — so it holds still and reads as "shown off", matching the kennel modal's composed portrait; call `_pause_wander()` (and ease the facing to camera, as the sit path already
-  does via `_engage_face_for_sit`/`_release_face`) on `_on_showcase_requested`, and `_resume_wander()` on `_close_showcase`. The dog can keep its idle breath/blink; it just must not
-  walk off-frame or turn its back. Keep the spotlight brightening + live preview re-tint (087/163) and the control-bar chrome (171) exactly as they are. Add a test that opening the
-  showcase pauses the wander (`_wander_active == false`) and closing restores it, and re-verify in-pixel at dsf3 that across several seconds the spotlit dog stays centered and
-  camera-facing within the frame.
+- **The same owned dog is named two different things depending on the surface: the kennel calls her «Bella» (each dog has a proper individual name — Bella / Nova / Balder / Sol / …),
+  but the training HUD, completion menu and breed showcase all label that same dog only by her BREED, «Labrador» — so the moment you adopt a named dog and start training her, the
+  game forgets her name.** *What I saw:* in the kennel the owned starter is «Bella · Labrador retriever» and every dog leads with its individual name (`P38K-grid`, `kennel_dog.gd`
+  `dog_name="Bella"`). But the completion-menu breeds row reads «Labrador» (not «Bella»), the training/showcase header reads «Labrador — aktiv», and the breed-showcase control-bar pip
+  reads «Labrador» / «Brun lab» (`P38S-menu`, `P38L-t*`). The two systems are literally separate — the kennel uses `KennelDog.dog_name` ("Bella") while the roster/menu/showcase use
+  `BreedPersonality.display_name` ("Labrador") (`breed_personality.gd:40`) — so the same physical starter dog is «Bella» in one surface and «Labrador» in all the others. *Why it
+  falls short:* the **breed showcase is explicitly the "here is MY dog, shown off" surface** (`breed_showcase_view.gd` header) and the kennel is the other "look at my dog" surface —
+  personalisation (the dog's given name) is the emotional core of an adopt-and-train game, and it's odd + immersion-breaking that the surface where you *show her off* calls her by her
+  breed while the shelf you *adopted her from* calls her Bella. The two "my dog" surfaces disagree on what the dog is even called. *What "good" looks like:* surface the adopted dog's
+  individual kennel name (Bella / Nova / …) on the surfaces that currently show only the breed — at minimum the **breed showcase** (header + spotlit pip) and ideally the
+  **completion-menu breeds row** — with the breed kept as a secondary subtitle (e.g. «Bella» title, «Labrador» beneath), reusing the existing `KennelDog.dog_name` (no new asset, no
+  economy change). Keep the 172 pose, 171 chrome and 087/163 re-tint exactly as they are. *(If the breed-centric naming in training turns out to be deliberate design — you train a
+  "breed", the kennel names "individuals" — that is a product-model call: build the name-surfacing, or if the dev loop judges it a genuine product decision, raise it as a flag rather
+  than guess. The observed inconsistency itself is real either way.)*
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

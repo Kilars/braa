@@ -210,6 +210,19 @@ func test_classify_breeds_active_owned_buyable_locked() -> void:
 	assert_eq(both[1].state, TrickMenu.BreedState.ACTIVE, "the active owned breed reads Active")
 	assert_eq(both[1].price, 30, "each row carries the adopt price for the locked/buyable badge")
 
+func test_classify_breeds_threads_subtitle() -> void:
+	# 173 (PO father-pass-38 X-4): the breed row carries an optional subtitle (the breed, under the
+	# individual kennel name «Bella»). A row fed a subtitle keeps it; a row without defaults to "".
+	var cat := [
+		{"id": "labrador", "name": "Bella", "subtitle": "Labrador", "tint": Color(0.86, 0.72, 0.47)},
+		{"id": "chocolate_labrador", "name": "Brun lab", "tint": Color(0.40, 0.28, 0.20)},
+	]
+	var rows := TrickMenu.classify_breeds(cat, ["labrador"], "labrador", 0, 30)
+	assert_eq(rows[0].get("subtitle", "MISSING"), "Labrador",
+		"a breed row surfaces the fed subtitle (breed under the individual name)")
+	assert_eq(rows[1].get("subtitle", "MISSING"), "",
+		"a breed with no subtitle fed defaults to «» (single-line row, no crash)")
+
 func _breed_menu(breeds: Array) -> TrickMenu:
 	var m := TrickMenu.new()
 	m.size = Vector2(390.0, 844.0)

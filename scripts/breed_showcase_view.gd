@@ -98,7 +98,7 @@ static func chevrons_active(owned_count: int) -> bool:
 static func hint_text(owned_count: int) -> String:
 	return HINT_MULTI if chevrons_active(owned_count) else HINT_SINGLE
 
-const TITLE_H := 92.0        ## the top title band height
+const TITLE_H := 116.0       ## the top title band height — deep enough to seat the breed subtitle (173) on the dark band, not the bright sky
 const CONTROL_H := 190.0     ## the bottom control-bar band height
 const SWATCH_R := 16.0
 
@@ -113,6 +113,7 @@ var _active := ""
 ## Live node refs (built once in _ready; updated per render).
 var _title: Label
 var _name_label: Label
+var _subtitle_label: Label   ## the breed, under the individual name (173) — hidden when name == breed
 var _hint: Label
 var _pips: HBoxContainer
 var _swatch: ColorRect
@@ -170,6 +171,19 @@ func _build_ui() -> void:
 	_name_label.offset_top = 54.0
 	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_name_label)
+
+	# The breed subtitle, just under the individual name (173): «Bella» big, «Labrador» beneath — the
+	# breed kept as a secondary read so the "show off MY dog" surface names her like the kennel does.
+	# Hidden (empty text) when the shown name IS the breed (no kennel individual for this breed).
+	_subtitle_label = Label.new()
+	_subtitle_label.add_theme_font_override("font", DesignSystem.font_body())
+	_subtitle_label.add_theme_font_size_override("font_size", 15)
+	_subtitle_label.add_theme_color_override("font_color", SUBTLE)
+	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_subtitle_label.anchor_right = 1.0
+	_subtitle_label.offset_top = 84.0
+	_subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_subtitle_label)
 
 	# Bottom control band.
 	var bottom := ColorRect.new()
@@ -371,6 +385,8 @@ func _refresh() -> void:
 	var is_active := _spotlit == _active
 	_name_label.text = _name_of(_spotlit) + (" — aktiv" if is_active else "")
 	_name_label.add_theme_color_override("font_color", NAME_ACTIVE if is_active else NAME_PREVIEW)
+	if _subtitle_label != null:
+		_subtitle_label.text = _subtitle_of(_spotlit)  # the breed under the individual name (173); "" hides it
 	# Rebuild pips: one per owned breed. The SPOTLIT (previewed) breed owns the solid dominant fill —
 	# it is the current selection; the ACTIVE dog carries a quiet "aktiv" dot (165, PO father-pass-30).
 	# (Was reversed: the fill keyed to active + an invisible `outline_size` on the spotlit pip, so
@@ -407,6 +423,15 @@ func _name_of(id: String) -> String:
 		if e.id == id:
 			return str(e.get("name", id))
 	return id.capitalize()
+
+## The breed subtitle for a spotlit id (173) — the entry's "subtitle" (breed) when an individual
+## kennel name is shown, else "" (the name already IS the breed, so no second line).
+func _subtitle_of(id: String) -> String:
+	for entry in _entries:
+		var e: Dictionary = entry
+		if e.id == id:
+			return str(e.get("subtitle", ""))
+	return ""
 
 ## The spotlit breed id currently shown — the render-free predicate a test / capture reads.
 func spotlit() -> String:

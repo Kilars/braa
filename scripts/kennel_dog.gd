@@ -142,6 +142,21 @@ func to_personality() -> BreedPersonality:
 	var window := _stat_scale(s[3], 0.20)         # Fokus    → window_stability (tighter/looser timing)
 	return BreedPersonality.new(id, dog_name, learn, distract, window, energ, coat_tint())
 
+## The bridge from the legacy Phase-3 "breed" ids (BreedPersonality — the showcase + completion-menu
+## breeds row read these) to the SAME physical dog the kennel adopts as a named individual (173, PO
+## father-pass-38 X-4). The two roster systems coexist; the one link the player actually reaches is the
+## starter — the yellow Labrador is kennel individual «Bella». Display-only, data-driven: a future
+## breed↔dog link is a one-line add here, and a breed with no kennel individual keeps its breed name.
+const BREED_TO_DOG := {"labrador": STARTER_ID}
+
+## The individual kennel name for a legacy breed id (e.g. "labrador" → "Bella"), or "" when the breed
+## has no kennel individual (the caller then keeps the breed name). Pure — the showcase/menu resolve
+## the name through this seam so «Bella» and «Labrador» stop disagreeing across surfaces.
+static func name_for_breed(breed_id: String) -> String:
+	if BREED_TO_DOG.has(breed_id):
+		return by_id(BREED_TO_DOG[breed_id]).dog_name
+	return ""
+
 ## Build the 8-dog catalog (fresh instances each call — callers may mutate freely).
 static func catalog() -> Array:
 	var out: Array = []

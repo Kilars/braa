@@ -2105,7 +2105,14 @@ func _render_showcase() -> void:
 	var entries: Array = []
 	for id in _roster.owned:
 		var bp := BreedPersonality.by_id(id)
-		entries.append({"id": id, "name": bp.display_name, "tint": bp.swatch_color()})
+		# Surface the adopted dog's individual kennel name (Bella) where one exists, with the breed
+		# (Labrador) demoted to a subtitle — so the "show off MY dog" surface stops calling her by her
+		# breed while the kennel calls her Bella (173, PO father-pass-38 X-4). A breed with no kennel
+		# individual keeps its breed name and no subtitle.
+		var indiv := KennelDog.name_for_breed(id)
+		var shown := indiv if indiv != "" else bp.display_name
+		var subtitle := bp.display_name if indiv != "" else ""
+		entries.append({"id": id, "name": shown, "subtitle": subtitle, "tint": bp.swatch_color()})
 	_showcase.render(entries, _showcase_model.spotlit_id(), _roster.active)
 
 ## Hide the showcase view and restore the garden lighting (shared by commit + dismiss).
@@ -2351,7 +2358,13 @@ func _breed_rows() -> Array:
 	var cat: Array = []
 	for entry in BreedPersonality.catalog():
 		var bp := entry as BreedPersonality
-		cat.append({"id": bp.id, "name": bp.display_name, "tint": bp.swatch_color()})
+		# Show the adopted dog's individual kennel name (Bella) with the breed (Labrador) as a subtitle,
+		# matching the kennel + showcase (173, PO father-pass-38 X-4). A breed with no kennel individual
+		# keeps its breed name and no subtitle.
+		var indiv := KennelDog.name_for_breed(bp.id)
+		var shown := indiv if indiv != "" else bp.display_name
+		var subtitle := bp.display_name if indiv != "" else ""
+		cat.append({"id": bp.id, "name": shown, "subtitle": subtitle, "tint": bp.swatch_color()})
 	return TrickMenu.classify_breeds(cat, _roster.owned, _roster.active, _purse.balance, BREED_ADOPT_COST)
 
 ## Build the completion-menu word rows (092, P5-4): the catalog classified against the unlocked set +

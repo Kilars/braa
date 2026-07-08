@@ -37,6 +37,38 @@ func test_no_tofu_glyph_in_any_showcase_text() -> void:
 				"showcase chrome must not render the tofu glyph '%s' (found in '%s')" % [glyph, t])
 	view.queue_free()
 
+func test_shows_individual_name_with_breed_subtitle() -> void:
+	# 173 (PO father-pass-38 X-4): the spotlit entry surfaces its individual kennel name (Bella) with
+	# the breed (Labrador) rendered beneath as a subtitle — so the "show off MY dog" surface names her
+	# like the kennel does, not by her breed.
+	var view := BreedShowcaseView.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(view)
+	if not view.is_node_ready():
+		view._ready()
+	view.render([{"id": "labrador", "name": "Bella", "subtitle": "Labrador", "tint": Color(1, 1, 1)}],
+		"labrador", "labrador")
+	var texts: Array = []
+	_collect_text(view, texts)
+	var joined := " | ".join(PackedStringArray(texts))
+	assert_true(joined.contains("Bella"), "the individual name «Bella» is rendered (name/pip)")
+	assert_true(joined.contains("Labrador"), "the breed «Labrador» is rendered as the subtitle")
+	view.queue_free()
+
+func test_no_subtitle_when_name_is_the_breed() -> void:
+	# A breed with no kennel individual feeds subtitle "" — the subtitle line stays empty (no phantom
+	# second line duplicating the name).
+	var view := BreedShowcaseView.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(view)
+	if not view.is_node_ready():
+		view._ready()
+	view.render([{"id": "chocolate_labrador", "name": "Brun lab", "subtitle": "", "tint": Color(1, 1, 1)}],
+		"chocolate_labrador", "chocolate_labrador")
+	assert_eq(view._subtitle_of("chocolate_labrador"), "",
+		"a breed with no individual name renders an empty subtitle")
+	view.queue_free()
+
 func test_cycle_buttons_draw_a_chevron_not_a_glyph() -> void:
 	## The prev/next cycle buttons carry NO glyph text — the affordance is a drawn chevron child instead.
 	var view := _build_view()
