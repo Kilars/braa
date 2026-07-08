@@ -34,3 +34,18 @@ func test_no_gold_in_ui_chrome() -> void:
 	for c in chrome:
 		assert_true((c as Color) != DesignSystem.GOLD, "no chrome constant is the GOLD coin token")
 		assert_true((c as Color) != DesignSystem.GOLD_DARK, "no chrome constant is GOLD_DARK")
+
+func test_disabled_send_is_muted_not_the_live_cta() -> void:
+	# 182 (PO father-pass-55): a disabled «Send» must NOT look like the live deep-blue CTA.
+	# It gets a muted, desaturated fill + muted ink so it reads "not ready yet", then snaps
+	# back to SEND_BG the instant text or a tag exists.
+	var dbg := FeedbackFormView.send_disabled_bg()
+	var dink := FeedbackFormView.send_disabled_ink()
+	assert_true(dbg != FeedbackFormView.SEND_BG, "disabled Send fill differs from the live blue CTA fill")
+	assert_true(dbg != DesignSystem.GRAD_PILL_TOP and dbg != DesignSystem.GRAD_PILL_LIP,
+		"disabled Send fill is not any live GRAD_PILL blue")
+	assert_true(dbg != DesignSystem.BLUE and dbg != DesignSystem.BLUE_DARK,
+		"disabled Send fill is not a saturated primary blue")
+	assert_true(dbg.s < FeedbackFormView.SEND_BG.s, "disabled Send fill is desaturated vs the live CTA")
+	assert_true(dink != FeedbackFormView.SEND_TEXT, "disabled label ink is muted, not the white live label")
+	assert_true(dbg != DesignSystem.GOLD and dbg != DesignSystem.GOLD_DARK, "disabled Send fill is not gold")

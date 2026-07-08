@@ -56,6 +56,14 @@ const FIELD_TEXT := DesignSystem.INK
 const FIELD_PLACEHOLDER := DesignSystem.SLATE_SOFT
 const SECONDARY_LABEL := DesignSystem.SLATE        ## «Hurtigvalg:» / «Helhet:» / privacy — AA muted ink on paper
 
+## 182 (PO father-pass-55): a disabled «Send» must read "not ready yet", not like the live
+## deep-blue CTA. Muted, desaturated grey-blue fill + muted ink; snaps back to SEND_BG the
+## instant text or a tag exists. Static (compile-time const can't call .lerp) + testable.
+static func send_disabled_bg() -> Color:
+	return DesignSystem.SLATE_SOFT.lerp(DesignSystem.CREAM, 0.55)  ## pale grey-blue, clearly inactive
+static func send_disabled_ink() -> Color:
+	return DesignSystem.SLATE  ## muted-but-readable label on the greyed fill
+
 func _init() -> void:
 	# Full-screen modal: eats all taps so nothing falls through to the trick menu behind it.
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -266,6 +274,7 @@ func _build_ui() -> void:
 	send.focus_mode = Control.FOCUS_NONE
 	send.add_theme_font_size_override("font_size", 17)
 	_style_button(send, SEND_BG, SEND_TEXT)
+	_apply_disabled_style(send, send_disabled_bg(), send_disabled_ink())
 	send.pressed.connect(_on_send)
 	btn_row.add_child(send)
 	_send_btn = send
@@ -306,6 +315,20 @@ func _style_button(btn: Button, bg: Color, fg: Color, border_col := Color(0, 0, 
 	btn.add_theme_color_override("font_hover_color",    fg)
 	btn.add_theme_color_override("font_pressed_color",  fg)
 	btn.add_theme_color_override("font_disabled_color", Color(fg, 0.4))
+
+## 182: override just the disabled visuals so a disabled primary reads clearly non-actionable
+## (muted grey-blue fill + muted ink) instead of an identical-looking live CTA. Same pill
+## geometry as _style_button so only the colour changes when the enable gate flips.
+func _apply_disabled_style(btn: Button, bg: Color, ink: Color) -> void:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.set_corner_radius_all(9999)
+	s.content_margin_left = 14.0
+	s.content_margin_right = 14.0
+	s.content_margin_top = 8.0
+	s.content_margin_bottom = 8.0
+	btn.add_theme_stylebox_override("disabled", s)
+	btn.add_theme_color_override("font_disabled_color", ink)
 
 ## Send is enabled only when the form has something to say (text OR a tag).
 func _refresh_send() -> void:
