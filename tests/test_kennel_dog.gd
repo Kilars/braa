@@ -489,6 +489,16 @@ func test_portrait_bias_trulte_is_cool_white() -> void:
 	var b := KennelDog.by_id("trulte").portrait_bias()
 	assert_true(b.b > b.r, "Trulte's bias cools the coat toward near-white: b(%.3f) > r(%.3f)" % [b.b, b.r])
 
+func test_portrait_bias_trulte_cool_is_gentle_not_icy() -> void:
+	# 192 (PO father-pass-66 X-6/X-4): 191's cool bias (b−r spread 0.40) overshot past neutral-white
+	# into icy blue — stacked on the already-cool LIGHT_COAT_WB + high GAIN it rendered a blue-dominant
+	# coat (in-pixel B−R +24), not the warm ivory/silver-white a Maltese has. The cool must stay GENTLE:
+	# a bounded spread so Trulte lands neutral-to-barely-cool white, not blue. Coolest of the three
+	# (b>r above) but only marginally.
+	var b := KennelDog.by_id("trulte").portrait_bias()
+	assert_true(b.b - b.r < 0.22,
+		"Trulte's cool bias is gentle, not icy: b−r spread %.3f < 0.22 (was 0.40 → in-pixel B−R +24 blue)" % [b.b - b.r])
+
 func test_portrait_bias_bella_and_others_are_neutral_white() -> void:
 	# Bella is the fixed 190 cream reference — she must NOT be re-tinted (white bias). Same for every
 	# dark/tan dog so only the two light breeds that flattened get a hue.

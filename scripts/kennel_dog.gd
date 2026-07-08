@@ -107,9 +107,14 @@ func portrait_tint() -> Color:
 ## so only the two flattened light breeds are re-hued. Pure + unit-tested; renders nothing itself.
 const PORTRAIT_BIAS := {
 	"sol":    Color(1.14, 0.96, 0.72),   ## golden retriever — warm/golden-amber, out-golds the cream lab
-	"trulte": Color(0.84, 0.98, 1.24),   ## Malchi — cool near-white / silver (strong cool bias to
-	                                     ## overcome the warm portrait rig; in-pixel R−B goes clearly
-	                                     ## negative, below Bella's neutral cream — a silver-white Malchi)
+	"trulte": Color(0.92, 0.99, 1.13),   ## Malchi — GENTLE cool toward a natural silver/ivory white.
+	                                     ## 192 (PO father-pass-66 X-6/X-4): 191's stronger (0.84,0.98,1.24)
+	                                     ## bias stacked on the already-cool LIGHT_COAT_WB + GAIN 2.34 and
+	                                     ## overshot into an icy BLUE coat (in-pixel B−R +24, blue-dominant),
+	                                     ## not the warm ivory/silver a Maltese has. Eased the blue boost +
+	                                     ## red cut so Trulte lands barely-cool white (in-pixel B−R ≈ +6, no
+	                                     ## channel dominating) — still the coolest of the three light dogs,
+	                                     ## just marginally, not blue.
 }
 func portrait_bias() -> Color:
 	return PORTRAIT_BIAS.get(id, Color(1, 1, 1))
