@@ -44,7 +44,13 @@ const C_RARITY_EPIC  := Color("9b7bd4")   ## EPIC «Episk» — calm violet acce
 const C_PRICE_OWN    := Color("57b85c")   ## «Din» owned price chip
 const C_PRICE_FREE   := Color("ff7a85")   ## «Gratis» coral
 const C_TAG_INK      := Color("141c26")   ## dark ink for status/rarity pill labels — clears WCAG AA 4.5:1 on every calm accent above (X-6, task 149)
-const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg
+const C_CLOSE_BG     := Color("2b3742", 0.12)  ## subtle close button bg (legacy; unused since 189)
+# 189 (PO father-pass-63, X-6/X-4): ONE shared kennel ✕ component. Both the grid back-✕ and the
+# modal ✕ were styled oppositely + 36u; the modal's white-on-translucent-black washed out over
+# light coats. The unified control is an OPAQUE light disc with a defined steel ring + a dark
+# C_INK glyph — reads on any header/band/portrait, sized to the 44u app standard.
+const C_CLOSE_DISC   := Color("ffffff")   ## opaque light disc — a dark glyph reads on it over any coat
+const C_CLOSE_RING   := Color("788794")   ## steel ring (C_STEEL tone) so the disc outline reads on a light bg
 const C_HEADER_BG    := Color("f4f6f8")   ## flat header bg (no gradient needed in code)
 const C_COIN_TEXT    := Color("1e2a3a")   ## ink on gold (still used by the price chip label)
 const C_PRICE_SCRIM  := Color("22344a", 0.35) ## dark border behind price chip so any fill holds on any band bg
@@ -153,7 +159,7 @@ const PORTRAIT_AMBIENT_ENERGY := 0.72   ## flat fill+ambient (1.12) >> key so co
 const TAG_RADIUS     := 8.0
 const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
-const CLOSE_SIZE     := 36.0
+const CLOSE_SIZE     := 44.0   ## app control standard (main.TRICKS_BTN_HEIGHT) — 36→44 (189, X-6/X-4)
 
 # Modal layout constants (108, K-2).
 const MODAL_CARD_RADIUS    := 24.0   ## card corner radius
@@ -326,6 +332,44 @@ func _build_ui() -> void:
 	_build_header()
 	_build_scroll_grid()
 
+## Shared close-button spec (189, X-6/X-4) — the single source of truth both kennel ✕ controls
+## draw from, so the grid back-✕ and the modal ✕ read identically. Pure + static → testable.
+static func close_button_style() -> Dictionary:
+	return {
+		"size":   CLOSE_SIZE,
+		"disc":   C_CLOSE_DISC,
+		"border": C_CLOSE_RING,
+		"ink":    C_INK,
+	}
+
+## Build the one shared kennel ✕ control. Call sites set their own layout (grid: in the header
+## row; modal: anchored top-right) but the disc/ring/ink/size all come from close_button_style().
+func _make_close_button(node_name: String, on_pressed: Callable) -> Button:
+	var spec := close_button_style()
+	var btn := Button.new()
+	btn.name = node_name
+	btn.text = "x"   ## ASCII x — safe in all fonts (no tofu risk, 089/CLAUDE.md)
+	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
+	btn.add_theme_font_size_override("font_size", 20)
+	btn.add_theme_color_override("font_color",         spec["ink"])
+	btn.add_theme_color_override("font_hover_color",   spec["ink"])
+	btn.add_theme_color_override("font_pressed_color", C_MUTED)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.custom_minimum_size = Vector2(spec["size"], spec["size"])
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = spec["disc"]
+	sb.set_corner_radius_all(int(float(spec["size"]) * 0.5))
+	sb.set_border_width_all(2)
+	sb.border_color = spec["border"]
+	sb.content_margin_left  = 6.0
+	sb.content_margin_right = 6.0
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		btn.add_theme_stylebox_override(st, sb)
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	btn.pressed.connect(on_pressed)
+	return btn
+
+
 func _build_header() -> void:
 	# Fixed header band: white bg, hairline bottom border.
 	var hdr := PanelContainer.new()
@@ -352,27 +396,9 @@ func _build_header() -> void:
 	row.add_theme_constant_override("separation", 0)
 	hdr.add_child(row)
 
-	# Close / back button (✕) — top-left.
-	var close_btn := Button.new()
-	close_btn.name = "CloseButton"
-	close_btn.text = "x"   ## ASCII x — safe in all fonts (no tofu risk, 089/CLAUDE.md)
-	close_btn.add_theme_font_override("font", DesignSystem.font_body_bold())
-	close_btn.add_theme_font_size_override("font_size", 18)
-	close_btn.add_theme_color_override("font_color",         C_INK)
-	close_btn.add_theme_color_override("font_hover_color",   C_INK)
-	close_btn.add_theme_color_override("font_pressed_color", C_MUTED)
-	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.custom_minimum_size = Vector2(CLOSE_SIZE, CLOSE_SIZE)
+	# Close / back button (✕) — top-left. Shared component (189).
+	var close_btn := _make_close_button("CloseButton", func(): closed.emit())
 	close_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var close_style := StyleBoxFlat.new()
-	close_style.bg_color = C_CLOSE_BG
-	close_style.set_corner_radius_all(int(CLOSE_SIZE * 0.5))
-	close_style.content_margin_left  = 6.0
-	close_style.content_margin_right = 6.0
-	for st in ["normal", "hover", "pressed", "disabled"]:
-		close_btn.add_theme_stylebox_override(st, close_style)
-	close_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	close_btn.pressed.connect(func(): closed.emit())
 	row.add_child(close_btn)
 
 	# Title + subtitle, centred — let it flex.
@@ -1241,25 +1267,10 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	name_lbl.offset_top    = -MODAL_NAMEPLATE_H
 	band.add_child(name_lbl)
 
-	# ✕ close button — top-right of the band. ASCII "x", no tofu.
-	var close_btn := Button.new()
-	close_btn.name = "ModalClose"
-	close_btn.text = "x"
-	close_btn.add_theme_font_override("font", DesignSystem.font_body_bold())
-	close_btn.add_theme_font_size_override("font_size", 16)
-	close_btn.add_theme_color_override("font_color",         Color.WHITE)
-	close_btn.add_theme_color_override("font_hover_color",   Color.WHITE)
-	close_btn.add_theme_color_override("font_pressed_color", Color(1,1,1,0.6))
-	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.custom_minimum_size = Vector2(CLOSE_SIZE, CLOSE_SIZE)
-	var close_sb := StyleBoxFlat.new()
-	close_sb.bg_color = Color(0.0, 0.0, 0.0, 0.20)
-	close_sb.set_corner_radius_all(int(CLOSE_SIZE * 0.5))
-	close_sb.content_margin_left  = 6.0
-	close_sb.content_margin_right = 6.0
-	for st in ["normal", "hover", "pressed", "disabled"]:
-		close_btn.add_theme_stylebox_override(st, close_sb)
-	close_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	# ✕ close button — top-right of the band. Shared component (189): same opaque light disc +
+	# dark ink as the grid ✕, so it reads on the light hero portrait (was white-on-black, washed
+	# out on light coats).
+	var close_btn := _make_close_button("ModalClose", close_detail)
 	# Position top-right with a small margin.
 	close_btn.anchor_left   = 1.0
 	close_btn.anchor_right  = 1.0
@@ -1269,7 +1280,6 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	close_btn.offset_right  = -8.0
 	close_btn.offset_top    = 8.0
 	close_btn.offset_bottom = 8.0 + CLOSE_SIZE
-	close_btn.pressed.connect(close_detail)
 	band.add_child(close_btn)
 
 	# Rarity badge — top-left of the band, echoing the grid cell so the ladder reads in the modal
