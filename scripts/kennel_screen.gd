@@ -136,6 +136,20 @@ static func modal_portrait_yaw_offset(_dog_index: int) -> float:
 ## a distant whole-body figure — while still fitting the full bounding sphere so nothing clips at any
 ## per-cell yaw. Validated in capture on the CC0 dog (watch the ears at the tighter fill).
 const PORTRAIT_HEAD_FRAC := 0.66  ## aim this fraction up the bbox (0.5 = centre) — lifts toward the head
+## Portrait light rig (187, PO father-pass-61 X-6). Grid + modal share _build_one_portrait; their ONLY
+## difference is yaw. The KEY is the sole yaw-VARIANT term (a directional light fixed in world space, so
+## a turning dog catches more/less of it): the old hard 1.2 key / 0.35 fill (ratio 3.43) blew the modal's
+## front-on flank ~2× brighter than the side-yaw grid cell, and the old COOL ambient (0.72,0.74,0.78)
+## tinted the shadowed grid flank so the same dog flipped cool→warm between views. Retuned so the flat,
+## yaw-INVARIANT illumination (fill + ambient) dominates the key — coat value holds as the dog turns —
+## and the ambient is hue-NEUTRAL so shadow vs. key-lit no longer flips hue. Softer key still shapes the
+## coat as a rounded animal (not a flat cut-out); Nova now stays a dark charcoal border collie in BOTH.
+const PORTRAIT_KEY_ENERGY     := 0.55   ## was 1.2 — softened so the front-on modal flank stops blowing out
+const PORTRAIT_FILL_ENERGY    := 0.40   ## was 0.35 — key:fill = 1.38 (was 3.43), a gentle shaping key
+const PORTRAIT_AMBIENT_COLOR  := Color(0.74, 0.74, 0.74)  ## was (0.72,0.74,0.78) cool → hue-neutral grey
+const PORTRAIT_AMBIENT_ENERGY := 0.72   ## flat fill+ambient (1.12) >> key so coat value holds across yaw;
+                                        ## total exposure kept near the OLD grid level so Nova converges at
+                                        ## her DARK charcoal (not a lifted mid-grey) in BOTH views (187)
 const TAG_RADIUS     := 8.0
 const CHIP_RADIUS    := 8.0
 const FOOTER_PAD     := 10.0
@@ -744,20 +758,23 @@ func _build_one_portrait(packed: PackedScene, yaw_offset: float, idx: int) -> Te
 			ap.play(clips.idle)
 			ap.seek(0.6, true)
 
-	# Key + gentle fill so the coat reads as a rounded animal, not a flat cut-out.
+	# Soft key + fill + neutral ambient (187): the key is the only yaw-variant term, so it stays gentle
+	# (fill+ambient dominate) and the coat value holds constant whether the dog is at the grid's side-yaw
+	# or the modal's front-on yaw. Still enough key to shape the coat as a rounded animal, not a cut-out.
 	var key := DirectionalLight3D.new()
 	key.rotation_degrees = Vector3(-34.0, -38.0, 0.0)
-	key.light_energy = 1.2
+	key.light_energy = PORTRAIT_KEY_ENERGY
 	vp.add_child(key)
 	var fill := DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-8.0, 145.0, 0.0)
-	fill.light_energy = 0.35
+	fill.light_energy = PORTRAIT_FILL_ENERGY
 	vp.add_child(fill)
-	# Ambient via the isolated world's own environment so the shadowed side isn't black.
+	# Ambient via the isolated world's own environment so the shadowed side isn't black. Hue-NEUTRAL grey
+	# (187) so the shadowed flank can't read cool while the key-lit flank reads warm — no cool→warm flip.
 	var env := Environment.new()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.72, 0.74, 0.78)
-	env.ambient_light_energy = 0.9
+	env.ambient_light_color = PORTRAIT_AMBIENT_COLOR
+	env.ambient_light_energy = PORTRAIT_AMBIENT_ENERGY
 	var we := WorldEnvironment.new()
 	we.environment = env
 	vp.add_child(we)
