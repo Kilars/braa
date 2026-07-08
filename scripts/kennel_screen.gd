@@ -86,6 +86,17 @@ const FOOTER_BLOCK_H := 72.0    ## the name+breed footer block below the band (c
 const GRID_COLS      := 2       ## the roster grid is 2-wide; rows = ceil(dogs / cols)
 const DESIGN_VP_H    := 1280.0  ## fallback logical viewport height (project.godot) when none is live
 const DARK_BAND_LUM  := 0.42    ## below this band luminance, lighten the dog so it reads on a dark band
+# Light-coat lift (190, PO father-pass-64 X-6). Above this luminance a coat is a LIGHT breed (Bella
+# cream Lab ~0.77, Sol golden ~0.75, Trulte near-white ~0.87) — the warm saturated portrait tint over
+# the neutral-grey/warm-rig render browned them, so lift toward the pale training cream: desaturate the
+# warm bias, then gain exposure up (modulate > 1 brightens the 2D portrait). The tan dogs (Sniff ~0.61,
+# Lykke ~0.67) and the dark dogs stay below the bar, untouched, so only the crushed-pale coats move.
+const LIGHT_BAND_LUM  := 0.70   ## above this coat luminance, treat as a light breed and lift toward cream
+const LIGHT_COAT_DESAT := 1.0   ## pull fully to the coat's own luminance — the warm-brown chroma is the break
+const LIGHT_COAT_WB   := Color(0.945, 1.0, 1.065) ## cool white-balance: the portrait rig renders WARM, so a
+                                        ## neutral modulate still left the coat golden-brown; nudge red down /
+                                        ## blue up to cancel the rig and land on the training cream (rb ~28, not ~55)
+const LIGHT_COAT_GAIN  := 2.34  ## exposure gain so the pale coat reads pale (modulate > 1 brightens the 2D portrait)
 
 # Live portrait SubViewport (116, K-1) — renders the game's actual dog once, shared 8× (X-7).
 const DOG_SCENE_PATH   := "res://assets/models/dog.glb"           ## CC0 dog (verify/local)
@@ -877,6 +888,20 @@ static func _band_dog_tint(coat_hue: Color) -> Color:
 		var target := DARK_BAND_LUM + 0.20
 		var s := target / maxf(lum, 0.001)
 		return Color(minf(coat_hue.r * s, 1.0), minf(coat_hue.g * s, 1.0), minf(coat_hue.b * s, 1.0), coat_hue.a)
+	if lum > LIGHT_BAND_LUM:
+		# 190 (PO father-pass-64 X-6): the LIGHT-coat dogs (Bella cream Lab, Sol golden) rendered a
+		# saturated medium-BROWN in the kennel — the NEUTRAL_COAT grey base under the 187 portrait rig
+		# (darker + warmer than the garden sun) times this warm, saturated tint crushed the pale coat
+		# down, so Bella read cream on the training page but brown here (a cross-surface identity break).
+		# Lift toward her training coat: DESATURATE the warm bias (pull toward the coat's own luminance
+		# so the brown lets go) then GAIN the exposure up so the pale coat reads pale. modulate > 1.0
+		# brightens the 2D portrait texture (no clamp — the render pixel is well under 1). Applied in
+		# this SHARED tint so the grid cell and the modal hero move together (187 parity preserved); the
+		# dark coats never reach this branch, so Nova/Pontus/Balder/Sniff are untouched.
+		var desat := coat_hue.lerp(Color(lum, lum, lum), LIGHT_COAT_DESAT)
+		return Color(desat.r * LIGHT_COAT_GAIN * LIGHT_COAT_WB.r,
+			desat.g * LIGHT_COAT_GAIN * LIGHT_COAT_WB.g,
+			desat.b * LIGHT_COAT_GAIN * LIGHT_COAT_WB.b, coat_hue.a)
 	return coat_hue
 
 ## Status tag (PanelContainer pill): owned green, easter coral, neutral muted.

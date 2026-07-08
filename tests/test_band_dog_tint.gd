@@ -9,6 +9,11 @@ extends "res://tests/test_case.gd"
 const NOVA   := Color(0.298, 0.322, 0.357)   ## Border collie — dark COOL (lum ~0.32)
 const PONTUS := Color(0.529, 0.337, 0.212)   ## Gravhund — dark WARM (lum ~0.37)
 const TRULTE := Color(0.902, 0.863, 0.796)   ## Malchi — LIGHT coat (lum high)
+const BELLA  := Color(0.905, 0.760, 0.470)   ## STARTER_PORTRAIT_TINT — cream yellow Labrador (lum ~0.77)
+const SOL    := Color(0.886, 0.741, 0.463)   ## Golden retriever — LIGHT warm coat (lum ~0.75)
+
+static func _chroma(c: Color) -> float:
+	return maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
 
 func test_dark_cool_coat_stays_cool() -> void:
 	## Nova is a dark cool coat. After tinting it must remain visibly cool — blue clearly above red,
@@ -35,7 +40,29 @@ func test_dark_cool_coat_is_not_near_neutral() -> void:
 	var chroma := maxf(t.r, maxf(t.g, t.b)) - minf(t.r, minf(t.g, t.b))
 	assert_true(chroma > 0.06, "Nova keeps real chroma (%.3f), not collapsed to neutral" % chroma)
 
-func test_light_coat_is_unchanged() -> void:
-	## A light coat is above the dark threshold — returned as-is (no lightening).
-	var t := KennelScreen._band_dog_tint(TRULTE)
-	assert_eq(t, TRULTE, "Trulte (light) coat passes through unchanged")
+func test_light_coat_is_lightened() -> void:
+	## 190 (PO father-pass-64 X-6): light coats (Bella cream, Sol golden) rendered brown in the kennel
+	## because the neutral-grey base under the warm portrait rig, times a warm saturated tint, crushed
+	## the pale coat down. The light branch must now LIGHTEN the modulate (luminance up) so the pale
+	## coat reads pale — up toward Bella's cream training coat.
+	assert_true(KennelScreen._band_dog_tint(BELLA).get_luminance() > BELLA.get_luminance(),
+		"Bella (light) is lightened toward her pale training cream")
+	assert_true(KennelScreen._band_dog_tint(SOL).get_luminance() > SOL.get_luminance(),
+		"Sol (light golden) is lightened, not crushed to brown")
+
+func test_light_coat_is_desaturated() -> void:
+	## The over-brown was warm-biased (R clearly above B). The fix desaturates the warm bias, so the
+	## tinted light coat carries LESS chroma than the raw portrait_tint — a pale cream, not a brown.
+	assert_true(_chroma(KennelScreen._band_dog_tint(BELLA)) < _chroma(BELLA),
+		"Bella tint is desaturated (chroma %.3f < raw %.3f)"
+			% [_chroma(KennelScreen._band_dog_tint(BELLA)), _chroma(BELLA)])
+	var t := KennelScreen._band_dog_tint(BELLA)
+	assert_true(t.r - t.b < BELLA.r - BELLA.b,
+		"Bella warm bias reduced: r-b %.3f < raw %.3f" % [t.r - t.b, BELLA.r - BELLA.b])
+
+func test_light_coat_stays_above_dark_coats() -> void:
+	## Sanity ordering: a lightened light coat still reads clearly brighter than a lightened dark coat,
+	## so the roster keeps its light↔dark coat variety.
+	assert_true(KennelScreen._band_dog_tint(BELLA).get_luminance()
+		> KennelScreen._band_dog_tint(NOVA).get_luminance(),
+		"Bella (light) stays brighter than Nova (dark) after tint")
