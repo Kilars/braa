@@ -812,6 +812,10 @@ const COIN_READOUT_TOP := 10.0
 const TRICKS_BTN_MARGIN := 20.0
 const TRICKS_BTN_TOP := COIN_READOUT_TOP
 const TRICKS_BTN_WIDTH := 128.0   ## 100: a touch wider so the glyph + "Triks" both fit the pill
+## 185 (PO father-pass-58 X-6): the «Kennel» nav pill was pinned to a bare 96 px and Godot trimmed
+## the 6-char label to «Kennel.» with an overrun ellipsis. Named for parity with TRICKS_BTN_WIDTH and
+## widened to hold «Kennel» at T_HEAD with balanced side padding (no glyph, so narrower than Triks).
+const KENNEL_BTN_WIDTH := 118.0
 const TRICKS_BTN_HEIGHT := 44.0
 ## 100 (Phase 6): the drawn hamburger menu glyph on the Triks pill + the top-HUD legibility lift.
 const TRICKS_GLYPH_GAP := 8       ## px between the hamburger glyph and the "Triks" label
@@ -2192,7 +2196,7 @@ func _setup_kennel_screen(ui: CanvasLayer) -> void:
 	btn.anchor_bottom = 0.0
 	btn.offset_left   = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH + 8.0
 	btn.offset_top    = TRICKS_BTN_TOP
-	btn.offset_right  = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH + 8.0 + 96.0
+	btn.offset_right  = TRICKS_BTN_MARGIN + TRICKS_BTN_WIDTH + 8.0 + KENNEL_BTN_WIDTH
 	btn.offset_bottom = TRICKS_BTN_TOP + TRICKS_BTN_HEIGHT
 	btn.focus_mode = Control.FOCUS_NONE
 	ui.add_child(btn)
