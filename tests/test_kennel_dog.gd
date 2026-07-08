@@ -438,3 +438,40 @@ func test_showoff_name_breed_without_a_kennel_individual_stays_single_line() -> 
 		"a breed with no kennel individual keeps its breed name")
 	assert_eq(d.get("subtitle", "MISSING"), "",
 		"a breed with no kennel individual renders no subtitle (single-line row)")
+
+# --- showoff_swatch (175, PO father-pass-40 X-4) --------------------------------------------------
+# 174 re-pointed the show-off NAME + breed + 3D coat to the active kennel dog, but the «Raser»
+# active-row coat SWATCH still showed the stale breed swatch (labrador → golden) beside a grey «Nova».
+# showoff_swatch repoints the swatch of the ACTIVE entry to the active kennel dog's portrait coat
+# (grey for Nova, warm cream for the starter Bella — portrait_tint, not identity-white coat_tint),
+# leaving every other entry's swatch byte-identical.
+
+func test_showoff_swatch_active_kennel_dog_uses_its_coat() -> void:
+	# Training Nova: the active «labrador» swatch must become Nova's grey portrait coat, not golden Lab.
+	var golden := BreedPersonality.by_id("labrador").swatch_color()
+	var c := KennelDog.showoff_swatch(golden, true, true, "nova")
+	assert_true(c.is_equal_approx(KennelDog.by_id("nova").portrait_tint()),
+		"the ACTIVE entry's swatch is the active kennel dog's coat (grey Nova), not the breed swatch")
+	assert_false(c.is_equal_approx(golden),
+		"the golden Labrador breed swatch no longer stands in for grey Nova")
+
+func test_showoff_swatch_active_starter_uses_portrait_not_identity() -> void:
+	# The starter Bella's coat_tint is identity-white; the swatch must read her warm cream portrait coat.
+	var golden := BreedPersonality.by_id("labrador").swatch_color()
+	var c := KennelDog.showoff_swatch(golden, true, true, "bella")
+	assert_true(c.is_equal_approx(KennelDog.by_id("bella").portrait_tint()),
+		"the starter's active swatch reads her warm-cream portrait coat, never identity-white")
+
+func test_showoff_swatch_kennel_not_driving_keeps_breed_swatch() -> void:
+	# Kennel not driving (Phase-3 breed switch owns the coat): the active swatch stays the breed swatch.
+	var golden := BreedPersonality.by_id("labrador").swatch_color()
+	var c := KennelDog.showoff_swatch(golden, true, false, "bella")
+	assert_true(c.is_equal_approx(golden),
+		"with the kennel not driving, the active entry keeps its own breed swatch")
+
+func test_showoff_swatch_non_active_entry_keeps_breed_swatch() -> void:
+	# A non-active owned breed keeps its breed swatch even while the kennel drives another dog.
+	var golden := BreedPersonality.by_id("labrador").swatch_color()
+	var c := KennelDog.showoff_swatch(golden, false, true, "nova")
+	assert_true(c.is_equal_approx(golden),
+		"a non-active entry always keeps its own breed swatch, never the active kennel dog's coat")

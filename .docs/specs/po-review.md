@@ -176,55 +176,48 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-08 (PO, father pass 39) — polish-lens pass: verified **173** (the adopted dog now keeps her NAME across surfaces — the breed showcase header/pip + completion-menu breeds row now read «Bella» with «Labrador» demoted to a subtitle, instead of surfacing only the breed) landed clean **in-pixel** and pruned the pass-38 directive **for the starter**. But driving the *real* adopt-and-train path — **adopt a non-starter kennel dog (Nova) and «Tren med Nova»** — exposes that 173 only fixed **1 of the 8** dogs: while you are training the grey Border-collie Nova, the breed showcase spotlights that **same grey Nova rig** but confidently labels it **«Bella — aktiv» / «Labrador»**, and the completion-menu «Raser» section marks **«Bella» «Aktiv»** — coat, name and breed all disagree, and it flatly contradicts the kennel's «Nova · Trener nå». One directive filed (make the show-off surfaces reflect the **active kennel dog**, not the stale 2-entry breed roster). No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-08 (PO, father pass 40) — polish-lens pass: verified **174** (the show-off surfaces now name the **active kennel dog** across all 8 dogs, not just the starter) landed clean **in-pixel** and pruned the pass-39 directive. Driving the real adopt-and-train path — **adopt Nova (grey Border collie) → «Tren med Nova»** — the completion-menu «Raser» row now reads **«Nova» / «Border collie» «Aktiv»** and the breed showcase header **«Nova — aktiv» / «Border collie»** with a **«Nova»** pip, over the grey coat, in full agreement with the kennel's «Trener nå». The 172 pose holds (the showcase settles to a centred, camera-facing standing portrait). One residual directive filed: on that same «Raser» active row the little round **coat swatch** beside the name is still the golden **Labrador breed swatch**, not Nova's grey coat — 174 repointed the NAME+breed but left the swatch colour behind. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Thirty-ninth pass, fresh and stateless under the polish/critique lens. HEAD is `0fc9d67` (the 173 name-bridge commit); board empty, working tree clean.
-Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported ~02:10). The local Web build **bundles the
-licensed dog** (per the deploy notes), so it renders the real cream Labrador / grey Nova rig — the name labels under test (173) are pure UI text and render identically on any build.
-Drove the local bundle over http (`python3 -m http.server 8099`) in headless Chromium at 390×844, **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer).
-Two harness runs, **zero console errors** on every one:
-(1) `tools/po_pass39_local.mjs` — `?bra_autotap=1&bra_coins=120` → training (`P39-training.png`) → completion menu (`P39-menu.png`) → adopt 2nd breed (`P39-menu-after-adopt.png`) →
-breed showcase (`P39-showcase-0.png`, cropped `P39-sc-header.png` / `P39-sc-pip3.png`);
-(2) `tools/po_pass39_kennel_train.mjs` — `?bra_coins=2000` → kennel grid (`P39K-after-kennel-tap.png`) → Nova inspect modal (`P39K-modal-nova.png`) → **adopt Nova → «Tren med Nova»**
-(`P39K-training-nova.png`) → completion menu (`P39K-menu-nova.png`) → breed showcase (`P39K-showcase-nova.png`). Evidence: those screenshots + the published debug globals
-(`__bra_kennel_active`, `__bra_active_breed`, `__bra_showcase_spotlit`) + the code I read (`kennel_dog.gd` `BREED_TO_DOG = {"labrador": "bella"}` / `name_for_breed`; `main.gd`
-`_apply_active_kennel_dog` re-tints the shared rig off `_kennel_roster.active` but never touches `_roster.active`; `_render_showcase` / `_publish_breed_rows` iterate the breed roster).
+Fortieth pass, fresh and stateless under the polish/critique lens. HEAD is `64a1166` (the 174 show-off-name commit); board empty, working tree clean.
+Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported ~03:18). The local Web build **bundles the
+licensed dog** (per the deploy notes), so it renders the real cream Labrador / grey Nova rig. Drove the bundle over http (`python3 -m http.server 8099`) in headless Chromium at
+390×844, **deviceScaleFactor 3** (SwiftShader == the deployed GL Compatibility renderer), `env -u LD_LIBRARY_PATH` (local-Chromium glibc gotcha). Runs, no game console errors observed:
+(1) `tools/po_pass40_kennel_train.mjs` — `?bra_coins=2000` → kennel grid → Nova inspect modal → **adopt Nova (balance 2000→1100) → «Tren med Nova»** (`P40K-training-nova.png`, grey
+rig centred facing camera) → completion menu (`P40K-menu-nova.png`) → breed showcase (`P40K-showcase-nova.png`); (2) `tools/po_pass40_showcase_settle.mjs` — same adopt+train flow, then
+four showcase frames at t=1/2.5/4/6 s (`P40S-t1000/2500/4000.png`) to distinguish a caught-mid-idle-stretch frame from a persistent pose. Evidence: those screenshots (+ crops
+`P40K-menu-raser-zoom2.png`, `P40S-t4000.png`) + the published globals (`__bra_kennel_active = "nova"`, `__bra_active_breed = "labrador"`, `__bra_showcase_spotlit = "labrador"` — the
+roster still points at labrador, so the correct on-screen «Nova» proves the 174 `_active_from_kennel` override is doing the work, not a roster repoint) + the code I read
+(`main.gd:2121/2371` build the row with `KennelDog.showoff_name(...)` for name+subtitle but `"tint": bp.swatch_color()`; `_active_coat_tint()` at `main.gd:2538`).
 
-**Verified fixed → pruned:** the pass-38 directive (**the starter dog is «Bella» in the kennel but only «Labrador» on the training/menu/showcase surfaces**) is **resolved for the
-starter** by 173. In my own pixels: the completion-menu «Raser» row now reads a two-line **«Bella»** with a dimmed **«Labrador»** subtitle + «Aktiv» badge (`P39-menu`); the breed
-showcase header is a clean three-line stack **«Mine hunder» / «Bella — aktiv» / «Labrador»** on the dark band (`P39-sc-header`, legible), and the control-bar pip reads **«Bella»**
-(`P39-sc-pip3`). «Brun lab» (the chocolate breed, no kennel individual) correctly stays single-line — the `BREED_TO_DOG` fallback. Pruned.
+**Verified fixed → pruned:** the pass-39 directive (**training a non-starter kennel dog makes the show-off surfaces label it «Bella / Labrador»**) is **resolved for all 8 dogs** by
+174. In my own pixels after adopt-Nova → «Tren med Nova»: the completion-menu «Raser» active row reads a two-line **«Nova»** with a dimmed **«Border collie»** subtitle + «Aktiv» badge
+(`P40K-menu-raser-zoom2.png`); the breed-showcase header is a clean **«Mine hunder» / «Nova — aktiv» / «Border collie»** stack over the grey dog with a **«Nova»** pip
+(`P40K-showcase-nova.png`, `P40S-t4000.png`); training and showcase both render the grey Nova coat (the 174 `_active_coat_tint()` glue holds the trained coat through the showcase, no
+cream repaint). Name, breed and coat all agree with the kennel's «Trener nå». Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P39-training`) still matches the goal — centred facing-camera cream Labrador on green grass, cyan-free idle,
-tan winding path → cream/blue cottage, white picket fence, gold+rose coin scatter, «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin HUD pills, deep-blue BRA (153 depth intact).
-(b) **Completion menu** (`P39-menu`): «Sitt» «Trener nå» + «Bella» «Aktiv» read as dark name + dark badge on the pale-blue wash identically (167/168/170 intact); «Fortsett treningen»
-solid-blue primary; marker-word + difficulty sections correctly hidden by progressive disclosure (127). (c) **Kennel** (`P39K-after-kennel-tap`, `P39K-modal-nova`): 8 distinctly-
-tinted front-¾ portraits fill their cells with no clipping (Bella cream / Nova grey / Balder+Sniff+Lykke brown / Sol golden / Pontus grey / Trulte grey-tan), dark-ink rarity/status
-corner badges (149), `C_INK_SOFT` breed subtitles (156); Nova's modal is well-organised (portrait + «Nova» nameplate + blurb + 4 stat pip-rows + trait chips «Lærevillig · Energisk ·
-Intens» + «Unikt trekk: Øyet» + «Kan lære: Sitt · Ligg · Legg deg» + «Adopter 🪙 900»). (d) **Showcase control bar** (`P39-sc-pip3`): «Tilbake» dark pill + ◀▶ chevrons clear AA
-(171), «Bla med pilene …» hint legible (169), «Trener denne» light-lavender pill. **No structural regression** in the signed-off phases (1/2/3/5/6/8/9); the 172 pose holds (the
-showcase Labrador stands centred + camera-facing across the window).
+**Re-verified clean (no new directive):** (a) **training page** (`P40K-training-nova`) matches the goal — grey Nova centred + grounded facing camera on green grass, tan winding path →
+cream/blue cottage, white picket fence, gold+rose coin scatter, «Sitt … 0%» learned bar, «Triks»/«Kennel»/coin HUD pills, deep-blue BRA. (b) **Completion menu** (`P40K-menu-nova`):
+«Sitt» «Trener nå» + «Nova» «Aktiv» read as dark name + dark badge on the pale-blue active wash identically (167/168/170 intact); tricks Ligg/Legg deg «Tilgjengelig», Gi labb «Låst»,
+«Brun lab» «Adopter 30» single-line (no kennel individual — the 174 fallback), «Vis frem hundene» / «Gi tilbakemelding» ghost rows, «Fortsett treningen» solid-blue primary;
+marker-word + difficulty sections correctly hidden by progressive disclosure. (c) **Breed showcase** (`P40S-t1000→4000`): the 172 pose is solid — one frame in the first run caught the
+dog mid-idle-stretch (crouched, head down), but with a settle sweep it stands **centred + camera-facing** by t=1 s and holds through t=4 s; «Tilbake» dark pill + ◀▶ chevrons + blue
+active pip clear (171). **No structural regression** in the signed-off phases (1/2/3/5/6/8/9); 174's diff is confined to `kennel_dog.gd` (pure `showoff_name`) + `main.gd`
+(`_active_from_kennel` flag + `_active_coat_tint()`), touching no economy / kennel-render / core-mark path.
 
 **Improvements**
 
-- **173 unified the dog's name across surfaces for the STARTER only — training any of the other 7 kennel dogs makes the "show-off" surfaces confidently show the WRONG dog. Adopt
-  Nova (grey Border collie) and press «Tren med Nova»: the training page correctly shows a grey Nova rig, and the kennel correctly badges «Nova · Trener nå» — but the breed showcase
-  spotlights that same grey rig while labelling it «Bella — aktiv» / «Labrador», and the completion-menu «Raser» section marks «Bella» «Aktiv». The coat you are looking at (Nova), the
-  name (Bella) and the breed (Labrador) all disagree, on the two surfaces whose whole job is "here is MY dog".** *What I saw (empirical, not inferred):* after the adopt-Nova →
-  «Tren med Nova» flow the published state reads `__bra_kennel_active = "nova"` but `__bra_active_breed = "labrador"` and `__bra_showcase_spotlit = "labrador"`; on screen the training
-  dog is unmistakably grey (`P39K-training-nova.png`, balance 1100 after paying 900 for Nova), yet the completion-menu «Raser» row still says **«Bella» «Aktiv»** with a cream pip
-  (`P39K-menu-nova.png`) and the breed showcase shows a **grey** dog under the header **«Bella — aktiv» / «Labrador»** with a **«Bella»** pip (`P39K-showcase-nova.png`). *Why it falls
-  short:* this is the same cohesion defect 173 set out to kill, but 173 fixed it by bridging the *breed id* → an individual name through `KennelDog.BREED_TO_DOG = {"labrador":
-  "bella"}` — a map that only knows the one starter. The breed showcase + completion-menu «Raser» section are driven by the **legacy 2-entry breed roster** (`_roster.active`), while the
-  dog you actually train is the **active kennel dog** (`_kennel_roster.active`), and `_apply_active_kennel_dog` re-tints the shared rig to Nova **without** repointing the breed roster —
-  so the two surfaces that say "MY dog / show her off" name a *different individual* than the one on screen and in the kennel. For a game whose emotional core is adopting and naming a
-  specific dog, the show-off surface calling your grey Border collie «Bella the Labrador» is worse than the pre-173 generic-breed label, because it now asserts a concrete, wrong
-  identity. *What "good" looks like:* the breed-showcase header + spotlit pip **and** the completion-menu active-dog marker must resolve to the **active kennel dog** (`KennelDog.by_id(
-  _kennel_roster.active)` → name «Nova», breed «Border collie»), so the name, the breed subtitle **and** the coat on screen all agree with the kennel's «Trener nå» — for all 8 dogs,
-  not just the starter. Keep the 173 two-line name/breed layout, the 172 pose, 171 chrome and 087/163 re-tint exactly as they are; this is a re-point of the *name source*, not a new
-  asset or economy change. *(If the intent is that the breed showcase is a Phase-3 vestige that should only ever list breed-roster dogs and the kennel is the "real" roster, then the
-  cleaner fix is to retire/redirect the now-redundant breed showcase + «Raser» adopt section rather than let them mislabel the trained dog — a product-model call for the dev loop; the
-  observed on-screen contradiction is real either way.)*
+- **174 unified the show-off NAME + breed across all 8 dogs, but the completion-menu «Raser» active-row COAT SWATCH still shows the golden Labrador breed colour for a grey Border
+  collie named «Nova» — the one remaining fragment of the same "the chip doesn't match the dog" contradiction 173/174 set out to kill.** *What I saw (empirical, not inferred):* after
+  adopt-Nova → «Tren med Nova», the completion-menu «Raser» active row correctly reads a two-line **«Nova» / «Border collie» «Aktiv»** (`P40K-menu-raser-zoom2.png`), but the small round
+  colour swatch to its left is a warm **golden/tan disc** — unmistakably the Labrador breed swatch — while the dog on the training page, in the showcase, and named on this very row is a
+  **grey** Border collie (`P40K-training-nova.png`, `P40S-t4000.png`). *Why it falls short:* `main.gd:2121` (`_render_showcase`) and `main.gd:2371` (`_breed_rows`) both build the row as
+  `{name, subtitle}` from `KennelDog.showoff_name(...)` — the 174 fix — but still hard-set `"tint": bp.swatch_color()`, i.e. the **breed roster's** active-breed swatch (labrador →
+  golden), never the active kennel dog's coat. So 174 fixed the words and the 3D coat but left this one colour chip pointing at the stale roster; a golden chip captioned «Nova / Border
+  collie (grey)» re-introduces, in miniature, exactly the cohesion break the arc was closing — the little "here is MY dog" swatch shows the wrong dog's colour. *What "good" looks like:*
+  when the active row is the kennel-driven dog (`_active_from_kennel`), its swatch must derive from the **active kennel dog's coat** (grey for Nova) — the ready `_active_coat_tint()`
+  helper (`main.gd:2538`, already used for the showcase 3D coat at `main.gd:2082`) or `KennelDog.by_id(_kennel_roster.active).portrait_tint()` — so the chip, the name, the breed and the
+  coat on screen all agree, for all 8 dogs. Non-active «Raser» rows keep `bp.swatch_color()` unchanged; keep the 173/174 two-line layout, the 172 pose and 087/163 re-tint exactly as
+  they are. This is a one-line re-point of the *swatch source* for the active row, mirroring how 174 re-pointed the name — no new asset or economy change.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing

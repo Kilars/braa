@@ -174,6 +174,19 @@ static func showoff_name(breed_id: String, breed_display_name: String, is_active
 		return {"name": indiv, "subtitle": breed_display_name}
 	return {"name": breed_display_name, "subtitle": ""}
 
+## The coat SWATCH a "show-off" surface should show for a legacy breed roster entry (175, PO
+## father-pass-40 X-4). Mirrors showoff_name for the little round colour chip: when the KENNEL is
+## the roster driving training (`active_from_kennel`), the ACTIVE entry's swatch borrows the active
+## kennel individual's PORTRAIT coat — Nova's grey, the starter Bella's warm cream — so the chip, the
+## name, the breed subtitle and the 3D coat on screen all agree. portrait_tint (not coat_tint): the
+## starter's coat_tint is the identity white, which would paint a blank chip; portrait_tint carries her
+## real cream. Every other entry keeps its own breed swatch unchanged.
+static func showoff_swatch(breed_swatch: Color, is_active: bool,
+		active_from_kennel: bool, active_kennel_id: String) -> Color:
+	if is_active and active_from_kennel:
+		return by_id(active_kennel_id).portrait_tint()
+	return breed_swatch
+
 ## Build the 8-dog catalog (fresh instances each call — callers may mutate freely).
 static func catalog() -> Array:
 	var out: Array = []

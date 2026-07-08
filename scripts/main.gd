@@ -2119,7 +2119,10 @@ func _render_showcase() -> void:
 		# individual's name+breed («Nova» / «Border collie») when the kennel is driving training, else the
 		# 173 breed→individual bridge («Bella» / «Labrador»), breed demoted to a subtitle (174, pass-39 X-4).
 		var d := KennelDog.showoff_name(id, bp.display_name, id == _roster.active, _active_from_kennel, _kennel_roster.active)
-		entries.append({"id": id, "name": d.name, "subtitle": d.subtitle, "tint": bp.swatch_color()})
+		# 175: the ACTIVE entry's swatch borrows the active kennel dog's coat (grey Nova / cream Bella) so the
+		# chip matches the name+breed+3D coat — every other entry keeps its own breed swatch (PO father-pass-40).
+		var tint := KennelDog.showoff_swatch(bp.swatch_color(), id == _roster.active, _active_from_kennel, _kennel_roster.active)
+		entries.append({"id": id, "name": d.name, "subtitle": d.subtitle, "tint": tint})
 	_showcase.render(entries, _showcase_model.spotlit_id(), _roster.active)
 
 ## Hide the showcase view and restore the garden lighting (shared by commit + dismiss).
@@ -2369,7 +2372,10 @@ func _breed_rows() -> Array:
 		# kennel individual's name+breed («Nova» / «Border collie») when the kennel is driving, else the 173
 		# breed→individual bridge, breed as subtitle — matching the kennel + showcase (174, pass-39 X-4).
 		var d := KennelDog.showoff_name(bp.id, bp.display_name, bp.id == _roster.active, _active_from_kennel, _kennel_roster.active)
-		cat.append({"id": bp.id, "name": d.name, "subtitle": d.subtitle, "tint": bp.swatch_color()})
+		# 175: the active «Raser» row's swatch borrows the active kennel dog's coat (grey Nova) so the chip
+		# agrees with the name+breed+coat; non-active rows keep their own breed swatch (PO father-pass-40 X-4).
+		var tint := KennelDog.showoff_swatch(bp.swatch_color(), bp.id == _roster.active, _active_from_kennel, _kennel_roster.active)
+		cat.append({"id": bp.id, "name": d.name, "subtitle": d.subtitle, "tint": tint})
 	return TrickMenu.classify_breeds(cat, _roster.owned, _roster.active, _purse.balance, BREED_ADOPT_COST)
 
 ## Build the completion-menu word rows (092, P5-4): the catalog classified against the unlocked set +
