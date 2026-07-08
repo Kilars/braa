@@ -74,3 +74,16 @@ func test_backing_panel_is_the_same_paper_surface_as_the_pills() -> void:
 	# must be the same surface so the whole HUD reads as one set of opaque chips.
 	assert_eq(LearnedBar.SCRIM_COLOR, DesignSystem.PAPER,
 		"the backing panel is the DS PAPER surface the nav/coin pills use, at full opacity")
+
+# ── 179 (PO father-pass-50, X-4/X-6): the empty track must READ as a groove ───────────
+# 145/159 made BOTH the track rail AND the backing panel opaque PAPER (the same white), so
+# the unfilled channel was invisible against its own panel — at 0 % there was no visible
+# track and when partly filled the blue fill floated with no channel around it, so the meter
+# never read as a meter. The empty track must be a visibly darker groove inset into the panel
+# (while staying opaque + light — 145/159 kept, asserted above).
+
+func test_empty_track_channel_reads_as_a_distinct_groove_in_the_panel() -> void:
+	assert_true(LearnedBar.TRACK_COLOR != LearnedBar.SCRIM_COLOR,
+		"the empty track is a distinct groove, not the same white as its own panel")
+	assert_true(LearnedBar.SCRIM_COLOR.get_luminance() - LearnedBar.TRACK_COLOR.get_luminance() >= 0.04,
+		"the track is a groove visibly darker than the panel (was identical PAPER — invisible)")

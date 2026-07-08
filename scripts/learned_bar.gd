@@ -44,7 +44,13 @@ const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 ## track, backing behind the text all kept).
 const LABEL_COLOR := DesignSystem.INK        ## dark slate «Sitt» label — reads on sky/sun
 const PCT_COLOR   := DesignSystem.INK         ## dark, legible «%» readout
-const TRACK_COLOR := DesignSystem.PAPER       ## opaque light rail (was BORDER @ 0.9)
+## 179 (PO father-pass-50, X-4/X-6): 145/159 made BOTH the track rail AND the backing panel
+## opaque PAPER — the same white — so the unfilled channel was invisible against its own panel
+## and the meter never read as a meter (no track at 0 %, a fill floating in nothing when partly
+## filled). Repoint the track to the DS BORDER groove: still opaque + light (luminance ≈ 0.89 >
+## 0.80, so the blue fill reads and no sky/sun bleeds through — 145/159 kept), but ≈0.095 darker
+## than the PAPER panel, so the full rounded track reads as a defined empty channel per goal art.
+const TRACK_COLOR := DesignSystem.BORDER      ## opaque light groove, darker than the PAPER panel (179)
 const SCRIM_COLOR := DesignSystem.PAPER       ## 159: fully OPAQUE backing panel (was PAPER @ 0.55)
 ## The pills' soft drop shadow lifts the opaque panel off the scene (matches CoinReadout's 100
 ## deepened HUD-pill shadow, INK @ 0.20, so no sky/sun shows through and it reads as one chip).
