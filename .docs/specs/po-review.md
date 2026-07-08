@@ -176,52 +176,42 @@
 > section only — never touch the Phase Sign-off list above except to append a new
 > sign-off.**
 
-### PO Review — 2026-07-08 (PO, father pass 41) — polish-lens pass: verified **175** (the completion-menu «Raser» active-row **coat swatch** now reflects the active kennel dog's coat) landed clean **in-pixel** and pruned the pass-40 directive, closing the 173/174/175 "chip ≠ dog" cohesion arc. Driving the real adopt-and-train path — **adopt Nova (grey Border collie) → «Tren med Nova»** — the completion-menu «Raser» active row now shows a **grey** swatch `(76,82,91)` beside «Nova» / «Border collie» «Aktiv» (was the golden Labrador disc), while non-active «Brun lab» keeps its **brown** breed swatch `(128,94,66)`; the showcase coat, pip and names all agree with the kennel's «Trener nå». One residual directive filed against the goal art: on the training page the two primary HUD nav pills — **«Triks»** and **«Kennel»** (+ the hamburger glyph) — render in muted **SLATE grey** and read faint/washed against the bright sky, where the **goal art shows a crisp BLUE label + blue glyph**. No sign-off (Phase 10 owner-gated on its empty spec).
+### PO Review — 2026-07-08 (PO, father pass 42) — polish-lens pass: verified **176** (the training-page HUD nav pills + hamburger glyph now render crisp **BLUE**, not faint SLATE) landed clean **in-pixel**, pruned the pass-41 directive, then hunted hard across every persistent surface for a new buildable improvement. Every candidate I chased dissolved on verification (a "faint PERFECT verdict" was a fade-frame capture artifact — at true peak opacity it is bold outlined gold; a "missing completion-menu scrim" is actually present as a 45% INK veil). No new buildable, non-owner-gated improvement found this pass, so **no new directive is filed**. No sign-off (Phase 10 owner-gated on its empty spec).
 
-Forty-first pass, fresh and stateless under the polish/critique lens. HEAD is `94edea0` (the 175 swatch commit); board empty, working tree clean.
-Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → gate green, `build/web/index.pck` re-exported this pass — the prior on-disk build was stale
-at `03:49`, before the 175 commit, so a rebuild was mandatory before judging). The local Web build **bundles the licensed dog** (per the deploy notes), so it renders the real cream
-Labrador / grey Nova rig. Drove the bundle over http (`python3 -m http.server 8099`) in headless Chromium at 390×844, **deviceScaleFactor 3** (SwiftShader == the deployed GL
-Compatibility renderer), `env -u LD_LIBRARY_PATH` (local-Chromium glibc gotcha). Runs, **no game console errors** observed: (1) `tools/po_pass41_swatch.mjs` — `?bra_coins=2000` →
-kennel grid → Nova inspect modal → **adopt Nova (balance 2000→1100) → «Tren med Nova»** (`P41-training-nova.png`, grey rig centred facing camera) → completion menu (`P41-menu-nova.png`,
-crop `P41-raser-zoom.png`); (2) `tools/po_pass41_showcase.mjs` — same adopt+train flow → breed showcase, 4.5 s settle (`P41-showcase.png`, crops `P41-showcase-header/-subtitle.png`,
-`P41-pip.png`). Evidence: those screenshots + the published globals (`__bra_kennel_active = "nova"`, `__bra_active_breed = "labrador"`, `__bra_showcase_spotlit = "labrador"` — the
-roster still points at labrador, so the correct on-screen grey «Nova» swatch proves the 175 `showoff_swatch(...active_from_kennel...)` override is doing the work, not a roster repoint) +
-the code I read (`main.gd:2124/2377` now route `"tint"` through `KennelDog.showoff_swatch(...)`; `kennel_dog.gd:184` returns `by_id(active_kennel_id).portrait_tint()` for the active
-kennel-driven entry).
+Forty-second pass, fresh and stateless under the polish/critique lens. HEAD is `94d1ffb` (the 176 HUD-pill commit); board empty, working tree clean.
+Rebuilt the **fresh local licensed bundle** at this HEAD (`nix develop -c bash verify.sh` → `✓ verify gate green`, `build/web/index.pck` re-exported this pass at `04:50` — the prior
+on-disk build was stale at `04:36`, before this HEAD, so a rebuild was mandatory before judging). The local Web build **bundles the licensed dog** (per the deploy notes), so it renders
+the real cream Labrador / grey Nova / golden Sol rig. Drove the bundle over http (`python3 -m http.server 8099`) in headless Chromium at 390×844, **deviceScaleFactor 3** (SwiftShader ==
+the deployed GL Compatibility renderer), `env -u LD_LIBRARY_PATH` (local-Chromium glibc gotcha). **No game console errors** on any run: `tools/po_pass42.mjs` (fresh training → 6 real BRA
+taps → `?bra_autotap=1` mastery burst → completion menu → kennel grid → Nova modal), `tools/po_pass42_forced.mjs` (`?bra_force_tier=perfect`), `tools/po_pass42_more.mjs`
+(`?bra_force_tier=ok|miss`), `tools/po_pass41_showcase.mjs` (adopt Nova → «Tren med Nova» → breed showcase).
 
-**Verified fixed → pruned:** the pass-40 directive (**the «Raser» active-row coat swatch stayed the golden Labrador disc for a grey Nova**) is **resolved**. In my own pixels after
-adopt-Nova → «Tren med Nova», the completion-menu «Raser» active row's swatch is now a cool **charcoal-grey disc `(76,82,91)`** matching Nova's grey Border-collie coat (`P41-raser-zoom.png`),
-while the non-active «Brun lab» row keeps its **brown breed swatch `(128,94,66)`** and its gold «Adopter 30» coin pip (`bp.swatch_color()` byte-identical for non-active rows, as spec'd).
-The 173/174/175 arc is closed — the chip, the name, the breed, the training coat and the showcase coat now all agree for the kennel-driven dog. Pruned.
+**Verified fixed → pruned:** the pass-41 directive (**the «Triks»/«Kennel» HUD nav pills + hamburger glyph rendered faint SLATE where the goal art is crisp BLUE**) is **resolved**. In my
+own pixels on the fresh training page (`P42-hud-crop.png`, a 240×70 crop of the top-left HUD) both pill labels **and** the three hamburger bars now read as a saturated, clearly-primary
+**BLUE** on the near-white PAPER pill — matching the goal art's blue treatment (`.docs/specs/assets/goal-training-screen.png`) and no longer the faintest labels on screen. 176 routed both
+labels' `font_color`/pressed/hover **and** the baked glyph bars through one `HUD_NAV_INK := DesignSystem.BLUE_INK` (#2a66b3) source (`main.gd:1971–1974`), so label and glyph can never
+drift; the PAPER pill + deepened 100 HUD shadow + geometry are untouched. Pruned.
 
-**Re-verified clean (no new directive):** (a) **training page** (`P41-training-nova`) matches the goal — grey Nova centred + grounded facing camera on green grass, tan winding path →
-cream/blue cottage, white picket fence, gold+rose coin scatter, «Sitt … 0%» learned bar on its opaque cream rail (145 holds), deep-blue BRA. (b) **Completion menu** (`P41-menu-nova`):
-«Sitt» «Trener nå» + «Nova» «Aktiv» read as dark name + dark badge on the pale-blue active wash identically (167/168/170 intact); Ligg/Legg deg «Tilgjengelig», Gi labb «Låst», «Brun
-lab» «Adopter 30» single-line, ghost «Vis frem hundene» / «Gi tilbakemelding» rows, «Fortsett treningen» solid-blue primary; marker-word + difficulty sections correctly hidden by
-progressive disclosure. AA spot-checks all pass at the token/render level: «Raser» section label ~4.8:1, active-row «Border collie» subtitle 6.75:1. (c) **Breed showcase**
-(`P41-showcase`): the 172 pose is solid — grey Nova stands **centred + camera-facing** after the settle; header «Mine hunder» / «Nova — aktiv» / «Border collie» (subtitle 5.06:1),
-«Nova» pip with the blue "you-are-here" dot, «Tilbake» dark pill + «Trener denne», hint 4.8:1 — all legible (169/171 hold). **No structural regression** in the signed-off phases
-(1/2/3/5/6/8/9); 175's diff is confined to `kennel_dog.gd` (pure `showoff_swatch`) + the two `"tint"` re-points in `main.gd`, touching no economy / kennel-render / core-mark path.
-
-**Improvements**
-
-- **The training page's two primary HUD navigation pills — «Triks» and «Kennel» (plus the «Triks» hamburger glyph) — render in muted SLATE grey and read faint/washed-out against the
-  bright sky, where the goal art shows them as a crisp, saturated BLUE label + blue glyph.** *What I saw (empirical, not inferred):* on the training page the top-left «Triks» and «Kennel»
-  pills carry a pale blue-grey label on the near-white PAPER pill (`P41-navpills.png`, `P41-hud.png`); sampling the rendered text-cores gives an effective on-screen contrast of only
-  **~3.7:1 («Triks»)** and **~2.9:1 («Kennel»)** against the pill — visibly the faintest primary labels in the game, weaker than the solid hamburger bars beside them, the «Sitt»
-  learned-bar label, and the deep-blue BRA. Cropping the **goal art** (`.docs/specs/assets/goal-training-screen.png`, `P41-goal-hud.png`) the «Triks» pill is unmistakably a **saturated
-  BLUE** label with a **matching blue** hamburger glyph — crisp and clearly primary, not grey. *Why it falls short:* both pills hard-set `font_color = DesignSystem.SLATE` (`main.gd:1964–1966`
-  for «Triks», `main.gd:2166–2168` for «Kennel») and the glyph bakes its bars in `DesignSystem.SLATE` (`main.gd:_hamburger_texture`, ~`main.gd:2014`). SLATE is nominally 5.2:1 on PAPER,
-  but at the pills' small bold T_HEAD size the thin strokes anti-alias toward the pale pill and read well under the AA bar on screen; the 100/Phase-6 mitigation only deepened the pill
-  *shadow* (the code comment even notes the PO's earlier "washes out faint" note) — it lifted the pill off the sky but never addressed the *label* legibility, and it left the colour grey
-  where the goal is blue. The 149→156 AA sweep measured kennel badges, menu blue-on-light text, the BRA CTA and kennel secondary text, but **never these training-page HUD nav pills**, so
-  they slipped. *What "good" looks like:* repoint the «Triks» + «Kennel» pill `font_color` (normal/hover/pressed) **and** the hamburger glyph bars from `SLATE` to the design system's
-  AA-safe `BLUE_INK` token (`#2a66b3`, the 154 blue-on-light ink, ~5.5:1 on PAPER — BLUE/BLUE_DARK both fail on light, BLUE_INK exists precisely for this) so the pills match the goal
-  art's crisp blue treatment, read as clearly primary nav, and clear AA with real margin even after anti-aliasing. Keep the near-opaque PAPER pill + deepened HUD shadow (100) and the pill
-  geometry exactly as they are — this is a colour-token re-point of two labels + the baked glyph, no layout/economy/asset change.
+**Re-verified clean (no new directive), every persistent surface replayed with a critique/polish eye:**
+- **Training page** (`P42-training.png`, `P42-after-taps.png`) matches the goal — cream Labrador centred + grounded facing camera on green grass, tan winding path → cream/blue cottage,
+  white picket fence, gold+rose coin scatter, «Sitt … %» learned bar on its opaque cream rail (145 holds), deep-blue BRA with crisp white label. At the seated apex the dog composes
+  close to the goal-art pose.
+- **The mark verdict** — the game's core reward beat. Captured at guaranteed peak opacity via `?bra_force_tier`: **PERFECT** is bold triumphant gold with a clean near-black outline
+  (`P42f-perfect-3.png`), **OK** calm green, **MISS** muted grey (`P42v-ok-1.png`), each big, centred, outlined and legible over the bright sky (`tier_readout.gd`, outline 12px @ font 88).
+  *Caution recorded for the next pass:* an autotap burst that samples frames off the mark instant will catch the readout mid-fade and read it as "washed out" — that is a capture artifact,
+  not a defect; judge the verdict only via `bra_force_tier` at peak.
+- **Completion menu** (`P42-menu.png`): properly veiled by a 45% INK backdrop over the game (`trick_menu.gd:145,770`) — the greyed «BRA» visible behind the card is that veil, not a
+  disabled-state bug. «Sitt» «Trener nå» dark-on-pale-blue active wash + «Tilgjengelig»/«Låst» rows + ghost «Gi tilbakemelding» + solid-blue «Fortsett treningen» primary all consistent
+  and AA-safe (152/167/168/170 intact).
+- **Kennel grid + modal** (`P42-kennel-grid.png`, `P42-modal-nova.png`): 8 cells front-¾ facing viewer (155), corner rarity badges («Din»/«Sjelden»/«Vanlig»/«Påskeegg»), gold coin price
+  pills, calm ownership-tint cells; Nova's modal shows the nameplate clear of the face, blurb, 4 blue stat-pip rows, trait chips, «Kan lære» list and the solid-blue «Adopter 900» CTA —
+  all polished, no regression (117/148/150 intact).
+- **Breed showcase** (`P41-showcase.png`): after adopt-Nova → «Tren med Nova» the grey Nova stands **centred + camera-facing** (172), header «Mine hunder» / «Nova — aktiv» / «Border collie»,
+  «Nova» pip with the blue "you-are-here" dot, quiet «Tilbake» chrome (171) — legible and composed.
+- **No structural regression** in the signed-off phases (1/2/3/5/6/8/9); 176's diff is a colour-token re-point confined to the two HUD pill labels + the baked hamburger glyph in
+  `main.gd`, touching no layout / economy / kennel-render / core-mark path.
 
 **No sign-off.** Phases 1/2/3/5/6/8/9 remain signed with no regression. Phase 10 (`phase10.md`) is still **empty/deferred** — owner-gated (no spec ⇒
 cannot Visual-Review and cannot be given buildable stories without inventing scope), so it can neither be signed off nor given directives. The standing
 asset flags (distinct per-breed **models**, camera-facing **signature clips**, warm human "Bra!"/Maren voice, coat UV re-export) remain owner-gated.
-The build loop turns the directive above into the next task.
+No buildable, non-owner-gated improvement surfaced this pass; the polished experience holds. The next pass replays the same build for regressions or fresh polish.
