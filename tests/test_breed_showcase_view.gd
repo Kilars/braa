@@ -159,6 +159,30 @@ func test_active_pip_carries_a_quiet_active_marker() -> void:
 	assert_eq(spot.get_node_or_null("ActiveDot"), null, "the non-active spotlit pip carries no active marker")
 	view.queue_free()
 
+## --- Task 184 (PO father-pass-57 X-6): the active-dog commit label unifies onto the kennel
+## «Trener nå» status word — «Trener denne» diverged from the kennel modal (151) / trick-menu
+## ACTIVE (152) for the identical "currently training this dog" state. Copy unification only. ---
+
+func test_active_commit_label_is_trener_na() -> void:
+	## The active dog's non-tappable commit label reads the SAME status word the kennel modal +
+	## trick-menu ACTIVE row use — «Trener nå» — not the old divergent «Trener denne».
+	assert_eq(BreedShowcaseView.commit_label(true), "Trener nå",
+		"active-dog label unifies onto «Trener nå» (matches TrickMenu.BADGE[ACTIVE] + kennel modal)")
+	assert_eq(BreedShowcaseView.commit_label(true), TrickMenu.BADGE[TrickMenu.State.ACTIVE],
+		"showcase active label is literally the same status word as the trick-menu ACTIVE badge")
+
+func test_inactive_commit_label_is_the_switch_action() -> void:
+	## The enabled (non-active) label stays the «Tren denne» switch ACTION — unchanged.
+	assert_eq(BreedShowcaseView.commit_label(false), "Tren denne",
+		"non-active dog keeps the «Tren denne» switch action label")
+
+func test_rendered_active_commit_button_reads_trener_na() -> void:
+	## End-to-end: a rendered showcase on the active dog shows «Trener nå» on the disabled commit button.
+	var view := _build_view()  # renders one owned breed, spotlit == active
+	assert_true(view._commit_btn.disabled, "spotlit==active → commit button is the non-tappable status")
+	assert_eq(view._commit_btn.text, "Trener nå", "the rendered active commit button reads «Trener nå»")
+	view.queue_free()
+
 func test_spotlit_equals_active_pip_reads_as_both() -> void:
 	## Default single-active view (spotlit == active): the pip is BOTH the solid dominant fill AND
 	## carries the active marker — it reads cleanly as the selected AND active dog at once.

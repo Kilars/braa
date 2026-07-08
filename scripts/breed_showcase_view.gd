@@ -77,14 +77,14 @@ static func chrome_ink_over(band: Color) -> Color:
 const SWATCH_RIM := Color(0.0, 0.0, 0.0, 0.5)
 
 ## Primary CTA — the DS blue gradient pill (GRAD_PILL_*, the BRA / «Fortsett treningen» palette, 153),
-## white label. Its DISABLED (active-dog «Trener denne») state is a muted light pill with a dark ink
+## white label. Its DISABLED (active-dog «Trener nå») state is a muted light pill with a dark ink
 ## label — the kennel «Trener nå» non-tappable style (151) — never a washed label on gold (~1.03:1 defect).
 const COMMIT_ENABLED_TEXT := Color(1.0, 1.0, 1.0)  ## white on the blue gradient (AA per 153)
 const COMMIT_DISABLED_INK := DesignSystem.INK      ## dark DS ink on the muted disabled fill
 const COMMIT_W := 280        ## commit-pill content width  (offset -140 .. +140)
 const COMMIT_H := 42         ## commit-pill content height (offset -88 .. -46)
 
-## The muted fill for the non-tappable active-dog «Trener denne» — a pale slate the dark INK clears AA on.
+## The muted fill for the non-tappable active-dog «Trener nå» — a pale slate the dark INK clears AA on.
 static func commit_disabled_fill() -> Color:
 	return Color("cfd6dd")
 
@@ -297,7 +297,7 @@ func _make_button(text: String, bg: Color, fg: Color) -> Button:
 		b.add_theme_color_override(fc, fg)
 	return b
 
-## The primary «Tren denne» / «Trener denne» commit pill (163). Its normal/hover/pressed states are the DS
+## The primary «Tren denne» / «Trener nå» commit pill (163). Its normal/hover/pressed states are the DS
 ## blue gradient pill (baked once, cached) with a white label; its DISABLED state — the active dog, non-
 ## tappable — is a muted light pill with a dark INK label (the kennel «Trener nå» treatment, 151). Godot
 ## picks the disabled stylebox automatically when `.disabled` is set, so `_refresh` only toggles `.disabled`.
@@ -378,6 +378,14 @@ class ActiveDot extends Control:
 	func _draw() -> void:
 		draw_circle(center_for(size), R, _color)
 
+## The commit button's copy: the non-tappable ACTIVE state speaks the SAME status word as the
+## kennel modal (151, «Trener nå») + the trick-menu ACTIVE badge (152) — one word across all five
+## current-item surfaces (trick/breed/word menus · kennel modal · this showcase), 184 X-6. The
+## enabled state is the «Tren denne» switch ACTION (mirrors the kennel switch «Tren med [navn]»:
+## action = «Tren …», status = «Trener nå»).
+static func commit_label(is_active: bool) -> String:
+	return "Trener nå" if is_active else "Tren denne"
+
 ## Rebuild the pip row + the spotlit name/colour from the current model state.
 func _refresh() -> void:
 	if _name_label == null:
@@ -409,7 +417,7 @@ func _refresh() -> void:
 		_pips.add_child(pip)
 	# The commit button reads differently when the spotlit dog is already the active one.
 	_commit_btn.disabled = is_active
-	_commit_btn.text = "Trener denne" if is_active else "Tren denne"
+	_commit_btn.text = commit_label(is_active)
 	# ◀ ▶ only cycle owned breeds — hide them (and drop the "bla med pilene" hint) when there's
 	# nothing to cycle to, so a single-dog showcase shows no active-looking dead controls (164).
 	var multi := chevrons_active(_entries.size())
