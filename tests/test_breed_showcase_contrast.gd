@@ -194,3 +194,13 @@ func test_disabled_fill_is_a_near_white_pale_slate_with_render_headroom() -> voi
 	var ratio := DesignSystem.wcag_contrast(BreedShowcaseView.COMMIT_DISABLED_INK, fill)
 	assert_true(ratio >= 7.0,
 		"disabled INK on the near-white fill must carry render headroom over the 4.5 bar (got %.2f:1)" % ratio)
+
+func test_active_status_fill_matches_kennel_active_wash() -> void:
+	## PO father-pass-72 (X-6, DS consistency): the non-tappable «Trener nå» active-training-dog
+	## status pill must read ONE colour across surfaces. 197 lightened the showcase fill to a COOL
+	## slate `#eef1f5` (rgb 238,241,245, blue-biased) while the kennel modal's owned-active pill uses
+	## the GREEN-MINT `active_state_fill()` = C_MODAL_SURFACE.lerp(C_STATUS_OWNED, 0.14) ≈ `#e4f2e1`
+	## — two tints for the identical status. Unify by SOURCING the showcase fill from the kennel's
+	## own active wash so the ownership-green language reads everywhere and the two can never drift.
+	assert_eq(BreedShowcaseView.commit_disabled_fill(), KennelScreen.active_state_fill(),
+		"showcase «Trener nå» fill must equal the kennel active wash (one colour, one source)")

@@ -106,14 +106,16 @@ const COMMIT_DISABLED_INK := DesignSystem.INK      ## dark DS ink on the muted d
 const COMMIT_W := 280        ## commit-pill content width  (offset -140 .. +140)
 const COMMIT_H := 42         ## commit-pill content height (offset -88 .. -46)
 
-## The muted fill for the non-tappable active-dog «Trener nå» — a pale slate the dark INK clears AA on.
-## father-pass-71 measured the old `cfd6dd` (lum ~0.666) at only 4.03:1 in the shipped pixels (the dark
-## strokes under-cover toward the pale fill). Lifted to a near-white muted slate (~0.88) matching the
-## kennel 151 «Trener nå» precedent — dark ink on a near-white wash, which already clears AA in-pixel —
-## so the dark INK core reads ~12:1 analytic and clears the render bar with headroom. Still a quiet
-## muted disabled pill (a cool near-white), distinct from the blue-gradient enabled state + paper card.
+## The muted fill for the non-tappable active-dog «Trener nå» — sourced from the kennel modal's own
+## active wash so the "currently training this dog" status reads ONE colour across surfaces (father-
+## pass-72, X-6). 197 lifted the old `cfd6dd` (4.03:1 in-pixel) to a near-white `eef1f5`, but that was a
+## COOL slate while the kennel's owned-active pill is the GREEN-MINT `active_state_fill()` (≈ `#e4f2e1`,
+## C_MODAL_SURFACE.lerp(C_STATUS_OWNED, 0.14)) — two tints for the identical component. Delegating here
+## ties the showcase pill to the ownership-green language and guarantees the two can never drift.
+## Still a quiet near-white muted disabled pill (lum ~0.85 → dark INK clears AA ~13:1 analytic, render
+## headroom per 151's in-pixel precedent), distinct from the blue-gradient enabled state + paper card.
 static func commit_disabled_fill() -> Color:
-	return Color("eef1f5")
+	return KennelScreen.active_state_fill()
 
 ## The ◀ ▶ chevrons cycle the OWNED roster, so they only do something with 2+ owned breeds (164,
 ## PO father-pass-29). With ≤1 owned dog they are verified no-ops → hidden, and the hint drops the
