@@ -62,7 +62,7 @@ const C_MODAL_CREAM    := Color("f4efe6")                  ## warm cream for Uni
 const C_PIP_FILLED     := Color("4a90e2")                  ## filled stat pip (blue)
 const C_PIP_EMPTY      := Color("b3bcc4")                  ## empty stat pip — a present-but-unfilled slate track (188, PO father-pass-62 X-6). Was #dfe5ea (~1.22:1 on the card → the empty box vanished, 4/5 read as 5/5); #b3bcc4 is ~1.85:1 on C_MODAL_SURFACE yet still far lighter than the DS-blue fill, so the meter reads its value. SLATE_SOFT-hue family, matching the learned-bar-rail intent (145/179).
 const C_TRAIT_BG       := Color("e8f0f8")                  ## raseegenskaper chip background
-const C_TRAIT_INK      := Color("3a6a9a")                  ## raseegenskaper chip text
+const C_TRAIT_INK      := Color("285681")                  ## raseegenskaper chip text — 204: deepened from #3a6a9a (blue-family) so it clears AA with margin (6.66:1 analytic on C_TRAIT_BG; external sampler read the old token at 3.71:1)
 const C_INK_SOFT       := Color("5a6b7d")                  ## Ink-Soft — legible sub-labels / stat labels (X-4 modal)
 const C_ADOPT_DISABLED := Color("c3cdd6")                  ## muted-grey fill for unaffordable adopt button (135)
 
@@ -74,12 +74,22 @@ const C_ADOPT_DISABLED := Color("c3cdd6")                  ## muted-grey fill fo
 ## hue. Matches HUD_NAV_LABEL_OUTLINE / LearnedBar.LABEL_OUTLINE / TrickMenu.ROW_LABEL_OUTLINE (all 4).
 const SOFT_INK_OUTLINE := 4
 
-## Route every C_INK_SOFT secondary label through here so all sites carry the stroke-thickening
-## outline identically and can never drift apart.
-func _apply_soft_ink(lbl: Label) -> void:
-	lbl.add_theme_color_override("font_color", C_INK_SOFT)
+## Route every small Label through here so its darkest stroke-core reaches ~full coverage: a
+## same-colour outline thickens the thin Nunito strokes so the label renders its TRUE token instead
+## of the 0.60-coverage wash. One shared lever so no site can drift (200/201/202/203/204 arc).
+func _apply_ink_outline(lbl: Label, ink: Color) -> void:
+	lbl.add_theme_color_override("font_color", ink)
 	lbl.add_theme_constant_override("outline_size", SOFT_INK_OUTLINE)
-	lbl.add_theme_color_override("font_outline_color", C_INK_SOFT)
+	lbl.add_theme_color_override("font_outline_color", ink)
+
+## The C_INK_SOFT secondary tier (203): grid/header subtitles, modal stat labels, section headings.
+func _apply_soft_ink(lbl: Label) -> void:
+	_apply_ink_outline(lbl, C_INK_SOFT)
+
+## The dark C_INK body tier (204): modal blurb + «Unikt trekk» value — analytic ~11:1 but they
+## render-floor to ~3.5:1 without the outline, the same wash 203 fixed one token lighter.
+func _apply_dark_ink(lbl: Label) -> void:
+	_apply_ink_outline(lbl, C_INK)
 
 # Cell surface tokens (133): one DS neutral surface, tinted only by ownership state.
 # C_SURFACE_SAND is the Warm Sand DS base (#F4EFE6 = C_MODAL_CREAM — same token, aliased
@@ -1365,7 +1375,7 @@ func _build_modal_blurb(detail: Dictionary) -> Label:
 	lbl.text = detail["blurb"]
 	lbl.add_theme_font_override("font", DesignSystem.font_body())
 	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	lbl.add_theme_color_override("font_color", C_INK)
+	_apply_dark_ink(lbl)   # 204: outline thickens the strokes so the blurb renders its true C_INK (was 1.8–3.0:1 washed)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
@@ -1448,7 +1458,7 @@ func _build_modal_traits(detail: Dictionary) -> VBoxContainer:
 		chip_lbl.text = str(trait_word)
 		chip_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		chip_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-		chip_lbl.add_theme_color_override("font_color", C_TRAIT_INK)
+		_apply_ink_outline(chip_lbl, C_TRAIT_INK)   # 204: deepened blue + outline so the pale-blue chip clears AA in-pixel (was ~1.62:1)
 		chip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.add_child(chip_lbl)
 		chip_row.add_child(chip)
@@ -1487,7 +1497,7 @@ func _build_modal_unique_trait(detail: Dictionary) -> PanelContainer:
 	trait_lbl.text = detail["unique_trait"]
 	trait_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	trait_lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	trait_lbl.add_theme_color_override("font_color", C_INK)
+	_apply_dark_ink(trait_lbl)   # 204: outline lifts the «Unikt trekk» value out of the 1.76–2.32:1 wash
 	trait_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(trait_lbl)
 
