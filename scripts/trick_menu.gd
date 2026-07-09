@@ -779,10 +779,24 @@ func _gui_input(event: InputEvent) -> void:
 
 # ---- rendering ------------------------------------------------------------------------------------
 
-## Draw text crisp on the light PAPER surface — no heavy black halo (that was for dark-navy legibility).
-## On paper, text renders SLATE-on-paper; we use crisp draw_string only.
+## 202 (PO father-pass-79, X-6): the completion menu was the last high-traffic surface still on the
+## bare draw_string path, so it carried the SAME thin-stroke render-wash tasks 200 (nav pills) / 201
+## (learned readout) fixed elsewhere. At the row-name/subtitle sizes (13–26px Nunito) draw_string
+## reaches only ~NAV_STROKE_COVERAGE (0.60) sub-pixel coverage, so an analytically-AA token renders a
+## 0.60/0.40 ink-over-fill blend — the «Labrador» subtitle (SLATE) measured 1.58:1, the active «Sitt»
+## name (ROW_ACTIVE_INK) 3.64:1, UNDER AA in the shipped pixels though the analytic ratio passes. The
+## decisive lever (200/201): a same-colour stroke-thickening OUTLINE via draw_string_outline raises
+## effective coverage to ~full so every row renders its true token — WITHOUT changing text advance/
+## geometry, token hue, or row state. Matches HUD_NAV_LABEL_OUTLINE / LearnedBar.LABEL_OUTLINE (4).
+const ROW_LABEL_OUTLINE := 4
+
+## Draw text on the light PAPER surface. The same-colour outline pass (202) thickens the thin Nunito
+## strokes to ~full effective coverage so the darkest core renders the true token (kills the render-
+## wash), then the crisp glyph draws on top. No heavy black halo (that was for dark-navy legibility);
+## the outline is the text's OWN colour, so it only restores coverage — no recolour, no geometry change.
 func _draw_text(font: Font, pos: Vector2, text: String, fsize: int, color: Color,
 		align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
+	draw_string_outline(font, pos, text, align, width, fsize, ROW_LABEL_OUTLINE, color)
 	draw_string(font, pos, text, align, width, fsize, color)
 
 ## Trim `text` to at most `max_w` pixels, appending "…" when it would overflow — so a long name
