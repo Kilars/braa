@@ -1629,6 +1629,12 @@ func _build_active_state(_detail: Dictionary) -> Control:
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
 	btn.add_theme_color_override("font_disabled_color", C_TAG_INK)
+	# 205 (X-6): same-colour outline thickens the thin Nunito strokes so the disabled pill renders its
+	# TRUE dark C_TAG_INK token instead of the 0.60-coverage wash (PO-sampled 2.70:1). The _apply_ink_outline
+	# helpers are Label-typed, so apply the equivalent overrides directly on the Button — the same lever
+	# the 200→204 arc used on every Label around it. font_outline_color is state-agnostic (covers disabled).
+	btn.add_theme_constant_override("outline_size", SOFT_INK_OUTLINE)
+	btn.add_theme_color_override("font_outline_color", C_TAG_INK)
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := StyleBoxFlat.new()

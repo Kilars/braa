@@ -375,7 +375,17 @@ func _make_commit_button() -> Button:
 	b.add_theme_color_override("font_hover_color", COMMIT_ENABLED_TEXT)
 	b.add_theme_color_override("font_pressed_color", COMMIT_ENABLED_TEXT)
 	b.add_theme_color_override("font_disabled_color", COMMIT_DISABLED_INK)  # was never set → the ~1.03:1 defect
+	b.add_theme_color_override("font_outline_color", COMMIT_DISABLED_INK)   # 205: dark outline hue (only shown when the outline_size is toggled on — disabled state)
+	_apply_commit_outline(b, b.disabled)
 	return b
+
+## 205 (X-6): the disabled active-dog «Trener nå» pill renders its dark COMMIT_DISABLED_INK washed by the
+## thin-stroke coverage floor (the kennel `_build_active_state` sibling was PO-sampled 2.70:1) — the same
+## same-colour outline lever the 200→204 arc used. Scoped to the DISABLED state only: the ENABLED blue-
+## gradient CTA keeps its clean white Baloo 2 label (no outline) exactly as signed off. Godot's Button
+## outline is state-agnostic, so we toggle `outline_size` alongside `.disabled` in `_refresh`.
+func _apply_commit_outline(b: Button, disabled: bool) -> void:
+	b.add_theme_constant_override("outline_size", KennelScreen.SOFT_INK_OUTLINE if disabled else 0)
 
 ## A ◀ / ▶ cycle button whose arrow is a DRAWN chevron, not a font glyph (089, PO 2026-07-03 Bugfix 1):
 ## U+25C0/U+25B6 are absent from the project font and drew as tofu boxes on the deployed GL build — the
@@ -474,6 +484,7 @@ func _refresh() -> void:
 		_pips.add_child(pip)
 	# The commit button reads differently when the spotlit dog is already the active one.
 	_commit_btn.disabled = is_active
+	_apply_commit_outline(_commit_btn, is_active)   # 205: outline only in the disabled «Trener nå» state
 	_commit_btn.text = commit_label(is_active)
 	# ◀ ▶ only cycle owned breeds — hide them (and drop the "bla med pilene" hint) when there's
 	# nothing to cycle to, so a single-dog showcase shows no active-looking dead controls (164).

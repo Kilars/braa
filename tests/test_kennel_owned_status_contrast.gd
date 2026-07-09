@@ -30,3 +30,43 @@ func test_active_state_fill_matches_po_sampled_composite() -> void:
 	assert_true(abs(fill.r * 255.0 - 228.0) <= 1.5, "fill R ~228 (got %.1f)" % (fill.r * 255.0))
 	assert_true(abs(fill.g * 255.0 - 241.0) <= 1.5, "fill G ~241 (got %.1f)" % (fill.g * 255.0))
 	assert_true(abs(fill.b * 255.0 - 225.0) <= 1.5, "fill B ~225 (got %.1f)" % (fill.b * 255.0))
+
+## Task 205 (PO father-pass-82, X-6): task 151 set the dark C_TAG_INK token (analytic ~14.8:1) but
+## never added an outline_size override to the disabled Button, so it hit the same thin-stroke
+## render-wash the 200→204 arc closed — the PO sampled 2.70:1 in shipped pixels. The lever is the same
+## same-colour outline, applied Button-typed. These pin the wash and the wired outline.
+
+func test_active_pill_ink_WASHES_without_the_outline() -> void:
+	# Regression pin: at 0.60 stroke coverage the dark C_TAG_INK core is a 60/40 blend over the mint
+	# fill that renders UNDER AA — the wash the ~14.8:1 analytic ratio hid until the PO measured pixels.
+	var r := DesignSystem.render_floor_contrast(
+		KennelScreen.C_TAG_INK, KennelScreen.active_state_fill(), DesignSystem.NAV_STROKE_COVERAGE)
+	assert_true(r < 4.5,
+		"C_TAG_INK on the mint pill at 0.60 coverage WASHES under AA — got %.2f:1" % r)
+
+func test_active_state_button_carries_the_outline() -> void:
+	var ks := KennelScreen.new()
+	var btn: Button = ks._build_active_state({})
+	assert_eq(btn.get_theme_constant("outline_size"), KennelScreen.SOFT_INK_OUTLINE,
+		"«Trener nå» pill carries the stroke-thickening outline")
+	assert_eq(btn.get_theme_color("font_outline_color"), KennelScreen.C_TAG_INK,
+		"pill outline is the same C_TAG_INK hue (thickens the stroke, does not recolour)")
+	btn.free()
+	ks.free()
+
+func test_showcase_commit_button_disabled_carries_the_outline() -> void:
+	# The shared sibling pill (198) sources its disabled fill from active_state_fill() — keep it unified.
+	# The outline is scoped to the DISABLED «Trener nå» state so the enabled blue-gradient CTA keeps its
+	# clean white label; assert both branches.
+	var sv := BreedShowcaseView.new()
+	var btn: Button = sv._make_commit_button()
+	assert_eq(btn.get_theme_color("font_outline_color"), BreedShowcaseView.COMMIT_DISABLED_INK,
+		"showcase pill outline hue is COMMIT_DISABLED_INK")
+	sv._apply_commit_outline(btn, true)
+	assert_eq(btn.get_theme_constant("outline_size"), KennelScreen.SOFT_INK_OUTLINE,
+		"disabled «Trener nå» commit pill carries the stroke-thickening outline")
+	sv._apply_commit_outline(btn, false)
+	assert_eq(btn.get_theme_constant("outline_size"), 0,
+		"enabled blue-gradient CTA keeps its clean no-outline white label")
+	btn.free()
+	sv.free()
