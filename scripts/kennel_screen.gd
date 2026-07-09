@@ -66,6 +66,21 @@ const C_TRAIT_INK      := Color("3a6a9a")                  ## raseegenskaper chi
 const C_INK_SOFT       := Color("5a6b7d")                  ## Ink-Soft — legible sub-labels / stat labels (X-4 modal)
 const C_ADOPT_DISABLED := Color("c3cdd6")                  ## muted-grey fill for unaffordable adopt button (135)
 
+## 203 (X-6): the C_INK_SOFT secondary tier is drawn through bare Labels with no outline, so at 13px
+## the thin Nunito strokes cover only ~0.60 of each edge pixel and the analytically-AA C_INK_SOFT
+## (~4.78:1, task 156) renders 1.4–2.9:1 in the real 390×844 SwiftShader pixels — the SAME wash the
+## nav pills had until task 200 gave them an outline. A same-colour outline thickens the strokes to
+## ~full coverage so the muted grey renders its true token, WITHOUT changing font size, layout, or
+## hue. Matches HUD_NAV_LABEL_OUTLINE / LearnedBar.LABEL_OUTLINE / TrickMenu.ROW_LABEL_OUTLINE (all 4).
+const SOFT_INK_OUTLINE := 4
+
+## Route every C_INK_SOFT secondary label through here so all sites carry the stroke-thickening
+## outline identically and can never drift apart.
+func _apply_soft_ink(lbl: Label) -> void:
+	lbl.add_theme_color_override("font_color", C_INK_SOFT)
+	lbl.add_theme_constant_override("outline_size", SOFT_INK_OUTLINE)
+	lbl.add_theme_color_override("font_outline_color", C_INK_SOFT)
+
 # Cell surface tokens (133): one DS neutral surface, tinted only by ownership state.
 # C_SURFACE_SAND is the Warm Sand DS base (#F4EFE6 = C_MODAL_CREAM — same token, aliased
 # here so the intent is explicit). Owned/egg get a faint state wash over the sand.
@@ -440,7 +455,7 @@ func _build_header() -> void:
 	sub.text = "Profesjonell fasilitet · 8 plasser"
 	sub.add_theme_font_override("font", DesignSystem.font_body())
 	sub.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	sub.add_theme_color_override("font_color", C_INK_SOFT)
+	_apply_soft_ink(sub)   # 203: stroke-thickening outline so the header subtitle clears AA in-pixel
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_col.add_child(sub)
@@ -1086,7 +1101,7 @@ func _make_footer(row: Dictionary) -> PanelContainer:
 	breed_lbl.text = row.breed
 	breed_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	breed_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	breed_lbl.add_theme_color_override("font_color", C_INK_SOFT)
+	_apply_soft_ink(breed_lbl)   # 203: grid breed subtitle — outline lifts it out of the 1.7:1 wash
 	breed_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	breed_lbl.clip_text = true
 	col.add_child(breed_lbl)
@@ -1375,7 +1390,7 @@ func _build_modal_stats(detail: Dictionary) -> VBoxContainer:
 		lbl.text = stat_labels[i]
 		lbl.add_theme_font_override("font", DesignSystem.font_body())
 		lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-		lbl.add_theme_color_override("font_color", C_INK_SOFT)
+		_apply_soft_ink(lbl)   # 203: modal stat label «Læreevne» etc. — outline clears the 1.55:1 wash
 		lbl.custom_minimum_size = Vector2(84.0, 22.0)
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1408,7 +1423,7 @@ func _build_modal_traits(detail: Dictionary) -> VBoxContainer:
 	section_lbl.text = "Raseegenskaper"
 	section_lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 	section_lbl.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	section_lbl.add_theme_color_override("font_color", C_INK_SOFT)
+	_apply_soft_ink(section_lbl)   # 203: «Raseegenskaper» section heading — outline clears the 1.70:1 wash
 	section_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(section_lbl)
 
@@ -1463,7 +1478,7 @@ func _build_modal_unique_trait(detail: Dictionary) -> PanelContainer:
 	heading.text = "Unikt trekk"
 	heading.add_theme_font_override("font", DesignSystem.font_body_bold())
 	heading.add_theme_font_size_override("font_size", DesignSystem.T_SMALL)
-	heading.add_theme_color_override("font_color", C_INK_SOFT)
+	_apply_soft_ink(heading)   # 203: «Unikt trekk» caption — outline clears the wash
 	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(heading)
 
@@ -1495,7 +1510,7 @@ func _build_modal_trick_list(detail: Dictionary) -> Label:
 	lbl.text = "Kan lære: " + " · ".join(parts)
 	lbl.add_theme_font_override("font", DesignSystem.font_body())
 	lbl.add_theme_font_size_override("font_size", DesignSystem.T_BODY)
-	lbl.add_theme_color_override("font_color", C_INK_SOFT)
+	_apply_soft_ink(lbl)   # 203: «Kan lære: …» trick list — outline clears the 1.38:1 wash
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
