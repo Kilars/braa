@@ -17,6 +17,7 @@ const BLUE       := Color("4a90e2")   # primary — BRA button
 const BLUE_DARK  := Color("2f6fbf")   # primary depth / pressed / button bottom-lip
 const BLUE_LIGHT := Color("6fb6ff")
 const BLUE_INK   := Color("2a66b3")   # blue TEXT on light (CREAM/PAPER) — AA-legible ≥4.5:1; BLUE/BLUE_DARK stay <4.5 on CREAM (154)
+const NAV_INK    := Color("0a1628")   # deep blue-slate for the small bold HUD nav labels «Triks»/«Kennel» (200). BLUE_INK is AA analytically (~4.84 on PAPER) but its thin 18px strokes reach only ~0.60 sub-pixel coverage → the darkest core washes to ~2.43:1 (pass-77). NAV_INK is dark enough that even that 0.60-coverage blend clears AA (~4.8:1), yet still blue-dominant.
 const GOLD       := Color("f5b841")   # accent — coins / mastery
 const GOLD_DARK  := Color("d99a2b")
 const GOLD_LIGHT := Color("ffdd8c")
@@ -276,6 +277,21 @@ static func wcag_contrast(a: Color, b: Color) -> float:
 	var hi: float = maxf(la, lb)
 	var lo: float = minf(la, lb)
 	return (hi + 0.05) / (lo + 0.05)
+
+## Fraction of the ink a small bold HUD label's darkest stroke-core pixel actually reaches in the
+## GL-Compat/SwiftShader render. Measured from the shipped pixels (pass-77 / task 200): at 18px
+## Baloo the thin strokes never fully cover a pixel, so the darkest core is a ~0.60/0.40 blend of
+## ink over the fill (BLUE_INK #2a66b3 rendered [126,166,215] on PAPER; INK #1e2a3a rendered
+## [117,125,133]). The number the eye sees, not the analytic full-coverage ratio.
+const NAV_STROKE_COVERAGE := 0.60
+
+## Render-robust contrast of small dark text on a light fill: the WCAG ratio of the ACTUAL darkest
+## rendered stroke pixel (a `coverage`-blend of ink over fill) against the fill. Inverts the
+## dark-on-light case of 196/197's render-headroom guards (which forced the BG dark for light
+## strokes). Use for HUD labels whose analytic contrast overstates what the framebuffer shows.
+static func render_floor_contrast(ink: Color, fill: Color, coverage: float) -> float:
+	var seen := ink.lerp(fill, 1.0 - coverage)  # coverage of ink; the rest bleeds through to fill
+	return wcag_contrast(seen, fill)
 
 ## WCAG relative luminance of a colour (linearized sRGB, Rec. 709 weights).
 static func _rel_luminance(c: Color) -> float:

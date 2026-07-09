@@ -826,12 +826,21 @@ const HAMBURGER_BAR_GAP := 4      ## px gap between bars
 ## pill lifts off the bright sun band instead of washing out (PO Phase-6 note #3).
 ## 125: bumped alpha 0.20 → 0.28 — extra lift for directive-5 HUD legibility after de-bloom.
 const HUD_PILL_SHADOW := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 0.28)
-## The «Triks»/«Kennel» HUD nav pills + hamburger glyph ink (176, PO father-pass-41 X-6). Was
-## DesignSystem.SLATE, which at the small bold T_HEAD size anti-aliased toward the pale PAPER pill
-## and read only ~3.7:1 / ~2.9:1 against the bright sky (the faintest primary labels in the game).
-## BLUE_INK (#2a66b3, ~5.5:1 on PAPER) matches the goal art's crisp blue nav treatment and clears
-## AA with margin. One named source so both pill labels and the glyph can never drift apart.
-const HUD_NAV_INK := DesignSystem.BLUE_INK
+## The «Triks»/«Kennel» HUD nav pills + hamburger glyph ink (176 → 200). SLATE (176's predecessor)
+## then BLUE_INK both read too light in the SHIPPED render: at the small bold T_HEAD (18px Baloo)
+## the thin strokes reach only ~0.60 sub-pixel coverage, so BLUE_INK's darkest core washed to
+## ~2.43:1 on the PAPER pill (PO father-pass-77 measured it — analytic 4.84:1 was a mirage). 200
+## points this at the deeper DS NAV_INK (#0a1628), dark enough that even the 0.60-coverage rendered
+## pixel clears AA (~4.8:1 in the render-floor model) yet still blue-dominant for the goal-art blue.
+## One named source so both pill labels and the glyph can never drift apart.
+const HUD_NAV_INK := DesignSystem.NAV_INK
+## 200: a same-ink outline that THICKENS the nav-label strokes. At 18px the thin Nunito-700 strokes
+## reach only ~0.55 sub-pixel coverage in the SwiftShader/GL-Compat render, which caps the darkest
+## stroke-core contrast at ~4.68:1 even for pure black — so a dark ink alone cannot clear AA with
+## margin. Outlining the glyph in its own ink raises effective coverage (no change to text advance,
+## so «Kennel» stays un-truncated / geometry unchanged), letting NAV_INK reach ≥4.5:1 in the actual
+## render. Applied to «Triks» + «Kennel» (the hamburger bars are already full-coverage baked pixels).
+const HUD_NAV_LABEL_OUTLINE := 4
 
 ## Learned bar (045, P2-4): a meter below the coin line holding the trick label + progress track.
 ## 097 (Phase 6): expanded to include the trick-name label row above the track itself. The label row
@@ -1975,9 +1984,12 @@ func _setup_trick_menu(ui: CanvasLayer) -> void:
 	# rides the button's native icon slot, left of the label, signalling "menu" like the goal.
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
-	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 176: BLUE_INK, was faint SLATE
+	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 200: NAV_INK deep-blue-slate
 	btn.add_theme_color_override("font_pressed_color", HUD_NAV_INK)
 	btn.add_theme_color_override("font_hover_color",   HUD_NAV_INK)
+	# 200: same-ink outline thickens the thin strokes so the dark ink clears AA in the real render.
+	btn.add_theme_constant_override("outline_size", HUD_NAV_LABEL_OUTLINE)
+	btn.add_theme_color_override("font_outline_color", HUD_NAV_INK)
 	btn.icon = _hamburger_texture()
 	btn.add_theme_constant_override("h_separation", TRICKS_GLYPH_GAP)  # space the glyph off the label
 	# 100: near-opaque PAPER fill (unchanged) + a STRONGER-than-default drop shadow so the pale
@@ -2177,9 +2189,12 @@ func _setup_kennel_screen(ui: CanvasLayer) -> void:
 	btn.text = "Kennel"
 	btn.add_theme_font_override("font", DesignSystem.font_body_bold())
 	btn.add_theme_font_size_override("font_size", DesignSystem.T_HEAD)
-	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 176: BLUE_INK, was faint SLATE
+	btn.add_theme_color_override("font_color",         HUD_NAV_INK)  # 200: NAV_INK deep-blue-slate
 	btn.add_theme_color_override("font_pressed_color", HUD_NAV_INK)
 	btn.add_theme_color_override("font_hover_color",   HUD_NAV_INK)
+	# 200: same-ink outline thickens the thin strokes so the dark ink clears AA in the real render.
+	btn.add_theme_constant_override("outline_size", HUD_NAV_LABEL_OUTLINE)
+	btn.add_theme_color_override("font_outline_color", HUD_NAV_INK)
 	var k_normal := DesignSystem.panel(DesignSystem.PAPER, DesignSystem.R_PILL)
 	k_normal.shadow_color = HUD_PILL_SHADOW
 	var k_pressed := DesignSystem.panel(DesignSystem.CREAM, DesignSystem.R_PILL)
