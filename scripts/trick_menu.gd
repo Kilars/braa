@@ -114,8 +114,7 @@ const WORDS_GAP := 18.0          ## gutter above the subheading (from the breeds
 const WORD_HEADER_H := 30.0      ## the "Markørord" subheading band — matches BREED_HEADER_H/DIFFICULTY_HEADER_H (193: demoted from the 38px Baloo-2 display heading + divider)
 const WORD_ROW_H := 54.0         ## one word row (display text + state badge)
 const WORD_ROW_GAP := 8.0        ## gutter between word rows
-const WORD_ROW_INDENT := 8.0     ## extra left indent for marker-word rows (134: visually distinct from trick rows)
-const WORD_PIP_R := 3.0          ## leading pip radius — small filled circle at the left of each word row (134)
+const NAME_INSET := 14.0         ## shared row-name left inset (195): trick / difficulty / marker-word names all start here, one flush column
 
 ## The difficulty section (118, P4-1): a small "Vanskelighet" subheading + one row per mode
 ## (Normal/Hard/Expert), seated between the marker-words section and the showcase/footer pills.
@@ -183,6 +182,11 @@ static func row_fill(active: bool, dim: bool) -> Color:
 	if active:
 		return ROW_BG_ACTIVE
 	return ROW_BG_LOCKED if dim else ROW_BG
+## The flush left edge (px) where a row's NAME text starts, given the row's left x (195). Trick,
+## difficulty AND marker-word names all route through this one inset so the four selection sections
+## share a single row-name column — the marker-word rows dropped their pre-134 decorative pip + indent.
+static func row_name_left(row_x: float) -> float:
+	return row_x + NAME_INSET
 ## Coin GOLD reserved for the Buyable breed-price PIP (a real coin glyph) — never the text.
 ## The header balance is the shared CoinReadout pill (129); the price badge draws its own small
 ## gold coin disc, exactly like the kennel _make_price_chip. GOLD is intrinsically too light to
@@ -250,7 +254,6 @@ const WORD_BADGE := {
 	WordState.LOCKED:   "Låst",
 }
 const WORD_NAME_ACTIVE   := ROW_ACTIVE_INK           ## the firing word — dark current-state ink on the active wash (170: matches the active trick name + badge, not the action-blue)
-const WORD_PIP_ACTIVE    := DesignSystem.BLUE_INK    ## the active word's leading differentiation pip stays Bra-Blue (170: decoupled from the now-dark name so only the NAME moved)
 const WORD_NAME_UNLOCKED := DesignSystem.SLATE       ## switchable — slate body text
 const WORD_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## not yet earned — greyed, clearly not tappable
 const WORD_SUBHEAD       := DesignSystem.SLATE       ## the "Marker words" subheading — secondary, AA-clean on PAPER (186)
@@ -953,7 +956,7 @@ func _draw_row(f_name: Font, f_badge: Font, i: int) -> void:
 	elif st == State.AVAILABLE:
 		name_col = NAME_AVAILABLE
 	var name_baseline := rect.position.y + rect.size.y * 0.5 + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
-	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
+	_draw_text(f_name, Vector2(row_name_left(rect.position.x), name_baseline),
 		display_name(r.id), NAME_SIZE, name_col)
 	var badge: String = BADGE[st]
 	var badge_col := BADGE_LOCKED
@@ -1070,14 +1073,9 @@ func _draw_word_row(f_name: Font, f_badge: Font, i: int) -> void:
 	if show_cost_hint:
 		var pct: int = int(round((w_window_scale - 1.0) * 100.0))
 		cost_hint = "+%d%% · hviler %d" % [pct, w_cooldown]
-	# Leading pip — a small filled circle at the left edge of every word row so the eye separates
-	# marker-word rows from trick rows at a glance (134: visual differentiation within the section).
-	var pip_x := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R
-	var pip_y := rect.position.y + rect.size.y * 0.5
-	var pip_col := WORD_PIP_ACTIVE if st == WordState.ACTIVE else (WORD_NAME_UNLOCKED if st == WordState.UNLOCKED else WORD_NAME_LOCKED)
-	draw_circle(Vector2(pip_x, pip_y), WORD_PIP_R, pip_col)
-	# Left offset for name text: past the pip + a small gap.
-	var name_left := rect.position.x + WORD_ROW_INDENT + WORD_PIP_R * 2.0 + 6.0
+	# Name left edge: flush at the shared NAME_INSET, same column as the trick and difficulty rows
+	# (195: dropped 134's decorative leading pip + extra indent so all four sections align).
+	var name_left := row_name_left(rect.position.x)
 	# Lay out the name: if we have a cost hint, shift the name up slightly to leave room for
 	# the hint line below it, keeping everything within the row height.
 	var name_mid_y := rect.position.y + rect.size.y * 0.5
@@ -1154,12 +1152,12 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 	if show_trade:
 		name_mid_y = rect.position.y + rect.size.y * 0.5 - f_name.get_ascent(HINT_SIZE) * 0.5 - 1.0
 	var name_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5
-	_draw_text(f_name, Vector2(rect.position.x + 14.0, name_baseline),
+	_draw_text(f_name, Vector2(row_name_left(rect.position.x), name_baseline),
 		str(d.get("name", d.id)), NAME_SIZE, name_col)
 	# Trade subtitle below the name (121; 134: SLATE Ink-Soft #5A6B7D, HINT_SIZE ≥12px for legibility).
 	if show_trade:
 		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(HINT_SIZE) + 2.0
-		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
+		_draw_text(f_badge, Vector2(row_name_left(rect.position.x), hint_baseline),
 			trade, HINT_SIZE, DIFF_TRADE_HINT)
 	# The badge, right (194): «Låst» (locked-active) / «Valgt» (active) in the dark current-state ink,
 	# «Bytt» (selectable non-active) in the action-blue so the switch reads like the word/breed rows,
