@@ -44,6 +44,15 @@ const CORNER_INSET := 2.0     ## fill sits just inside the track edge
 ## track, backing behind the text all kept).
 const LABEL_COLOR := DesignSystem.INK        ## dark slate «Sitt» label — reads on sky/sun
 const PCT_COLOR   := DesignSystem.BLUE_INK    ## blue «%» readout — tied to the blue fill, per goal art (180); AA-safe on the opaque 159 PAPER panel
+## 201 (PO father-pass-78, X-6): the SAME thin-stroke render-wash task 200 fixed on the nav pills.
+## At T_HEAD (18px Baloo bold) drawn via draw_string these labels reach only ~NAV_STROKE_COVERAGE
+## (0.60) sub-pixel coverage, so the darkest core is a 0.60/0.40 blend of ink over the PAPER panel:
+## INK «Sitt» rendered [119,127,135] ≈ 3.92:1 (under AA) — the faintest primary text on the page
+## once the nav pills jumped to 17:1 (200). A deeper ink alone tops out ~4.0:1 at that coverage; the
+## decisive lever is a same-ink stroke-thickening OUTLINE (draw_string_outline), which raises
+## effective coverage to ~full so both labels render their true tokens (INK ≈12:1, BLUE_INK ≈4.84:1).
+## Matches the nav pills' HUD_NAV_LABEL_OUTLINE — WITHOUT changing text advance/geometry.
+const LABEL_OUTLINE := 4
 ## 179 (PO father-pass-50, X-4/X-6): 145/159 made BOTH the track rail AND the backing panel
 ## opaque PAPER — the same white — so the unfilled channel was invisible against its own panel
 ## and the meter never read as a meter (no track at 0 %, a fill floating in nothing when partly
@@ -132,6 +141,13 @@ func _draw() -> void:
 	# Vertically centre text in the label row.
 	var label_y := _label_row_h * 0.5 + font_label.get_ascent(label_size) * 0.5 - font_label.get_descent(label_size) * 0.5
 	# Dark INK (145): reads on the bright sky / behind the sun where the old SLATE washed out.
+	# 201: a same-ink stroke-thickening outline UNDER each label first, so the thin 18px strokes
+	# render at ~full coverage (their true token) instead of washing to the 0.60-coverage blend
+	# that failed AA in pass-78. Same lever as the nav pills' outline (200); no advance change.
+	draw_string_outline(font_label, Vector2(0.0, label_y), name_str,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, LABEL_OUTLINE, LABEL_COLOR)
+	draw_string_outline(font_label, Vector2(0.0, label_y), pct_str,
+		HORIZONTAL_ALIGNMENT_RIGHT, w, label_size, LABEL_OUTLINE, PCT_COLOR)
 	draw_string(font_label, Vector2(0.0, label_y), name_str,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, LABEL_COLOR)
 	draw_string(font_label, Vector2(0.0, label_y), pct_str,
