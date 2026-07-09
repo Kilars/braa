@@ -1009,7 +1009,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.add_theme_color_override("font_color", C_TAG_INK)
+		_apply_ink_outline(lbl, C_TAG_INK)   # 206: same-colour outline so the 10px badge renders its TRUE dark token (was 1.7–1.8:1 washed)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(lbl)
 	else:
@@ -1017,7 +1017,7 @@ func _make_tag(row: Dictionary) -> PanelContainer:
 		lbl.text = badge_text
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.add_theme_color_override("font_color", C_TAG_INK)
+		_apply_ink_outline(lbl, C_TAG_INK)   # 206: same-colour outline so the 10px badge renders its TRUE dark token (was 1.7–1.8:1 washed)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(lbl)
 
