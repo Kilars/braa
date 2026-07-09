@@ -148,3 +148,49 @@ func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	var fill_lum := DesignSystem._rel_luminance(BreedShowcaseView.commit_disabled_fill())
 	assert_true(ink_lum < fill_lum,
 		"disabled ink must be darker than its fill (dark-ink-on-light-muted, not washed-on-gold)")
+
+## ── father-pass-71 (X-6): the bottom-control chrome — «Tilbake» + «Trener nå» — cleared AA only
+## ANALYTICALLY under 171; the shipped pixels read ~2.35–3.15:1 / 4.03:1. These pin the render-robust
+## fix (mirror 196's opaque-backing lever): an opaque near-black ghost pill + a near-white disabled fill.
+
+func test_ghost_pill_is_an_opaque_dark_scrim() -> void:
+	## The render-robust lever (mirrors 196's CAPTION_SCRIM): the «Tilbake»/chevron ghost pill must be an
+	## OPAQUE near-black scrim, not the translucent black@0.45 overlay 171 used — over the bright-grass
+	## band that overlay only composited to a ~grey pill, so the white label under-covered to ~0.23 (sub-AA).
+	## An opaque near-black base makes the render match the analytic, exactly as the caption scrim does.
+	assert_true(BreedShowcaseView.BTN_SECONDARY.a >= 0.98,
+		"ghost pill must be (near-)opaque so bright grass can't bleed behind the label (got a=%.2f)" % BreedShowcaseView.BTN_SECONDARY.a)
+	var pill_lum := DesignSystem._rel_luminance(BreedShowcaseView.BTN_SECONDARY)
+	assert_true(pill_lum < 0.05,
+		"ghost pill must be a near-black ink so under-covered white strokes still clear AA (got luminance %.3f)" % pill_lum)
+
+func test_chrome_render_peak_clears_aa_on_the_opaque_pill() -> void:
+	## The render-robust worst case, same as the captions (196): the thin font_body_bold 17px chrome
+	## strokes under-cover, so the brightest rendered white pixel reaches only ~0.46 LUMINANCE. Backed by
+	## the opaque near-black pill, even that dim peak must clear AA — the guarantee the translucent 171
+	## pill couldn't give (there the peak sat on a ~grey pill → ~2.4–3.1:1).
+	const MEASURED_PEAK_LUM := 0.46
+	var pill_lum := DesignSystem._rel_luminance(BreedShowcaseView.BTN_SECONDARY)
+	var ratio := (MEASURED_PEAK_LUM + 0.05) / (pill_lum + 0.05)
+	assert_true(ratio >= AA,
+		"the ~0.46-luminance chrome peak must clear AA on the opaque ghost pill (got %.2f:1)" % ratio)
+
+func test_secondary_chrome_text_is_full_opaque_white() -> void:
+	## 171's BTN_SECONDARY_TEXT was white@0.96 — the transparency compounded the thin-stroke
+	## under-coverage. Full-opaque white lands the brightest pixel as bright as the render allows
+	## (mirrors the caption SUBTLE); subordination comes from the pill, not a lowered alpha.
+	assert_eq(BreedShowcaseView.BTN_SECONDARY_TEXT, Color(1, 1, 1, 1),
+		"the «Tilbake»/chevron label must be full-opaque white so the brightest pixel reaches its peak")
+
+func test_disabled_fill_is_a_near_white_pale_slate_with_render_headroom() -> void:
+	## «Trener nå» read 4.03:1 in-pixel on the old `cfd6dd` (lum ~0.666) — the dark strokes under-cover
+	## toward the pale fill. A near-white fill (the kennel 151 «Trener nå» precedent, which clears AA
+	## in-pixel) keeps the dark INK core well-separated: assert the fill is near-white (lum ≥ 0.82) and
+	## that INK-on-fill carries render headroom (≥7:1 analytic), so the shipped dark-on-pale clears AA.
+	var fill := BreedShowcaseView.commit_disabled_fill()
+	var fill_lum := DesignSystem._rel_luminance(fill)
+	assert_true(fill_lum >= 0.82,
+		"disabled fill must be a near-white pale slate so the dark ink clears AA in-pixel (got luminance %.3f)" % fill_lum)
+	var ratio := DesignSystem.wcag_contrast(BreedShowcaseView.COMMIT_DISABLED_INK, fill)
+	assert_true(ratio >= 7.0,
+		"disabled INK on the near-white fill must carry render headroom over the 4.5 bar (got %.2f:1)" % ratio)

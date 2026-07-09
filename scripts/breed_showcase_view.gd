@@ -71,14 +71,17 @@ const ACTIVE_DOT_ON_LIGHT := DesignSystem.BLUE_INK   ## dot on the solid-paper s
 const ACTIVE_DOT_ON_DARK := DesignSystem.BLUE_LIGHT  ## dot on the faint over-dark-band active pip
 static func active_dot_color(on_bright_pip: bool) -> Color:
 	return ACTIVE_DOT_ON_LIGHT if on_bright_pip else ACTIVE_DOT_ON_DARK
-## The «Tilbake» / ◀▶ chevron chrome sits on GHOST pills over the translucent stage band. The 169 AA
-## fix tuned the hint that sits DIRECTLY on the band, but these pills LIFT the background: a white@0.14
-## *lightening* fill composited to a ~112–116-grey pill, so the white@0.92 label/glyph only reached
-## ~3.9–4.0:1 (sub-AA, PO father-pass-36). Fixed (171) by making BTN_SECONDARY a *darkening* ink overlay
-## so the pill is genuinely dark and the near-opaque white chrome clears AA on it — the quiet "ghost
-## secondary" read survives (a subtle recessed pill on the dark band, not a bright lifted one).
-const BTN_SECONDARY := Color(0.0, 0.0, 0.0, 0.45)  ## «Tilbake»/chevron ghost pill — a DARKENING ink over the band
-const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 0.96)
+## The «Tilbake» / ◀▶ chevron chrome sits on GHOST pills over the translucent stage band. 171 made
+## BTN_SECONDARY a *translucent* black@0.45 darkening overlay — but father-pass-71 measured the SHIPPED
+## pixels at ~2.35–3.15:1 (sub-AA): over the bright-grass-bleeding translucent band that overlay only
+## composites to a ~grey pill, and the thin font_body_bold 17px strokes under-cover, so the white@0.96
+## label lands a grey ~0.23 peak. 171 pinned the *analytic* composite (~4.9:1), not the render. This is
+## the exact analytic-vs-render trap 196 closed for the captions. The render-robust fix mirrors 196's
+## lever: back the chrome with an OPAQUE near-black scrim (= CAPTION_SCRIM) so the white label composites
+## against a stable near-black base — even the under-covered strokes clear AA. The quiet recessed-ghost
+## read survives: a solid dark caption-chip tag on the dark band, not a bright lifted pill.
+const BTN_SECONDARY := CAPTION_SCRIM               ## «Tilbake»/chevron ghost pill — an OPAQUE near-black scrim (was translucent black@0.45)
+const BTN_SECONDARY_TEXT := Color(1.0, 1.0, 1.0, 1.0)  ## full-opaque white (was @0.96) — mirror the caption SUBTLE, land the brightest pixel
 
 ## The ghost pill's EFFECTIVE colour = BTN_SECONDARY composited over the translucent stage band, and the
 ## label/glyph's EFFECTIVE colour = BTN_SECONDARY_TEXT composited over that pill. Pure so the contrast
@@ -104,8 +107,13 @@ const COMMIT_W := 280        ## commit-pill content width  (offset -140 .. +140)
 const COMMIT_H := 42         ## commit-pill content height (offset -88 .. -46)
 
 ## The muted fill for the non-tappable active-dog «Trener nå» — a pale slate the dark INK clears AA on.
+## father-pass-71 measured the old `cfd6dd` (lum ~0.666) at only 4.03:1 in the shipped pixels (the dark
+## strokes under-cover toward the pale fill). Lifted to a near-white muted slate (~0.88) matching the
+## kennel 151 «Trener nå» precedent — dark ink on a near-white wash, which already clears AA in-pixel —
+## so the dark INK core reads ~12:1 analytic and clears the render bar with headroom. Still a quiet
+## muted disabled pill (a cool near-white), distinct from the blue-gradient enabled state + paper card.
 static func commit_disabled_fill() -> Color:
-	return Color("cfd6dd")
+	return Color("eef1f5")
 
 ## The ◀ ▶ chevrons cycle the OWNED roster, so they only do something with 2+ owned breeds (164,
 ## PO father-pass-29). With ≤1 owned dog they are verified no-ops → hidden, and the hint drops the
@@ -263,7 +271,7 @@ func _build_ui() -> void:
 	_commit_btn.pressed.connect(func(): commit_requested.emit())
 	add_child(_commit_btn)
 
-	_back_btn = _make_button("Tilbake", BTN_SECONDARY, BTN_SECONDARY_TEXT)
+	_back_btn = _make_button("Tilbake", BTN_SECONDARY, BTN_SECONDARY_TEXT, true)  # thick display face — thin body face renders grey (196)
 	_back_btn.anchor_left = 0.5
 	_back_btn.anchor_right = 0.5
 	_back_btn.anchor_top = 1.0
@@ -317,11 +325,17 @@ func _caption_row(lbl: Label, top: float, height: float) -> CenterContainer:
 	cc.add_child(lbl)
 	return cc
 
-func _make_button(text: String, bg: Color, fg: Color) -> Button:
+## `display_face` picks the THICK Baloo display font instead of the thin Nunito body-bold. 196 proved
+## the thin body face at ≤17px is sub-pixel on the GL/SwiftShader path — no rendered pixel of a white
+## label reaches full white (it anti-aliases to a ~0.20 grey), so the «Tilbake»/chevron chrome read grey
+## even over the opaque scrim (father-pass-71). The display face covers full-white pixels (peak ~0.46+),
+## so on the opaque near-black BTN_SECONDARY scrim the label clears AA — the same face swap 196 used.
+func _make_button(text: String, bg: Color, fg: Color, display_face := false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", DesignSystem.font_body_bold())   # DS font, not the fallback (163)
+	b.add_theme_font_override("font",
+		DesignSystem.font_display() if display_face else DesignSystem.font_body_bold())   # DS font, not the fallback (163)
 	b.add_theme_font_size_override("font_size", 17)
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
@@ -367,7 +381,7 @@ func _make_commit_button() -> Button:
 ## +1 right (next). The button keeps its styled pill + real hit target (its centre is published for the
 ## capture); the glyph text is empty and a mouse-ignoring `Chevron` child paints the arrow instead.
 func _make_cycle_button(dir: int) -> Button:
-	var b := _make_button("", BTN_SECONDARY, BTN_SECONDARY_TEXT)
+	var b := _make_button("", BTN_SECONDARY, BTN_SECONDARY_TEXT, true)
 	var chevron := Chevron.new(dir, BTN_SECONDARY_TEXT)
 	chevron.name = "Chevron"
 	b.add_child(chevron)

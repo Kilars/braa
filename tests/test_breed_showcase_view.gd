@@ -50,6 +50,19 @@ func test_caption_labels_carry_opaque_scrim_stylebox() -> void:
 			"caption scrim must be a near-black ink (got luminance %.3f)" % DesignSystem._rel_luminance(sb.bg_color))
 	view.queue_free()
 
+func test_bottom_control_chrome_uses_the_thick_display_face() -> void:
+	## father-pass-71 (X-6): the «Tilbake» + ◀▶ chevron chrome rendered a muted GREY (~2.35–3.15:1) —
+	## the thin Nunito body-bold face at 17px is sub-pixel on the GL path, so no rendered pixel of the
+	## white label reaches full white (peak ~0.20). 196's proven fix is the THICK Baloo display face,
+	## whose strokes cover full-white pixels (peak ~0.46+) so the label clears AA on the opaque scrim.
+	## The back + cycle buttons must therefore carry the display font, not the body face.
+	var view := _build_view()
+	var display := DesignSystem.font_display()
+	for btn in [view._back_btn, view._prev_btn, view._next_btn]:
+		assert_eq(btn.get_theme_font("font"), display,
+			"the «Tilbake»/chevron chrome must use the thick display face (thin body face renders grey)")
+	view.queue_free()
+
 func test_shows_individual_name_with_breed_subtitle() -> void:
 	# 173 (PO father-pass-38 X-4): the spotlit entry surfaces its individual kennel name (Bella) with
 	# the breed (Labrador) rendered beneath as a subtitle — so the "show off MY dog" surface names her
