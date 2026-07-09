@@ -108,6 +108,40 @@ func test_ghost_pill_is_a_darkening_fill() -> void:
 	assert_true(pill_lum < band_lum,
 		"ghost pill must darken the band (got pill %.3f vs band %.3f)" % [pill_lum, band_lum])
 
+func test_caption_scrim_is_an_opaque_dark_ink() -> void:
+	## PO father-pass-70 (X-6): the two captions — the «Labrador» breed subtitle (top band) and the
+	## «Adopter flere …» hint (bottom band) — rendered ~2.0–2.4:1 in the shipped pixels because at a
+	## subordinate 14–16px NO rendered pixel of their strokes reaches full white (measured peak ~0.48),
+	## so over the translucent band (bright grass bleeds it to lum ~0.08–0.13) they land sub-AA. The
+	## fix backs each caption with a LOCAL opaque-dark scrim chip that forces the band behind the strokes
+	## to near-black INK, so even the ~0.48 peak clears AA — the scrim must be opaque + dark.
+	assert_true(BreedShowcaseView.CAPTION_SCRIM.a >= 0.98,
+		"caption scrim must be (near-)opaque so bright grass can't bleed behind the text (got a=%.2f)" % BreedShowcaseView.CAPTION_SCRIM.a)
+	var scrim_lum := DesignSystem._rel_luminance(BreedShowcaseView.CAPTION_SCRIM)
+	assert_true(scrim_lum < 0.05,
+		"caption scrim must be a near-black ink (got luminance %.3f)" % scrim_lum)
+
+func test_caption_render_peak_clears_aa_on_the_scrim() -> void:
+	## The render-robust worst case: the caption's rendered peak white pixel reaches only ~0.46
+	## LUMINANCE (measured in-pixel over the scrim, task 196 — thin subordinate strokes never fully
+	## cover). Backed by the opaque near-black scrim, even that dim peak must clear AA — the guarantee
+	## the translucent band couldn't give (there the peak sat on lum ~0.08–0.13 → ~2–4:1). Contrast is
+	## computed from the measured peak LUMINANCE against the scrim's luminance (matching the in-pixel
+	## sampler's units — the earlier bug treated 0.46 as an sRGB value, whose luminance is far lower).
+	const MEASURED_PEAK_LUM := 0.46
+	var scrim_lum := DesignSystem._rel_luminance(BreedShowcaseView.CAPTION_SCRIM)
+	var ratio := (MEASURED_PEAK_LUM + 0.05) / (scrim_lum + 0.05)
+	assert_true(ratio >= AA,
+		"the measured ~0.46-luminance caption peak must clear AA on the opaque scrim (got %.2f:1)" % ratio)
+
+func test_subtle_caption_is_full_opacity_white() -> void:
+	## 169's SUBTLE was white@0.92 — the ~8% transparency compounded the thin-stroke under-coverage so
+	## the brightest shipped pixel never reached the analytic target. Full-opaque white lands the glyph
+	## body as bright as the render allows; subordination to the title now comes from the smaller size
+	## + the scrim chip, not from a lowered alpha.
+	assert_eq(BreedShowcaseView.SUBTLE.a, 1.0,
+		"the SUBTLE caption colour must be full-opaque white so the brightest pixel reaches its peak")
+
 func test_disabled_ink_is_a_dark_design_system_ink() -> void:
 	## The disabled label ink is a real dark DS ink (not a washed light gold) — luminance well below the fill.
 	var ink_lum := DesignSystem._rel_luminance(BreedShowcaseView.COMMIT_DISABLED_INK)

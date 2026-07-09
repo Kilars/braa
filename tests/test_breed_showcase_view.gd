@@ -37,6 +37,19 @@ func test_no_tofu_glyph_in_any_showcase_text() -> void:
 				"showcase chrome must not render the tofu glyph '%s' (found in '%s')" % [glyph, t])
 	view.queue_free()
 
+func test_caption_labels_carry_opaque_scrim_stylebox() -> void:
+	# PO father-pass-70 (X-6): both captions (the breed subtitle + the bottom hint) must sit on an
+	# opaque-dark scrim stylebox so their thin subordinate strokes render legibly over the translucent
+	# bright-grass band — the render-robust fix for the ~2:1 shipped captions (task 196).
+	var view := _build_view()
+	for lbl in [view._subtitle_label, view._hint]:
+		var sb := lbl.get_theme_stylebox("normal") as StyleBoxFlat
+		assert_true(sb != null, "caption label must carry a StyleBoxFlat scrim behind the text")
+		assert_true(sb.bg_color.a >= 0.98, "caption scrim must be (near-)opaque (got a=%.2f)" % sb.bg_color.a)
+		assert_true(DesignSystem._rel_luminance(sb.bg_color) < 0.05,
+			"caption scrim must be a near-black ink (got luminance %.3f)" % DesignSystem._rel_luminance(sb.bg_color))
+	view.queue_free()
+
 func test_shows_individual_name_with_breed_subtitle() -> void:
 	# 173 (PO father-pass-38 X-4): the spotlit entry surfaces its individual kennel name (Bella) with
 	# the breed (Labrador) rendered beneath as a subtitle — so the "show off MY dog" surface names her

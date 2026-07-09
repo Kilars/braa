@@ -23,11 +23,30 @@ const BAND_BG := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.
 const TITLE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const NAME_ACTIVE := DesignSystem.PAPER            ## the spotlit breed's name (active) — bright paper-white, NOT gold
 const NAME_PREVIEW := Color(1.0, 1.0, 1.0)         ## a previewed (not-yet-active) breed's name — white
-## 169 (PO father-pass-34): was white@0.78 → the hint «Bla med pilene …» read ~4.36:1 (sub-AA) once
-## the bright-grass scene bled through the translucent band and lightened it. Bumped to the same
-## secondary-white the «Tilbake»/chevron chrome uses (0.92) → ~5.3:1 on the father's measured worst-
-## case band, while keeping a hair of "secondary" vs the full-opaque white title. Band stays translucent.
-const SUBTLE := Color(1.0, 1.0, 1.0, 0.92)         ## caption/hint on the dark band — legible secondary white
+## 169 (PO father-pass-34) bumped the caption white to 0.92 for an *analytic* ~5.3:1 — but father-pass-70
+## measured the SHIPPED pixels at ~2.0–2.4:1. Root cause (proven in-pixel, task 196): the captions used
+## the THIN Nunito body face at 13–15px, whose strokes are sub-pixel — no rendered pixel reaches full
+## white (peak luminance ~0.48), so the composited ink lands ~2–4:1 no matter the colour alpha. (An INK
+## outline made it WORSE: at that stroke width the dark halo swallows the white core → dark-on-dark.) The
+## crisp white TITLES sit on the SAME translucent band at 6.2:1 — because they use the THICK Baloo display
+## face, whose strokes are wide enough to cover full-white pixels. The render-robust fix mirrors them:
+## draw both captions in the SAME display face (font_display) at a SUBORDINATE size, full-opaque white.
+## Subordination to the title now comes from the smaller size, not a lowered alpha / a different face.
+const SUBTLE := Color(1.0, 1.0, 1.0, 1.0)          ## caption/hint on the dark band — full-opaque legible white
+const CAPTION_SUBTITLE_SIZE := 16                   ## breed subtitle — display face, subordinate to the 26px name
+const CAPTION_HINT_SIZE := 14                       ## bottom hint — display face, subordinate to the 30px title
+
+## Even in the thick Baloo face at a SUBORDINATE 14–16px, the caption's rendered peak white pixel only
+## reaches ~0.48 luminance (measured in-pixel, task 196) — so over the translucent band (which bright
+## grass bleeds up to lum ~0.08–0.13) the contrast lands ~3–4:1, still sub-AA. The reliable fix (the
+## PO's "raise the opacity behind the captions" lever) is a LOCAL opaque-dark scrim chip hugging each
+## caption: it forces the band behind the strokes to near-black INK (lum ~0.012), so the ~0.48 peak
+## clears AA ~8:1 — WITHOUT making the surrounding stage band any less translucent (the spotlight glow
+## the PO asked to keep). A rounded chip with tight margins reads as an intentional caption tag.
+const CAPTION_SCRIM := Color(DesignSystem.INK.r, DesignSystem.INK.g, DesignSystem.INK.b, 1.0)  ## opaque dark backing behind each caption
+const CAPTION_SCRIM_RADIUS := 8
+const CAPTION_SCRIM_PAD_H := 10.0
+const CAPTION_SCRIM_PAD_V := 3.0
 
 ## The hint caption is drawn at <1.0 alpha over the translucent stage band, so its EFFECTIVE colour
 ## is SUBTLE composited over whatever the band has become once the bright-grass scene bleeds through
@@ -175,15 +194,8 @@ func _build_ui() -> void:
 	# The breed subtitle, just under the individual name (173): «Bella» big, «Labrador» beneath — the
 	# breed kept as a secondary read so the "show off MY dog" surface names her like the kennel does.
 	# Hidden (empty text) when the shown name IS the breed (no kennel individual for this breed).
-	_subtitle_label = Label.new()
-	_subtitle_label.add_theme_font_override("font", DesignSystem.font_body())
-	_subtitle_label.add_theme_font_size_override("font_size", 15)
-	_subtitle_label.add_theme_color_override("font_color", SUBTLE)
-	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_subtitle_label.anchor_right = 1.0
-	_subtitle_label.offset_top = 84.0
-	_subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_subtitle_label)
+	_subtitle_label = _make_caption(CAPTION_SUBTITLE_SIZE)
+	add_child(_caption_row(_subtitle_label, 82.0, 26.0))
 
 	# Bottom control band.
 	var bottom := ColorRect.new()
@@ -263,19 +275,47 @@ func _build_ui() -> void:
 	_back_btn.pressed.connect(func(): dismissed.emit())
 	add_child(_back_btn)
 
-	_hint = Label.new()
+	_hint = _make_caption(CAPTION_HINT_SIZE)
 	_hint.text = HINT_MULTI  # replaced per roster size in _refresh
-	_hint.add_theme_color_override("font_color", SUBTLE)
-	_hint.add_theme_font_override("font", DesignSystem.font_body())
-	_hint.add_theme_font_size_override("font_size", 13)
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.anchor_right = 1.0
-	_hint.anchor_top = 1.0
-	_hint.anchor_bottom = 1.0
-	_hint.offset_top = -CONTROL_H + 62.0
-	_hint.offset_bottom = -CONTROL_H + 84.0
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_hint)
+	var hint_row := _caption_row(_hint, 0.0, 26.0)
+	hint_row.anchor_top = 1.0
+	hint_row.anchor_bottom = 1.0
+	hint_row.offset_top = -CONTROL_H + 60.0
+	hint_row.offset_bottom = -CONTROL_H + 86.0
+	add_child(hint_row)
+
+## A caption chip Label: the thick display face, full-opaque white, on an opaque-dark scrim stylebox
+## (196, PO father-pass-70) — the scrim forces the band behind the thin strokes to near-black so the
+## caption clears AA over the translucent bright-grass band. Content-sized (the scrim hugs the text).
+func _make_caption(size_px: int) -> Label:
+	var lbl := Label.new()
+	lbl.add_theme_font_override("font", DesignSystem.font_display())
+	lbl.add_theme_font_size_override("font_size", size_px)
+	lbl.add_theme_color_override("font_color", SUBTLE)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = CAPTION_SCRIM
+	sb.set_corner_radius_all(CAPTION_SCRIM_RADIUS)
+	sb.content_margin_left = CAPTION_SCRIM_PAD_H
+	sb.content_margin_right = CAPTION_SCRIM_PAD_H
+	sb.content_margin_top = CAPTION_SCRIM_PAD_V
+	sb.content_margin_bottom = CAPTION_SCRIM_PAD_V
+	lbl.add_theme_stylebox_override("normal", sb)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+## Centre a content-sized caption chip in a full-width, mouse-ignoring row at [top, top+height]. The
+## CenterContainer shrink-wraps the chip so the scrim hugs the text (not a full-width bar), keeping the
+## surrounding stage band translucent.
+func _caption_row(lbl: Label, top: float, height: float) -> CenterContainer:
+	var cc := CenterContainer.new()
+	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cc.anchor_right = 1.0
+	cc.offset_top = top
+	cc.offset_bottom = top + height
+	cc.add_child(lbl)
+	return cc
 
 func _make_button(text: String, bg: Color, fg: Color) -> Button:
 	var b := Button.new()
@@ -395,6 +435,7 @@ func _refresh() -> void:
 	_name_label.add_theme_color_override("font_color", NAME_ACTIVE if is_active else NAME_PREVIEW)
 	if _subtitle_label != null:
 		_subtitle_label.text = _subtitle_of(_spotlit)  # the breed under the individual name (173); "" hides it
+		_subtitle_label.visible = _subtitle_label.text != ""  # no phantom scrim chip when there's no breed line
 	# Rebuild pips: one per owned breed. The SPOTLIT (previewed) breed owns the solid dominant fill —
 	# it is the current selection; the ACTIVE dog carries a quiet "aktiv" dot (165, PO father-pass-30).
 	# (Was reversed: the fill keyed to active + an invisible `outline_size` on the spotlit pip, so
