@@ -263,6 +263,11 @@ const DIFF_NAME_IDLE     := DesignSystem.SLATE       ## a selectable, non-active
 const DIFF_NAME_LOCKED   := DesignSystem.SLATE_SOFT  ## non-selectable (special dog locks it, 119) — greyed
 const DIFF_BADGE_ACTIVE  := "Valgt"                  ## the chosen mode's badge
 const DIFF_BADGE_LOCKED  := "Låst"                   ## the fixed mode on a special dog (119)
+## The selectable (non-active, non-locked) mode's action badge (194, PO father-pass-68, X-4). Was
+## bare — «Vanskelighet» was the only menu section whose switchable alternates carried no right-side
+## affordance, unlike «Markørord»/«Raser» whose switch rows show a blue «Bytt». Same word + same
+## action-blue so all four sections signal "current vs switchable" identically.
+const DIFF_BADGE_SWITCH  := "Bytt"                   ## a tappable non-active mode — mirrors WORD/BREED «Bytt»
 ## Trade subtitle (121, P4-3): the reward/challenge trade made legible before selecting, dimmed like
 ## the marker-word cost hint. WORD_COST_HINT SLATE_SOFT reused so the two hint styles read identical.
 const DIFF_TRADE_HINT    := WORD_COST_HINT           ## dimmed trade subtitle colour — secondary
@@ -417,6 +422,33 @@ static func difficulty_trade_label(reward_scale: float, window_scale: float) -> 
 ## the active mode is still "selectable" (tapping it is simply a no-op switch in main). Pure predicate.
 static func is_difficulty_selectable(row: Dictionary) -> bool:
 	return row.get("selectable", false)
+
+## The right-side badge TEXT for a difficulty row (194, P4-1/PO father-pass-68). Unit-locked so the
+## section marks selectability like its three peers: active+locked → «Låst» (fixed mode, 119);
+## active → «Valgt» (current-state); a selectable non-active mode → «Bytt» (tappable, mirrors the
+## marker-word/breed switch rows); a non-active LOCKED row → "" (not tappable → no affordance).
+static func difficulty_badge(row: Dictionary) -> String:
+	var is_active: bool = row.get("active", false)
+	var locked: bool = row.get("locked", false)
+	if is_active and locked:
+		return DIFF_BADGE_LOCKED
+	if is_active:
+		return DIFF_BADGE_ACTIVE
+	if not locked:
+		return DIFF_BADGE_SWITCH
+	return ""
+
+## The badge INK for a difficulty row (194) — pairs difficulty_badge. «Valgt» reads in the dark
+## current-state ink (168, matches «Trener nå»); the fixed «Låst» stays greyed; the selectable
+## «Bytt» reads in the action-blue BADGE_AVAILABLE so it signals a tappable switch, not a state.
+static func difficulty_badge_ink(row: Dictionary) -> Color:
+	var is_active: bool = row.get("active", false)
+	var locked: bool = row.get("locked", false)
+	if is_active and locked:
+		return DIFF_NAME_LOCKED
+	if is_active:
+		return BADGE_ACTIVE
+	return BADGE_AVAILABLE
 
 ## Whether the fed difficulty section is locked (122): a special dog fixes the mode, so every row is
 ## locked. Drives the one-line reason note that tells the player the challenge is fixed by design, not
@@ -1129,15 +1161,11 @@ func _draw_difficulty_row(f_name: Font, f_badge: Font, i: int) -> void:
 		var hint_baseline := name_mid_y + f_name.get_ascent(NAME_SIZE) * 0.5 - f_name.get_descent(NAME_SIZE) * 0.5 + f_badge.get_ascent(HINT_SIZE) + 2.0
 		_draw_text(f_badge, Vector2(rect.position.x + 14.0, hint_baseline),
 			trade, HINT_SIZE, DIFF_TRADE_HINT)
-	# The badge, right. Locked-active → "Låst"; unlocked-active → "Valgt"; other rows show no badge.
-	var badge := ""
-	var badge_col := BADGE_ACTIVE
-	if is_active and locked:
-		badge = DIFF_BADGE_LOCKED
-		badge_col = DIFF_NAME_LOCKED
-	elif is_active:
-		badge = DIFF_BADGE_ACTIVE
-		badge_col = BADGE_ACTIVE  # 168: dark current-state ink «Valgt», not action-blue (matches «Trener nå»)
+	# The badge, right (194): «Låst» (locked-active) / «Valgt» (active) in the dark current-state ink,
+	# «Bytt» (selectable non-active) in the action-blue so the switch reads like the word/breed rows,
+	# and a non-active LOCKED row stays bare. Text + ink are unit-locked in difficulty_badge*.
+	var badge := difficulty_badge(d)
+	var badge_col := difficulty_badge_ink(d)
 	if badge != "":
 		var badge_baseline := rect.position.y + rect.size.y * 0.5 + f_badge.get_ascent(BADGE_SIZE) * 0.5 - f_badge.get_descent(BADGE_SIZE) * 0.5
 		_draw_text(f_badge, Vector2(rect.position.x, badge_baseline), badge, BADGE_SIZE, badge_col,
