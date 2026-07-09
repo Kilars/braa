@@ -1073,6 +1073,7 @@ func _make_price_chip(row: Dictionary) -> PanelContainer:
 		lbl.add_theme_font_override("font", DesignSystem.font_body_bold())
 		lbl.add_theme_font_size_override("font_size", 11)
 		lbl.add_theme_color_override("font_color", C_TAG_INK)
+		_apply_ink_outline(lbl, C_TAG_INK)   # 207: same-colour outline so the 11px «Gratis»/«Din» chip renders its TRUE dark token (was 4.27:1 washed on coral)
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(lbl)
 	return panel
