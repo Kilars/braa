@@ -140,6 +140,17 @@ static func rarity_label(rarity: int) -> String:
 		Rarity.SECRET: return "Påskeegg"
 	return ""
 
+## The player-facing ownership/status corner-badge word (199, PO father-pass-74 X-6). Owned reads
+## «Din hund», secret «Påskeegg», every buyable "" (so the corner badge falls through to the rarity
+## word). ONE source for the grid cell AND the inspect modal so the badge can never drift between
+## surfaces the way it did (grid «Din hund» vs modal «Din») before both were routed through here.
+static func status_label(is_owned: bool, is_secret: bool) -> String:
+	if is_owned:
+		return "Din hund"
+	if is_secret:
+		return "Påskeegg"
+	return ""
+
 ## The fixed difficulty mode a special dog pins (119, P4-1). A special dog is a set challenge —
 ## Hard — never the free Normal. The exact mode is a product knob; it must name a known Difficulty id.
 func locked_difficulty_id() -> String:
@@ -243,7 +254,7 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 		var is_secret: bool = d.rarity == Rarity.SECRET
 		var affordable: bool = is_owned or d.price == 0 or balance >= d.price
 		var price_label := "Din" if is_owned else ("Gratis" if is_secret else str(d.price))
-		var status_label := "Din hund" if is_owned else ("Påskeegg" if is_secret else "")
+		var status_word := status_label(is_owned, is_secret)
 		rows.append({
 			"id": d.id, "name": d.dog_name, "breed": d.breed, "rarity": d.rarity,
 			"price": d.price, "stats": d.stats, "unique_trait": d.unique_trait,
@@ -251,7 +262,7 @@ static func classify_kennel_dogs(owned: Array, active: String, balance: int) -> 
 			"portrait_bias": d.portrait_bias(), "trick_ids": d.trick_ids,
 			"blurb": d.blurb, "traits": d.traits,
 			"owned": is_owned, "active": d.id == active, "secret": is_secret,
-			"affordable": affordable, "status_label": status_label, "price_label": price_label,
+			"affordable": affordable, "status_label": status_word, "price_label": price_label,
 			"rarity_label": rarity_label(d.rarity),
 		})
 	return rows

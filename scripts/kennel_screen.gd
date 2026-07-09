@@ -282,6 +282,10 @@ func open_detail(id: String) -> void:
 			break
 	detail["owned"] = is_owned
 	detail["active"] = is_active
+	# Ownership/status corner-badge word — from the SAME KennelDog.status_label source the grid cell
+	# uses, so the modal badge reads «Din hund» (owned) / «Påskeegg» (secret) identically to the cell
+	# (199, X-6). detail_for stays economy-unaware, so ownership is only known here.
+	detail["status_label"] = KennelDog.status_label(is_owned, detail.get("secret", false))
 	detail["affordable"] = is_owned or detail["price"] == 0 or _balance >= detail["price"]
 	detail["balance"] = _balance
 	# Carry the dog's grid index (131) so the modal header shows the SAME distinct-yaw portrait as its cell.
@@ -1314,15 +1318,17 @@ func _build_modal_band(detail: Dictionary) -> Control:
 	close_btn.offset_bottom = 8.0 + CLOSE_SIZE
 	band.add_child(close_btn)
 
-	# Rarity badge — top-left of the band, echoing the grid cell so the ladder reads in the modal
-	# too (148, X-4). Same corner-badge component: owned/secret keep green/coral, buyables get their
-	# rarity word + calm accent. Synthesized row forces the rarity_label path (owned shows «Din»).
+	# Rarity/status badge — top-left of the band, echoing the grid cell so the badge reads the SAME
+	# word in the modal (148, X-4; 199, PO father-pass-74 X-6). Same corner-badge component: pass the
+	# row's real status_label through so owned shows «Din hund» and secret «Påskeegg» EXACTLY as the
+	# grid cell draws them (one source, grid ↔ modal can't drift); buyables fall through to their
+	# rarity word. (Was hardcoding status_label:"" here, which forced owned down to «Din» — the drift.)
 	if detail.get("rarity_label", "") != "":
 		var rtag := _make_tag({
 			"owned": detail.get("rarity", KennelDog.Rarity.COMMON) == KennelDog.Rarity.OWNED,
 			"secret": detail.get("secret", false),
 			"rarity": detail.get("rarity", KennelDog.Rarity.COMMON),
-			"status_label": "",
+			"status_label": detail.get("status_label", ""),
 			"rarity_label": detail.get("rarity_label", ""),
 		})
 		rtag.anchor_left   = 0.0
